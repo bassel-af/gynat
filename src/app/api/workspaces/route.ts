@@ -7,7 +7,6 @@ import { serializeBigInt } from '@/lib/api/serialize';
 const createWorkspaceSchema = z.object({
   slug: z.string().regex(/^[a-z0-9-]+$/, 'Slug must contain only lowercase letters, numbers, and hyphens'),
   nameAr: z.string().min(1, 'Arabic name is required'),
-  nameEn: z.string().optional(),
   description: z.string().optional(),
   logoUrl: z.string().url().optional(),
 });
@@ -34,7 +33,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { slug, nameAr, nameEn, description, logoUrl } = parsed.data;
+  const { slug, nameAr, description, logoUrl } = parsed.data;
 
   try {
     const workspace = await prisma.$transaction(async (tx) => {
@@ -42,7 +41,6 @@ export async function POST(request: NextRequest) {
         data: {
           slug,
           nameAr,
-          nameEn: nameEn ?? null,
           description: description ?? null,
           logoUrl: logoUrl ?? null,
           createdById: user.id,

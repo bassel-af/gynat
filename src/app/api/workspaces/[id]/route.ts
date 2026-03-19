@@ -8,7 +8,6 @@ type RouteParams = { params: Promise<{ id: string }> };
 
 const updateWorkspaceSchema = z.object({
   nameAr: z.string().min(1).optional(),
-  nameEn: z.string().optional(),
   description: z.string().optional(),
   logoUrl: z.string().url().nullable().optional(),
 });

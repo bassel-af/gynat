@@ -11,7 +11,6 @@ interface Workspace {
   id: string;
   slug: string;
   nameAr: string;
-  nameEn: string | null;
   description: string | null;
   memberCount: number;
 }

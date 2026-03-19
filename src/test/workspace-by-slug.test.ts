@@ -66,7 +66,6 @@ const fakeWorkspace = {
   id: 'ws-uuid-1',
   slug: 'al-saeed',
   nameAr: 'عائلة السعيد',
-  nameEn: 'Al-Saeed Family',
   description: 'A family workspace',
   logoUrl: null,
   createdById: fakeUser.id,

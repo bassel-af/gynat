@@ -92,7 +92,6 @@ describe('GET /api/workspaces/[id]', () => {
       id: wsId,
       slug: 'test-ws',
       nameAr: 'اختبار',
-      nameEn: null,
       description: null,
       logoUrl: null,
     });
@@ -153,7 +152,6 @@ describe('PATCH /api/workspaces/[id]', () => {
       id: wsId,
       slug: 'test-ws',
       nameAr: 'اسم محدث',
-      nameEn: 'Updated Name',
       description: 'desc',
       logoUrl: null,
     };
@@ -162,7 +160,7 @@ describe('PATCH /api/workspaces/[id]', () => {
     const { PATCH } = await import('@/app/api/workspaces/[id]/route');
     const req = makeRequest(`http://localhost:3000/api/workspaces/${wsId}`, {
       method: 'PATCH',
-      body: { nameAr: 'اسم محدث', nameEn: 'Updated Name', description: 'desc' },
+      body: { nameAr: 'اسم محدث', description: 'desc' },
     });
     const res = await PATCH(req, routeParams);
 

@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This repository ("solalah") is a **private family collaboration platform** evolving from a read-only genealogy viewer. Built with Next.js 15 (App Router) + React 19 + TypeScript, backed by PostgreSQL (Prisma ORM) and Supabase Auth (self-hosted via Docker Compose). The app is RTL (right-to-left) with Arabic as the primary language. See `docs/product-requirements.md` for the full PRD and `docs/auth-provider-decisions.md` for auth architecture decisions.
 
-**Current state**: Phase 1 (Auth & Workspace Foundation) is in progress. Infrastructure is set up (Docker, Prisma, GoTrue). Auth pages (signup/login) work end-to-end. Workspace features are not yet implemented. The tree visualization still reads from static GEDCOM files in `/public/` — database-backed trees come in Phase 4.
+**Current state**: Phase 1 (Auth & Workspace Foundation) is complete. Auth (email/password + Google OAuth), workspace CRUD, membership/invitations, dashboard UI, and policy page are all working. Phase 2 (Branch Infrastructure) is next. The tree visualization still reads from static GEDCOM files in `/public/` — database-backed trees come in Phase 4.
 
 ## Package Management
 
@@ -33,7 +33,8 @@ This project uses **pnpm** as the package manager (version 10.28.0).
 - **Framework**: Next.js 15.x with App Router and Turbopack
 - **UI**: React 19.x with TypeScript 5.x
 - **ORM**: Prisma 7.x with `@prisma/adapter-pg` driver adapter
-- **Auth**: Supabase Auth (GoTrue) via `@supabase/supabase-js`, self-hosted
+- **Auth**: Supabase Auth (GoTrue) via `@supabase/ssr` (cookie-based), self-hosted
+- **Validation**: Zod for API request validation
 - **Database**: PostgreSQL 15 (via Docker Compose)
 - **API Gateway**: Kong 3.9.1 (routes `/auth/v1/*` to GoTrue)
 - **Tree Visualization**: @xyflow/react (React Flow) with custom tree layout algorithm
@@ -90,7 +91,7 @@ The app wraps the entire application in `<TreeProvider>` via `src/app/providers.
 The app uses dynamic routing (`src/app/[familySlug]/page.tsx`) with a family configuration system:
 - **Config** (`src/config/families.ts`): Defines `FamilyConfig` entries (slug, rootId, displayName, gedcomFile) in a `FAMILIES` record
 - The `test` family config uses `test-family.ged` (small fixture) — used by the `/test` browser test route
-- **Root URL** (`/`) returns 404 — users access family trees via `/{familySlug}` (e.g., `/saeed`, `/al-dabbagh`, `/al-dalati`, `/sharbek`)
+- **Root URL** (`/`) redirects authenticated users to `/dashboard`, shows landing page otherwise
 - Each family route is statically generated via `generateStaticParams()`
 - `FamilyTreeClient` wraps the tree in `<TreeProvider>` with a `forcedRootId` from the family config
 
@@ -160,17 +161,44 @@ The GEDCOM file (`public/saeed-family.ged`):
 - Run migrations: `npx prisma migrate dev`
 - Config: `prisma.config.ts` loads `DATABASE_URL` from `.env` via `dotenv/config`
 
-**Supabase Client Libraries**:
-- Browser client: `src/lib/supabase/client.ts` — uses `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- Server client: `src/lib/supabase/server.ts` — uses `SUPABASE_SERVICE_ROLE_KEY`
+**Supabase Client Libraries** (all via `@supabase/ssr`):
+- Browser client: `src/lib/supabase/client.ts` — `createBrowserClient` (auto cookie storage)
+- Server client: `src/lib/supabase/server.ts` — `createServerClient` with Next.js `cookies()` (async)
+- Middleware client: `src/lib/supabase/middleware.ts` — `updateSession()` for token refresh
 - Prisma singleton: `src/lib/db.ts` — uses `DATABASE_URL`
 
 **Auth Flow**:
-- Signup: `src/app/auth/signup/page.tsx` → GoTrue `/auth/v1/signup`
-- Login: `src/app/auth/login/page.tsx` → GoTrue `/auth/v1/token?grant_type=password`
-- Callback: `src/app/auth/callback/route.ts` — handles OAuth redirects and email confirmations
-- User sync: `POST /api/auth/sync-user` — mirrors GoTrue user to `public.users` table
-- Middleware: `src/middleware.ts` — protects routes by checking `sb-access-token` / `sb-refresh-token` cookies
+- Signup: `src/app/auth/signup/page.tsx` → GoTrue `/auth/v1/signup` + Google OAuth
+- Login: `src/app/auth/login/page.tsx` → GoTrue `/auth/v1/token?grant_type=password` + Google OAuth
+- Callback: `src/app/auth/callback/route.ts` — handles OAuth redirects, email confirmations, sets cookies, syncs user to DB
+- User sync: `POST /api/auth/sync-user` + shared helper `src/lib/auth/sync-user.ts` — mirrors GoTrue user to `public.users`
+- Middleware: `src/middleware.ts` — uses `@supabase/ssr` to verify/refresh sessions, redirects unauthenticated users to `/auth/login`
+- After login/signup, users are redirected to `/dashboard`
+
+**API Utilities**:
+- Auth guard: `src/lib/api/auth.ts` — `getAuthenticatedUser(request)` parses Bearer token, verifies via Supabase
+- Workspace guards: `src/lib/api/workspace-auth.ts` — `requireWorkspaceMember()`, `requireWorkspaceAdmin()`
+- Client fetch: `src/lib/api/client.ts` — `apiFetch(path, options)` auto-attaches Bearer token
+- Serialization: `src/lib/api/serialize.ts` — `serializeBigInt()` for JSON responses with BigInt fields
+
+**Workspace API Routes** (`src/app/api/workspaces/`):
+- `POST /api/workspaces` — create workspace (any authenticated user, creator becomes `workspace_admin`)
+- `GET /api/workspaces` — list user's workspaces
+- `GET /api/workspaces/[id]` — workspace detail (members only)
+- `PATCH /api/workspaces/[id]` — update settings (admin only)
+- `GET /api/workspaces/by-slug/[slug]` — resolve workspace by slug
+- `GET /api/workspaces/[id]/members` — list members
+- `POST /api/workspaces/[id]/members` — invite by email (admin only)
+- `PATCH /api/workspaces/[id]/members/[userId]` — update role/permissions (admin only)
+- `DELETE /api/workspaces/[id]/members/[userId]` — remove member (admin only, last-admin protected)
+- `POST /api/workspaces/[id]/invitations/code` — generate join code (admin only)
+- `POST /api/workspaces/join` — join via code
+
+**Dashboard & Workspace UI**:
+- `/dashboard` — workspace list (مساحات العائلة), create button, logout
+- `/dashboard/create` — create workspace form (اسم العائلة, slug, description)
+- `/workspaces/[slug]` — workspace detail with members, invite modal, tree link
+- `/policy` — public policy page (Arabic + English)
 
 **Environment Variables** (see `.env.example`):
 - `.env` — `DATABASE_URL` (used by Prisma CLI)
