@@ -72,9 +72,9 @@ export default function DashboardPage() {
             <div className={styles.emptyIcon}>
               <iconify-icon icon="material-symbols:home-work" width="64" height="64" />
             </div>
-            <h2 className={styles.emptyTitle}>لا توجد مساحات عائلة</h2>
+            <h2 className={styles.emptyTitle}>لا توجد مساحات عائلية</h2>
             <p className={styles.emptyText}>
-              أنشئ مساحة عائلة جديدة لبدء التعاون مع عائلتك
+              أنشئ مساحة عائلية جديدة لبدء التعاون مع عائلتك
             </p>
             <Link href="/dashboard/create" className={styles.emptyCreateButton}>
               إنشاء مساحة عائلة جديدة

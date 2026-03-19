@@ -7,25 +7,23 @@ import { FAMILIES } from '../src/config/families';
 // because this script runs outside of Next.js/Vite.
 // Instead, we create a standalone Prisma client.
 
+const ADMIN_EMAIL = 'bassel@autoflowa.com';
+
 async function main() {
-  const adminUserId = process.env.SEED_ADMIN_USER_ID || process.argv[2];
-
-  if (!adminUserId) {
-    console.error(
-      'Error: Admin user ID is required.\n' +
-        'Provide it via SEED_ADMIN_USER_ID env var or as the first argument.\n' +
-        'Usage: npx tsx prisma/seed.ts <admin-user-id>',
-    );
-    process.exit(1);
-  }
-
   const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
   const prisma = new PrismaClient({ adapter });
 
   try {
+    const adminUser = await prisma.user.findUnique({ where: { email: ADMIN_EMAIL } });
+    if (!adminUser) {
+      console.error(`Error: No user found with email ${ADMIN_EMAIL}. Make sure the user has signed up first.`);
+      process.exit(1);
+    }
+    const adminUserId = adminUser.id;
+
     const entries = Object.entries(FAMILIES).filter(([key]) => key !== 'test');
 
-    console.log(`Seeding ${entries.length} workspaces for admin user ${adminUserId}...`);
+    console.log(`Seeding ${entries.length} workspaces for admin user ${ADMIN_EMAIL} (${adminUserId})...`);
 
     for (const [, config] of entries) {
       const workspace = await prisma.workspace.upsert({
