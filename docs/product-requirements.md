@@ -358,39 +358,43 @@ Notification
 
 ## 7. Build Phases
 
-### Phase 1 — Auth & Workspace Foundation
+### Phase 1 — Auth & Workspace Foundation ✅ COMPLETE
 
-**✅ DONE — Infrastructure:**
+**✅ Infrastructure:**
 - Supabase Auth self-hosted (Docker Compose): PostgreSQL + GoTrue v2.186.0 + Kong 3.9.1 + Studio + pg-meta — `docker/docker-compose.yml`
 - Prisma ORM with full data model (20 tables) — `prisma/schema.prisma`, migration applied
 - Prisma v7 with `@prisma/adapter-pg` driver adapter — `src/lib/db.ts`
-- Supabase client libraries — `src/lib/supabase/client.ts` (browser), `src/lib/supabase/server.ts` (server)
+- Supabase client libraries via `@supabase/ssr` — `src/lib/supabase/client.ts` (browser), `src/lib/supabase/server.ts` (server), `src/lib/supabase/middleware.ts` (middleware)
 - Environment config — `.env.local` (Next.js), `docker/.env` (Docker Compose), `.env` (Prisma)
 - Phone OTP infrastructure ready in GoTrue config but activation deferred (SMS gateway not configured)
 
-**✅ DONE — Auth pages & middleware:**
-- Auth pages — `/auth/signup`, `/auth/login` with email/password (working end-to-end, Arabic RTL UI)
-- Auth callback route — `/auth/callback` for OAuth/email confirmation redirects
-- User sync API — `POST /api/auth/sync-user` mirrors GoTrue user to `public.users` (tested, but not yet called from auth pages)
-- Route protection middleware — `src/middleware.ts` checks for `sb-access-token` / `sb-refresh-token` cookies, redirects unauthenticated users to `/auth/login`
-- Tests — middleware tests + sync-user API tests
+**✅ Auth pages & middleware:**
+- Auth pages — `/auth/signup`, `/auth/login` with email/password + Google OAuth button (Arabic RTL UI)
+- Auth callback route — `/auth/callback` for OAuth/email confirmation redirects, sets auth cookies via `@supabase/ssr`
+- User sync — `POST /api/auth/sync-user` mirrors GoTrue user to `public.users`, wired into login/signup/callback flows
+- Shared sync helper — `src/lib/auth/sync-user.ts` (used by both API route and callback)
+- Route protection middleware — `src/middleware.ts` uses `@supabase/ssr` to verify/refresh sessions, redirects unauthenticated users to `/auth/login`
+- Auth utilities — `src/lib/api/auth.ts` (server-side `getAuthenticatedUser`), `src/lib/api/client.ts` (client-side `apiFetch` with auto Bearer token)
+- Tests — middleware, sync-user API, sync-user helper, callback, auth helper, API client (23 tests)
 
-**🔧 TODO — Complete auth flow:**
-- Wire `/api/auth/sync-user` into login/signup pages so `public.users` is populated after auth
-- Add Google OAuth button to auth pages (GoTrue config exists but UI is missing)
+**✅ Workspace features:**
+- Workspace CRUD API — `POST /api/workspaces` (create), `GET /api/workspaces` (list), `GET /api/workspaces/[id]` (detail), `PATCH /api/workspaces/[id]` (update), `GET /api/workspaces/by-slug/[slug]` (slug resolution)
+- Self-service workspace creation; creator becomes first `workspace_admin` (atomic via `$transaction`)
+- Workspace membership API — `GET /api/workspaces/[id]/members` (list), `POST /api/workspaces/[id]/members` (invite by email with optional tree-link), `PATCH /api/workspaces/[id]/members/[userId]` (update role/permissions), `DELETE /api/workspaces/[id]/members/[userId]` (remove, last-admin protected)
+- Join code API — `POST /api/workspaces/[id]/invitations/code` (generate code, e.g. `SAEED-4X7K`), `POST /api/workspaces/join` (join via code, validates expiry/max uses)
+- Content roles: admin can grant `tree_editor`, `news_editor`, `album_editor`, `event_editor` via membership update
+- Workspace auth guards — `src/lib/api/workspace-auth.ts` (`requireWorkspaceMember`, `requireWorkspaceAdmin`)
+- Request validation via `zod`; BigInt serialization via `src/lib/api/serialize.ts`
+- Dashboard UI — `/dashboard` (workspace list with "عائلة" prefix), `/dashboard/create` (create workspace form)
+- Workspace detail page — `/workspaces/[slug]` (members list, invite modal, tree link if family config exists)
+- Login/signup/callback redirect to `/dashboard`; root `/` redirects authenticated users to `/dashboard`
+- Seed script — `prisma/seed.ts` migrates existing family configs to workspace records (excludes `test`)
+- Storage quota tracked in schema (5 GB default) but not enforced
+- Tests — workspaces, workspace detail, workspace members, workspace invitations, workspace by-slug (38 tests)
 
-**🔲 TODO — Workspace features (not started):**
-- Workspace CRUD API routes (`/api/workspaces/*`) — no routes exist yet
-- Self-service workspace creation; creator becomes first `workspace_admin`
-- Workspace membership: email invite + workspace join code (WhatsApp-friendly)
-- Content roles: admin can grant `tree_editor`, `news_editor`, `album_editor`, `event_editor`
-- Protected routes: workspace pages require login **and membership**
-- Basic workspace dashboard (tree accessible; other features placeholder)
-- Existing family configs (`src/config/families.ts`) seeded as workspace records in the database
-- Storage quota tracked (visible to admin) but not enforced
-
-**🔲 TODO — Policy page (not started):**
-- Policy page (`/policy`): publicly accessible, covers terms, privacy, and future billing notice (route is whitelisted in middleware but page doesn't exist yet)
+**✅ Policy page:**
+- Policy page — `/policy` (publicly accessible, Arabic primary + English, covers terms/privacy/billing)
+- Clearly states platform is currently free; terms may change with notice
 
 ### Phase 2 — Branch Infrastructure
 - Branch creation (workspace_admin only)
