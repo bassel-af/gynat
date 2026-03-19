@@ -411,6 +411,18 @@ Notification
 - Permission enforcement: content scoped to workspace vs branch
 - Admin usage metrics view (no content access)
 
+**Security fixes (from Phase 1 audit):**
+- **[HIGH] Open redirect in auth callback and login/signup**: The `next` query parameter is used in redirects without validation. Validate that `next` starts with `/` and not `//` — reject any absolute URLs. Affects `src/app/auth/callback/route.ts` and `src/app/auth/login/page.tsx`, `src/app/auth/signup/page.tsx`.
+- **[HIGH] No rate limiting on join and workspace endpoints**: `/api/workspaces/join` and workspace creation routes have no rate limiting, enabling brute-force of join codes and API abuse. Add rate limiting at minimum on the join-by-code endpoint and workspace creation.
+- **[MEDIUM] Weak randomness for join code generation**: `Math.random()` used in `src/app/api/workspaces/[id]/invitations/code/route.ts` produces ~1.68M combinations — brute-forceable with no rate limiting. Replace with `crypto.randomBytes()` and increase random portion to 8+ characters.
+- **[MEDIUM] Race condition on invite code `useCount`**: The join flow reads invitation, checks `useCount < maxUses`, creates membership, then increments in separate queries with no transaction. Wrap the entire operation in `prisma.$transaction` with an atomic increment.
+- **[MEDIUM] API routes excluded from middleware auth**: All `/api` paths are treated as static assets in `src/middleware.ts` and bypass middleware entirely. Remove `/api` from the static asset exclusion to close the defense-in-depth gap.
+- **[MEDIUM] HTML injection in email templates**: `workspaceName` and `inviterName` are interpolated into HTML without encoding in `src/lib/email/templates/invite.ts`. HTML-encode all user-supplied values before inserting into email templates.
+- **[MEDIUM] Members list exposes full user records**: `GET /api/workspaces/[id]/members` uses `include: { user: true }` returning all columns including email and phone. Use `select` to return only displayName and avatarUrl; expose email only to admins.
+- **[LOW] Workspace `id` not validated as UUID**: Dynamic route `id` and `userId` params are passed to Prisma without UUID validation, resulting in 500 errors that may leak internals. Validate against a UUID regex and return 400 for invalid formats.
+- **[LOW] `sync-user` endpoint returns full DB user object**: Returns the entire Prisma user record in the response. Return only needed fields or a minimal success response.
+- **[LOW] SMTP transport missing `requireTLS`**: `src/lib/email/transport.ts` uses `secure: false` without `requireTLS: true`, allowing fallback to plaintext if STARTTLS is stripped. Add `requireTLS: true`.
+
 ### Phase 3 — User–Tree Linking
 - Flow A: invite-with-link (admin specifies individual at invite time, user confirms)
 - Flow B: member requests link, admin approves/rejects with notification
