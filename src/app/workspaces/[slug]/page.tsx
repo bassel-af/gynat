@@ -13,6 +13,8 @@ interface Workspace {
   nameAr: string;
   description: string | null;
   memberCount: number;
+  currentUserRole: string;
+  currentUserId: string;
 }
 
 interface Member {
@@ -45,7 +47,6 @@ export default function WorkspaceDetailPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [isAdmin, setIsAdmin] = useState(false);
 
   // Invite modal state
   const [showInvite, setShowInvite] = useState(false);
@@ -54,10 +55,22 @@ export default function WorkspaceDetailPage() {
   const [inviteError, setInviteError] = useState('');
   const [inviteSuccess, setInviteSuccess] = useState('');
 
+  // Edit workspace modal state
+  const [showEdit, setShowEdit] = useState(false);
+  const [editNameAr, setEditNameAr] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState('');
+
+  // Member management state
+  const [confirmRemove, setConfirmRemove] = useState<Member | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const [togglingRoleId, setTogglingRoleId] = useState<string | null>(null);
+  const [memberActionError, setMemberActionError] = useState('');
+
   useEffect(() => {
     async function fetchData() {
       try {
-        // Fetch workspace by slug
         const wsRes = await apiFetch(`/api/workspaces/by-slug/${slug}`);
         if (!wsRes.ok) {
           const body = await wsRes.json();
@@ -69,15 +82,10 @@ export default function WorkspaceDetailPage() {
         const ws = wsBody.data as Workspace;
         setWorkspace(ws);
 
-        // Fetch members
         const membersRes = await apiFetch(`/api/workspaces/${ws.id}/members`);
         if (membersRes.ok) {
           const membersBody = await membersRes.json();
           setMembers(membersBody.data);
-
-          // Check if current user is admin (we can infer from the membership list
-          // or from the by-slug response — for now check members)
-          // We'll determine admin status from the membership data
         }
       } catch {
         setError('فشل في تحميل مساحة العمل');
@@ -88,24 +96,57 @@ export default function WorkspaceDetailPage() {
     fetchData();
   }, [slug]);
 
-  // Determine admin status when members load
-  useEffect(() => {
-    if (members.length > 0 && workspace) {
-      // We need to check the current user's role. Since we fetched successfully,
-      // we can check if any member with admin role matches. But we don't have the
-      // current user ID here easily. Let's add a simpler approach:
-      // The by-slug endpoint already verified membership. We can check if we're admin
-      // by looking at the workspace creator or finding ourselves in the members list.
-      // For now, we'll rely on the membership role from members list.
-      // A pragmatic approach: try an admin-only action — or add role info to by-slug response.
-      // For now, let's just show the invite button to all members and let the API enforce.
-      // We'll mark admin if we see ourselves as workspace_admin in the members list.
-      // But we don't have our own userId easily. Let's just show invite for all and let API guard.
-      setIsAdmin(true); // Simplification: show invite button, API will reject if not admin
-    }
-  }, [members, workspace]);
-
+  const isAdmin = workspace?.currentUserRole === 'workspace_admin';
   const familyConfig = getFamilyBySlug(slug);
+
+  function openEdit() {
+    if (!workspace) return;
+    setEditNameAr(workspace.nameAr);
+    setEditDescription(workspace.description ?? '');
+    setEditError('');
+    setShowEdit(true);
+  }
+
+  async function handleEditWorkspace(e: React.FormEvent) {
+    e.preventDefault();
+    if (!workspace) return;
+    setEditError('');
+    setEditLoading(true);
+
+    try {
+      const res = await apiFetch(`/api/workspaces/${workspace.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nameAr: editNameAr,
+          description: editDescription || undefined,
+        }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json();
+        setEditError(body.error || 'فشل في حفظ التغييرات');
+        setEditLoading(false);
+        return;
+      }
+
+      const body = await res.json();
+      setWorkspace((prev) =>
+        prev
+          ? {
+              ...prev,
+              nameAr: body.data.nameAr,
+              description: body.data.description,
+            }
+          : prev,
+      );
+      setShowEdit(false);
+    } catch {
+      setEditError('فشل في حفظ التغييرات');
+    } finally {
+      setEditLoading(false);
+    }
+  }
 
   async function handleInvite(e: React.FormEvent) {
     e.preventDefault();
@@ -123,9 +164,6 @@ export default function WorkspaceDetailPage() {
 
       if (!res.ok) {
         const body = await res.json();
-        if (res.status === 403) {
-          setIsAdmin(false);
-        }
         setInviteError(body.error || 'فشل في إرسال الدعوة');
         setInviteLoading(false);
         return;
@@ -133,10 +171,76 @@ export default function WorkspaceDetailPage() {
 
       setInviteSuccess(`تم إرسال دعوة إلى ${inviteEmail}`);
       setInviteEmail('');
-      setInviteLoading(false);
     } catch {
       setInviteError('فشل في إرسال الدعوة');
+    } finally {
       setInviteLoading(false);
+    }
+  }
+
+  async function handleRemoveMember() {
+    if (!workspace || !confirmRemove) return;
+    setRemovingId(confirmRemove.userId);
+    setMemberActionError('');
+
+    try {
+      const res = await apiFetch(
+        `/api/workspaces/${workspace.id}/members/${confirmRemove.userId}`,
+        { method: 'DELETE' },
+      );
+
+      if (!res.ok) {
+        const body = await res.json();
+        setMemberActionError(body.error || 'فشل في إزالة العضو');
+        setRemovingId(null);
+        setConfirmRemove(null);
+        return;
+      }
+
+      setMembers((prev) => prev.filter((m) => m.userId !== confirmRemove.userId));
+      setWorkspace((prev) =>
+        prev ? { ...prev, memberCount: prev.memberCount - 1 } : prev,
+      );
+    } catch {
+      setMemberActionError('فشل في إزالة العضو');
+    } finally {
+      setRemovingId(null);
+      setConfirmRemove(null);
+    }
+  }
+
+  async function handleToggleRole(member: Member) {
+    if (!workspace) return;
+    setTogglingRoleId(member.userId);
+    setMemberActionError('');
+
+    const newRole =
+      member.role === 'workspace_admin' ? 'workspace_member' : 'workspace_admin';
+
+    try {
+      const res = await apiFetch(
+        `/api/workspaces/${workspace.id}/members/${member.userId}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ role: newRole }),
+        },
+      );
+
+      if (!res.ok) {
+        const body = await res.json();
+        setMemberActionError(body.error || 'فشل في تغيير الدور');
+        setTogglingRoleId(null);
+        return;
+      }
+
+      setMembers((prev) =>
+        prev.map((m) => (m.userId === member.userId ? { ...m, role: newRole } : m)),
+      );
+    } catch {
+      setMemberActionError('فشل في تغيير الدور');
+    } finally {
+      setTogglingRoleId(null);
     }
   }
 
@@ -179,7 +283,14 @@ export default function WorkspaceDetailPage() {
       <div className={styles.content}>
         {/* Workspace Info */}
         <div className={styles.infoCard}>
-          <h2 className={styles.workspaceName}>{workspace.nameAr}</h2>
+          <div className={styles.infoCardHeader}>
+            <h2 className={styles.workspaceName}>{workspace.nameAr}</h2>
+            {isAdmin && (
+              <button onClick={openEdit} className={styles.editButton}>
+                تعديل
+              </button>
+            )}
+          </div>
           {workspace.description && (
             <p className={styles.workspaceDescription}>{workspace.description}</p>
           )}
@@ -218,6 +329,13 @@ export default function WorkspaceDetailPage() {
               </button>
             )}
           </div>
+
+          {memberActionError && (
+            <div className={styles.error} style={{ marginBottom: 'var(--space-3)' }}>
+              {memberActionError}
+            </div>
+          )}
+
           <div className={styles.membersList}>
             {members.map((m) => (
               <div key={m.userId} className={styles.memberCard}>
@@ -227,7 +345,37 @@ export default function WorkspaceDetailPage() {
                   </span>
                   <span className={styles.memberEmail}>{m.user.email}</span>
                 </div>
-                <span className={styles.memberRole}>{roleLabel(m.role)}</span>
+                <div className={styles.memberRight}>
+                  <span className={styles.memberRole}>{roleLabel(m.role)}</span>
+                  {isAdmin && (
+                    <div className={styles.memberActions}>
+                      <button
+                        className={styles.roleToggleButton}
+                        onClick={() => handleToggleRole(m)}
+                        disabled={togglingRoleId === m.userId}
+                        title={
+                          m.role === 'workspace_admin'
+                            ? 'تخفيض إلى عضو'
+                            : 'ترقية إلى مدير'
+                        }
+                      >
+                        {togglingRoleId === m.userId
+                          ? '...'
+                          : m.role === 'workspace_admin'
+                          ? 'تخفيض'
+                          : 'ترقية'}
+                      </button>
+                      <button
+                        className={styles.removeButton}
+                        onClick={() => setConfirmRemove(m)}
+                        disabled={removingId === m.userId}
+                        title="إزالة من المساحة"
+                      >
+                        إزالة
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -242,9 +390,7 @@ export default function WorkspaceDetailPage() {
             <form onSubmit={handleInvite} className={styles.modalForm}>
               {inviteError && <div className={styles.error}>{inviteError}</div>}
               {inviteSuccess && (
-                <div style={{ color: '#68d391', fontSize: 'var(--font-size-sm)' }}>
-                  {inviteSuccess}
-                </div>
+                <div className={styles.successMessage}>{inviteSuccess}</div>
               )}
               <input
                 type="email"
@@ -272,6 +418,89 @@ export default function WorkspaceDetailPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Workspace Modal */}
+      {showEdit && (
+        <div className={styles.modalOverlay} onClick={() => setShowEdit(false)}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h3 className={styles.modalTitle}>تعديل المساحة</h3>
+            <form onSubmit={handleEditWorkspace} className={styles.modalForm}>
+              {editError && <div className={styles.error}>{editError}</div>}
+              <div className={styles.fieldGroup}>
+                <label className={styles.fieldLabel}>اسم العائلة</label>
+                <input
+                  type="text"
+                  value={editNameAr}
+                  onChange={(e) => setEditNameAr(e.target.value)}
+                  className={styles.modalInput}
+                  required
+                />
+              </div>
+              <div className={styles.fieldGroup}>
+                <label className={styles.fieldLabel}>الوصف (اختياري)</label>
+                <textarea
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  className={styles.modalTextarea}
+                  rows={3}
+                  placeholder="وصف مختصر للمساحة"
+                />
+              </div>
+              <div className={styles.modalActions}>
+                <button
+                  type="button"
+                  onClick={() => setShowEdit(false)}
+                  className={styles.modalCancel}
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="submit"
+                  className={styles.modalSubmit}
+                  disabled={editLoading}
+                >
+                  {editLoading ? 'جاري الحفظ...' : 'حفظ'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Remove Modal */}
+      {confirmRemove && (
+        <div
+          className={styles.modalOverlay}
+          onClick={() => setConfirmRemove(null)}
+        >
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h3 className={styles.modalTitle}>تأكيد الإزالة</h3>
+            <p className={styles.confirmText}>
+              هل أنت متأكد من إزالة{' '}
+              <strong>
+                {confirmRemove.user.displayName || confirmRemove.user.email}
+              </strong>{' '}
+              من المساحة؟
+            </p>
+            <div className={styles.modalActions}>
+              <button
+                type="button"
+                onClick={() => setConfirmRemove(null)}
+                className={styles.modalCancel}
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={handleRemoveMember}
+                className={styles.modalDanger}
+                disabled={removingId !== null}
+              >
+                {removingId !== null ? 'جاري الإزالة...' : 'إزالة'}
+              </button>
+            </div>
           </div>
         </div>
       )}

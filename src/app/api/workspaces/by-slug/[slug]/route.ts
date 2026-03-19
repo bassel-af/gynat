@@ -36,6 +36,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   });
 
   return NextResponse.json({
-    data: serializeBigInt({ ...workspace, memberCount }),
+    data: serializeBigInt({
+      ...workspace,
+      memberCount,
+      currentUserRole: membership.role,
+      currentUserId: user.id,
+    }),
   });
 }

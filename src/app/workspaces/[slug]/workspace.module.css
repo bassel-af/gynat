@@ -70,11 +70,37 @@
   margin-bottom: var(--space-6);
 }
 
+.infoCardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-2);
+}
+
+.editButton {
+  flex-shrink: 0;
+  padding: var(--space-1) var(--space-3);
+  border-radius: 6px;
+  border: 1px solid var(--alpha-white-15);
+  background: transparent;
+  color: var(--alpha-white-50);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: background var(--transition-base), color var(--transition-base);
+}
+
+.editButton:hover {
+  background: var(--alpha-white-08);
+  color: var(--alpha-white-80);
+}
+
 .workspaceName {
   font-size: var(--font-size-3xl);
   font-weight: var(--font-weight-bold);
   color: var(--alpha-white-85);
-  margin: 0 0 var(--space-2);
+  margin: 0;
 }
 
 .workspaceDescription {
@@ -176,6 +202,60 @@
   border-radius: 8px;
   border: 1px solid var(--alpha-white-06);
   background: var(--alpha-white-04);
+  gap: var(--space-3);
+}
+
+.memberRight {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-shrink: 0;
+}
+
+.memberActions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.roleToggleButton {
+  padding: var(--space-1) var(--space-3);
+  border-radius: 6px;
+  border: 1px solid var(--alpha-white-15);
+  background: transparent;
+  color: var(--alpha-white-50);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  transition: background var(--transition-base), color var(--transition-base);
+}
+
+.roleToggleButton:hover:not(:disabled) {
+  background: var(--alpha-white-08);
+  color: var(--alpha-white-80);
+}
+
+.roleToggleButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.removeButton {
+  padding: var(--space-1) var(--space-3);
+  border-radius: 6px;
+  border: 1px solid rgba(229, 62, 62, 0.3);
+  background: transparent;
+  color: #fc8181;
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  transition: background var(--transition-base);
+}
+
+.removeButton:hover:not(:disabled) {
+  background: rgba(229, 62, 62, 0.1);
+}
+
+.removeButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .memberInfo {
@@ -328,6 +408,80 @@
 .modalSubmit:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.modalDanger {
+  padding: var(--space-2) var(--space-5);
+  border-radius: 8px;
+  border: 1px solid rgba(229, 62, 62, 0.4);
+  background: rgba(229, 62, 62, 0.15);
+  color: #fc8181;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: background var(--transition-base);
+}
+
+.modalDanger:hover:not(:disabled) {
+  background: rgba(229, 62, 62, 0.25);
+}
+
+.modalDanger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.fieldLabel {
+  font-size: var(--font-size-sm);
+  color: var(--alpha-white-50);
+  font-weight: var(--font-weight-medium);
+}
+
+.modalTextarea {
+  padding: var(--space-3) var(--space-4);
+  border-radius: 8px;
+  border: 1px solid var(--alpha-white-10);
+  background: var(--alpha-white-04);
+  color: var(--alpha-white-85);
+  font-size: var(--font-size-base);
+  font-family: inherit;
+  outline: none;
+  resize: vertical;
+  transition: border-color var(--transition-base);
+}
+
+.modalTextarea::placeholder {
+  color: var(--alpha-white-25);
+}
+
+.modalTextarea:focus {
+  border-color: var(--color-primary);
+}
+
+.successMessage {
+  padding: var(--space-2) var(--space-3);
+  border-radius: 6px;
+  background: rgba(72, 187, 120, 0.1);
+  border: 1px solid rgba(72, 187, 120, 0.25);
+  color: #68d391;
+  font-size: var(--font-size-sm);
+}
+
+.confirmText {
+  font-size: var(--font-size-base);
+  color: var(--alpha-white-60);
+  line-height: 1.6;
+  margin: 0 0 var(--space-4);
+}
+
+.confirmText strong {
+  color: var(--alpha-white-85);
 }
 
 @media (max-width: 640px) {
