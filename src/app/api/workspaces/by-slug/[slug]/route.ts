@@ -28,7 +28,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   });
 
   if (!membership) {
-    return NextResponse.json({ error: 'Not a member of this workspace' }, { status: 403 });
+    return NextResponse.json({ error: 'لست عضوًا في هذه المساحة' }, { status: 403 });
   }
 
   const memberCount = await prisma.workspaceMembership.count({

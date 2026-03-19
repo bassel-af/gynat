@@ -26,7 +26,7 @@ export async function requireWorkspaceMember(
   });
 
   if (!membership) {
-    return NextResponse.json({ error: 'Not a member of this workspace' }, { status: 403 });
+    return NextResponse.json({ error: 'لست عضوًا في هذه المساحة' }, { status: 403 });
   }
 
   return { user, membership };
