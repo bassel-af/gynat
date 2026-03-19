@@ -97,14 +97,20 @@ services:
     ports:
       - "3001:3000"
     environment:
+      HOSTNAME: "::"
       STUDIO_PG_META_URL: "http://pg-meta:8080"
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-your-super-secret-password}
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: solalah
+      PG_META_CRYPTO_KEY: ${PG_META_CRYPTO_KEY:-your-encryption-key-32-chars-min}
       DEFAULT_ORGANIZATION_NAME: "Solalah"
       DEFAULT_PROJECT_NAME: "Solalah"
       SUPABASE_URL: "http://kong:8000"
       SUPABASE_PUBLIC_URL: ${API_EXTERNAL_URL:-http://localhost:8000}
       SUPABASE_ANON_KEY: ${ANON_KEY:-your-anon-key}
       SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY:-your-service-role-key}
+      AUTH_JWT_SECRET: ${JWT_SECRET:-your-jwt-secret-at-least-32-characters-long}
     depends_on:
       - kong
       - pg-meta
@@ -117,8 +123,9 @@ services:
       PG_META_DB_HOST: db
       PG_META_DB_PORT: "5432"
       PG_META_DB_NAME: solalah
-      PG_META_DB_USER: postgres
+      PG_META_DB_USER: supabase_admin
       PG_META_DB_PASSWORD: ${POSTGRES_PASSWORD:-your-super-secret-password}
+      CRYPTO_KEY: ${PG_META_CRYPTO_KEY:-your-encryption-key-32-chars-min}
     depends_on:
       db:
         condition: service_healthy
