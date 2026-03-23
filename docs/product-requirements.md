@@ -420,9 +420,30 @@ Notification
 - All mutations logged to `TreeEditLog` for future audit trail (Phase 6)
 - Workspace tree page at `/workspaces/[slug]/tree` with empty tree state, individual add/edit form, and edit controls in PersonDetail sidebar (edit, add child, add spouse, add parent, delete)
 - Seed script extended to populate tree data from existing GEDCOM files
-- 94 new tests (264 total)
+- 94 new tests (264 total before security hardening)
 
-We need also btw to make it possible in edit person UI to mark him as dead without putting dates. Also we need to add a way to add notes. Check if these things are also parsable from gedcom or not.
+**✅ Security hardening:**
+- Open redirect fix: `validateRedirectPath()` validates `?next` parameter in login/signup/callback — rejects absolute URLs, protocol-relative URLs, `javascript:` schemes
+- Middleware auth bypass fix: removed `/api` from static asset bypass — API routes now get session token refresh via middleware
+- Join code hardening: replaced `Math.random()` with `crypto.randomBytes()`, increased code length from 4→8 random characters (~2.8T possibilities)
+- Race condition fix: join code acceptance wrapped in `prisma.$transaction()` to prevent exceeding `maxUses`
+- Rate limiting (two layers): Kong `rate-limiting` plugin (30/min on auth routes) + in-memory `RateLimiter` class on 10 API route handlers (per-user, configurable windows)
+- Server-side privacy enforcement: `redactPrivateIndividuals()` strips PII from `isPrivate` individuals before API response (names → "خاص", dates/places cleared, tree structure preserved)
+- Security headers: X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, HSTS, X-DNS-Prefetch-Control added in `next.config.ts`
+- CORS: restricted Kong CORS origins from wildcard `*` to `http://localhost:3000`
+- Docker secrets: replaced placeholder defaults with `:?` required syntax — Docker Compose fails to start if secrets are missing
+- Input validation: added `.max()` constraints to all Zod string fields across 6 route files (slug≤64, names≤200, description≤2000, dates≤50, places≤500, email≤254)
+- Error handling: replaced `throw err` with generic 500 responses — no stack trace leakage
+- HTML injection: `escapeHtml()` applied to `inviterName`/`workspaceName` in email templates; `inviteUrl` validated as `https://` before use in `href`; subject line stripped of `\r\n`
+- Port binding: PostgreSQL, GoTrue, Studio bound to `127.0.0.1` (Kong remains public)
+- Email verification: disabled `GOTRUE_MAILER_AUTOCONFIRM` — signup now requires email confirmation
+- Workspace creation limit: capped at 5 owned workspaces per user (counts `workspace_admin` roles only)
+- Invitation enumeration: consolidated all invalid-invitation error responses into a single generic message
+- Member data exposure: member list API restricted to `id`, `displayName`, `avatarUrl` (no email/phone)
+- 59 new security tests (323 total)
+
+**📝 Notes for future phases:**
+- In-memory rate limiter is single-process — replace with Redis/Upstash before horizontal scaling
 
 ### Phase 3 — Family-Aware Relationship Editing
 
@@ -442,6 +463,17 @@ Phase 2 introduced basic tree editing, but the "Add child" flow has a gap: when 
 **Move child between families:**
 - A tree editor can move a child from one family to another (remove from old family, add to new family)
 - This handles corrections when a child was added to the wrong family
+
+**Mark deceased without dates:**
+- The `isDeceased` DB column already exists — add a checkbox to the edit person form so a person can be marked as deceased without requiring death date/place
+- Check if GEDCOM `DEAT` tag without a `DATE` sub-tag is already parsed correctly by the existing parser
+
+**Birth place in UI:**
+- The `birthPlace` field exists in the DB and API but is missing from both the person detail view and the edit person form — add it to both
+
+**Notes field on individuals:**
+- Add a `notes` text field to individual records (DB + API + UI)
+- Check if GEDCOM `NOTE` tag should be parsed and stored during import
 
 **Fix seed script — subtree-per-workspace seeding:**
 - Currently, the seed script imports the entire GEDCOM file (all 551 individuals) into every workspace. This is wrong — each workspace should only contain its own family subtree.
