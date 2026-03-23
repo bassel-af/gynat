@@ -5,7 +5,7 @@ import type { User } from '@supabase/supabase-js';
 
 interface WorkspaceAuthResult {
   user: User;
-  membership: { userId: string; workspaceId: string; role: string };
+  membership: { userId: string; workspaceId: string; role: string; permissions: string[] };
 }
 
 /**
@@ -51,6 +51,34 @@ export async function requireWorkspaceAdmin(
   }
 
   return result;
+}
+
+/**
+ * Authenticates the user and verifies tree editing permission.
+ * Allows workspace admins (implicit) or members with tree_editor permission.
+ * Returns the user and membership, or a NextResponse error.
+ */
+export async function requireTreeEditor(
+  request: NextRequest,
+  workspaceId: string,
+): Promise<WorkspaceAuthResult | NextResponse> {
+  const result = await requireWorkspaceMember(request, workspaceId);
+
+  if (result instanceof NextResponse) {
+    return result;
+  }
+
+  if (
+    result.membership.role === 'workspace_admin' ||
+    result.membership.permissions.includes('tree_editor')
+  ) {
+    return result;
+  }
+
+  return NextResponse.json(
+    { error: 'ليس لديك صلاحية تعديل شجرة العائلة' },
+    { status: 403 },
+  );
 }
 
 /**

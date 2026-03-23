@@ -91,7 +91,7 @@
   margin-top: var(--space-6);
 }
 
-/* Focus in Tree Button */
+/* Focus in Tree Button (also used for Edit button) */
 .focusButton {
   display: flex;
   align-items: center;
@@ -121,6 +121,169 @@
 
 .focusButton:active {
   transform: scale(0.92);
+}
+
+/* ============================================
+   ACTION BAR — Add child / spouse / parent
+   ============================================ */
+
+.actionBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-9);
+  background: var(--alpha-white-04);
+  border-bottom: 1px solid var(--alpha-white-06);
+  flex-wrap: wrap;
+}
+
+.actionButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: transparent;
+  border: 1px solid var(--alpha-white-15);
+  border-radius: var(--radius-md);
+  color: var(--alpha-white-60);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  font-family: inherit;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.actionButton:hover {
+  background: var(--alpha-white-08);
+  border-color: var(--alpha-white-25);
+  color: var(--color-text-inverse);
+}
+
+.actionButton:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus-primary);
+  border-color: var(--color-primary-light);
+}
+
+.actionButton:active {
+  transform: scale(0.97);
+}
+
+.actionButton svg {
+  flex-shrink: 0;
+}
+
+/* ============================================
+   DELETE SECTION
+   ============================================ */
+
+.deleteSection {
+  flex-shrink: 0;
+  padding: var(--space-5) var(--space-9);
+  border-top: 1px solid var(--alpha-white-06);
+}
+
+.deleteButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: transparent;
+  border: 1px solid rgba(229, 62, 62, 0.25);
+  border-radius: var(--radius-md);
+  color: rgba(229, 62, 62, 0.7);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  font-family: inherit;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.deleteButton:hover {
+  background: rgba(229, 62, 62, 0.1);
+  border-color: rgba(229, 62, 62, 0.4);
+  color: var(--color-error);
+}
+
+.deleteButton:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.15);
+  border-color: var(--color-error);
+}
+
+.deleteButton svg {
+  flex-shrink: 0;
+}
+
+/* Delete confirmation */
+.deleteConfirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.deleteConfirmText {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: rgba(229, 62, 62, 0.85);
+}
+
+.deleteConfirmActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.deleteConfirmYes {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-2) var(--space-5);
+  background: rgba(229, 62, 62, 0.15);
+  border: 1px solid rgba(229, 62, 62, 0.35);
+  border-radius: var(--radius-md);
+  color: var(--color-error);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  font-family: inherit;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.deleteConfirmYes:hover {
+  background: rgba(229, 62, 62, 0.25);
+  border-color: rgba(229, 62, 62, 0.5);
+}
+
+.deleteConfirmYes:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.deleteConfirmNo {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-2) var(--space-5);
+  background: transparent;
+  border: 1px solid var(--alpha-white-15);
+  border-radius: var(--radius-md);
+  color: var(--alpha-white-60);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  font-family: inherit;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.deleteConfirmNo:hover {
+  background: var(--alpha-white-08);
+  border-color: var(--alpha-white-25);
+  color: var(--color-text-inverse);
+}
+
+.deleteConfirmNo:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Relationship Sections */
@@ -286,6 +449,10 @@
     font-size: var(--font-size-xl);
   }
 
+  .actionBar {
+    padding: var(--space-3) var(--space-7);
+  }
+
   .sectionTitle {
     padding: var(--space-3) var(--space-7);
   }
@@ -298,6 +465,10 @@
   .relPersonClickable {
     padding: var(--space-3) var(--space-7);
     padding-right: calc(var(--space-7) + 16px);
+  }
+
+  .deleteSection {
+    padding: var(--space-4) var(--space-7);
   }
 }
 
@@ -314,6 +485,11 @@
     font-size: var(--font-size-lg);
   }
 
+  .actionBar {
+    padding: var(--space-3) var(--space-6);
+    gap: var(--space-2);
+  }
+
   .sectionTitle {
     padding: var(--space-3) var(--space-6);
   }
@@ -326,5 +502,9 @@
   .relPersonClickable {
     padding: var(--space-3) var(--space-6);
     padding-right: calc(var(--space-6) + 16px);
+  }
+
+  .deleteSection {
+    padding: var(--space-3) var(--space-6);
   }
 }

@@ -23,10 +23,6 @@ model User {
   workspaceMemberships WorkspaceMembership[]
   createdWorkspaces    Workspace[]           @relation("WorkspaceCreator")
   sentWorkspaceInvites WorkspaceInvitation[] @relation("InviteSender")
-  branchMemberships    BranchMembership[]
-  createdBranches      Branch[]              @relation("BranchCreator")
-  sentBranchInvites    BranchInvitation[]    @relation("BranchInviteSender")
-  receivedBranchInvites BranchInvitation[]   @relation("BranchInviteReceiver")
   userTreeLinks        UserTreeLink[]        @relation("TreeLinkUser")
   requestedTreeLinks   UserTreeLink[]        @relation("TreeLinkRequester")
   treeEdits            TreeEditLog[]
@@ -59,7 +55,6 @@ model Workspace {
   createdBy   User                  @relation("WorkspaceCreator", fields: [createdById], references: [id])
   memberships WorkspaceMembership[]
   invitations WorkspaceInvitation[]
-  branches    Branch[]
   familyTree  FamilyTree?
   posts       Post[]
   albums      Album[]
@@ -139,78 +134,6 @@ model WorkspaceInvitation {
   @@map("workspace_invitations")
 }
 
-// =============================================================================
-// Branches
-// =============================================================================
-
-model Branch {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  workspaceId String   @map("workspace_id") @db.Uuid
-  name        String
-  description String?
-  createdById String   @map("created_by") @db.Uuid
-  createdAt   DateTime @default(now()) @map("created_at")
-
-  // Relations
-  workspace   Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  createdBy   User               @relation("BranchCreator", fields: [createdById], references: [id])
-  memberships BranchMembership[]
-  invitations BranchInvitation[]
-  posts       Post[]
-  albums      Album[]
-  events      Event[]
-
-  @@map("branches")
-}
-
-// =============================================================================
-// Branch Membership
-// =============================================================================
-
-enum BranchRole {
-  branch_admin
-  branch_member
-}
-
-model BranchMembership {
-  userId   String     @map("user_id") @db.Uuid
-  branchId String     @map("branch_id") @db.Uuid
-  role     BranchRole @default(branch_member)
-  joinedAt DateTime   @default(now()) @map("joined_at")
-
-  // Relations
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
-
-  @@id([userId, branchId])
-  @@map("branch_memberships")
-}
-
-// =============================================================================
-// Branch Invitations
-// =============================================================================
-
-enum BranchInvitationStatus {
-  pending
-  accepted
-  declined
-}
-
-model BranchInvitation {
-  id            String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  branchId      String                 @map("branch_id") @db.Uuid
-  invitedUserId String                 @map("invited_user_id") @db.Uuid
-  invitedById   String                 @map("invited_by") @db.Uuid
-  status        BranchInvitationStatus @default(pending)
-  createdAt     DateTime               @default(now()) @map("created_at")
-
-  // Relations
-  branch      Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  invitedUser User   @relation("BranchInviteReceiver", fields: [invitedUserId], references: [id])
-  invitedBy   User   @relation("BranchInviteSender", fields: [invitedById], references: [id])
-
-  @@map("branch_invitations")
-}
 
 // =============================================================================
 // User–Tree Linking
@@ -270,6 +193,7 @@ model Individual {
   birthPlace  String?  @map("birth_place")
   deathDate   String?  @map("death_date")
   deathPlace  String?  @map("death_place")
+  isDeceased  Boolean  @default(false) @map("is_deceased")
   isPrivate   Boolean  @default(false) @map("is_private")
   createdById String?  @map("created_by") @db.Uuid
   updatedAt   DateTime @updatedAt @map("updated_at")
@@ -346,7 +270,6 @@ model TreeEditLog {
 model Post {
   id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   workspaceId    String   @map("workspace_id") @db.Uuid
-  branchId       String?  @map("branch_id") @db.Uuid // null = workspace-scoped
   authorId       String   @map("author_id") @db.Uuid
   content        String
   mediaSizeBytes BigInt   @default(0) @map("media_size_bytes")
@@ -355,7 +278,6 @@ model Post {
 
   // Relations
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  branch    Branch?   @relation(fields: [branchId], references: [id], onDelete: Cascade)
   author    User      @relation(fields: [authorId], references: [id])
 
   @@index([workspaceId, createdAt])
@@ -369,14 +291,12 @@ model Post {
 model Album {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   workspaceId String   @map("workspace_id") @db.Uuid
-  branchId    String?  @map("branch_id") @db.Uuid
   name        String
   createdById String   @map("created_by") @db.Uuid
   createdAt   DateTime @default(now()) @map("created_at")
 
   // Relations
   workspace Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  branch    Branch?      @relation(fields: [branchId], references: [id], onDelete: Cascade)
   createdBy User         @relation(fields: [createdById], references: [id])
   media     AlbumMedia[]
 
@@ -412,7 +332,6 @@ enum RsvpVisibility {
 model Event {
   id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   workspaceId String         @map("workspace_id") @db.Uuid
-  branchId    String?        @map("branch_id") @db.Uuid
   title       String
   startAt     DateTime       @map("start_at")
   endAt       DateTime?      @map("end_at")
@@ -425,7 +344,6 @@ model Event {
 
   // Relations
   workspace Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  branch    Branch?     @relation(fields: [branchId], references: [id], onDelete: Cascade)
   createdBy User        @relation(fields: [createdById], references: [id])
   rsvps     EventRsvp[]
 

@@ -40,6 +40,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       ...workspace,
       memberCount,
       currentUserRole: membership.role,
+      currentUserPermissions: membership.permissions,
       currentUserId: user.id,
     }),
   });

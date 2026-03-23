@@ -1,7 +1,7 @@
 # Product Requirements Document — Solalah Platform
 
-**Version**: 1.0
-**Date**: 2026-03-19
+**Version**: 2.0
+**Date**: 2026-03-23
 **Status**: Draft
 **Audience**: Human developers, AI coding assistants
 
@@ -16,15 +16,18 @@ This PRD describes the evolution of an **already-running** Next.js application. 
 - Multi-family routing already exists: `/{familySlug}` (e.g., `/saeed`, `/al-dabbagh`)
 - Family configs are statically defined in `src/config/families.ts` as a `FAMILIES` record with slugs, root IDs, and GEDCOM file paths
 - GEDCOM files live in `/public/` and are fetched and parsed entirely in the browser
-- GEDCOM parser lives at `src/lib/gedcom/parser.ts` — this must be preserved and reused as the import engine in Phase 4
+- GEDCOM parser lives at `src/lib/gedcom/parser.ts` — this must be preserved and reused as the import engine in Phase 3
 - No authentication, no database, no backend — everything is client-side today
 - The root URL (`/`) returns 404; all content is under `/{familySlug}`
 
-**What Phase 1 changes:**
-- Introduces a database (PostgreSQL via Supabase), an auth layer (Supabase Auth / GoTrue), and Next.js API routes as the backend
-- The existing `/{familySlug}` routing evolves: slugs become workspace slugs stored in the database rather than static config
-- Existing family configs in `src/config/families.ts` must be seeded as workspace records in the database during Phase 1 setup
-- The existing tree visualization continues to read from static GEDCOM files until Phase 4 (no tree data migration in Phase 1)
+**What Phase 1 changed:**
+- Introduced a database (PostgreSQL via Supabase), an auth layer (Supabase Auth / GoTrue), and Next.js API routes as the backend
+- The existing `/{familySlug}` routing evolved: slugs become workspace slugs stored in the database rather than static config
+- Existing family configs in `src/config/families.ts` were seeded as workspace records in the database
+- The existing tree visualization continues to read from static GEDCOM files until Phase 2 (no tree data migration in Phase 1)
+
+**⚠️ Phase 1 cleanup required in Phase 2:**
+Phase 1 created a Prisma schema with 20 tables, including branch-related tables (`branches`, `branch_memberships`, `branch_invitations`) and `branch_id` foreign keys on content tables (`posts`, `albums`, `events`). These must be **removed via a Prisma migration** at the start of Phase 2, as the branch model has been eliminated from the architecture (see Section 2.2). The notification types `branch_invite` and `branch_admin_vacancy` should also be removed.
 
 **Tech stack:**
 - Framework: Next.js 15 App Router
@@ -41,7 +44,9 @@ This PRD describes the evolution of an **already-running** Next.js application. 
 
 ## 1. Vision
 
-Solalah is evolving from a read-only genealogy viewer into a **private family collaboration platform**. Each family gets a shared digital space (workspace) with a family tree, news, albums, and events. Families can organize into smaller private sub-groups (branches) without losing membership in the larger family. A single user account works across multiple family workspaces simultaneously.
+Solalah is evolving from a read-only genealogy viewer into a **private family collaboration platform**. Each family gets a shared digital space (workspace) with a family tree, news, albums, and events. A single user account works across multiple family workspaces simultaneously.
+
+Sub-families that want their own private content (news, albums, events, meetings) simply create their own independent workspace. Workspaces are never nested or dependent on each other. The only cross-workspace connection is at the **tree level**: a workspace can display a read-only pointer to a branch (subtree) from another workspace's family tree.
 
 The platform is Arabic-first, RTL, and designed for families — not for general social networking. Privacy is a core value: private content must stay private, even from platform administrators.
 
@@ -51,36 +56,34 @@ The platform is Arabic-first, RTL, and designed for families — not for general
 
 ### 2.1 Workspace
 
-A workspace represents an extended family (e.g., "آل سعيد"). It is the top-level organizational unit.
+A workspace represents a family (e.g., "آل سعيد" for an extended family, or "عائلة أحمد" for a nuclear family). It is the **only** organizational unit in the platform — there are no sub-groups, branches, or nested structures within a workspace.
 
 - Any registered user can create a workspace (self-service)
 - Has exactly one family tree shared by all members
 - Has workspace-wide content visible to all members (news, events, albums)
 - Has one or more admins and zero or more members
-- Has zero or more branches (sub-groups)
 - Members join by invitation only — no self-registration into a workspace
-- A workspace can optionally be linked to another workspace through a shared individual (cross-workspace identity). The data model supports this; the UI for it is deferred.
+- Workspaces are fully independent — no workspace owns, nests under, or depends on another workspace
 - Storage quota: **5 GB per workspace** (media across all content types counts toward this limit). Quota is tracked and visible to admins but **not enforced in v1** — the platform is free during the growth phase. Enforcement and billing will be introduced in a future version. A policy page must exist from launch that can be updated when this changes.
 
-### 2.2 Branch
+### 2.2 No In-Workspace Branches
 
-A branch is a private sub-group inside a workspace (e.g., a nuclear family within the extended family).
+Earlier versions of this PRD defined "branches" as private sub-groups inside a workspace with their own content scope, roles, and permissions. **This model has been removed entirely.** The reasons:
 
-- Belongs to exactly one workspace
-- Only a `workspace_admin` can create a branch
-- Has its own private content (news, events, albums) — not visible to workspace members unless they are branch members
-- Members of a branch can see the list of other branch members
-- Does **not** have its own family tree — branches share the workspace tree
-- Architecture must remain expandable to support branch-scoped tree views in the future
-- A branch can have multiple admins
+- It created tight coupling between branch and parent workspace (deletion cascades, permission complexity)
+- It required branch-specific roles, vacancy resolution logic, and scoped content queries — all unnecessary complexity
+- The same goal (private space for a sub-family) is achieved more simply: the sub-family creates their own independent workspace
+
+**What was removed:** `Branch`, `BranchMembership`, `BranchInvitation` tables; branch roles (`branch_admin`, `branch_member`); `branch_id` on content tables; branch-scoped content and permission checks; branch admin vacancy resolution logic.
+
+**What replaces it:** Nothing at the workspace level. Sub-families that want private content create their own workspace. The only cross-workspace feature is branch pointers in the family tree (see Section 2.6).
 
 ### 2.3 User
 
-A user is a single account that can participate in multiple workspaces and multiple branches.
+A user is a single account that can participate in multiple workspaces.
 
 - One account links a person's presence across all their workspaces
 - Has independent roles in each workspace (e.g., admin in one, member in another)
-- Can be a member of multiple branches within the same workspace
 - Can optionally be linked to an individual in each workspace's family tree (see Section 2.5)
 - A user's entry in a workspace's family tree is independent of their entry in another workspace's tree (the trees are separate; cross-tree identity linking is deferred but the architecture must not prevent it)
 
@@ -90,7 +93,7 @@ A user is a single account that can participate in multiple workspaces and multi
 
 | Role | Description |
 |---|---|
-| `workspace_admin` | Manages workspace settings, members, branches, and grants content roles. Can see branch usage metrics but not branch content. Cannot access branch content unless they are a member of that branch. |
+| `workspace_admin` | Manages workspace settings, members, and grants content roles. |
 | `workspace_member` | Base role. Can view workspace-wide content. Additional capabilities are granted via content roles below. |
 
 **Content roles** (granted per workspace member by `workspace_admin`):
@@ -98,26 +101,13 @@ A user is a single account that can participate in multiple workspaces and multi
 | Role | Description |
 |---|---|
 | `tree_editor` | Can add, edit, and delete individuals and relationships in the workspace tree |
-| `news_editor` | Can create and edit workspace-level news posts |
-| `album_editor` | Can create albums and upload media at the workspace level |
-| `event_editor` | Can create and edit workspace-level events |
+| `news_editor` | Can create and edit news posts |
+| `album_editor` | Can create albums and upload media |
+| `event_editor` | Can create and edit events |
 
 A `workspace_admin` implicitly has all content roles.
 
-**Branch roles** (per branch):
-
-| Role | Description |
-|---|---|
-| `branch_admin` | Manages branch members and settings. Can invite workspace members to the branch. Multiple branch admins are allowed. |
-| `branch_member` | Can view and create content within the branch. |
-
-**Rule**: A `workspace_admin` who is not a member of a specific branch **cannot** join it, self-invite to it, or access its content. They can only see: member count, storage used, creation date, and last activity timestamp for that branch.
-
-**Rule**: A `workspace_admin` who creates a branch is automatically a `branch_admin` of that branch. If they leave, they lose that status and cannot re-enter unless re-invited by a current branch member.
-
-**Rule**: If a branch has no remaining `branch_admin`, the `workspace_admin` can promote any existing branch member to `branch_admin` without gaining content access themselves. Alternatively, the system automatically promotes a random branch member to `branch_admin` (similar to WhatsApp group behavior). Both mechanisms are supported.
-
-### 2.5 User–Tree Linking
+### 2.5 User-Tree Linking
 
 A user account can be linked to an individual record in a workspace's family tree. This is optional — a user can be a workspace member without being linked to any individual, and an individual in the tree can exist without a linked user account.
 
@@ -127,18 +117,36 @@ A user account can be linked to an individual record in a workspace's family tre
 - **Flow B (member requests link)**: An existing workspace member can search the tree and request to be linked to a specific individual. The request is sent to the `workspace_admin` as a notification. The admin approves or rejects. The link becomes active only after admin approval. A member cannot self-link without admin approval.
 
 **Rules:**
-- One individual ↔ at most one linked user account per workspace
+- One individual <-> at most one linked user account per workspace
 - A user can be unlinked by themselves or by a `workspace_admin`
 - Linking a user to an individual does not change any privacy or content access rules — it is a profile association only (used for personalization, birthday notifications, tree highlights, and future cross-workspace identity features)
+
+### 2.6 Branch Pointers (Cross-Workspace Tree Sharing)
+
+A branch pointer allows a workspace to display a **read-only reference** to a subtree (branch) from another workspace's family tree. This is the only cross-workspace mechanism in the platform — workspaces themselves have no knowledge of each other.
+
+**How it works:**
+- A "branch" in tree terms = an ancestor individual + all their descendants (goes downward only, never upward)
+- The admin of workspace A (source) provides a shareable link for a branch in their tree
+- A user in workspace B (target) adds that branch to their tree via the link — it appears as a read-only pointer
+- The pointer reads live from the source: if workspace A edits an individual in the branch, workspace B sees the update automatically
+- The pointer is read-only in workspace B — they cannot edit individuals that belong to workspace A's tree
+
+**Admin controls on the source workspace:**
+- **Shareable**: branches can be shared as pointers and can also be hard-copied by the target workspace
+- **Copyable only**: branches cannot be shared as live pointers, but can be hard-copied (one-time import, no live link)
+- **None**: branches cannot be shared or copied
+
+**Lifecycle events:**
+- If the source workspace **revokes sharing** for a branch, all pointers to that branch are automatically converted to deep copies in each target workspace. The target workspace admin receives a notification: "This branch is no longer maintained by the original workspace. It is now your own copy."
+- If the source workspace **deletes the branch ancestor** (or the workspace itself is deleted), the same deep-copy conversion + notification occurs.
+- If the target workspace wants to **edit** a pointed branch, they must first do a hard copy, which breaks the live link and creates an independent copy they fully own.
 
 ---
 
 ## 3. Content Model
 
-Content objects (news posts, albums, events) belong to exactly one **scope**:
-
-- `workspace` — visible to all workspace members
-- `branch:<branch_id>` — visible only to members of that branch
+Content objects (news posts, albums, events) belong to a **workspace** and are visible to all workspace members.
 
 No content is public to the internet unless explicitly shared via a public link (a future feature, out of scope for now).
 
@@ -147,18 +155,16 @@ No content is public to the internet unless explicitly shared via a public link 
 | Type | Description |
 |---|---|
 | News post | Rich text announcement or update, optional media attachments |
-| Album | Collection of photos/videos, linked to a scope |
+| Album | Collection of photos/videos |
 | Event | Calendar entry with date, time, location, description, optional RSVP |
-
-All content types exist at both workspace scope and branch scope.
 
 ### 3.2 Media Limits
 
-All uploaded media (images, videos) in news posts, albums, and events counts toward the workspace's **5 GB storage quota**. Branch storage is tracked separately within that quota and visible to `workspace_admin` and `branch_admin` as a metric (not the content itself).
+All uploaded media (images, videos) in news posts, albums, and events counts toward the workspace's **5 GB storage quota**.
 
 ### 3.3 Family Tree
 
-The family tree belongs to the workspace and is shared by all workspace members. It is editable by users with the `tree_editor` role. Branches do not have separate trees, but future versions may support branch-scoped views (filtered subsets of the workspace tree).
+The family tree belongs to the workspace and is shared by all workspace members. It is editable by users with the `tree_editor` role.
 
 ---
 
@@ -170,17 +176,11 @@ The family tree belongs to the workspace and is shared by all workspace members.
 | Invite members to workspace | `workspace_admin` |
 | Remove members from workspace | `workspace_admin` |
 | Grant content roles | `workspace_admin` |
-| Create a branch | `workspace_admin` only |
-| Invite members to a branch | `branch_admin` of that branch |
-| See branch content | Branch members only |
-| See branch usage metrics | `workspace_admin` and `branch_admin` |
-| See branch member list | All branch members |
-| Promote branch member to branch_admin | `workspace_admin` (without gaining content access) |
 | Edit the family tree | Users with `tree_editor` role (or `workspace_admin`) |
 | Link a user to a tree individual | `workspace_admin` approves; user confirms |
 | Request self-linking to a tree individual | Any `workspace_member` (pending admin approval) |
-| Create workspace-level news/albums/events | Users with the corresponding editor role (or `workspace_admin`) |
-| Create branch-level content | Branch members |
+| Create news/albums/events | Users with the corresponding editor role (or `workspace_admin`) |
+| Share a branch pointer to another workspace | `workspace_admin` of source workspace (if sharing policy allows) |
 | View RSVP responses for an event | Configurable by the event creator or `workspace_admin` (options: all members see full list, counts only, or admin-only) |
 
 ---
@@ -191,7 +191,7 @@ The family tree belongs to the workspace and is shared by all workspace members.
 
 - Handled by **Supabase Auth** (self-hosted via Docker Compose, see `docs/auth-provider-decisions.md`)
 - JWT-based sessions with full refresh token control
-- Workspace and branch memberships are managed in the application layer, not in Supabase Auth
+- Workspace memberships are managed in the application layer, not in Supabase Auth
 - Supabase Auth handles: login, registration, password recovery, email verification, session management, token revocation
 - **Supported sign-in methods:**
   - Email + password
@@ -204,37 +204,28 @@ The family tree belongs to the workspace and is shared by all workspace members.
 
 - Workspace has: name (Arabic + Latin), slug (URL identifier), logo/avatar, description
 - Any registered user can create a workspace; the creator becomes the first `workspace_admin`
-- Workspace admin can: invite members, remove members, view all branch usage metrics, grant/revoke content roles, manage workspace settings
-- Workspace admin cannot: access branch content they were not invited into
-- Storage usage dashboard visible to `workspace_admin`: total used, per-branch breakdown (size only, not content)
+- Workspace admin can: invite members, remove members, grant/revoke content roles, manage workspace settings, configure branch sharing policy
+- Storage usage dashboard visible to `workspace_admin`
 
 **Invite methods** (both supported):
 
-- **Email invite**: admin enters a member's email → invite link sent → recipient clicks, signs in or registers, joins workspace
+- **Email invite**: admin enters a member's email -> invite link sent -> recipient clicks, signs in or registers, joins workspace
 - **Workspace join code**: admin generates a short alphanumeric code (e.g., `SAEED-4X7K`). Admin shares it anywhere (WhatsApp group, SMS, verbally). Any signed-in user who enters a valid code joins the workspace. Codes can have an optional expiry date and an optional max-use count set by the admin. Admin can revoke a code at any time.
 
-### 5.3 Branch Management
-
-- Only `workspace_admin` can create a branch
-- Branch creation requires: name, optional description
-- The creating admin becomes a `branch_admin` automatically
-- Multiple `branch_admin`s are allowed per branch
-- `branch_admin` can invite workspace members into the branch
-- Branch invite: notification sent to invitee, they must accept
-- `workspace_admin` sees per-branch: member count, storage used (MB), creation date, last activity timestamp
-- `workspace_admin` does not see: post content, album contents, event details of branches they are not in
-- If all `branch_admin`s leave: `workspace_admin` can promote an existing member, or the system auto-promotes a random member
-
-### 5.4 Editable Family Tree
+### 5.3 Editable Family Tree
 
 - Tree data stored in the database (not as static GEDCOM files at runtime)
 - GEDCOM is the import/export format, not the storage format
 - The existing GEDCOM parser (`src/lib/gedcom/parser.ts`) is preserved and reused as the import engine
-- **Import**: workspace admin or `tree_editor` can upload a `.ged` file to populate or update the tree
-- **Export**: any workspace member can export the full tree as a `.ged` file at any time
 - Operations: add individual, edit individual, add relationship, remove relationship, delete individual
-- All tree edits are logged with author and timestamp (audit log, permanent)
 - Privacy flag on individuals (`isPrivate`) is preserved and enforced in the UI
+- **Each workspace owns its own tree data** — no shared mutable references across workspaces
+- Branch pointers (Section 2.6) allow read-only cross-workspace subtree references
+
+### 5.4 GEDCOM Import/Export
+
+- **Import**: workspace admin or `tree_editor` can upload a `.ged` file to populate or update the tree (reuses existing parser)
+- **Export**: any workspace member can export the full tree as a `.ged` file at any time
 
 ### 5.5 Policy Page
 
@@ -247,21 +238,21 @@ The family tree belongs to the workspace and is shared by all workspace members.
 ### 5.6 News
 
 - Rich text posts with optional media attachments (counts toward storage quota)
-- Scoped to workspace or branch
+- Workspace-scoped (visible to all workspace members)
 - Members can react and comment (basic interactions, details TBD)
 - Admin can pin posts
 
 ### 5.7 Albums
 
 - Collections of photos and videos
-- Scoped to workspace or branch
+- Workspace-scoped
 - Photos can be tagged to individuals in the family tree
-- Storage usage counted per branch/workspace for admin visibility
+- Storage usage counted for admin visibility
 
 ### 5.8 Events / Calendar
 
 - Events have: title, date/time, location (text), description, optional RSVP
-- Scoped to workspace or branch
+- Workspace-scoped
 - Birthdays and anniversaries from the family tree are auto-populated as workspace-level events (read-only, generated)
 - Members can RSVP: attending / not attending / maybe
 - RSVP visibility is configurable per event: full list / counts only / admin-only
@@ -280,7 +271,7 @@ When a user is created in GoTrue, a corresponding row is inserted into `public.u
 -- auth.users is owned by GoTrue (not shown here)
 -- public.users mirrors it and is the only user table the app touches
 
-public.users  ← mirror of auth.users, created on user sign-up
+public.users  <- mirror of auth.users, created on user sign-up
   id           (same UUID as auth.users.id)
   email
   display_name
@@ -290,30 +281,21 @@ public.users  ← mirror of auth.users, created on user sign-up
 
 Workspace
   id, slug, name_ar, name_en, logo_url, description, created_by (user_id),
-  storage_quota_bytes, created_at
+  storage_quota_bytes, branch_sharing_policy (shareable | copyable_only | none),
+  created_at
 
 WorkspaceMembership
   user_id, workspace_id, role (workspace_admin | workspace_member),
-  permissions (tree_editor | news_editor | album_editor | event_editor — array),
+  permissions (tree_editor | news_editor | album_editor | event_editor -- array),
   joined_at
 
 WorkspaceInvitation
   id, workspace_id, type (email | code),
-  email (nullable — set for email type),
-  code (nullable — set for code type, e.g. "SAEED-4X7K"),
-  individual_id (nullable — for invite-with-tree-link, Flow A),
+  email (nullable -- set for email type),
+  code (nullable -- set for code type, e.g. "SAEED-4X7K"),
+  individual_id (nullable -- for invite-with-tree-link, Flow A),
   invited_by (user_id), expires_at (nullable), max_uses (nullable),
   use_count, status (pending | accepted | revoked), created_at
-
-Branch
-  id, workspace_id, name, description, created_by (user_id), created_at
-
-BranchMembership
-  user_id, branch_id, role (branch_admin | branch_member), joined_at
-
-BranchInvitation
-  id, branch_id, invited_user_id, invited_by (user_id),
-  status (pending | accepted | declined), created_at
 
 UserTreeLink
   id, user_id, individual_id, workspace_id,
@@ -329,21 +311,29 @@ Individual
 Family (relationship unit)
   id, tree_id, husband_id, wife_id, [children via FamilyChild]
 
+FamilyChild
+  family_id, individual_id
+
+BranchPointer
+  id, source_workspace_id, source_individual_id (root ancestor of shared subtree),
+  target_workspace_id, target_tree_id,
+  status (active | deep_copied), created_at, converted_at (nullable)
+
 TreeEditLog
   id, tree_id, user_id, action, entity_type, entity_id, payload (JSON), timestamp
 
 Post (news)
-  id, workspace_id, branch_id (nullable), author_id, content,
+  id, workspace_id, author_id, content,
   media_size_bytes, is_pinned, created_at
 
 Album
-  id, workspace_id, branch_id (nullable), name, created_by, created_at
+  id, workspace_id, name, created_by, created_at
 
 AlbumMedia
   id, album_id, file_url, file_size_bytes, tagged_individual_ids (array), uploaded_at
 
 Event
-  id, workspace_id, branch_id (nullable), title, start_at, end_at,
+  id, workspace_id, title, start_at, end_at,
   location, description, is_generated, rsvp_visibility (all | counts | admin), created_by
 
 EventRsvp
@@ -351,8 +341,16 @@ EventRsvp
 
 Notification
   id, user_id, type, payload (JSON), is_read, created_at
-  (types include: workspace_invite, branch_invite, tree_link_request, tree_link_approved, branch_admin_vacancy)
+  (types include: workspace_invite, tree_link_request, tree_link_approved,
+   branch_pointer_revoked)
 ```
+
+**Tables removed from Phase 1 schema** (must be dropped via Prisma migration at start of Phase 2):
+- `branches`
+- `branch_memberships`
+- `branch_invitations`
+- `branch_id` column on `posts`, `albums`, `events`
+- Notification types `branch_invite` and `branch_admin_vacancy`
 
 ---
 
@@ -404,49 +402,66 @@ Notification
 - Policy page — `/policy` (publicly accessible, Arabic primary + English, covers terms/privacy/billing)
 - Clearly states platform is currently free; terms may change with notice
 
-### Phase 2 — Branch Infrastructure
-- Branch creation (workspace_admin only)
-- Branch membership (invite-only, accept flow)
-- Multiple branch admins; vacancy resolution (promote or auto-assign)
-- Permission enforcement: content scoped to workspace vs branch
-- Admin usage metrics view (no content access)
+### Phase 2 — Editable Family Tree
 
-### Phase 3 — User–Tree Linking
+**⚠️ Cleanup first:**
+- Remove branch-related tables from Prisma schema (`branches`, `branch_memberships`, `branch_invitations`) via migration
+- Remove `branch_id` column from `posts`, `albums`, `events` tables
+- Remove any branch-related code, API routes, types, and tests from the codebase
+
+**Editable family tree:**
+- Tree data stored in the database (individuals, families, family_children tables)
+- CRUD API for individuals and relationships (`tree_editor` role or `workspace_admin`)
+- Tree visualization reads from database instead of static GEDCOM files
+- Privacy flag on individuals (`isPrivate`) preserved and enforced in the UI
+- Each workspace owns its own tree data — no shared mutable references across workspaces
+
+### Phase 3 — User-Tree Linking + Branch Pointers
+
+**User-tree linking:**
 - Flow A: invite-with-link (admin specifies individual at invite time, user confirms)
 - Flow B: member requests link, admin approves/rejects with notification
 - Link status displayed on member profiles within workspace
 
-### Phase 4 — Editable Family Tree
-- GEDCOM import: upload `.ged` file → parse with existing parser → persist to database
-- GEDCOM export: database → generate `.ged` file → download
-- CRUD for individuals and relationships (tree_editor role)
-- Audit log for all tree edits
-- Keep existing read/visualization UI working against the database instead of static files
+**Branch pointers:**
+- Add `branch_sharing_policy` column to `workspaces` table
+- Add `BranchPointer` table
+- Admin configures workspace sharing policy (shareable / copyable_only / none)
+- Admin can generate a shareable link for any branch (ancestor + all descendants downward)
+- Target workspace adds the branch as a read-only pointer
+- Pointer reads live from source — edits in source are visible automatically
+- Revoke or source deletion triggers deep-copy conversion + notification to target admin
+- Hard copy option: target can break the live link and get an independent editable copy
 
-### Phase 5 — Workspace Content
-- News posts (workspace-scoped)
-- Events (workspace-scoped, with auto-generated birthdays from tree)
-- Albums (workspace-scoped)
+### Phase 4 — GEDCOM Import/Export
+
+- **Import**: workspace admin or `tree_editor` can upload a `.ged` file to populate or update the tree
+- Reuses the existing GEDCOM parser (`src/lib/gedcom/parser.ts`) as the import engine
+- **Export**: any workspace member can export the full tree as a `.ged` file at any time
+- Database -> generate `.ged` file -> download
+
+### Phase 5 — Content
+
+- News posts (workspace-scoped): rich text, media attachments, reactions, comments, pinning
+- Albums (workspace-scoped): photo/video collections, tagging to individuals in the tree
+- Events (workspace-scoped): calendar entries with RSVP, auto-generated birthdays/anniversaries from tree data
 - Storage tracking and quota enforcement
 
-### Phase 6 — Branch Content
-- All Phase 5 content types, now also available at branch scope
-- Per-branch storage metrics visible to workspace_admin and branch_admin
+### Phase 6 — Polish & Growth
 
-### Phase 7 — Polish & Growth
-- Mobile (Expo / React Native) — tracked separately
+- Audit log for all tree edits (TreeEditLog)
+- Mobile app (Expo / React Native) — tracked separately
 - Phone OTP sign-in activated (SMS gateway configured)
 - Notifications (in-app + email)
 - Public sharing links for specific content (opt-in)
-- Cross-tree identity linking (same person in multiple workspaces) — design TBD
+- Cross-workspace identity linking: a lightweight link recognizing the same real person across workspaces — each workspace retains its own copy of the individual (no shared data, no sync). The link is informational only.
 
 ---
 
 ## 8. Out of Scope (for now)
 
-- **Cross-tree identity linking**: recognizing that an individual in workspace A and an individual in workspace B are the same real person. The user account and `UserTreeLink` table already serve as the practical link. Full cross-tree data sharing is deferred to Phase 7+. The data model must not prevent it.
+- **Cross-workspace identity linking**: recognizing that an individual in workspace A and an individual in workspace B are the same real person. Each workspace owns its own copy of the individual — the link is informational only, no shared data or sync. The user account and `UserTreeLink` table already serve as the practical link. Full linking UI is deferred to Phase 6+. The data model must not prevent it.
 - **Public workspace discovery**: workspaces are private and not discoverable
-- **Branch-scoped tree views**: branches share the workspace tree without filtering. Expandability is required but the feature is not built in v1.
 - **Real-time collaboration** (e.g., live cursors in tree editing)
 - **Native mobile app**: tracked in a separate document
 
@@ -456,8 +471,8 @@ Notification
 
 - **RTL-first**: all UI is Arabic-first with RTL layout
 - **Privacy by default**: no content is accessible beyond its declared scope, ever
-- **Audit trail**: all tree edits are logged permanently
+- **Audit trail**: all tree edits are logged permanently (Phase 6)
 - **Self-hosted**: no user data leaves the server to third-party services (excluding Umami analytics which is already in use)
 - **Expandable architecture**: data model and API design must not block features listed as "out of scope for now"
-- **Storage accountability**: every media upload is attributed to a workspace and optionally a branch; quota is tracked from day one
+- **Storage accountability**: every media upload is attributed to a workspace; quota is tracked from day one
 - **Docker-based deployment**: the entire stack runs in Docker Compose on our own server. Phase 1 services: Next.js app, PostgreSQL, GoTrue (Supabase Auth). Storage API added in Phase 5. No managed cloud dependencies for core infrastructure.

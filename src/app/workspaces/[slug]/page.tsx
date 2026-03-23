@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api/client';
-import { getFamilyBySlug } from '@/config/families';
 import { roleLabel } from '@/lib/workspace/labels';
 import { Spinner } from '@/components/ui/Spinner';
 import styles from './workspace.module.css';
@@ -88,7 +87,6 @@ export default function WorkspaceDetailPage() {
   }, [slug]);
 
   const isAdmin = workspace?.currentUserRole === 'workspace_admin';
-  const familyConfig = getFamilyBySlug(slug);
 
   function openEdit() {
     if (!workspace) return;
@@ -298,18 +296,12 @@ export default function WorkspaceDetailPage() {
         </div>
 
         {/* Tree link */}
-        {familyConfig ? (
-          <Link href={`/${familyConfig.slug}`} className={styles.treeLink}>
-            <span className={styles.treeLinkIcon}>
-              <iconify-icon icon="material-symbols:account-tree" width="24" height="24" />
-            </span>
-            عرض شجرة العائلة
-          </Link>
-        ) : (
-          <div className={styles.placeholder}>
-            شجرة العائلة غير متوفرة بعد لهذه المساحة
-          </div>
-        )}
+        <Link href={`/workspaces/${slug}/tree`} className={styles.treeLink}>
+          <span className={styles.treeLinkIcon}>
+            <iconify-icon icon="material-symbols:account-tree" width="24" height="24" />
+          </span>
+          عرض شجرة العائلة
+        </Link>
 
         {/* Members section */}
         <div className={styles.section}>
