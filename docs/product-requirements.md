@@ -402,21 +402,55 @@ Notification
 - Policy page — `/policy` (publicly accessible, Arabic primary + English, covers terms/privacy/billing)
 - Clearly states platform is currently free; terms may change with notice
 
-### Phase 2 — Editable Family Tree
+### Phase 2 — Editable Family Tree ✅ COMPLETE
 
-**⚠️ Cleanup first:**
-- Remove branch-related tables from Prisma schema (`branches`, `branch_memberships`, `branch_invitations`) via migration
-- Remove `branch_id` column from `posts`, `albums`, `events` tables
-- Remove any branch-related code, API routes, types, and tests from the codebase
+**✅ Cleanup:**
+- Removed branch-related tables from Prisma schema (`branches`, `branch_memberships`, `branch_invitations`) via migration
+- Removed `branch_id` column from `posts`, `albums`, `events` tables
+- Removed branch-related enums (`BranchRole`, `BranchInvitationStatus`) and all branch relations from User/Workspace models
 
-**Editable family tree:**
+**✅ Editable family tree:**
 - Tree data stored in the database (individuals, families, family_children tables)
-- CRUD API for individuals and relationships (`tree_editor` role or `workspace_admin`)
-- Tree visualization reads from database instead of static GEDCOM files
+- CRUD API for individuals and relationships (`tree_editor` role or `workspace_admin`) — 8 endpoints: POST/PATCH/DELETE individuals, POST/PATCH/DELETE families, POST/DELETE family children
+- `requireTreeEditor` auth guard enforces `tree_editor` permission or `workspace_admin` role
+- Tree visualization reads from database via `GET /api/workspaces/[id]/tree` — DB records mapped to `GedcomData` shape so all existing visualization components work unchanged
 - Privacy flag on individuals (`isPrivate`) preserved and enforced in the UI
 - Each workspace owns its own tree data — no shared mutable references across workspaces
+- `isDeceased` column added to preserve GEDCOM `DEAT` tag (deceased without date)
+- All mutations logged to `TreeEditLog` for future audit trail (Phase 6)
+- Workspace tree page at `/workspaces/[slug]/tree` with empty tree state, individual add/edit form, and edit controls in PersonDetail sidebar (edit, add child, add spouse, add parent, delete)
+- Seed script extended to populate tree data from existing GEDCOM files
+- 94 new tests (264 total)
 
-### Phase 3 — User-Tree Linking + Branch Pointers
+### Phase 3 — Family-Aware Relationship Editing
+
+Phase 2 introduced basic tree editing, but the "Add child" flow has a gap: when a person has multiple families (e.g., a man with two wives, or a woman who remarried), the UI adds the child to the first family without asking the user which family/spouse the child belongs to. This must be fixed before the tree editor is usable for real polygamous family data.
+
+**Family picker for add-child:**
+- When a person has multiple `familiesAsSpouse`, the "Add child" action must show a picker asking which family (spouse) the child belongs to
+- The picker displays the other spouse's name for each family (e.g., "أبناء من سارة" / "أبناء من هدى")
+- If a family has no other spouse (single parent), show it as "عائلة بدون زوج/زوجة"
+- If the person has only one family, skip the picker (current behavior)
+
+**Family picker for add-parent:**
+- When adding a parent to a person who already has a `familyAsChild` with one parent, the new parent is added to that existing family — no picker needed
+- When adding a parent to a person with no `familyAsChild`, a new family is created — no picker needed
+- When adding a parent to a person whose `familyAsChild` already has both husband and wife, show an error: "هذا الشخص لديه والدان بالفعل"
+
+**Move child between families:**
+- A tree editor can move a child from one family to another (remove from old family, add to new family)
+- This handles corrections when a child was added to the wrong family
+
+**Fix seed script — subtree-per-workspace seeding:**
+- Currently, the seed script imports the entire GEDCOM file (all 551 individuals) into every workspace. This is wrong — each workspace should only contain its own family subtree.
+- Each family config has a `rootId` — the topmost ancestor for that family. The seed script must:
+  1. Parse the full GEDCOM file
+  2. Starting from the family's `rootId`, walk downward: collect the root, their spouses, all descendants, and all descendants' spouses
+  3. Only import this subtree into the workspace — not the entire file
+  4. Import the corresponding Family and FamilyChild records for only those individuals
+- This means each workspace gets a distinct, non-overlapping subset of the GEDCOM data (unless families share members via marriage, in which case both workspaces get their own copy of that person)
+
+### Phase 4 — User-Tree Linking + Branch Pointers
 
 **User-tree linking:**
 - Flow A: invite-with-link (admin specifies individual at invite time, user confirms)
@@ -433,21 +467,21 @@ Notification
 - Revoke or source deletion triggers deep-copy conversion + notification to target admin
 - Hard copy option: target can break the live link and get an independent editable copy
 
-### Phase 4 — GEDCOM Import/Export
+### Phase 5 — GEDCOM Import/Export
 
 - **Import**: workspace admin or `tree_editor` can upload a `.ged` file to populate or update the tree
 - Reuses the existing GEDCOM parser (`src/lib/gedcom/parser.ts`) as the import engine
 - **Export**: any workspace member can export the full tree as a `.ged` file at any time
 - Database -> generate `.ged` file -> download
 
-### Phase 5 — Content
+### Phase 6 — Content
 
 - News posts (workspace-scoped): rich text, media attachments, reactions, comments, pinning
 - Albums (workspace-scoped): photo/video collections, tagging to individuals in the tree
 - Events (workspace-scoped): calendar entries with RSVP, auto-generated birthdays/anniversaries from tree data
 - Storage tracking and quota enforcement
 
-### Phase 6 — Polish & Growth
+### Phase 7 — Polish & Growth
 
 - Audit log for all tree edits (TreeEditLog)
 - Mobile app (Expo / React Native) — tracked separately
