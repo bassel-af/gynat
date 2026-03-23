@@ -3,6 +3,12 @@ import { createClient } from '@/lib/supabase/client';
 /**
  * Client-side fetch wrapper that automatically attaches the Bearer token
  * from the current Supabase session to API requests.
+ *
+ * NOTE: We intentionally use `getSession()` here (not `getUser()`) because this
+ * is a client-side convenience helper that only needs the access token for the
+ * Authorization header. The server side (src/lib/api/auth.ts) always calls
+ * `getUser()` to cryptographically verify the token before trusting the user
+ * identity. The client-side session is not used for access control decisions.
  */
 export async function apiFetch(
   path: string,

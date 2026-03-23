@@ -1,3 +1,5 @@
+import { escapeHtml } from '@/lib/utils/html-escape';
+
 interface InviteEmailParams {
   workspaceName: string;
   inviterName: string;
@@ -6,6 +8,10 @@ interface InviteEmailParams {
 
 export function buildInviteEmail({ workspaceName, inviterName, inviteUrl }: InviteEmailParams) {
   const subject = `دعوة للانضمام إلى ${workspaceName} على سلالة`;
+
+  // Escape dynamic values to prevent HTML injection in the email body
+  const safeInviterName = escapeHtml(inviterName);
+  const safeWorkspaceName = escapeHtml(workspaceName);
 
   const html = `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -27,7 +33,7 @@ export function buildInviteEmail({ workspaceName, inviterName, inviteUrl }: Invi
             <td style="padding: 32px 24px;">
               <p style="font-size: 18px; color: #333; margin: 0 0 16px;">مرحبا،</p>
               <p style="font-size: 16px; color: #555; line-height: 1.6; margin: 0 0 24px;">
-                قام <strong>${inviterName}</strong> بدعوتك للانضمام إلى عائلة <strong>${workspaceName}</strong> على منصة سلالة.
+                قام <strong>${safeInviterName}</strong> بدعوتك للانضمام إلى عائلة <strong>${safeWorkspaceName}</strong> على منصة سلالة.
               </p>
               <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 0 auto 24px;">
                 <tr>

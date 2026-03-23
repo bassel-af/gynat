@@ -123,6 +123,7 @@ export async function POST(
         { status: 400 },
       );
     }
-    throw error;
+    console.error('Invitation acceptance failed:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

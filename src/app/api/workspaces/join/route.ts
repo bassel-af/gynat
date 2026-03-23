@@ -5,7 +5,7 @@ import { prisma } from '@/lib/db';
 import { z } from 'zod';
 
 const joinSchema = z.object({
-  code: z.string().min(1, 'Code is required'),
+  code: z.string().min(1, 'Code is required').max(64),
 });
 
 // POST /api/workspaces/join — Join workspace via invite code

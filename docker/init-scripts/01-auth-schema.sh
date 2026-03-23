@@ -20,6 +20,8 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<EO
   CREATE ROLE anon NOLOGIN;
   CREATE ROLE authenticated NOLOGIN;
   CREATE ROLE service_role NOLOGIN;
+  -- NOTE: In production, use a separate SUPABASE_AUTH_ADMIN_PASSWORD instead of
+  -- sharing the main POSTGRES_PASSWORD. This avoids giving GoTrue the superuser DB password.
   CREATE ROLE supabase_auth_admin LOGIN PASSWORD '${POSTGRES_PASSWORD}';
 
   GRANT ALL ON SCHEMA auth TO supabase_auth_admin;

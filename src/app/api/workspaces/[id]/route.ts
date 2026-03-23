@@ -7,8 +7,8 @@ import { z } from 'zod';
 type RouteParams = { params: Promise<{ id: string }> };
 
 const updateWorkspaceSchema = z.object({
-  nameAr: z.string().min(1).optional(),
-  description: z.string().optional(),
+  nameAr: z.string().min(1).max(200).optional(),
+  description: z.string().max(2000).optional(),
   logoUrl: z.string().url().nullable().optional(),
 });
 

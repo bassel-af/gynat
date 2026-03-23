@@ -6,9 +6,9 @@ import { z } from 'zod';
 import { serializeBigInt } from '@/lib/api/serialize';
 
 const createWorkspaceSchema = z.object({
-  slug: z.string().regex(/^[a-z0-9-]+$/, 'Slug must contain only lowercase letters, numbers, and hyphens'),
-  nameAr: z.string().min(1, 'Arabic name is required'),
-  description: z.string().optional(),
+  slug: z.string().max(64).regex(/^[a-z0-9-]+$/, 'Slug must contain only lowercase letters, numbers, and hyphens'),
+  nameAr: z.string().min(1, 'Arabic name is required').max(200),
+  description: z.string().max(2000).optional(),
   logoUrl: z.string().url().optional(),
 });
 
@@ -67,7 +67,8 @@ export async function POST(request: NextRequest) {
     if (err && typeof err === 'object' && 'code' in err && err.code === 'P2002') {
       return NextResponse.json({ error: 'A workspace with this slug already exists' }, { status: 409 });
     }
-    throw err;
+    console.error('Workspace creation failed:', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 

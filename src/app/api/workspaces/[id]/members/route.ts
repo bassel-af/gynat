@@ -8,7 +8,7 @@ import { z } from 'zod';
 type RouteParams = { params: Promise<{ id: string }> };
 
 const inviteSchema = z.object({
-  email: z.string().email('Valid email is required'),
+  email: z.string().max(254).email('Valid email is required'),
   individualId: z.string().uuid().optional(),
 });
 

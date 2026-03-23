@@ -8,14 +8,14 @@ import { z } from 'zod';
 type RouteParams = { params: Promise<{ id: string }> };
 
 const createIndividualSchema = z.object({
-  givenName: z.string().optional(),
-  surname: z.string().optional(),
-  fullName: z.string().optional(),
+  givenName: z.string().max(200).optional(),
+  surname: z.string().max(200).optional(),
+  fullName: z.string().max(200).optional(),
   sex: z.enum(['M', 'F']).optional(),
-  birthDate: z.string().optional(),
-  birthPlace: z.string().optional(),
-  deathDate: z.string().optional(),
-  deathPlace: z.string().optional(),
+  birthDate: z.string().max(50).optional(),
+  birthPlace: z.string().max(500).optional(),
+  deathDate: z.string().max(50).optional(),
+  deathPlace: z.string().max(500).optional(),
   isDeceased: z.boolean().optional(),
   isPrivate: z.boolean().optional().default(false),
 }).refine(
