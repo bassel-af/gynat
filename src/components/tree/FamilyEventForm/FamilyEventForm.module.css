@@ -1,0 +1,102 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Collapsible section */
+.eventSection {
+  border: 1px solid var(--alpha-white-08);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.eventSection + .eventSection {
+  margin-top: var(--space-2);
+}
+
+.eventSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: var(--alpha-white-04);
+  border: none;
+  color: var(--alpha-white-70);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  font-family: inherit;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.eventSectionHeader:hover {
+  background: var(--alpha-white-08);
+}
+
+.chevron {
+  width: 16px;
+  height: 16px;
+  transition: transform var(--transition-fast);
+  color: var(--alpha-white-40);
+}
+
+.chevronExpanded {
+  transform: rotate(180deg);
+}
+
+.eventSectionContent {
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  border-top: 1px solid var(--alpha-white-06);
+}
+
+/* Divorce section red tint */
+.divorceSection .eventSectionHeader {
+  color: rgba(229, 62, 62, 0.7);
+}
+
+.divorceSection {
+  border-color: rgba(229, 62, 62, 0.15);
+}
+
+/* Hijri date field accent */
+.hijriFieldAccented {
+  composes: hijriFieldAccented from '../../../styles/form-elements.module.css';
+}
+
+/* Checkbox */
+.checkboxLabel {
+  composes: checkboxLabel from '../../../styles/form-elements.module.css';
+}
+
+.checkbox {
+  composes: checkbox from '../../../styles/form-elements.module.css';
+}
+
+/* Textarea */
+.textarea {
+  composes: textarea from '../../../styles/form-elements.module.css';
+  min-height: 60px;
+}
+
+.label {
+  composes: label from '../../../styles/form-elements.module.css';
+}
+
+.fieldGroup {
+  composes: fieldGroup from '../../../styles/form-elements.module.css';
+}
+
+/* Error area */
+.error {
+  composes: error from '../../../styles/form-elements.module.css';
+}
+
+/* Modal width override */
+.modal {
+  max-width: 520px;
+}

@@ -3,14 +3,9 @@ import { prisma } from '@/lib/db';
 import { requireTreeEditor, isErrorResponse } from '@/lib/api/workspace-auth';
 import { treeMutateLimiter, rateLimitResponse } from '@/lib/api/rate-limit';
 import { getOrCreateTree, getTreeFamily, getTreeIndividual } from '@/lib/tree/queries';
-import { z } from 'zod';
+import { updateFamilySchema } from '@/lib/tree/schemas';
 
 type RouteParams = { params: Promise<{ id: string; familyId: string }> };
-
-const updateFamilySchema = z.object({
-  husbandId: z.string().uuid().nullable().optional(),
-  wifeId: z.string().uuid().nullable().optional(),
-});
 
 // PATCH /api/workspaces/[id]/tree/families/[familyId] — Update a family
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
@@ -46,8 +41,6 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     );
   }
 
-  const updateData: { husbandId?: string | null; wifeId?: string | null } = {};
-
   // Verify new husband if provided (not null — null means "remove")
   if (parsed.data.husbandId !== undefined) {
     if (parsed.data.husbandId !== null) {
@@ -66,7 +59,6 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         );
       }
     }
-    updateData.husbandId = parsed.data.husbandId;
   }
 
   // Verify new wife if provided (not null — null means "remove")
@@ -87,12 +79,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         );
       }
     }
-    updateData.wifeId = parsed.data.wifeId;
   }
 
   const family = await prisma.family.update({
     where: { id: familyId },
-    data: updateData,
+    data: parsed.data,
     include: { children: true },
   });
 

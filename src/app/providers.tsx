@@ -1,6 +1,7 @@
 'use client';
 
 import { TreeProvider } from '@/context/TreeContext';
+import { CalendarPreferenceContext, useCalendarPreferenceState } from '@/hooks/useCalendarPreference';
 
 interface ProvidersProps {
   children: React.ReactNode;
@@ -8,5 +9,11 @@ interface ProvidersProps {
 }
 
 export function Providers({ children, forcedRootId }: ProvidersProps) {
-  return <TreeProvider forcedRootId={forcedRootId}>{children}</TreeProvider>;
+  const calendarPref = useCalendarPreferenceState();
+
+  return (
+    <CalendarPreferenceContext.Provider value={calendarPref}>
+      <TreeProvider forcedRootId={forcedRootId}>{children}</TreeProvider>
+    </CalendarPreferenceContext.Provider>
+  );
 }

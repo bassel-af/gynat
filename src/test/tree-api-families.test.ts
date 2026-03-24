@@ -1016,3 +1016,136 @@ describe('PATCH family — parent-slot conflict validation', () => {
     expect(res.status).toBe(200);
   });
 });
+
+// ============================================================================
+// POST family — marriage event fields
+// ============================================================================
+describe('POST family — marriage event fields', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  test('creates family with marriage event data', async () => {
+    mockAuth();
+    mockTreeEditor();
+    mockExistingTree();
+    mockIndividualsExist([husbandId, wifeId]);
+    mockTreeEditLogCreate.mockResolvedValue({});
+
+    const createdFamily = {
+      id: famId,
+      treeId,
+      gedcomId: null,
+      husbandId,
+      wifeId,
+      marriageContractDate: '2020-01-01',
+      marriageContractHijriDate: '1441/05/06',
+      marriageContractPlace: 'Riyadh',
+      marriageDate: '2020-03-15',
+      marriageHijriDate: '1441/07/20',
+      marriagePlace: 'Jeddah',
+      isDivorced: false,
+      children: [],
+    };
+    mockFamilyCreate.mockResolvedValue(createdFamily);
+
+    const { POST } = await import('@/app/api/workspaces/[id]/tree/families/route');
+    const req = makeRequest(`http://localhost:3000/api/workspaces/${wsId}/tree/families`, {
+      method: 'POST',
+      body: {
+        husbandId,
+        wifeId,
+        marriageContractDate: '2020-01-01',
+        marriageContractHijriDate: '1441/05/06',
+        marriageContractPlace: 'Riyadh',
+        marriageDate: '2020-03-15',
+        marriageHijriDate: '1441/07/20',
+        marriagePlace: 'Jeddah',
+      },
+    });
+    const res = await POST(req, familiesParams);
+
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.data.marriageContractDate).toBe('2020-01-01');
+    expect(body.data.marriageDate).toBe('2020-03-15');
+  });
+});
+
+// ============================================================================
+// PATCH family — marriage event fields
+// ============================================================================
+describe('PATCH family — marriage event fields', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  test('updates family marriage events via PATCH', async () => {
+    mockAuth();
+    mockTreeEditor();
+    mockExistingTree();
+    mockFamilyExists();
+    mockTreeEditLogCreate.mockResolvedValue({});
+
+    const updatedFamily = {
+      id: famId,
+      treeId,
+      husbandId,
+      wifeId,
+      marriageDate: '2020-03-15',
+      marriageHijriDate: '1441/07/20',
+      marriagePlace: 'Jeddah',
+      isDivorced: true,
+      divorceDate: '2023-06-01',
+      children: [],
+    };
+    mockFamilyUpdate.mockResolvedValue(updatedFamily);
+
+    const { PATCH } = await import(
+      '@/app/api/workspaces/[id]/tree/families/[familyId]/route'
+    );
+    const req = makeRequest(
+      `http://localhost:3000/api/workspaces/${wsId}/tree/families/${famId}`,
+      {
+        method: 'PATCH',
+        body: {
+          marriageDate: '2020-03-15',
+          marriageHijriDate: '1441/07/20',
+          marriagePlace: 'Jeddah',
+          isDivorced: true,
+          divorceDate: '2023-06-01',
+        },
+      },
+    );
+    const res = await PATCH(req, familyParams);
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data.marriageDate).toBe('2020-03-15');
+    expect(body.data.isDivorced).toBe(true);
+  });
+
+  test('validates marriage event field lengths', async () => {
+    mockAuth();
+    mockTreeEditor();
+    const { PATCH } = await import(
+      '@/app/api/workspaces/[id]/tree/families/[familyId]/route'
+    );
+    const req = makeRequest(
+      `http://localhost:3000/api/workspaces/${wsId}/tree/families/${famId}`,
+      { method: 'PATCH', body: { marriageDescription: 'a'.repeat(501) } },
+    );
+    const res = await PATCH(req, familyParams);
+    expect(res.status).toBe(400);
+  });
+
+  test('validates divorce notes field length', async () => {
+    mockAuth();
+    mockTreeEditor();
+    const { PATCH } = await import(
+      '@/app/api/workspaces/[id]/tree/families/[familyId]/route'
+    );
+    const req = makeRequest(
+      `http://localhost:3000/api/workspaces/${wsId}/tree/families/${famId}`,
+      { method: 'PATCH', body: { divorceNotes: 'a'.repeat(5001) } },
+    );
+    const res = await PATCH(req, familyParams);
+    expect(res.status).toBe(400);
+  });
+});

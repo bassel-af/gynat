@@ -1,4 +1,8 @@
-import type { Individual, Family, GedcomData } from './types';
+import type { Individual, Family, FamilyEvent, GedcomData } from './types';
+
+function emptyFamilyEvent(): FamilyEvent {
+  return { date: '', hijriDate: '', place: '', description: '', notes: '' };
+}
 
 const GEDCOM_MONTHS: Record<string, string> = {
   JAN: '01', FEB: '02', MAR: '03', APR: '04', MAY: '05', JUN: '06',
@@ -83,10 +87,12 @@ export function parseGedcom(text: string): GedcomData {
           birthPlace: '',
           birthDescription: '',
           birthNotes: '',
+          birthHijriDate: '',
           death: '',
           deathPlace: '',
           deathDescription: '',
           deathNotes: '',
+          deathHijriDate: '',
           notes: '',
           isDeceased: false,
           isPrivate: false,
@@ -101,6 +107,10 @@ export function parseGedcom(text: string): GedcomData {
           husband: null,
           wife: null,
           children: [],
+          marriageContract: emptyFamilyEvent(),
+          marriage: emptyFamilyEvent(),
+          divorce: emptyFamilyEvent(),
+          isDivorced: false,
         };
         families[id] = currentRecord;
       } else {
@@ -168,6 +178,20 @@ export function parseGedcom(text: string): GedcomData {
             fam.wife = value || null;
           } else if (tag === 'CHIL' && value) {
             fam.children.push(value);
+          } else if (tag === 'MARC') {
+            if (value && value.trim()) {
+              fam.marriageContract.description = value.trim();
+            }
+          } else if (tag === 'MARR') {
+            if (value && value.trim()) {
+              fam.marriage.description = value.trim();
+            }
+          } else if (tag === 'DIV') {
+            fam.isDivorced = true;
+            const trimVal = (value || '').trim();
+            if (trimVal && trimVal !== 'Y') {
+              fam.divorce.description = trimVal;
+            }
           }
         }
       } else if (level === 2) {
@@ -197,6 +221,12 @@ export function parseGedcom(text: string): GedcomData {
             } else if (currentSubRecord === 'DEAT') {
               indi.deathDescription = value || '';
             }
+          } else if (tag === '_HIJR') {
+            if (currentSubRecord === 'BIRT') {
+              indi.birthHijriDate = value || '';
+            } else if (currentSubRecord === 'DEAT') {
+              indi.deathHijriDate = value || '';
+            }
           } else if (tag === 'NOTE' && (currentSubRecord === 'BIRT' || currentSubRecord === 'DEAT')) {
             if (currentSubRecord === 'BIRT') {
               indi.birthNotes = value || '';
@@ -214,6 +244,28 @@ export function parseGedcom(text: string): GedcomData {
           } else {
             currentLevel2Tag = tag;
           }
+        } else if (currentRecord.type === 'FAM') {
+          const fam = currentRecord as Family;
+          const eventMap: Record<string, FamilyEvent | undefined> = {
+            'MARC': fam.marriageContract,
+            'MARR': fam.marriage,
+            'DIV': fam.divorce,
+          };
+          const event = eventMap[currentSubRecord ?? ''];
+          if (event) {
+            if (tag === 'DATE') {
+              event.date = formatGedcomDate(value || '');
+            } else if (tag === 'PLAC') {
+              event.place = value || '';
+            } else if (tag === '_HIJR') {
+              event.hijriDate = value || '';
+            } else if (tag === 'NOTE') {
+              event.notes = value || '';
+              currentLevel2Tag = 'NOTE';
+            } else {
+              currentLevel2Tag = tag;
+            }
+          }
         }
       } else if (level === 3) {
         if (currentRecord.type === 'INDI' && currentLevel2Tag === 'NOTE') {
@@ -229,6 +281,21 @@ export function parseGedcom(text: string): GedcomData {
               indi.deathNotes += '\n' + (value || '');
             } else if (tag === 'CONC') {
               indi.deathNotes += (value || '');
+            }
+          }
+        } else if (currentRecord.type === 'FAM' && currentLevel2Tag === 'NOTE') {
+          const fam = currentRecord as Family;
+          const eventMap: Record<string, FamilyEvent | undefined> = {
+            'MARC': fam.marriageContract,
+            'MARR': fam.marriage,
+            'DIV': fam.divorce,
+          };
+          const event = eventMap[currentSubRecord ?? ''];
+          if (event) {
+            if (tag === 'CONT') {
+              event.notes += '\n' + (value || '');
+            } else if (tag === 'CONC') {
+              event.notes += (value || '');
             }
           }
         }
@@ -250,6 +317,18 @@ export function parseGedcom(text: string): GedcomData {
     if (indi.deathNotes.startsWith('@') && indi.deathNotes.endsWith('@')) {
       const resolved = standaloneNotes[indi.deathNotes];
       indi.deathNotes = resolved !== undefined ? resolved : '';
+    }
+  }
+
+  // Resolve standalone NOTE references on family events
+  for (const id in families) {
+    const fam = families[id];
+    const events = [fam.marriageContract, fam.marriage, fam.divorce];
+    for (const event of events) {
+      if (event.notes.startsWith('@') && event.notes.endsWith('@')) {
+        const resolved = standaloneNotes[event.notes];
+        event.notes = resolved !== undefined ? resolved : '';
+      }
     }
   }
 

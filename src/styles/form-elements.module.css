@@ -1,0 +1,104 @@
+/* Shared form element styles used by IndividualForm and FamilyEventForm */
+
+/* Field group */
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.label {
+  font-size: var(--font-size-sm);
+  color: var(--alpha-white-50);
+  font-weight: var(--font-weight-medium);
+}
+
+/* Checkbox */
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  cursor: pointer;
+  font-size: var(--font-size-base);
+  color: var(--alpha-white-60);
+  transition: color var(--transition-base);
+}
+
+.checkboxLabel:hover {
+  color: var(--alpha-white-80);
+}
+
+.checkbox {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--alpha-white-25);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+  transition: background var(--transition-base), border-color var(--transition-base);
+  position: relative;
+  flex-shrink: 0;
+}
+
+.checkbox:checked {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.checkbox:checked::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 4.5px;
+  width: 4px;
+  height: 7px;
+  border: solid var(--color-text-inverse);
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
+}
+
+.checkbox:focus-visible {
+  box-shadow: var(--shadow-focus-primary);
+}
+
+/* Textarea */
+.textarea {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: var(--alpha-white-04);
+  border: 1px solid var(--alpha-white-15);
+  border-radius: var(--radius-lg);
+  color: var(--alpha-white-85);
+  font-size: var(--font-size-base);
+  font-family: inherit;
+  resize: vertical;
+  transition: border-color var(--transition-base), box-shadow var(--transition-base);
+}
+
+.textarea::placeholder {
+  color: var(--alpha-white-35);
+}
+
+.textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-focus-primary);
+}
+
+/* Error area */
+.error {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  background: rgba(229, 62, 62, 0.1);
+  border: 1px solid rgba(229, 62, 62, 0.25);
+  color: #fc8181;
+  font-size: var(--font-size-sm);
+}
+
+/* Hijri date field accent */
+.hijriFieldAccented {
+  border-inline-start: 2px solid var(--alpha-white-08);
+  padding-inline-start: var(--space-3);
+  margin-inline-start: var(--space-1);
+}

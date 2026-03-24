@@ -1,3 +1,11 @@
+export interface FamilyEvent {
+  date: string;
+  hijriDate: string;
+  place: string;
+  description: string;
+  notes: string;
+}
+
 export interface Individual {
   id: string;
   type: 'INDI';
@@ -9,10 +17,12 @@ export interface Individual {
   birthPlace: string;
   birthDescription: string;
   birthNotes: string;
+  birthHijriDate: string;
   death: string;
   deathPlace: string;
   deathDescription: string;
   deathNotes: string;
+  deathHijriDate: string;
   notes: string;
   isDeceased: boolean;
   isPrivate: boolean;
@@ -26,6 +36,10 @@ export interface Family {
   husband: string | null;
   wife: string | null;
   children: string[];
+  marriageContract: FamilyEvent;
+  marriage: FamilyEvent;
+  divorce: FamilyEvent;
+  isDivorced: boolean;
 }
 
 export interface GedcomData {

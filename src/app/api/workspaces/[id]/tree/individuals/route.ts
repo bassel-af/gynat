@@ -3,30 +3,9 @@ import { prisma } from '@/lib/db';
 import { requireTreeEditor, isErrorResponse } from '@/lib/api/workspace-auth';
 import { treeMutateLimiter, rateLimitResponse } from '@/lib/api/rate-limit';
 import { getOrCreateTree } from '@/lib/tree/queries';
-import { z } from 'zod';
+import { createIndividualSchema } from '@/lib/tree/schemas';
 
 type RouteParams = { params: Promise<{ id: string }> };
-
-const createIndividualSchema = z.object({
-  givenName: z.string().max(200).optional(),
-  surname: z.string().max(200).optional(),
-  fullName: z.string().max(200).optional(),
-  sex: z.enum(['M', 'F']).optional(),
-  birthDate: z.string().max(50).optional(),
-  birthPlace: z.string().max(500).optional(),
-  birthDescription: z.string().max(500).optional(),
-  birthNotes: z.string().max(5000).optional(),
-  deathDate: z.string().max(50).optional(),
-  deathPlace: z.string().max(500).optional(),
-  deathDescription: z.string().max(500).optional(),
-  deathNotes: z.string().max(5000).optional(),
-  isDeceased: z.boolean().optional(),
-  isPrivate: z.boolean().optional().default(false),
-  notes: z.string().max(5000).optional(),
-}).refine(
-  (data) => data.givenName || data.fullName,
-  { message: 'يجب تقديم الاسم الأول أو الاسم الكامل' },
-);
 
 // POST /api/workspaces/[id]/tree/individuals — Create a new individual
 export async function POST(request: NextRequest, { params }: RouteParams) {

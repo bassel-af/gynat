@@ -518,11 +518,6 @@
    NOTES SECTION
    ============================================ */
 
-.notesSection {
-  flex-shrink: 0;
-  border-top: 1px solid var(--alpha-white-06);
-}
-
 .notesContent {
   padding: var(--space-4) var(--space-9);
   font-size: var(--font-size-sm);
@@ -623,4 +618,154 @@
   .notesContent {
     padding: var(--space-3) var(--space-6);
   }
+
+  .marriageBlock {
+    padding: var(--space-3) var(--space-7);
+  }
+}
+
+/* ============================================
+   CALENDAR TOGGLE
+   ============================================ */
+
+.calendarToggle {
+  display: flex;
+  align-items: center;
+  background: var(--alpha-white-04);
+  border: 1px solid var(--alpha-white-08);
+  border-radius: var(--radius-full);
+  padding: 2px;
+}
+
+.calendarToggleOption {
+  padding: var(--space-1) var(--space-4);
+  border: none;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--alpha-white-40);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  font-family: inherit;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.calendarToggleOption:hover {
+  color: var(--alpha-white-60);
+}
+
+.calendarToggleOptionActive {
+  background: var(--alpha-white-12);
+  color: var(--color-primary-light);
+}
+
+/* ============================================
+   MARRIAGE INFO
+   ============================================ */
+
+.marriageBlock {
+  padding: var(--space-4) var(--space-9);
+}
+
+.marriageBlock + .marriageBlock {
+  border-top: 1px solid var(--alpha-white-04);
+}
+
+.marriageBlockHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.marriageSpouseName {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--alpha-white-60);
+}
+
+.marriageEditButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: var(--alpha-white-04);
+  border: 1px solid var(--alpha-white-08);
+  border-radius: var(--radius-full);
+  color: var(--alpha-white-40);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.marriageEditButton:hover {
+  background: var(--alpha-white-10);
+  color: var(--alpha-white-70);
+}
+
+.marriageEvent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2) 0;
+}
+
+.marriageEvent + .marriageEvent {
+  border-top: 1px solid var(--alpha-white-04);
+}
+
+.marriageEventLabel {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-primary-light);
+}
+
+.marriageEventDate {
+  font-size: var(--font-size-sm);
+  color: var(--alpha-white-70);
+}
+
+.marriageEventDateSecondary {
+  font-size: var(--font-size-xs);
+  color: var(--alpha-white-35);
+}
+
+.marriageEventPlace {
+  font-size: var(--font-size-xs);
+  color: var(--alpha-white-40);
+}
+
+.divorceBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-4);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  background: rgba(229, 62, 62, 0.1);
+  color: rgba(229, 62, 62, 0.7);
+  border: 1px solid rgba(229, 62, 62, 0.15);
+}
+
+/* ============================================
+   DUAL DATE DISPLAY
+   ============================================ */
+
+.dateGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.datePrimary {
+  font-size: inherit;
+  color: inherit;
+}
+
+.dateSecondary {
+  font-size: var(--font-size-xs);
+  color: var(--alpha-white-35);
+  margin-top: var(--space-1);
 }

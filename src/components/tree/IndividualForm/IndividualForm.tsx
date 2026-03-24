@@ -14,10 +14,12 @@ export interface IndividualFormData {
   birthPlace: string;
   birthDescription: string;
   birthNotes: string;
+  birthHijriDate: string;
   deathDate: string;
   deathPlace: string;
   deathDescription: string;
   deathNotes: string;
+  deathHijriDate: string;
   isDeceased: boolean;
   isPrivate: boolean;
   notes: string;
@@ -41,10 +43,12 @@ const EMPTY_FORM: IndividualFormData = {
   birthPlace: '',
   birthDescription: '',
   birthNotes: '',
+  birthHijriDate: '',
   deathDate: '',
   deathPlace: '',
   deathDescription: '',
   deathNotes: '',
+  deathHijriDate: '',
   isDeceased: false,
   isPrivate: false,
   notes: '',
@@ -217,6 +221,15 @@ export function IndividualForm({
             rows={2}
           />
         </div>
+        <div className={styles.hijriFieldAccented}>
+          <Input
+            id="birthHijriDate"
+            label="التاريخ الهجري للميلاد"
+            value={formData.birthHijriDate}
+            onChange={(e) => updateField('birthHijriDate', e.target.value)}
+            placeholder="مثال: 5 رمضان 1370"
+          />
+        </div>
 
         {/* Death info */}
         <span className={styles.sectionLabel}>بيانات الوفاة</span>
@@ -264,6 +277,15 @@ export function IndividualForm({
                 placeholder="مثال: توفي بسلام في منزله"
                 maxLength={2000}
                 rows={2}
+              />
+            </div>
+            <div className={styles.hijriFieldAccented}>
+              <Input
+                id="deathHijriDate"
+                label="التاريخ الهجري للوفاة"
+                value={formData.deathHijriDate}
+                onChange={(e) => updateField('deathHijriDate', e.target.value)}
+                placeholder="مثال: 15 محرم 1442"
               />
             </div>
           </>

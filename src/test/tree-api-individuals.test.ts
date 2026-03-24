@@ -1158,3 +1158,256 @@ describe('PATCH individual — birthDescription and deathDescription fields', ()
     expect(res.status).toBe(400);
   });
 });
+
+// ============================================================================
+// POST — Hijri date fields
+// ============================================================================
+describe('POST individual — Hijri date fields', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  test('creates individual with Hijri dates', async () => {
+    mockAuth();
+    mockTreeEditor();
+    mockExistingTree();
+    mockTreeEditLogCreate.mockResolvedValue({});
+
+    const createdIndividual = {
+      id: indId,
+      treeId,
+      givenName: 'محمد',
+      birthHijriDate: '1369/03/16',
+      deathHijriDate: '1441/10/09',
+      isPrivate: false,
+      createdById: fakeUser.id,
+      updatedAt: now,
+      createdAt: now,
+    };
+    mockIndividualCreate.mockResolvedValue(createdIndividual);
+
+    const { POST } = await import('@/app/api/workspaces/[id]/tree/individuals/route');
+    const req = makeRequest(`http://localhost:3000/api/workspaces/${wsId}/tree/individuals`, {
+      method: 'POST',
+      body: { givenName: 'محمد', birthHijriDate: '1369/03/16', deathHijriDate: '1441/10/09' },
+    });
+    const res = await POST(req, individualsParams);
+
+    expect(res.status).toBe(201);
+    const createCall = mockIndividualCreate.mock.calls[0][0];
+    expect(createCall.data.birthHijriDate).toBe('1369/03/16');
+    expect(createCall.data.deathHijriDate).toBe('1441/10/09');
+  });
+
+  test('rejects birthHijriDate exceeding 50 characters', async () => {
+    mockAuth();
+    mockTreeEditor();
+    const { POST } = await import('@/app/api/workspaces/[id]/tree/individuals/route');
+    const req = makeRequest(`http://localhost:3000/api/workspaces/${wsId}/tree/individuals`, {
+      method: 'POST',
+      body: { givenName: 'محمد', birthHijriDate: 'a'.repeat(51) },
+    });
+    const res = await POST(req, individualsParams);
+    expect(res.status).toBe(400);
+  });
+});
+
+// ============================================================================
+// PATCH — Hijri date fields
+// ============================================================================
+describe('PATCH individual — Hijri date fields', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  test('updates individual Hijri dates via PATCH', async () => {
+    mockAuth();
+    mockTreeEditor();
+    mockExistingTree();
+    mockIndividualExists();
+    mockTreeEditLogCreate.mockResolvedValue({});
+
+    const updatedIndividual = {
+      id: indId,
+      treeId,
+      givenName: 'محمد',
+      birthHijriDate: '1369/03/16',
+      deathHijriDate: '1441/10/09',
+      updatedAt: now,
+      createdAt: now,
+    };
+    mockIndividualUpdate.mockResolvedValue(updatedIndividual);
+
+    const { PATCH } = await import(
+      '@/app/api/workspaces/[id]/tree/individuals/[individualId]/route'
+    );
+    const req = makeRequest(
+      `http://localhost:3000/api/workspaces/${wsId}/tree/individuals/${indId}`,
+      { method: 'PATCH', body: { birthHijriDate: '1369/03/16', deathHijriDate: '1441/10/09' } },
+    );
+    const res = await PATCH(req, individualParams);
+
+    expect(res.status).toBe(200);
+    expect(mockIndividualUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          birthHijriDate: '1369/03/16',
+          deathHijriDate: '1441/10/09',
+        }),
+      }),
+    );
+  });
+
+  test('rejects deathHijriDate exceeding 50 characters', async () => {
+    mockAuth();
+    mockTreeEditor();
+    const { PATCH } = await import(
+      '@/app/api/workspaces/[id]/tree/individuals/[individualId]/route'
+    );
+    const req = makeRequest(
+      `http://localhost:3000/api/workspaces/${wsId}/tree/individuals/${indId}`,
+      { method: 'PATCH', body: { deathHijriDate: 'a'.repeat(51) } },
+    );
+    const res = await PATCH(req, individualParams);
+    expect(res.status).toBe(400);
+  });
+});
+
+// ============================================================================
+// PATCH — field clearing via null (Finding 3)
+// ============================================================================
+describe('PATCH individual — clearing fields with null', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  test('accepts null to clear a previously-set birthDate', async () => {
+    mockAuth();
+    mockTreeEditor();
+    mockExistingTree();
+    mockIndividualExists();
+    mockTreeEditLogCreate.mockResolvedValue({});
+
+    const updatedIndividual = {
+      id: indId,
+      treeId,
+      givenName: 'محمد',
+      surname: 'السعيد',
+      birthDate: null,
+      updatedAt: now,
+      createdAt: now,
+    };
+    mockIndividualUpdate.mockResolvedValue(updatedIndividual);
+
+    const { PATCH } = await import(
+      '@/app/api/workspaces/[id]/tree/individuals/[individualId]/route'
+    );
+    const req = makeRequest(
+      `http://localhost:3000/api/workspaces/${wsId}/tree/individuals/${indId}`,
+      { method: 'PATCH', body: { birthDate: null } },
+    );
+    const res = await PATCH(req, individualParams);
+
+    expect(res.status).toBe(200);
+    expect(mockIndividualUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ birthDate: null }),
+      }),
+    );
+  });
+
+  test('accepts null to clear a previously-set birthPlace', async () => {
+    mockAuth();
+    mockTreeEditor();
+    mockExistingTree();
+    mockIndividualExists();
+    mockTreeEditLogCreate.mockResolvedValue({});
+
+    mockIndividualUpdate.mockResolvedValue({
+      id: indId,
+      treeId,
+      givenName: 'محمد',
+      birthPlace: null,
+      updatedAt: now,
+      createdAt: now,
+    });
+
+    const { PATCH } = await import(
+      '@/app/api/workspaces/[id]/tree/individuals/[individualId]/route'
+    );
+    const req = makeRequest(
+      `http://localhost:3000/api/workspaces/${wsId}/tree/individuals/${indId}`,
+      { method: 'PATCH', body: { birthPlace: null } },
+    );
+    const res = await PATCH(req, individualParams);
+
+    expect(res.status).toBe(200);
+    expect(mockIndividualUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ birthPlace: null }),
+      }),
+    );
+  });
+
+  test('accepts null to clear notes', async () => {
+    mockAuth();
+    mockTreeEditor();
+    mockExistingTree();
+    mockIndividualExists();
+    mockTreeEditLogCreate.mockResolvedValue({});
+
+    mockIndividualUpdate.mockResolvedValue({
+      id: indId,
+      treeId,
+      givenName: 'محمد',
+      notes: null,
+      updatedAt: now,
+      createdAt: now,
+    });
+
+    const { PATCH } = await import(
+      '@/app/api/workspaces/[id]/tree/individuals/[individualId]/route'
+    );
+    const req = makeRequest(
+      `http://localhost:3000/api/workspaces/${wsId}/tree/individuals/${indId}`,
+      { method: 'PATCH', body: { notes: null } },
+    );
+    const res = await PATCH(req, individualParams);
+
+    expect(res.status).toBe(200);
+    expect(mockIndividualUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ notes: null }),
+      }),
+    );
+  });
+});
+
+// ============================================================================
+// POST — null fields accepted in create (Finding 3)
+// ============================================================================
+describe('POST individual — null fields accepted in create', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  test('accepts null for optional string fields in create', async () => {
+    mockAuth();
+    mockTreeEditor();
+    mockExistingTree();
+    mockTreeEditLogCreate.mockResolvedValue({});
+
+    mockIndividualCreate.mockResolvedValue({
+      id: indId,
+      treeId,
+      givenName: 'محمد',
+      birthDate: null,
+      birthPlace: null,
+      isPrivate: false,
+      createdById: fakeUser.id,
+      updatedAt: now,
+      createdAt: now,
+    });
+
+    const { POST } = await import('@/app/api/workspaces/[id]/tree/individuals/route');
+    const req = makeRequest(`http://localhost:3000/api/workspaces/${wsId}/tree/individuals`, {
+      method: 'POST',
+      body: { givenName: 'محمد', birthDate: null, birthPlace: null },
+    });
+    const res = await POST(req, individualsParams);
+
+    expect(res.status).toBe(201);
+  });
+});

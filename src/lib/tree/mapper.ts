@@ -21,10 +21,12 @@ export interface DbIndividual {
   birthPlace: string | null
   birthDescription: string | null
   birthNotes: string | null
+  birthHijriDate: string | null
   deathDate: string | null
   deathPlace: string | null
   deathDescription: string | null
   deathNotes: string | null
+  deathHijriDate: string | null
   notes: string | null
   isDeceased: boolean
   isPrivate: boolean
@@ -40,6 +42,25 @@ export interface DbFamily {
   husbandId: string | null
   wifeId: string | null
   children: DbFamilyChild[]
+  // Marriage contract
+  marriageContractDate: string | null
+  marriageContractHijriDate: string | null
+  marriageContractPlace: string | null
+  marriageContractDescription: string | null
+  marriageContractNotes: string | null
+  // Marriage
+  marriageDate: string | null
+  marriageHijriDate: string | null
+  marriagePlace: string | null
+  marriageDescription: string | null
+  marriageNotes: string | null
+  // Divorce
+  isDivorced: boolean
+  divorceDate: string | null
+  divorceHijriDate: string | null
+  divorcePlace: string | null
+  divorceDescription: string | null
+  divorceNotes: string | null
 }
 
 export interface DbTree {
@@ -120,10 +141,12 @@ function mapIndividual(
     birthPlace: dbInd.birthPlace ?? '',
     birthDescription: dbInd.birthDescription ?? '',
     birthNotes: dbInd.birthNotes ?? '',
+    birthHijriDate: dbInd.birthHijriDate ?? '',
     death: dbInd.deathDate ?? '',
     deathPlace: dbInd.deathPlace ?? '',
     deathDescription: dbInd.deathDescription ?? '',
     deathNotes: dbInd.deathNotes ?? '',
+    deathHijriDate: dbInd.deathHijriDate ?? '',
     notes: dbInd.notes ?? '',
     isDeceased: dbInd.isDeceased,
     isPrivate: dbInd.isPrivate,
@@ -178,10 +201,12 @@ export function redactPrivateIndividuals(data: GedcomData): GedcomData {
         birthPlace: '',
         birthDescription: '',
         birthNotes: '',
+        birthHijriDate: '',
         death: '',
         deathPlace: '',
         deathDescription: '',
         deathNotes: '',
+        deathHijriDate: '',
         notes: '',
       }
     } else {
@@ -203,5 +228,27 @@ function mapFamily(dbFam: DbFamily): Family {
     husband: dbFam.husbandId ?? null,
     wife: dbFam.wifeId ?? null,
     children: dbFam.children.map((fc) => fc.individualId),
+    marriageContract: {
+      date: dbFam.marriageContractDate ?? '',
+      hijriDate: dbFam.marriageContractHijriDate ?? '',
+      place: dbFam.marriageContractPlace ?? '',
+      description: dbFam.marriageContractDescription ?? '',
+      notes: dbFam.marriageContractNotes ?? '',
+    },
+    marriage: {
+      date: dbFam.marriageDate ?? '',
+      hijriDate: dbFam.marriageHijriDate ?? '',
+      place: dbFam.marriagePlace ?? '',
+      description: dbFam.marriageDescription ?? '',
+      notes: dbFam.marriageNotes ?? '',
+    },
+    divorce: {
+      date: dbFam.divorceDate ?? '',
+      hijriDate: dbFam.divorceHijriDate ?? '',
+      place: dbFam.divorcePlace ?? '',
+      description: dbFam.divorceDescription ?? '',
+      notes: dbFam.divorceNotes ?? '',
+    },
+    isDivorced: dbFam.isDivorced,
   }
 }

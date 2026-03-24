@@ -3,15 +3,9 @@ import { prisma } from '@/lib/db';
 import { requireTreeEditor, isErrorResponse } from '@/lib/api/workspace-auth';
 import { treeMutateLimiter, rateLimitResponse } from '@/lib/api/rate-limit';
 import { getOrCreateTree, getTreeIndividual } from '@/lib/tree/queries';
-import { z } from 'zod';
+import { createFamilySchema } from '@/lib/tree/schemas';
 
 type RouteParams = { params: Promise<{ id: string }> };
-
-const createFamilySchema = z.object({
-  husbandId: z.string().uuid().optional(),
-  wifeId: z.string().uuid().optional(),
-  childrenIds: z.array(z.string().uuid()).optional(),
-});
 
 // POST /api/workspaces/[id]/tree/families — Create a new family
 export async function POST(request: NextRequest, { params }: RouteParams) {
@@ -39,7 +33,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   }
 
   const tree = await getOrCreateTree(workspaceId);
-  const { husbandId, wifeId, childrenIds } = parsed.data;
+  const { husbandId, wifeId, childrenIds, ...eventFields } = parsed.data;
 
   // Verify husband belongs to this tree
   if (husbandId) {
@@ -81,6 +75,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       treeId: tree.id,
       husbandId: husbandId ?? null,
       wifeId: wifeId ?? null,
+      ...eventFields,
       children: childrenIds
         ? {
             create: childrenIds.map((individualId) => ({ individualId })),

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { parseGedcom } from '@/lib/gedcom/parser'
-import type { Individual, GedcomData } from '@/lib/gedcom/types'
+import type { Individual, Family, GedcomData, FamilyEvent } from '@/lib/gedcom/types'
 import {
   formatDateWithPlace,
   getDeceasedLabel,
@@ -9,6 +9,7 @@ import {
   canMoveChild,
   getAlternativeFamilies,
   buildEditInitialData,
+  buildFamilyEventInitialData,
 } from '@/lib/person-detail-helpers'
 
 // ---------------------------------------------------------------------------
@@ -26,15 +27,36 @@ function makeIndividual(overrides: Partial<Individual> = {}): Individual {
     birthPlace: '',
     birthDescription: '',
     birthNotes: '',
+    birthHijriDate: '',
     death: '',
     deathPlace: '',
     deathDescription: '',
     deathNotes: '',
+    deathHijriDate: '',
     notes: '',
     isDeceased: false,
     isPrivate: false,
     familiesAsSpouse: [],
     familyAsChild: null,
+    ...overrides,
+  }
+}
+
+function makeEmptyEvent(): FamilyEvent {
+  return { date: '', hijriDate: '', place: '', description: '', notes: '' }
+}
+
+function makeFamily(overrides: Partial<Family> = {}): Family {
+  return {
+    id: '@F1@',
+    type: 'FAM',
+    husband: null,
+    wife: null,
+    children: [],
+    marriageContract: makeEmptyEvent(),
+    marriage: makeEmptyEvent(),
+    divorce: makeEmptyEvent(),
+    isDivorced: false,
     ...overrides,
   }
 }
@@ -141,15 +163,17 @@ describe('PersonDetail Phase 3 – birthDescription / deathDescription display',
 })
 
 describe('PersonDetail Phase 3 – edit form pre-fill', () => {
-  it('includes birthPlace, deathPlace, isDeceased, notes, birthNotes, deathNotes, birthDescription, deathDescription in initial data', () => {
+  it('includes birthPlace, deathPlace, isDeceased, notes, birthNotes, deathNotes, birthDescription, deathDescription, and Hijri dates in initial data', () => {
     const person = makeIndividual({
       givenName: 'أحمد',
       surname: 'السعيد',
       sex: 'M',
       birth: '1950',
       birthPlace: 'مكة المكرمة',
+      birthHijriDate: '5 رمضان 1370',
       death: '2020',
       deathPlace: 'المدينة المنورة',
+      deathHijriDate: '15 محرم 1442',
       isDeceased: true,
       isPrivate: false,
       notes: 'ملاحظة',
@@ -166,9 +190,11 @@ describe('PersonDetail Phase 3 – edit form pre-fill', () => {
       birthDate: '1950',
       birthPlace: 'مكة المكرمة',
       birthDescription: 'وصف ميلاد',
+      birthHijriDate: '5 رمضان 1370',
       deathDate: '2020',
       deathPlace: 'المدينة المنورة',
       deathDescription: 'سبب وفاة',
+      deathHijriDate: '15 محرم 1442',
       isDeceased: true,
       isPrivate: false,
       notes: 'ملاحظة',
@@ -187,6 +213,18 @@ describe('PersonDetail Phase 3 – edit form pre-fill', () => {
     expect(data).toMatchObject({
       birthDescription: 'ولادة طبيعية في المنزل',
       deathDescription: 'نوبة قلبية',
+    })
+  })
+
+  it('includes Hijri dates in initial data', () => {
+    const person = makeIndividual({
+      birthHijriDate: '5 رمضان 1370',
+      deathHijriDate: '15 محرم 1442',
+    })
+    const data = buildEditInitialData(person)
+    expect(data).toMatchObject({
+      birthHijriDate: '5 رمضان 1370',
+      deathHijriDate: '15 محرم 1442',
     })
   })
 })
@@ -357,5 +395,54 @@ describe('PersonDetail Phase 3 – move child', () => {
     const data = parseGedcom(POLYGAMOUS_GEDCOM)
     const father = data.individuals['@I1@']
     expect(getAlternativeFamilies(father, data)).toEqual([])
+  })
+})
+
+describe('buildFamilyEventInitialData', () => {
+  it('maps family marriage contract event to form data', () => {
+    const family = makeFamily({
+      marriageContract: { date: '2020', hijriDate: '1441', place: 'مكة', description: 'عقد', notes: 'ملاحظة' },
+    })
+    const data = buildFamilyEventInitialData(family)
+    expect(data.marriageContractDate).toBe('2020')
+    expect(data.marriageContractHijriDate).toBe('1441')
+    expect(data.marriageContractPlace).toBe('مكة')
+    expect(data.marriageContractDescription).toBe('عقد')
+    expect(data.marriageContractNotes).toBe('ملاحظة')
+  })
+
+  it('maps family marriage event to form data', () => {
+    const family = makeFamily({
+      marriage: { date: '2021', hijriDate: '1442', place: 'جدة', description: 'زفاف', notes: 'ملاحظة زفاف' },
+    })
+    const data = buildFamilyEventInitialData(family)
+    expect(data.marriageDate).toBe('2021')
+    expect(data.marriageHijriDate).toBe('1442')
+    expect(data.marriagePlace).toBe('جدة')
+    expect(data.marriageDescription).toBe('زفاف')
+    expect(data.marriageNotes).toBe('ملاحظة زفاف')
+  })
+
+  it('maps family divorce event to form data', () => {
+    const family = makeFamily({
+      isDivorced: true,
+      divorce: { date: '2023', hijriDate: '1444', place: 'الرياض', description: 'طلاق', notes: 'ملاحظة طلاق' },
+    })
+    const data = buildFamilyEventInitialData(family)
+    expect(data.isDivorced).toBe(true)
+    expect(data.divorceDate).toBe('2023')
+    expect(data.divorceHijriDate).toBe('1444')
+    expect(data.divorcePlace).toBe('الرياض')
+    expect(data.divorceDescription).toBe('طلاق')
+    expect(data.divorceNotes).toBe('ملاحظة طلاق')
+  })
+
+  it('returns empty strings for family with no events', () => {
+    const family = makeFamily()
+    const data = buildFamilyEventInitialData(family)
+    expect(data.marriageContractDate).toBe('')
+    expect(data.marriageDate).toBe('')
+    expect(data.divorceDate).toBe('')
+    expect(data.isDivorced).toBe(false)
   })
 })

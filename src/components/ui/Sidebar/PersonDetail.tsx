@@ -8,7 +8,11 @@ import { getDisplayName, getPersonRelationships } from '@/lib/gedcom';
 import type { Individual } from '@/lib/gedcom';
 import { IndividualForm, type IndividualFormData } from '@/components/tree/IndividualForm/IndividualForm';
 import { FamilyPickerModal } from '@/components/tree/FamilyPickerModal/FamilyPickerModal';
-import { apiFetch } from '@/lib/api/client';
+import { FamilyEventForm } from '@/components/tree/FamilyEventForm/FamilyEventForm';
+import { getPreferredDate, getSecondaryDate, getDateSuffix } from '@/lib/calendar-helpers';
+import type { CalendarPreference } from '@/lib/calendar-helpers';
+import { useCalendarPreference } from '@/hooks/useCalendarPreference';
+import { usePersonActions } from '@/hooks/usePersonActions';
 import {
   formatDateWithPlace,
   getDeceasedLabel,
@@ -17,6 +21,7 @@ import {
   canMoveChild,
   getAlternativeFamilies,
   buildEditInitialData,
+  buildFamilyEventInitialData,
   getFamiliesForPicker,
 } from '@/lib/person-detail-helpers';
 import type { AddParentResult } from '@/lib/person-detail-helpers';
@@ -37,22 +42,31 @@ function useOptionalWorkspaceTree() {
 }
 
 // ---------------------------------------------------------------------------
-// Types for the form modal state machine
-// ---------------------------------------------------------------------------
-
-type FormMode =
-  | { kind: 'edit' }
-  | { kind: 'addChild'; targetFamilyId?: string }
-  | { kind: 'addSpouse' }
-  | { kind: 'addParent'; lockedSex?: 'M' | 'F' };
-
-// ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
 
-function DateInfo({ person, className, compact }: { person: Individual; className?: string; compact?: boolean }) {
-  const birthDisplay = compact ? person.birth : formatDateWithPlace(person.birth, person.birthPlace);
-  const deathDisplay = compact ? person.death : formatDateWithPlace(person.death, person.deathPlace);
+function DateInfo({
+  person,
+  className,
+  compact,
+  calendarPreference = 'hijri',
+}: {
+  person: Individual;
+  className?: string;
+  compact?: boolean;
+  calendarPreference?: CalendarPreference;
+}) {
+  const birthPrimary = getPreferredDate(person.birth, person.birthHijriDate, calendarPreference);
+  const birthSecondary = getSecondaryDate(person.birth, person.birthHijriDate, calendarPreference);
+  const birthSuffix = getDateSuffix(person.birth, person.birthHijriDate);
+  const deathPrimary = getPreferredDate(person.death, person.deathHijriDate, calendarPreference);
+  const deathSecondary = getSecondaryDate(person.death, person.deathHijriDate, calendarPreference);
+  const deathSuffix = getDateSuffix(person.death, person.deathHijriDate);
+
+  const birthDateWithSuffix = birthPrimary ? `${birthPrimary}${birthSuffix ? ` ${birthSuffix}` : ''}` : '';
+  const birthDisplay = compact ? birthDateWithSuffix : formatDateWithPlace(birthDateWithSuffix, person.birthPlace);
+  const deathDateWithSuffix = deathPrimary ? `${deathPrimary}${deathSuffix ? ` ${deathSuffix}` : ''}` : '';
+  const deathDisplay = compact ? deathDateWithSuffix : formatDateWithPlace(deathDateWithSuffix, person.deathPlace);
   const deceasedLabel = getDeceasedLabel(person);
 
   if (!birthDisplay && !deathDisplay && !deceasedLabel) return null;
@@ -60,8 +74,11 @@ function DateInfo({ person, className, compact }: { person: Individual; classNam
   return (
     <span className={className}>
       {birthDisplay && (
-        <span>
-          الميلاد: {birthDisplay}
+        <span className={styles.dateGroup}>
+          <span className={styles.datePrimary}>الميلاد: {birthDisplay}</span>
+          {!compact && birthSecondary && (
+            <span className={styles.dateSecondary}>{birthSecondary}</span>
+          )}
         </span>
       )}
       {!compact && person.birthDescription && (
@@ -71,8 +88,11 @@ function DateInfo({ person, className, compact }: { person: Individual; classNam
         <span className={styles.eventNote}>{person.birthNotes}</span>
       )}
       {deathDisplay && (
-        <span>
-          الوفاة: {deathDisplay}
+        <span className={styles.dateGroup}>
+          <span className={styles.datePrimary}>الوفاة: {deathDisplay}</span>
+          {!compact && deathSecondary && (
+            <span className={styles.dateSecondary}>{deathSecondary}</span>
+          )}
         </span>
       )}
       {!compact && person.deathDescription && (
@@ -158,6 +178,33 @@ function RelationshipSection({ title, people, visiblePersonIds, onPersonClick, h
 }
 
 // ---------------------------------------------------------------------------
+// MarriageEventDisplay sub-component
+// ---------------------------------------------------------------------------
+
+function MarriageEventDisplay({
+  label,
+  event,
+  calendarPreference,
+}: {
+  label: string;
+  event: { date: string; hijriDate: string; place: string };
+  calendarPreference: CalendarPreference;
+}) {
+  const primary = getPreferredDate(event.date, event.hijriDate, calendarPreference);
+  const secondary = getSecondaryDate(event.date, event.hijriDate, calendarPreference);
+  const suffix = getDateSuffix(event.date, event.hijriDate);
+
+  return (
+    <div className={styles.marriageEvent}>
+      <span className={styles.marriageEventLabel}>{label}</span>
+      {primary && <span className={styles.marriageEventDate}>{primary}{suffix ? ` ${suffix}` : ''}</span>}
+      {secondary && <span className={styles.marriageEventDateSecondary}>{secondary}</span>}
+      {event.place && <span className={styles.marriageEventPlace}>{event.place}</span>}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // PersonDetail
 // ---------------------------------------------------------------------------
 
@@ -176,20 +223,32 @@ export function PersonDetail({ personId }: PersonDetailProps) {
 
   const workspace = useOptionalWorkspaceTree();
   const canEdit = workspace?.canEdit ?? false;
-
-  // Form modal state
-  const [formMode, setFormMode] = useState<FormMode | null>(null);
-  const [formLoading, setFormLoading] = useState(false);
-  const [formError, setFormError] = useState('');
-
-  // Family picker state
-  const [familyPickerMode, setFamilyPickerMode] = useState<'addChild' | 'moveChild' | null>(null);
-
-  // Delete confirmation state
-  const [deleteConfirm, setDeleteConfirm] = useState(false);
-  const [deleteLoading, setDeleteLoading] = useState(false);
+  const { preference: calendarPreference, setPreference: setCalendarPreference } = useCalendarPreference();
 
   const person = data?.individuals[personId];
+
+  const {
+    formMode, setFormMode,
+    formLoading,
+    formError, setFormError,
+    deleteConfirm, setDeleteConfirm, deleteLoading,
+    handleEditSubmit,
+    handleAddChildSubmit,
+    handleAddSpouseSubmit,
+    handleAddParentSubmit,
+    handleFamilyEventSubmit,
+    handleDelete,
+    moveChild,
+  } = usePersonActions({
+    personId,
+    workspace,
+    person,
+    data,
+    setSelectedPersonId,
+  });
+
+  // Family picker state (stays local — it controls which modal is open)
+  const [familyPickerMode, setFamilyPickerMode] = useState<'addChild' | 'moveChild' | null>(null);
   const relationships = useMemo(() => {
     if (!data) return null;
     return getPersonRelationships(data, personId);
@@ -215,251 +274,6 @@ export function PersonDetail({ personId }: PersonDetailProps) {
       setSelectedPersonId(null);
     }
   }, [personId, setFocusPersonId, setSelectedPersonId]);
-
-  // -------------------------------------------------------------------------
-  // API helpers
-  // -------------------------------------------------------------------------
-
-  const createIndividual = useCallback(async (formData: IndividualFormData) => {
-    if (!workspace) throw new Error('No workspace context');
-    const res = await apiFetch(`/api/workspaces/${workspace.workspaceId}/tree/individuals`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        givenName: formData.givenName || undefined,
-        surname: formData.surname || undefined,
-        sex: formData.sex || undefined,
-        birthDate: formData.birthDate || undefined,
-        birthPlace: formData.birthPlace || undefined,
-        birthDescription: formData.birthDescription || undefined,
-        birthNotes: formData.birthNotes || undefined,
-        deathDate: formData.deathDate || undefined,
-        deathPlace: formData.deathPlace || undefined,
-        deathDescription: formData.deathDescription || undefined,
-        deathNotes: formData.deathNotes || undefined,
-        isDeceased: formData.isDeceased,
-        isPrivate: formData.isPrivate,
-        notes: formData.notes || undefined,
-      }),
-    });
-    if (!res.ok) {
-      const json = await res.json();
-      throw new Error(json.error ?? 'حدث خطأ');
-    }
-    const json = await res.json();
-    return json.data as { id: string };
-  }, [workspace]);
-
-  const createFamily = useCallback(async (opts: { husbandId?: string; wifeId?: string; childrenIds?: string[] }) => {
-    if (!workspace) throw new Error('No workspace context');
-    const res = await apiFetch(`/api/workspaces/${workspace.workspaceId}/tree/families`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(opts),
-    });
-    if (!res.ok) {
-      const json = await res.json();
-      throw new Error(json.error ?? 'حدث خطأ');
-    }
-    const json = await res.json();
-    return json.data as { id: string };
-  }, [workspace]);
-
-  const addChildToFamily = useCallback(async (familyId: string, individualId: string) => {
-    if (!workspace) throw new Error('No workspace context');
-    const res = await apiFetch(`/api/workspaces/${workspace.workspaceId}/tree/families/${familyId}/children`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ individualId }),
-    });
-    if (!res.ok) {
-      const json = await res.json();
-      throw new Error(json.error ?? 'حدث خطأ');
-    }
-  }, [workspace]);
-
-  const patchFamily = useCallback(async (familyId: string, patch: { husbandId?: string | null; wifeId?: string | null }) => {
-    if (!workspace) throw new Error('No workspace context');
-    const res = await apiFetch(`/api/workspaces/${workspace.workspaceId}/tree/families/${familyId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(patch),
-    });
-    if (!res.ok) {
-      const json = await res.json();
-      throw new Error(json.error ?? 'حدث خطأ');
-    }
-  }, [workspace]);
-
-  const moveChild = useCallback(async (targetFamilyId: string) => {
-    if (!workspace || !person?.familyAsChild) return;
-    setFormLoading(true);
-    try {
-      const res = await apiFetch(
-        `/api/workspaces/${workspace.workspaceId}/tree/families/${person.familyAsChild}/children/${personId}/move`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ targetFamilyId }),
-        },
-      );
-      if (!res.ok) {
-        const json = await res.json();
-        throw new Error(json.error ?? 'حدث خطأ');
-      }
-      setFamilyPickerMode(null);
-      await workspace.refreshTree();
-    } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'حدث خطأ');
-    } finally {
-      setFormLoading(false);
-    }
-  }, [workspace, person, personId]);
-
-  // -------------------------------------------------------------------------
-  // Form submit handlers
-  // -------------------------------------------------------------------------
-
-  const handleEditSubmit = useCallback(async (formData: IndividualFormData) => {
-    if (!workspace) return;
-    setFormLoading(true);
-    setFormError('');
-    try {
-      const res = await apiFetch(`/api/workspaces/${workspace.workspaceId}/tree/individuals/${personId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          givenName: formData.givenName || undefined,
-          surname: formData.surname || undefined,
-          sex: formData.sex || undefined,
-          birthDate: formData.birthDate || undefined,
-          birthPlace: formData.birthPlace || undefined,
-          birthDescription: formData.birthDescription || undefined,
-          birthNotes: formData.birthNotes || undefined,
-          deathDate: formData.deathDate || undefined,
-          deathPlace: formData.deathPlace || undefined,
-          deathDescription: formData.deathDescription || undefined,
-          deathNotes: formData.deathNotes || undefined,
-          isDeceased: formData.isDeceased,
-          isPrivate: formData.isPrivate,
-          notes: formData.notes || undefined,
-        }),
-      });
-      if (!res.ok) {
-        const json = await res.json();
-        throw new Error(json.error ?? 'حدث خطأ');
-      }
-      setFormMode(null);
-      await workspace.refreshTree();
-    } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'حدث خطأ');
-    } finally {
-      setFormLoading(false);
-    }
-  }, [workspace, personId]);
-
-  const handleAddChildSubmit = useCallback(async (formData: IndividualFormData) => {
-    if (!workspace || !person || !data) return;
-    setFormLoading(true);
-    setFormError('');
-    try {
-      const newPerson = await createIndividual(formData);
-
-      // Use the target family from the form mode, or the first family
-      const targetFamilyId = formMode?.kind === 'addChild' ? formMode.targetFamilyId : undefined;
-
-      if (targetFamilyId) {
-        await addChildToFamily(targetFamilyId, newPerson.id);
-      } else if (person.familiesAsSpouse.length > 0) {
-        const familyId = person.familiesAsSpouse[0];
-        await addChildToFamily(familyId, newPerson.id);
-      } else {
-        // No family exists — create one with current person as spouse and new person as child
-        const familyOpts: { husbandId?: string; wifeId?: string; childrenIds: string[] } = {
-          childrenIds: [newPerson.id],
-        };
-        if (person.sex === 'F') {
-          familyOpts.wifeId = personId;
-        } else {
-          familyOpts.husbandId = personId;
-        }
-        await createFamily(familyOpts);
-      }
-
-      setFormMode(null);
-      await workspace.refreshTree();
-    } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'حدث خطأ');
-    } finally {
-      setFormLoading(false);
-    }
-  }, [workspace, person, data, personId, formMode, createIndividual, addChildToFamily, createFamily]);
-
-  const handleAddSpouseSubmit = useCallback(async (formData: IndividualFormData) => {
-    if (!workspace || !person) return;
-    setFormLoading(true);
-    setFormError('');
-    try {
-      const newPerson = await createIndividual(formData);
-
-      // Create family with both spouses
-      const familyOpts: { husbandId?: string; wifeId?: string } = {};
-      if (person.sex === 'F') {
-        familyOpts.wifeId = personId;
-        familyOpts.husbandId = newPerson.id;
-      } else {
-        familyOpts.husbandId = personId;
-        familyOpts.wifeId = newPerson.id;
-      }
-      await createFamily(familyOpts);
-
-      setFormMode(null);
-      await workspace.refreshTree();
-    } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'حدث خطأ');
-    } finally {
-      setFormLoading(false);
-    }
-  }, [workspace, person, personId, createIndividual, createFamily]);
-
-  const handleAddParentSubmit = useCallback(async (formData: IndividualFormData) => {
-    if (!workspace || !person || !data) return;
-    setFormLoading(true);
-    setFormError('');
-    try {
-      const newPerson = await createIndividual(formData);
-      const newSex = formData.sex;
-
-      if (person.familyAsChild) {
-        // Update existing family — set husband or wife
-        const patch: { husbandId?: string; wifeId?: string } = {};
-        if (newSex === 'F') {
-          patch.wifeId = newPerson.id;
-        } else {
-          patch.husbandId = newPerson.id;
-        }
-        await patchFamily(person.familyAsChild, patch);
-      } else {
-        // Create a new family with the new person as parent and current person as child
-        const familyOpts: { husbandId?: string; wifeId?: string; childrenIds: string[] } = {
-          childrenIds: [personId],
-        };
-        if (newSex === 'F') {
-          familyOpts.wifeId = newPerson.id;
-        } else {
-          familyOpts.husbandId = newPerson.id;
-        }
-        await createFamily(familyOpts);
-      }
-
-      setFormMode(null);
-      await workspace.refreshTree();
-    } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'حدث خطأ');
-    } finally {
-      setFormLoading(false);
-    }
-  }, [workspace, person, data, personId, createIndividual, patchFamily, createFamily]);
 
   // -------------------------------------------------------------------------
   // Action handlers with validation
@@ -497,33 +311,9 @@ export function PersonDetail({ personId }: PersonDetailProps) {
   }, []);
 
   const handleMoveChildSelect = useCallback((targetFamilyId: string) => {
+    setFamilyPickerMode(null);
     moveChild(targetFamilyId);
   }, [moveChild]);
-
-  // -------------------------------------------------------------------------
-  // Delete handler
-  // -------------------------------------------------------------------------
-
-  const handleDelete = useCallback(async () => {
-    if (!workspace) return;
-    setDeleteLoading(true);
-    try {
-      const res = await apiFetch(`/api/workspaces/${workspace.workspaceId}/tree/individuals/${personId}`, {
-        method: 'DELETE',
-      });
-      if (!res.ok && res.status !== 204) {
-        const json = await res.json();
-        throw new Error(json.error ?? 'حدث خطأ');
-      }
-      setSelectedPersonId(null);
-      await workspace.refreshTree();
-    } catch {
-      // Reset confirm state on error so the user can try again
-      setDeleteConfirm(false);
-    } finally {
-      setDeleteLoading(false);
-    }
-  }, [workspace, personId, setSelectedPersonId]);
 
   // -------------------------------------------------------------------------
   // Derived: form submit dispatcher + initial data
@@ -536,14 +326,18 @@ export function PersonDetail({ personId }: PersonDetailProps) {
         ? handleAddChildSubmit
         : formMode.kind === 'addSpouse'
           ? handleAddSpouseSubmit
-          : handleAddParentSubmit
+          : formMode.kind === 'addParent'
+            ? handleAddParentSubmit
+            : undefined
     : undefined;
 
   const formInitialData: Partial<IndividualFormData> | undefined = formMode?.kind === 'edit' && person
     ? buildEditInitialData(person) as Partial<IndividualFormData>
     : undefined;
 
-  const formLockedSex = formMode?.kind === 'addParent' ? formMode.lockedSex : undefined;
+  const formLockedSex = formMode?.kind === 'addParent' ? formMode.lockedSex
+    : formMode?.kind === 'addSpouse' ? formMode.lockedSex
+    : undefined;
 
   // -------------------------------------------------------------------------
   // Derived: move child and family picker data
@@ -559,6 +353,20 @@ export function PersonDetail({ personId }: PersonDetailProps) {
 
   if (!person || !data || !relationships) return null;
 
+  // Show calendar toggle only when this person (or their families) has both hijri + gregorian
+  const hasDualDates = useMemo(() => {
+    if (person.birth && person.birthHijriDate) return true;
+    if (person.death && person.deathHijriDate) return true;
+    for (const fId of person.familiesAsSpouse) {
+      const f = data.families[fId];
+      if (!f) continue;
+      if (f.marriageContract.date && f.marriageContract.hijriDate) return true;
+      if (f.marriage.date && f.marriage.hijriDate) return true;
+      if (f.divorce.date && f.divorce.hijriDate) return true;
+    }
+    return false;
+  }, [person, data]);
+
   const name = getDisplayName(person);
 
   return (
@@ -572,7 +380,7 @@ export function PersonDetail({ personId }: PersonDetailProps) {
 
       <div className={styles.hero}>
         <h2 className={styles.heroName}>{name}</h2>
-        <DateInfo person={person} className={styles.heroDates} />
+        <DateInfo person={person} className={styles.heroDates} calendarPreference={calendarPreference} />
         <div className={styles.heroActions}>
           {person.sex && (
             <span className={clsx(styles.heroSexBadge, {
@@ -581,6 +389,28 @@ export function PersonDetail({ personId }: PersonDetailProps) {
             })}>
               {person.sex === 'M' ? 'ذكر' : 'أنثى'}
             </span>
+          )}
+          {hasDualDates && (
+            <div className={styles.calendarToggle}>
+              <button
+                type="button"
+                className={clsx(styles.calendarToggleOption, {
+                  [styles.calendarToggleOptionActive]: calendarPreference === 'hijri',
+                })}
+                onClick={() => setCalendarPreference('hijri')}
+              >
+                هجري
+              </button>
+              <button
+                type="button"
+                className={clsx(styles.calendarToggleOption, {
+                  [styles.calendarToggleOptionActive]: calendarPreference === 'gregorian',
+                })}
+                onClick={() => setCalendarPreference('gregorian')}
+              >
+                ميلادي
+              </button>
+            </div>
           )}
           <button
             className={styles.focusButton}
@@ -622,12 +452,12 @@ export function PersonDetail({ personId }: PersonDetailProps) {
           </button>
           <button
             className={styles.actionButton}
-            onClick={() => { setFormMode({ kind: 'addSpouse' }); setFormError(''); }}
+            onClick={() => { setFormMode({ kind: 'addSpouse', lockedSex: person.sex === 'M' ? 'F' : person.sex === 'F' ? 'M' : undefined }); setFormError(''); }}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
               <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
             </svg>
-            إضافة زوج/زوجة
+            {person.sex === 'M' ? 'إضافة زوجة' : person.sex === 'F' ? 'إضافة زوج' : 'إضافة زوج/زوجة'}
           </button>
           {person && data && validateAddParent(person, data).allowed && (
             <button
@@ -687,14 +517,82 @@ export function PersonDetail({ personId }: PersonDetailProps) {
           onPersonClick={handlePersonClick}
           hideNonVisible
         />
-      </div>
 
-      {person.notes && (
-        <div className={styles.notesSection}>
-          <h3 className={styles.sectionTitle}>ملاحظات</h3>
-          <div className={styles.notesContent}>{person.notes}</div>
-        </div>
-      )}
+        {person.familiesAsSpouse.length > 0 && (
+          <div>
+            <h3 className={styles.sectionTitle}>معلومات الزواج</h3>
+            {person.familiesAsSpouse.map((familyId) => {
+              const family = data.families[familyId];
+              if (!family) return null;
+              const spouseId = family.husband === personId ? family.wife : family.husband;
+              const spouse = spouseId ? data.individuals[spouseId] : null;
+              const spouseName = spouse ? getDisplayName(spouse) : null;
+              const hasAnyEvent = family.marriageContract.date || family.marriageContract.hijriDate ||
+                family.marriage.date || family.marriage.hijriDate ||
+                family.isDivorced;
+
+              return (
+                <div key={familyId} className={styles.marriageBlock}>
+                  <div className={styles.marriageBlockHeader}>
+                    <span className={styles.marriageSpouseName}>
+                      {spouseName ?? 'بدون زوج/زوجة'}
+                    </span>
+                    {canEdit && (
+                      <button
+                        className={styles.marriageEditButton}
+                        onClick={() => { setFormMode({ kind: 'editFamilyEvent', familyId }); setFormError(''); }}
+                        aria-label="تعديل أحداث الزواج"
+                        title="تعديل أحداث الزواج"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                          <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                  {(family.marriageContract.date || family.marriageContract.hijriDate) && (
+                    <MarriageEventDisplay
+                      label="عقد القران"
+                      event={family.marriageContract}
+                      calendarPreference={calendarPreference}
+                    />
+                  )}
+                  {(family.marriage.date || family.marriage.hijriDate) && (
+                    <MarriageEventDisplay
+                      label="حفل الزفاف"
+                      event={family.marriage}
+                      calendarPreference={calendarPreference}
+                    />
+                  )}
+                  {family.isDivorced && (
+                    <div className={styles.marriageEvent}>
+                      <span className={styles.divorceBadge}>مطلقان</span>
+                      {(family.divorce.date || family.divorce.hijriDate) && (
+                        <MarriageEventDisplay
+                          label="الطلاق"
+                          event={family.divorce}
+                          calendarPreference={calendarPreference}
+                        />
+                      )}
+                    </div>
+                  )}
+                  {!hasAnyEvent && (
+                    <span className={styles.marriageEventPlace}>لا توجد بيانات</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {person.notes && (
+          <div>
+            <h3 className={styles.sectionTitle}>ملاحظات</h3>
+            <div className={styles.notesContent}>{person.notes}</div>
+          </div>
+        )}
+      </div>
 
       {canEdit && (
         <div className={styles.deleteSection}>
@@ -761,6 +659,20 @@ export function PersonDetail({ personId }: PersonDetailProps) {
           onSelect={handleMoveChildSelect}
           families={alternativeFamilies}
           title="نقل إلى عائلة أخرى"
+        />
+      )}
+
+      {formMode?.kind === 'editFamilyEvent' && (
+        <FamilyEventForm
+          initialData={
+            data.families[formMode.familyId]
+              ? buildFamilyEventInitialData(data.families[formMode.familyId])
+              : undefined
+          }
+          onSubmit={handleFamilyEventSubmit}
+          onClose={() => { setFormMode(null); setFormError(''); }}
+          isLoading={formLoading}
+          error={formError}
         />
       )}
     </div>

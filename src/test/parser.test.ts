@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { parseGedcom } from '@/lib/gedcom/parser'
+import type { FamilyEvent } from '@/lib/gedcom/types'
 
 describe('parseGedcom — birthPlace and deathPlace', () => {
   it('parses PLAC under BIRT as birthPlace', () => {
@@ -370,5 +371,296 @@ describe('parseGedcom — standalone NOTE references', () => {
     const data = parseGedcom(gedcom)
     expect(data.individuals['@N1@']).toBeUndefined()
     expect(data.families['@N1@']).toBeUndefined()
+  })
+})
+
+// ── Family marriage events (MARC/MARR/DIV) ──────────────────────────
+
+describe('parseGedcom — family marriage events (MARC/MARR/DIV)', () => {
+  const emptyEvent: FamilyEvent = {
+    date: '',
+    hijriDate: '',
+    place: '',
+    description: '',
+    notes: '',
+  }
+
+  it('parses MARC with DATE and PLAC', () => {
+    const gedcom = `
+0 @I1@ INDI
+1 NAME Ahmad
+1 SEX M
+0 @I2@ INDI
+1 NAME Fatima
+1 SEX F
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+1 MARC
+2 DATE 11 JUL 2022
+2 PLAC Riyadh
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.families['@F1@'].marriageContract.date).toBe('11/07/2022')
+    expect(data.families['@F1@'].marriageContract.place).toBe('Riyadh')
+  })
+
+  it('parses MARR with DATE and PLAC', () => {
+    const gedcom = `
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+1 MARR
+2 DATE 15 SEP 2022
+2 PLAC Jeddah
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.families['@F1@'].marriage.date).toBe('15/09/2022')
+    expect(data.families['@F1@'].marriage.place).toBe('Jeddah')
+  })
+
+  it('parses DIV and sets isDivorced to true', () => {
+    const gedcom = `
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+1 DIV
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.families['@F1@'].isDivorced).toBe(true)
+  })
+
+  it('captures inline description on MARC (e.g., Hijri date)', () => {
+    const gedcom = `
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+1 MARC 12/2/1443
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.families['@F1@'].marriageContract.description).toBe('12/2/1443')
+  })
+
+  it('captures inline description on MARR', () => {
+    const gedcom = `
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+1 MARR 7/10/1443
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.families['@F1@'].marriage.description).toBe('7/10/1443')
+  })
+
+  it('filters Y from DIV description', () => {
+    const gedcom = `
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+1 DIV Y
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.families['@F1@'].isDivorced).toBe(true)
+    expect(data.families['@F1@'].divorce.description).toBe('')
+  })
+
+  it('captures inline description on DIV (non-Y value)', () => {
+    const gedcom = `
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+1 DIV irreconcilable differences
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.families['@F1@'].isDivorced).toBe(true)
+    expect(data.families['@F1@'].divorce.description).toBe('irreconcilable differences')
+  })
+
+  it('parses NOTE under MARC/MARR/DIV', () => {
+    const gedcom = `
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+1 MARC
+2 NOTE Contract signed at home
+1 MARR
+2 NOTE Large celebration
+1 DIV
+2 NOTE Mutual decision
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.families['@F1@'].marriageContract.notes).toBe('Contract signed at home')
+    expect(data.families['@F1@'].marriage.notes).toBe('Large celebration')
+    expect(data.families['@F1@'].divorce.notes).toBe('Mutual decision')
+  })
+
+  it('handles CONT/CONC in MARC/MARR/DIV notes', () => {
+    const gedcom = `
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+1 MARC
+2 NOTE First line
+3 CONT Second line
+3 CONC more text
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.families['@F1@'].marriageContract.notes).toBe('First line\nSecond linemore text')
+  })
+
+  it('resolves standalone NOTE references in family event notes', () => {
+    const gedcom = `
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+1 MARC
+2 NOTE @N1@
+0 @N1@ NOTE Standalone contract note
+1 CONT with more details
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.families['@F1@'].marriageContract.notes).toBe('Standalone contract note\nwith more details')
+  })
+
+  it('defaults all family event fields to empty strings', () => {
+    const gedcom = `
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.families['@F1@'].marriageContract).toEqual(emptyEvent)
+    expect(data.families['@F1@'].marriage).toEqual(emptyEvent)
+    expect(data.families['@F1@'].divorce).toEqual(emptyEvent)
+    expect(data.families['@F1@'].isDivorced).toBe(false)
+  })
+
+  it('parses all three events on the same family', () => {
+    const gedcom = `
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+1 MARC
+2 DATE 1 JAN 2020
+2 PLAC Riyadh
+1 MARR
+2 DATE 1 FEB 2020
+2 PLAC Jeddah
+1 DIV
+2 DATE 1 MAR 2021
+2 PLAC Dammam
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.families['@F1@'].marriageContract.date).toBe('01/01/2020')
+    expect(data.families['@F1@'].marriageContract.place).toBe('Riyadh')
+    expect(data.families['@F1@'].marriage.date).toBe('01/02/2020')
+    expect(data.families['@F1@'].marriage.place).toBe('Jeddah')
+    expect(data.families['@F1@'].divorce.date).toBe('01/03/2021')
+    expect(data.families['@F1@'].divorce.place).toBe('Dammam')
+    expect(data.families['@F1@'].isDivorced).toBe(true)
+  })
+
+  it('parses _HIJR under MARC/MARR/DIV', () => {
+    const gedcom = `
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+1 MARC
+2 _HIJR 12/02/1443
+1 MARR
+2 _HIJR 07/10/1443
+1 DIV
+2 _HIJR 15/06/1444
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.families['@F1@'].marriageContract.hijriDate).toBe('12/02/1443')
+    expect(data.families['@F1@'].marriage.hijriDate).toBe('07/10/1443')
+    expect(data.families['@F1@'].divorce.hijriDate).toBe('15/06/1444')
+  })
+
+  it('parses PLAC under MARR', () => {
+    const gedcom = `
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+1 MARR
+2 PLAC المدينة المنورة
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.families['@F1@'].marriage.place).toBe('المدينة المنورة')
+  })
+})
+
+// ── _HIJR (Hijri dates) on individuals ──────────────────────────────
+
+describe('parseGedcom — _HIJR (Hijri dates)', () => {
+  it('parses _HIJR under BIRT as birthHijriDate', () => {
+    const gedcom = `
+0 @I1@ INDI
+1 NAME Ahmad
+1 BIRT
+2 DATE 1 JAN 1990
+2 _HIJR 15/05/1410
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.individuals['@I1@'].birthHijriDate).toBe('15/05/1410')
+  })
+
+  it('parses _HIJR under DEAT as deathHijriDate', () => {
+    const gedcom = `
+0 @I1@ INDI
+1 NAME Ahmad
+1 DEAT
+2 DATE 15 MAR 2020
+2 _HIJR 20/07/1441
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.individuals['@I1@'].deathHijriDate).toBe('20/07/1441')
+  })
+
+  it('defaults birthHijriDate and deathHijriDate to empty string', () => {
+    const gedcom = `
+0 @I1@ INDI
+1 NAME Ahmad
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.individuals['@I1@'].birthHijriDate).toBe('')
+    expect(data.individuals['@I1@'].deathHijriDate).toBe('')
+  })
+
+  it('parses _HIJR on same individual as regular dates', () => {
+    const gedcom = `
+0 @I1@ INDI
+1 NAME Ahmad
+1 BIRT
+2 DATE 1 JAN 1990
+2 _HIJR 15/05/1410
+1 DEAT
+2 DATE 15 MAR 2020
+2 _HIJR 20/07/1441
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.individuals['@I1@'].birth).toBe('01/01/1990')
+    expect(data.individuals['@I1@'].birthHijriDate).toBe('15/05/1410')
+    expect(data.individuals['@I1@'].death).toBe('15/03/2020')
+    expect(data.individuals['@I1@'].deathHijriDate).toBe('20/07/1441')
   })
 })

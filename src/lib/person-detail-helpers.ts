@@ -1,4 +1,4 @@
-import type { Individual, GedcomData } from '@/lib/gedcom/types';
+import type { Individual, Family, GedcomData } from '@/lib/gedcom/types';
 import { getDisplayName } from '@/lib/gedcom';
 
 /** Format date with place for display */
@@ -106,13 +106,64 @@ export function buildEditInitialData(person: Individual): Record<string, unknown
     birthPlace: person.birthPlace,
     birthDescription: person.birthDescription,
     birthNotes: person.birthNotes,
+    birthHijriDate: person.birthHijriDate,
     deathDate: person.death,
     deathPlace: person.deathPlace,
     deathDescription: person.deathDescription,
     deathNotes: person.deathNotes,
+    deathHijriDate: person.deathHijriDate,
     isDeceased: person.isDeceased,
     isPrivate: person.isPrivate,
     notes: person.notes,
+  };
+}
+
+/** Build initial data for family event form from a Family object */
+export function buildFamilyEventInitialData(family: Family) {
+  return {
+    marriageContractDate: family.marriageContract.date,
+    marriageContractHijriDate: family.marriageContract.hijriDate,
+    marriageContractPlace: family.marriageContract.place,
+    marriageContractDescription: family.marriageContract.description,
+    marriageContractNotes: family.marriageContract.notes,
+    marriageDate: family.marriage.date,
+    marriageHijriDate: family.marriage.hijriDate,
+    marriagePlace: family.marriage.place,
+    marriageDescription: family.marriage.description,
+    marriageNotes: family.marriage.notes,
+    isDivorced: family.isDivorced,
+    divorceDate: family.divorce.date,
+    divorceHijriDate: family.divorce.hijriDate,
+    divorcePlace: family.divorce.place,
+    divorceDescription: family.divorce.description,
+    divorceNotes: family.divorce.notes,
+  };
+}
+
+/** Serialize IndividualFormData to API payload (empty strings → null) */
+export function serializeIndividualForm(formData: {
+  givenName: string; surname: string; sex: string;
+  birthDate: string; birthPlace: string; birthDescription: string; birthNotes: string; birthHijriDate: string;
+  deathDate: string; deathPlace: string; deathDescription: string; deathNotes: string; deathHijriDate: string;
+  isDeceased: boolean; isPrivate: boolean; notes: string;
+}): Record<string, unknown> {
+  return {
+    givenName: formData.givenName || null,
+    surname: formData.surname || null,
+    sex: formData.sex || null,
+    birthDate: formData.birthDate || null,
+    birthPlace: formData.birthPlace || null,
+    birthDescription: formData.birthDescription || null,
+    birthNotes: formData.birthNotes || null,
+    birthHijriDate: formData.birthHijriDate || null,
+    deathDate: formData.deathDate || null,
+    deathPlace: formData.deathPlace || null,
+    deathDescription: formData.deathDescription || null,
+    deathNotes: formData.deathNotes || null,
+    deathHijriDate: formData.deathHijriDate || null,
+    isDeceased: formData.isDeceased,
+    isPrivate: formData.isPrivate,
+    notes: formData.notes || null,
   };
 }
 

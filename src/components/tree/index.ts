@@ -6,3 +6,5 @@ export { IndividualForm } from './IndividualForm';
 export type { IndividualFormData } from './IndividualForm';
 export { FamilyPickerModal } from './FamilyPickerModal';
 export type { FamilyPickerModalProps } from './FamilyPickerModal';
+export { FamilyEventForm } from './FamilyEventForm';
+export type { FamilyEventFormData } from './FamilyEventForm';

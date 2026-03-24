@@ -3,27 +3,9 @@ import { prisma } from '@/lib/db';
 import { requireTreeEditor, isErrorResponse } from '@/lib/api/workspace-auth';
 import { treeMutateLimiter, rateLimitResponse } from '@/lib/api/rate-limit';
 import { getOrCreateTree, getTreeIndividual } from '@/lib/tree/queries';
-import { z } from 'zod';
+import { updateIndividualSchema } from '@/lib/tree/schemas';
 
 type RouteParams = { params: Promise<{ id: string; individualId: string }> };
-
-const updateIndividualSchema = z.object({
-  givenName: z.string().max(200).optional(),
-  surname: z.string().max(200).optional(),
-  fullName: z.string().max(200).optional(),
-  sex: z.enum(['M', 'F']).optional(),
-  birthDate: z.string().max(50).optional(),
-  birthPlace: z.string().max(500).optional(),
-  birthDescription: z.string().max(500).optional(),
-  birthNotes: z.string().max(5000).optional(),
-  deathDate: z.string().max(50).optional(),
-  deathPlace: z.string().max(500).optional(),
-  deathDescription: z.string().max(500).optional(),
-  deathNotes: z.string().max(5000).optional(),
-  isDeceased: z.boolean().optional(),
-  isPrivate: z.boolean().optional(),
-  notes: z.string().max(5000).optional(),
-});
 
 // PATCH /api/workspaces/[id]/tree/individuals/[individualId] — Update an individual
 export async function PATCH(request: NextRequest, { params }: RouteParams) {

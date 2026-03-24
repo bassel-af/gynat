@@ -17,6 +17,7 @@ model User {
   displayName String  @map("display_name")
   avatarUrl  String?  @map("avatar_url")
   phone      String?
+  calendarPreference String @default("hijri") @map("calendar_preference")
   createdAt  DateTime @default(now()) @map("created_at")
 
   // Relations
@@ -197,7 +198,9 @@ model Individual {
   deathPlace  String?  @map("death_place")
   deathDescription String? @map("death_description") @db.VarChar(500)
   deathNotes  String?  @map("death_notes") @db.Text
+  birthHijriDate String? @map("birth_hijri_date")
   notes       String?  @db.Text
+  deathHijriDate String? @map("death_hijri_date")
   isDeceased  Boolean  @default(false) @map("is_deceased")
   isPrivate   Boolean  @default(false) @map("is_private")
   createdById String?  @map("created_by") @db.Uuid
@@ -223,6 +226,28 @@ model Family {
   gedcomId  String? @map("gedcom_id") // original GEDCOM ID if imported
   husbandId String? @map("husband_id") @db.Uuid
   wifeId    String? @map("wife_id") @db.Uuid
+
+  // Marriage contract (MARC)
+  marriageContractDate        String? @map("marriage_contract_date")
+  marriageContractHijriDate   String? @map("marriage_contract_hijri_date")
+  marriageContractPlace       String? @map("marriage_contract_place")
+  marriageContractDescription String? @map("marriage_contract_description") @db.VarChar(500)
+  marriageContractNotes       String? @map("marriage_contract_notes") @db.Text
+
+  // Marriage (MARR)
+  marriageDate        String? @map("marriage_date")
+  marriageHijriDate   String? @map("marriage_hijri_date")
+  marriagePlace       String? @map("marriage_place")
+  marriageDescription String? @map("marriage_description") @db.VarChar(500)
+  marriageNotes       String? @map("marriage_notes") @db.Text
+
+  // Divorce (DIV)
+  isDivorced           Boolean @default(false) @map("is_divorced")
+  divorceDate          String? @map("divorce_date")
+  divorceHijriDate     String? @map("divorce_hijri_date")
+  divorcePlace         String? @map("divorce_place")
+  divorceDescription   String? @map("divorce_description") @db.VarChar(500)
+  divorceNotes         String? @map("divorce_notes") @db.Text
 
   // Relations
   tree     FamilyTree    @relation(fields: [treeId], references: [id], onDelete: Cascade)

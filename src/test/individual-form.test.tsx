@@ -287,4 +287,55 @@ describe('IndividualForm', () => {
       })
     })
   })
+
+  describe('birthHijriDate field', () => {
+    it('renders birthHijriDate input in birth section', () => {
+      render(<IndividualForm {...defaultProps} />)
+      expect(screen.getByLabelText('التاريخ الهجري للميلاد')).toBeInTheDocument()
+    })
+
+    it('pre-fills birthHijriDate from initialData', () => {
+      render(<IndividualForm {...defaultProps} initialData={{ birthHijriDate: '5 رمضان 1370' }} />)
+      const input = screen.getByLabelText('التاريخ الهجري للميلاد') as HTMLInputElement
+      expect(input.value).toBe('5 رمضان 1370')
+    })
+
+    it('includes birthHijriDate in submitted data', async () => {
+      const onSubmit = vi.fn().mockResolvedValue(undefined)
+      render(<IndividualForm {...defaultProps} onSubmit={onSubmit} initialData={{ givenName: 'أحمد' }} />)
+      const input = screen.getByLabelText('التاريخ الهجري للميلاد')
+      fireEvent.change(input, { target: { value: '5 رمضان 1370' } })
+      fireEvent.submit(document.getElementById('individual-form')!)
+      await waitFor(() => {
+        expect(onSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({ birthHijriDate: '5 رمضان 1370' })
+        )
+      })
+    })
+  })
+
+  describe('deathHijriDate field', () => {
+    it('renders deathHijriDate input when isDeceased is true', () => {
+      render(<IndividualForm {...defaultProps} initialData={{ isDeceased: true }} />)
+      expect(screen.getByLabelText('التاريخ الهجري للوفاة')).toBeInTheDocument()
+    })
+
+    it('does not render deathHijriDate when not deceased', () => {
+      render(<IndividualForm {...defaultProps} />)
+      expect(screen.queryByLabelText('التاريخ الهجري للوفاة')).not.toBeInTheDocument()
+    })
+
+    it('includes deathHijriDate in submitted data', async () => {
+      const onSubmit = vi.fn().mockResolvedValue(undefined)
+      render(<IndividualForm {...defaultProps} onSubmit={onSubmit} initialData={{ givenName: 'أحمد', isDeceased: true }} />)
+      const input = screen.getByLabelText('التاريخ الهجري للوفاة')
+      fireEvent.change(input, { target: { value: '15 محرم 1442' } })
+      fireEvent.submit(document.getElementById('individual-form')!)
+      await waitFor(() => {
+        expect(onSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({ deathHijriDate: '15 محرم 1442' })
+        )
+      })
+    })
+  })
 })

@@ -17,10 +17,12 @@ function makeIndividual(overrides: Partial<Individual> & { id: string }): Indivi
     birthPlace: '',
     birthDescription: '',
     birthNotes: '',
+    birthHijriDate: '',
     death: '',
     deathPlace: '',
     deathDescription: '',
     deathNotes: '',
+    deathHijriDate: '',
     notes: '',
     isDeceased: false,
     isPrivate: false,
@@ -30,12 +32,18 @@ function makeIndividual(overrides: Partial<Individual> & { id: string }): Indivi
   };
 }
 
+const EMPTY_EVENT = { date: '', hijriDate: '', place: '', description: '', notes: '' };
+
 function makeFamily(overrides: Partial<Family> & { id: string }): Family {
   return {
     type: 'FAM',
     husband: null,
     wife: null,
     children: [],
+    marriageContract: EMPTY_EVENT,
+    marriage: EMPTY_EVENT,
+    divorce: EMPTY_EVENT,
+    isDivorced: false,
     ...overrides,
   };
 }

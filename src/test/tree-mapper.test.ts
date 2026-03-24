@@ -19,10 +19,12 @@ interface DbIndividual {
   birthPlace: string | null
   birthNotes: string | null
   birthDescription: string | null
+  birthHijriDate: string | null
   deathDate: string | null
   deathPlace: string | null
   deathNotes: string | null
   deathDescription: string | null
+  deathHijriDate: string | null
   notes: string | null
   isDeceased: boolean
   isPrivate: boolean
@@ -43,6 +45,25 @@ interface DbFamily {
   husbandId: string | null
   wifeId: string | null
   children: DbFamilyChild[]
+  // Marriage contract
+  marriageContractDate: string | null
+  marriageContractHijriDate: string | null
+  marriageContractPlace: string | null
+  marriageContractDescription: string | null
+  marriageContractNotes: string | null
+  // Marriage
+  marriageDate: string | null
+  marriageHijriDate: string | null
+  marriagePlace: string | null
+  marriageDescription: string | null
+  marriageNotes: string | null
+  // Divorce
+  isDivorced: boolean
+  divorceDate: string | null
+  divorceHijriDate: string | null
+  divorcePlace: string | null
+  divorceDescription: string | null
+  divorceNotes: string | null
 }
 
 interface DbTree {
@@ -63,10 +84,12 @@ function makeIndividual(overrides: Partial<DbIndividual> & { id: string; treeId:
     birthPlace: null,
     birthNotes: null,
     birthDescription: null,
+    birthHijriDate: null,
     deathDate: null,
     deathPlace: null,
     deathNotes: null,
     deathDescription: null,
+    deathHijriDate: null,
     notes: null,
     isDeceased: false,
     isPrivate: false,
@@ -83,6 +106,22 @@ function makeFamily(overrides: Partial<DbFamily> & { id: string; treeId: string 
     husbandId: null,
     wifeId: null,
     children: [],
+    marriageContractDate: null,
+    marriageContractHijriDate: null,
+    marriageContractPlace: null,
+    marriageContractDescription: null,
+    marriageContractNotes: null,
+    marriageDate: null,
+    marriageHijriDate: null,
+    marriagePlace: null,
+    marriageDescription: null,
+    marriageNotes: null,
+    isDivorced: false,
+    divorceDate: null,
+    divorceHijriDate: null,
+    divorcePlace: null,
+    divorceDescription: null,
+    divorceNotes: null,
     ...overrides,
   }
 }
@@ -977,5 +1016,251 @@ describe('dbTreeToGedcomData — birthPlace, deathPlace, notes mapping', () => {
     expect(ind.birthPlace).toBe('')
     expect(ind.deathPlace).toBe('')
     expect(ind.notes).toBe('')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Hijri date mapping
+// ---------------------------------------------------------------------------
+
+describe('dbTreeToGedcomData — Hijri date mapping', () => {
+  const TREE_ID = 'tree-001'
+  const WORKSPACE_ID = 'ws-001'
+
+  it('maps individual with Hijri dates', () => {
+    const dbTree: DbTree = {
+      id: TREE_ID,
+      workspaceId: WORKSPACE_ID,
+      individuals: [
+        makeIndividual({
+          id: 'ind-1',
+          treeId: TREE_ID,
+          givenName: 'Ahmad',
+          birthDate: '1950-01-15',
+          birthHijriDate: '1369/03/16',
+          deathDate: '2020-06-01',
+          deathHijriDate: '1441/10/09',
+        }),
+      ],
+      families: [],
+    }
+
+    const result = dbTreeToGedcomData(dbTree)
+    const ind = result.individuals['ind-1']
+
+    expect(ind.birthHijriDate).toBe('1369/03/16')
+    expect(ind.deathHijriDate).toBe('1441/10/09')
+  })
+
+  it('defaults Hijri dates to empty string when DB values are null', () => {
+    const dbTree: DbTree = {
+      id: TREE_ID,
+      workspaceId: WORKSPACE_ID,
+      individuals: [
+        makeIndividual({
+          id: 'ind-1',
+          treeId: TREE_ID,
+          givenName: 'Ahmad',
+        }),
+      ],
+      families: [],
+    }
+
+    const result = dbTreeToGedcomData(dbTree)
+    const ind = result.individuals['ind-1']
+
+    expect(ind.birthHijriDate).toBe('')
+    expect(ind.deathHijriDate).toBe('')
+  })
+})
+
+describe('redactPrivateIndividuals — Hijri dates', () => {
+  const TREE_ID = 'tree-001'
+  const WORKSPACE_ID = 'ws-001'
+
+  it('redacts Hijri dates for private individuals', () => {
+    const dbTree: DbTree = {
+      id: TREE_ID,
+      workspaceId: WORKSPACE_ID,
+      individuals: [
+        makeIndividual({
+          id: 'ind-1',
+          treeId: TREE_ID,
+          givenName: 'Ahmad',
+          birthHijriDate: '1369/03/16',
+          deathHijriDate: '1441/10/09',
+          isPrivate: true,
+        }),
+      ],
+      families: [],
+    }
+
+    const gedcom = dbTreeToGedcomData(dbTree)
+    const result = redactPrivateIndividuals(gedcom)
+    const ind = result.individuals['ind-1']
+
+    expect(ind.birthHijriDate).toBe('')
+    expect(ind.deathHijriDate).toBe('')
+  })
+
+  it('does not redact Hijri dates for non-private individuals', () => {
+    const dbTree: DbTree = {
+      id: TREE_ID,
+      workspaceId: WORKSPACE_ID,
+      individuals: [
+        makeIndividual({
+          id: 'ind-1',
+          treeId: TREE_ID,
+          givenName: 'Ahmad',
+          birthHijriDate: '1369/03/16',
+          deathHijriDate: '1441/10/09',
+          isPrivate: false,
+        }),
+      ],
+      families: [],
+    }
+
+    const gedcom = dbTreeToGedcomData(dbTree)
+    const result = redactPrivateIndividuals(gedcom)
+    const ind = result.individuals['ind-1']
+
+    expect(ind.birthHijriDate).toBe('1369/03/16')
+    expect(ind.deathHijriDate).toBe('1441/10/09')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Family event mapping
+// ---------------------------------------------------------------------------
+
+describe('dbTreeToGedcomData — family event mapping', () => {
+  const TREE_ID = 'tree-001'
+  const WORKSPACE_ID = 'ws-001'
+
+  it('maps family with marriage contract data', () => {
+    const dbTree: DbTree = {
+      id: TREE_ID,
+      workspaceId: WORKSPACE_ID,
+      individuals: [],
+      families: [
+        makeFamily({
+          id: 'fam-1',
+          treeId: TREE_ID,
+          marriageContractDate: '2020-01-01',
+          marriageContractHijriDate: '1441/05/06',
+          marriageContractPlace: 'Riyadh',
+          marriageContractDescription: 'Official contract',
+          marriageContractNotes: 'Witnessed by family',
+        }),
+      ],
+    }
+
+    const result = dbTreeToGedcomData(dbTree)
+    const fam = result.families['fam-1']
+
+    expect(fam.marriageContract.date).toBe('2020-01-01')
+    expect(fam.marriageContract.hijriDate).toBe('1441/05/06')
+    expect(fam.marriageContract.place).toBe('Riyadh')
+    expect(fam.marriageContract.description).toBe('Official contract')
+    expect(fam.marriageContract.notes).toBe('Witnessed by family')
+  })
+
+  it('maps family with marriage data', () => {
+    const dbTree: DbTree = {
+      id: TREE_ID,
+      workspaceId: WORKSPACE_ID,
+      individuals: [],
+      families: [
+        makeFamily({
+          id: 'fam-1',
+          treeId: TREE_ID,
+          marriageDate: '2020-03-15',
+          marriageHijriDate: '1441/07/20',
+          marriagePlace: 'Jeddah',
+          marriageDescription: 'Wedding ceremony',
+          marriageNotes: 'Large gathering',
+        }),
+      ],
+    }
+
+    const result = dbTreeToGedcomData(dbTree)
+    const fam = result.families['fam-1']
+
+    expect(fam.marriage.date).toBe('2020-03-15')
+    expect(fam.marriage.hijriDate).toBe('1441/07/20')
+    expect(fam.marriage.place).toBe('Jeddah')
+    expect(fam.marriage.description).toBe('Wedding ceremony')
+    expect(fam.marriage.notes).toBe('Large gathering')
+  })
+
+  it('maps family with divorce data', () => {
+    const dbTree: DbTree = {
+      id: TREE_ID,
+      workspaceId: WORKSPACE_ID,
+      individuals: [],
+      families: [
+        makeFamily({
+          id: 'fam-1',
+          treeId: TREE_ID,
+          isDivorced: true,
+          divorceDate: '2023-06-01',
+          divorceHijriDate: '1444/11/12',
+          divorcePlace: 'Mecca',
+          divorceDescription: 'Mutual agreement',
+          divorceNotes: 'Amicable separation',
+        }),
+      ],
+    }
+
+    const result = dbTreeToGedcomData(dbTree)
+    const fam = result.families['fam-1']
+
+    expect(fam.isDivorced).toBe(true)
+    expect(fam.divorce.date).toBe('2023-06-01')
+    expect(fam.divorce.hijriDate).toBe('1444/11/12')
+    expect(fam.divorce.place).toBe('Mecca')
+    expect(fam.divorce.description).toBe('Mutual agreement')
+    expect(fam.divorce.notes).toBe('Amicable separation')
+  })
+
+  it('maps family with all events empty (defaults)', () => {
+    const dbTree: DbTree = {
+      id: TREE_ID,
+      workspaceId: WORKSPACE_ID,
+      individuals: [],
+      families: [
+        makeFamily({
+          id: 'fam-1',
+          treeId: TREE_ID,
+        }),
+      ],
+    }
+
+    const result = dbTreeToGedcomData(dbTree)
+    const fam = result.families['fam-1']
+
+    // All event fields default to empty strings
+    expect(fam.marriageContract).toEqual({
+      date: '',
+      hijriDate: '',
+      place: '',
+      description: '',
+      notes: '',
+    })
+    expect(fam.marriage).toEqual({
+      date: '',
+      hijriDate: '',
+      place: '',
+      description: '',
+      notes: '',
+    })
+    expect(fam.divorce).toEqual({
+      date: '',
+      hijriDate: '',
+      place: '',
+      description: '',
+      notes: '',
+    })
+    expect(fam.isDivorced).toBe(false)
   })
 })

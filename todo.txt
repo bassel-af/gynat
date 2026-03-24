@@ -1,6 +1,4 @@
-Marriage place, dates, etc (standard in Islam)
-Marriage notes
-كتب الكتاب
+
 
 Check other inputs in MacFamilyTree
 تعريب مكان الميلاد
@@ -30,3 +28,7 @@ Version control
 UI latest touches.
 
 الهجري والميلادي
+
+when a person is a man, show إضافة زوجة and vice versa.
+also, the gender shall be selected in the modal,
+do not allow to change.
