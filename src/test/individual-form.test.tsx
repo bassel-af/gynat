@@ -230,4 +230,61 @@ describe('IndividualForm', () => {
       })
     })
   })
+
+  describe('birthDescription input', () => {
+    it('renders birthDescription input with correct label', () => {
+      render(<IndividualForm {...defaultProps} />)
+      expect(screen.getByLabelText('وصف الميلاد')).toBeInTheDocument()
+    })
+
+    it('shows correct placeholder', () => {
+      render(<IndividualForm {...defaultProps} />)
+      const input = screen.getByLabelText('وصف الميلاد')
+      expect(input).toHaveAttribute('placeholder', 'مثال: ولادة طبيعية في المنزل')
+    })
+
+    it('includes birthDescription in submitted data', async () => {
+      const onSubmit = vi.fn().mockResolvedValue(undefined)
+      render(<IndividualForm {...defaultProps} onSubmit={onSubmit} initialData={{ givenName: 'أحمد' }} />)
+      const input = screen.getByLabelText('وصف الميلاد')
+      fireEvent.change(input, { target: { value: 'ولادة طبيعية' } })
+      fireEvent.submit(document.getElementById('individual-form')!)
+      await waitFor(() => {
+        expect(onSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({ birthDescription: 'ولادة طبيعية' })
+        )
+      })
+    })
+  })
+
+  describe('deathDescription input', () => {
+    it('does not render deathDescription when isDeceased is false', () => {
+      render(<IndividualForm {...defaultProps} />)
+      expect(screen.queryByLabelText('سبب الوفاة')).not.toBeInTheDocument()
+    })
+
+    it('renders deathDescription input when isDeceased is checked', () => {
+      render(<IndividualForm {...defaultProps} initialData={{ isDeceased: true }} />)
+      expect(screen.getByLabelText('سبب الوفاة')).toBeInTheDocument()
+    })
+
+    it('shows correct placeholder', () => {
+      render(<IndividualForm {...defaultProps} initialData={{ isDeceased: true }} />)
+      const input = screen.getByLabelText('سبب الوفاة')
+      expect(input).toHaveAttribute('placeholder', 'مثال: نوبة قلبية')
+    })
+
+    it('includes deathDescription in submitted data', async () => {
+      const onSubmit = vi.fn().mockResolvedValue(undefined)
+      render(<IndividualForm {...defaultProps} onSubmit={onSubmit} initialData={{ givenName: 'أحمد', isDeceased: true }} />)
+      const input = screen.getByLabelText('سبب الوفاة')
+      fireEvent.change(input, { target: { value: 'نوبة قلبية' } })
+      fireEvent.submit(document.getElementById('individual-form')!)
+      await waitFor(() => {
+        expect(onSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({ deathDescription: 'نوبة قلبية' })
+        )
+      })
+    })
+  })
 })

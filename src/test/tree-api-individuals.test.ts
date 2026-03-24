@@ -1022,3 +1022,139 @@ describe('PATCH individual — birthNotes and deathNotes fields', () => {
     expect(res.status).toBe(400);
   });
 });
+
+// ============================================================================
+// POST — birthDescription and deathDescription fields
+// ============================================================================
+describe('POST individual — birthDescription and deathDescription fields', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  test('accepts birthDescription and deathDescription in create', async () => {
+    mockAuth();
+    mockTreeEditor();
+    mockExistingTree();
+    mockTreeEditLogCreate.mockResolvedValue({});
+
+    const createdIndividual = {
+      id: indId,
+      treeId,
+      givenName: 'محمد',
+      birthDescription: 'ولادة طبيعية',
+      deathDescription: 'نوبة قلبية',
+      isPrivate: false,
+      createdById: fakeUser.id,
+      updatedAt: now,
+      createdAt: now,
+    };
+    mockIndividualCreate.mockResolvedValue(createdIndividual);
+
+    const { POST } = await import('@/app/api/workspaces/[id]/tree/individuals/route');
+    const req = makeRequest(`http://localhost:3000/api/workspaces/${wsId}/tree/individuals`, {
+      method: 'POST',
+      body: { givenName: 'محمد', birthDescription: 'ولادة طبيعية', deathDescription: 'نوبة قلبية' },
+    });
+    const res = await POST(req, individualsParams);
+
+    expect(res.status).toBe(201);
+    const createCall = mockIndividualCreate.mock.calls[0][0];
+    expect(createCall.data.birthDescription).toBe('ولادة طبيعية');
+    expect(createCall.data.deathDescription).toBe('نوبة قلبية');
+  });
+
+  test('rejects birthDescription exceeding 500 characters in create', async () => {
+    mockAuth();
+    mockTreeEditor();
+    const { POST } = await import('@/app/api/workspaces/[id]/tree/individuals/route');
+    const req = makeRequest(`http://localhost:3000/api/workspaces/${wsId}/tree/individuals`, {
+      method: 'POST',
+      body: { givenName: 'محمد', birthDescription: 'a'.repeat(501) },
+    });
+    const res = await POST(req, individualsParams);
+    expect(res.status).toBe(400);
+  });
+
+  test('rejects deathDescription exceeding 500 characters in create', async () => {
+    mockAuth();
+    mockTreeEditor();
+    const { POST } = await import('@/app/api/workspaces/[id]/tree/individuals/route');
+    const req = makeRequest(`http://localhost:3000/api/workspaces/${wsId}/tree/individuals`, {
+      method: 'POST',
+      body: { givenName: 'محمد', deathDescription: 'a'.repeat(501) },
+    });
+    const res = await POST(req, individualsParams);
+    expect(res.status).toBe(400);
+  });
+});
+
+// ============================================================================
+// PATCH — birthDescription and deathDescription fields
+// ============================================================================
+describe('PATCH individual — birthDescription and deathDescription fields', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  test('accepts birthDescription and deathDescription in update', async () => {
+    mockAuth();
+    mockTreeEditor();
+    mockExistingTree();
+    mockIndividualExists();
+    mockTreeEditLogCreate.mockResolvedValue({});
+
+    const updatedIndividual = {
+      id: indId,
+      treeId,
+      givenName: 'محمد',
+      birthDescription: 'ولادة طبيعية',
+      deathDescription: 'نوبة قلبية',
+      updatedAt: now,
+      createdAt: now,
+    };
+    mockIndividualUpdate.mockResolvedValue(updatedIndividual);
+
+    const { PATCH } = await import(
+      '@/app/api/workspaces/[id]/tree/individuals/[individualId]/route'
+    );
+    const req = makeRequest(
+      `http://localhost:3000/api/workspaces/${wsId}/tree/individuals/${indId}`,
+      { method: 'PATCH', body: { birthDescription: 'ولادة طبيعية', deathDescription: 'نوبة قلبية' } },
+    );
+    const res = await PATCH(req, individualParams);
+
+    expect(res.status).toBe(200);
+    expect(mockIndividualUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          birthDescription: 'ولادة طبيعية',
+          deathDescription: 'نوبة قلبية',
+        }),
+      }),
+    );
+  });
+
+  test('rejects birthDescription exceeding 500 characters in update', async () => {
+    mockAuth();
+    mockTreeEditor();
+    const { PATCH } = await import(
+      '@/app/api/workspaces/[id]/tree/individuals/[individualId]/route'
+    );
+    const req = makeRequest(
+      `http://localhost:3000/api/workspaces/${wsId}/tree/individuals/${indId}`,
+      { method: 'PATCH', body: { birthDescription: 'a'.repeat(501) } },
+    );
+    const res = await PATCH(req, individualParams);
+    expect(res.status).toBe(400);
+  });
+
+  test('rejects deathDescription exceeding 500 characters in update', async () => {
+    mockAuth();
+    mockTreeEditor();
+    const { PATCH } = await import(
+      '@/app/api/workspaces/[id]/tree/individuals/[individualId]/route'
+    );
+    const req = makeRequest(
+      `http://localhost:3000/api/workspaces/${wsId}/tree/individuals/${indId}`,
+      { method: 'PATCH', body: { deathDescription: 'a'.repeat(501) } },
+    );
+    const res = await PATCH(req, individualParams);
+    expect(res.status).toBe(400);
+  });
+});

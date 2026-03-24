@@ -12,9 +12,11 @@ export interface IndividualFormData {
   sex: 'M' | 'F' | '';
   birthDate: string;
   birthPlace: string;
+  birthDescription: string;
   birthNotes: string;
   deathDate: string;
   deathPlace: string;
+  deathDescription: string;
   deathNotes: string;
   isDeceased: boolean;
   isPrivate: boolean;
@@ -37,9 +39,11 @@ const EMPTY_FORM: IndividualFormData = {
   sex: '',
   birthDate: '',
   birthPlace: '',
+  birthDescription: '',
   birthNotes: '',
   deathDate: '',
   deathPlace: '',
+  deathDescription: '',
   deathNotes: '',
   isDeceased: false,
   isPrivate: false,
@@ -194,6 +198,13 @@ export function IndividualForm({
             placeholder="مثال: مكة المكرمة"
           />
         </div>
+        <Input
+          id="birthDescription"
+          label="وصف الميلاد"
+          value={formData.birthDescription}
+          onChange={(e) => updateField('birthDescription', e.target.value)}
+          placeholder="مثال: ولادة طبيعية في المنزل"
+        />
         <div className={styles.fieldGroup}>
           <label htmlFor="birthNotes" className={styles.label}>ملاحظات الميلاد</label>
           <textarea
@@ -236,6 +247,13 @@ export function IndividualForm({
                 placeholder="مثال: المدينة المنورة"
               />
             </div>
+            <Input
+              id="deathDescription"
+              label="سبب الوفاة"
+              value={formData.deathDescription}
+              onChange={(e) => updateField('deathDescription', e.target.value)}
+              placeholder="مثال: نوبة قلبية"
+            />
             <div className={styles.fieldGroup}>
               <label htmlFor="deathNotes" className={styles.label}>ملاحظات الوفاة</label>
               <textarea

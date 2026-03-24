@@ -184,6 +184,45 @@ describe('parseGedcom — birthNotes and deathNotes', () => {
   })
 })
 
+describe('parseGedcom — birthDescription and deathDescription (CAUS tag)', () => {
+  it('parses CAUS under BIRT as birthDescription', () => {
+    const gedcom = `
+0 @I1@ INDI
+1 NAME Ahmad
+1 BIRT
+2 DATE 1 JAN 1950
+2 CAUS Natural birth
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.individuals['@I1@'].birthDescription).toBe('Natural birth')
+  })
+
+  it('parses CAUS under DEAT as deathDescription', () => {
+    const gedcom = `
+0 @I1@ INDI
+1 NAME Ahmad
+1 DEAT
+2 DATE 15 MAR 2020
+2 CAUS Heart attack
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.individuals['@I1@'].deathDescription).toBe('Heart attack')
+  })
+
+  it('defaults birthDescription and deathDescription to empty string when no CAUS', () => {
+    const gedcom = `
+0 @I1@ INDI
+1 NAME Ahmad
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.individuals['@I1@'].birthDescription).toBe('')
+    expect(data.individuals['@I1@'].deathDescription).toBe('')
+  })
+})
+
 describe('parseGedcom — notes', () => {
   it('parses a simple NOTE tag', () => {
     const gedcom = `
@@ -254,5 +293,82 @@ describe('parseGedcom — notes', () => {
 
     const data = parseGedcom(gedcom)
     expect(data.individuals['@I1@'].notes).toBe('\nContent after empty note.')
+  })
+})
+
+describe('parseGedcom — standalone NOTE references', () => {
+  it('resolves a standalone NOTE reference on an individual', () => {
+    const gedcom = `
+0 @I1@ INDI
+1 NAME Ahmad
+1 NOTE @N1@
+0 @N1@ NOTE
+1 CONT لم تتزوج
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.individuals['@I1@'].notes).toBe('\nلم تتزوج')
+  })
+
+  it('resolves standalone NOTE with multiple CONT lines', () => {
+    const gedcom = `
+0 @I1@ INDI
+1 NAME Ahmad
+1 NOTE @N1@
+0 @N1@ NOTE
+1 CONT First line
+1 CONT Second line
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.individuals['@I1@'].notes).toBe('\nFirst line\nSecond line')
+  })
+
+  it('resolves standalone NOTE with inline text on the NOTE line', () => {
+    const gedcom = `
+0 @I1@ INDI
+1 NAME Ahmad
+1 NOTE @N1@
+0 @N1@ NOTE Some initial text
+1 CONT and more text
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.individuals['@I1@'].notes).toBe('Some initial text\nand more text')
+  })
+
+  it('clears notes if standalone NOTE reference is not found', () => {
+    const gedcom = `
+0 @I1@ INDI
+1 NAME Ahmad
+1 NOTE @MISSING@
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.individuals['@I1@'].notes).toBe('')
+  })
+
+  it('does not confuse inline NOTE text with a reference', () => {
+    const gedcom = `
+0 @I1@ INDI
+1 NAME Ahmad
+1 NOTE Just a normal note
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.individuals['@I1@'].notes).toBe('Just a normal note')
+  })
+
+  it('standalone NOTE records do not appear as individuals or families', () => {
+    const gedcom = `
+0 @I1@ INDI
+1 NAME Ahmad
+0 @N1@ NOTE
+1 CONT Some note
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.individuals['@N1@']).toBeUndefined()
+    expect(data.families['@N1@']).toBeUndefined()
   })
 })

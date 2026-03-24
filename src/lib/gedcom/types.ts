@@ -7,9 +7,11 @@ export interface Individual {
   sex: 'M' | 'F' | null;
   birth: string;
   birthPlace: string;
+  birthDescription: string;
   birthNotes: string;
   death: string;
   deathPlace: string;
+  deathDescription: string;
   deathNotes: string;
   notes: string;
   isDeceased: boolean;

@@ -79,9 +79,11 @@ describe('seedTreeFromGedcomData', () => {
           sex: 'M',
           birth: '01/01/1950',
           birthPlace: '',
+          birthDescription: '',
           birthNotes: '',
           death: '',
           deathPlace: '',
+          deathDescription: '',
           deathNotes: '',
           notes: '',
           isDeceased: false,
@@ -98,9 +100,11 @@ describe('seedTreeFromGedcomData', () => {
           sex: 'F',
           birth: '06/1955',
           birthPlace: '',
+          birthDescription: '',
           birthNotes: '',
           death: '',
           deathPlace: '',
+          deathDescription: '',
           deathNotes: '',
           notes: '',
           isDeceased: false,
@@ -117,9 +121,11 @@ describe('seedTreeFromGedcomData', () => {
           sex: 'M',
           birth: '15/03/1980',
           birthPlace: '',
+          birthDescription: '',
           birthNotes: '',
           death: '',
           deathPlace: '',
+          deathDescription: '',
           deathNotes: '',
           notes: '',
           isDeceased: false,
@@ -178,17 +184,17 @@ describe('seedTreeFromGedcomData', () => {
       individuals: {
         '@I1@': {
           id: '@I1@', type: 'INDI', name: 'Father', givenName: 'Father', surname: '',
-          sex: 'M', birth: '', birthPlace: '', birthNotes: '', death: '', deathPlace: '', deathNotes: '', notes: '', isDeceased: false, isPrivate: false,
+          sex: 'M', birth: '', birthPlace: '', birthDescription: '', birthNotes: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '', notes: '', isDeceased: false, isPrivate: false,
           familiesAsSpouse: ['@F1@'], familyAsChild: null,
         },
         '@I2@': {
           id: '@I2@', type: 'INDI', name: 'Mother', givenName: 'Mother', surname: '',
-          sex: 'F', birth: '', birthPlace: '', birthNotes: '', death: '', deathPlace: '', deathNotes: '', notes: '', isDeceased: false, isPrivate: false,
+          sex: 'F', birth: '', birthPlace: '', birthDescription: '', birthNotes: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '', notes: '', isDeceased: false, isPrivate: false,
           familiesAsSpouse: ['@F1@'], familyAsChild: null,
         },
         '@I3@': {
           id: '@I3@', type: 'INDI', name: 'Child', givenName: 'Child', surname: '',
-          sex: 'M', birth: '', birthPlace: '', birthNotes: '', death: '', deathPlace: '', deathNotes: '', notes: '', isDeceased: false, isPrivate: false,
+          sex: 'M', birth: '', birthPlace: '', birthDescription: '', birthNotes: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '', notes: '', isDeceased: false, isPrivate: false,
           familiesAsSpouse: [], familyAsChild: '@F1@',
         },
       },
@@ -230,7 +236,7 @@ describe('seedTreeFromGedcomData', () => {
       individuals: {
         '@I1@': {
           id: '@I1@', type: 'INDI', name: 'Unknown Person', givenName: 'Unknown Person', surname: '',
-          sex: null, birth: '', birthPlace: '', birthNotes: '', death: '', deathPlace: '', deathNotes: '', notes: '', isDeceased: false, isPrivate: false,
+          sex: null, birth: '', birthPlace: '', birthDescription: '', birthNotes: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '', notes: '', isDeceased: false, isPrivate: false,
           familiesAsSpouse: [], familyAsChild: null,
         },
       },
@@ -289,7 +295,7 @@ describe('seedTreeFromGedcomData', () => {
       individuals: {
         '@I1@': {
           id: '@I1@', type: 'INDI', name: 'Ahmad', givenName: 'Ahmad', surname: '',
-          sex: 'M', birth: '', birthPlace: '', birthNotes: '', death: '', deathPlace: '', deathNotes: '', notes: '', isDeceased: false, isPrivate: false,
+          sex: 'M', birth: '', birthPlace: '', birthDescription: '', birthNotes: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '', notes: '', isDeceased: false, isPrivate: false,
           familiesAsSpouse: [], familyAsChild: null,
         },
       },
@@ -317,27 +323,27 @@ describe('seedTreeFromGedcomData', () => {
       individuals: {
         '@I1@': {
           id: '@I1@', type: 'INDI', name: 'Grandfather', givenName: 'Grandfather', surname: '',
-          sex: 'M', birth: '', birthPlace: '', birthNotes: '', death: '', deathPlace: '', deathNotes: '', notes: '', isDeceased: false, isPrivate: false,
+          sex: 'M', birth: '', birthPlace: '', birthDescription: '', birthNotes: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '', notes: '', isDeceased: false, isPrivate: false,
           familiesAsSpouse: ['@F1@', '@F2@'], familyAsChild: null,
         },
         '@I2@': {
           id: '@I2@', type: 'INDI', name: 'Wife One', givenName: 'Wife One', surname: '',
-          sex: 'F', birth: '', birthPlace: '', birthNotes: '', death: '', deathPlace: '', deathNotes: '', notes: '', isDeceased: false, isPrivate: false,
+          sex: 'F', birth: '', birthPlace: '', birthDescription: '', birthNotes: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '', notes: '', isDeceased: false, isPrivate: false,
           familiesAsSpouse: ['@F1@'], familyAsChild: null,
         },
         '@I3@': {
           id: '@I3@', type: 'INDI', name: 'Wife Two', givenName: 'Wife Two', surname: '',
-          sex: 'F', birth: '', birthPlace: '', birthNotes: '', death: '', deathPlace: '', deathNotes: '', notes: '', isDeceased: false, isPrivate: false,
+          sex: 'F', birth: '', birthPlace: '', birthDescription: '', birthNotes: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '', notes: '', isDeceased: false, isPrivate: false,
           familiesAsSpouse: ['@F2@'], familyAsChild: null,
         },
         '@I4@': {
           id: '@I4@', type: 'INDI', name: 'Child A', givenName: 'Child A', surname: '',
-          sex: 'M', birth: '', birthPlace: '', birthNotes: '', death: '', deathPlace: '', deathNotes: '', notes: '', isDeceased: false, isPrivate: false,
+          sex: 'M', birth: '', birthPlace: '', birthDescription: '', birthNotes: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '', notes: '', isDeceased: false, isPrivate: false,
           familiesAsSpouse: [], familyAsChild: '@F1@',
         },
         '@I5@': {
           id: '@I5@', type: 'INDI', name: 'Child B', givenName: 'Child B', surname: '',
-          sex: 'F', birth: '', birthPlace: '', birthNotes: '', death: '', deathPlace: '', deathNotes: '', notes: '', isDeceased: false, isPrivate: false,
+          sex: 'F', birth: '', birthPlace: '', birthDescription: '', birthNotes: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '', notes: '', isDeceased: false, isPrivate: false,
           familiesAsSpouse: [], familyAsChild: '@F2@',
         },
       },
@@ -390,7 +396,7 @@ describe('seedTreeFromGedcomData', () => {
       individuals: {
         '@I1@': {
           id: '@I1@', type: 'INDI', name: 'Test', givenName: 'Test', surname: '',
-          sex: 'M', birth: '', birthPlace: '', birthNotes: '', death: '', deathPlace: '', deathNotes: '', notes: '', isDeceased: false, isPrivate: false,
+          sex: 'M', birth: '', birthPlace: '', birthDescription: '', birthNotes: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '', notes: '', isDeceased: false, isPrivate: false,
           familiesAsSpouse: [], familyAsChild: null,
         },
       },
@@ -407,5 +413,58 @@ describe('seedTreeFromGedcomData', () => {
 
     expect(mockTransaction).toHaveBeenCalledTimes(1);
     expect(mockTransaction).toHaveBeenCalledWith(expect.any(Function));
+  });
+
+  test('includes birthDescription and deathDescription in createMany data', async () => {
+    const gedcomData = makeGedcomData({
+      individuals: {
+        '@I1@': {
+          id: '@I1@', type: 'INDI', name: 'Ahmad', givenName: 'Ahmad', surname: '',
+          sex: 'M', birth: '', birthPlace: '', birthDescription: 'Natural birth', birthNotes: '', death: '2020', deathPlace: '', deathDescription: 'Heart attack', deathNotes: '', notes: '', isDeceased: true, isPrivate: false,
+          familiesAsSpouse: [], familyAsChild: null,
+        },
+      },
+    });
+
+    mockFamilyTreeFindUnique.mockResolvedValue(null);
+    mockFamilyTreeCreate.mockResolvedValue({ id: treeId, workspaceId, individuals: [], families: [] });
+    mockIndividualCount.mockResolvedValue(0);
+    mockIndividualCreateMany.mockResolvedValue({ count: 1 });
+    mockFamilyCreateMany.mockResolvedValue({ count: 0 });
+    mockFamilyChildCreateMany.mockResolvedValue({ count: 0 });
+
+    await seedTreeFromGedcomData(workspaceId, gedcomData, mockPrisma);
+
+    const individualData = mockIndividualCreateMany.mock.calls[0][0].data;
+    expect(individualData).toHaveLength(1);
+    const ind = individualData[0];
+    expect(ind.birthDescription).toBe('Natural birth');
+    expect(ind.deathDescription).toBe('Heart attack');
+  });
+
+  test('sets birthDescription and deathDescription to null when empty', async () => {
+    const gedcomData = makeGedcomData({
+      individuals: {
+        '@I1@': {
+          id: '@I1@', type: 'INDI', name: 'Ahmad', givenName: 'Ahmad', surname: '',
+          sex: 'M', birth: '', birthPlace: '', birthDescription: '', birthNotes: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '', notes: '', isDeceased: false, isPrivate: false,
+          familiesAsSpouse: [], familyAsChild: null,
+        },
+      },
+    });
+
+    mockFamilyTreeFindUnique.mockResolvedValue(null);
+    mockFamilyTreeCreate.mockResolvedValue({ id: treeId, workspaceId, individuals: [], families: [] });
+    mockIndividualCount.mockResolvedValue(0);
+    mockIndividualCreateMany.mockResolvedValue({ count: 1 });
+    mockFamilyCreateMany.mockResolvedValue({ count: 0 });
+    mockFamilyChildCreateMany.mockResolvedValue({ count: 0 });
+
+    await seedTreeFromGedcomData(workspaceId, gedcomData, mockPrisma);
+
+    const individualData = mockIndividualCreateMany.mock.calls[0][0].data;
+    const ind = individualData[0];
+    expect(ind.birthDescription).toBeNull();
+    expect(ind.deathDescription).toBeNull();
   });
 });

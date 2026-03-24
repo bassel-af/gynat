@@ -64,6 +64,9 @@ function DateInfo({ person, className, compact }: { person: Individual; classNam
           الميلاد: {birthDisplay}
         </span>
       )}
+      {!compact && person.birthDescription && (
+        <span className={styles.eventDescription}>{person.birthDescription}</span>
+      )}
       {!compact && person.birthNotes && (
         <span className={styles.eventNote}>{person.birthNotes}</span>
       )}
@@ -71,6 +74,9 @@ function DateInfo({ person, className, compact }: { person: Individual; classNam
         <span>
           الوفاة: {deathDisplay}
         </span>
+      )}
+      {!compact && person.deathDescription && (
+        <span className={styles.eventDescription}>سبب الوفاة: {person.deathDescription}</span>
       )}
       {!compact && person.deathNotes && (
         <span className={styles.eventNote}>{person.deathNotes}</span>
@@ -225,9 +231,11 @@ export function PersonDetail({ personId }: PersonDetailProps) {
         sex: formData.sex || undefined,
         birthDate: formData.birthDate || undefined,
         birthPlace: formData.birthPlace || undefined,
+        birthDescription: formData.birthDescription || undefined,
         birthNotes: formData.birthNotes || undefined,
         deathDate: formData.deathDate || undefined,
         deathPlace: formData.deathPlace || undefined,
+        deathDescription: formData.deathDescription || undefined,
         deathNotes: formData.deathNotes || undefined,
         isDeceased: formData.isDeceased,
         isPrivate: formData.isPrivate,
@@ -326,9 +334,11 @@ export function PersonDetail({ personId }: PersonDetailProps) {
           sex: formData.sex || undefined,
           birthDate: formData.birthDate || undefined,
           birthPlace: formData.birthPlace || undefined,
+          birthDescription: formData.birthDescription || undefined,
           birthNotes: formData.birthNotes || undefined,
           deathDate: formData.deathDate || undefined,
           deathPlace: formData.deathPlace || undefined,
+          deathDescription: formData.deathDescription || undefined,
           deathNotes: formData.deathNotes || undefined,
           isDeceased: formData.isDeceased,
           isPrivate: formData.isPrivate,

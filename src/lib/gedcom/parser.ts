@@ -32,10 +32,12 @@ export function parseGedcom(text: string): GedcomData {
   const lines = text.split(/\r\n|\r|\n/);
   const individuals: Record<string, Individual> = {};
   const families: Record<string, Family> = {};
+  const standaloneNotes: Record<string, string> = {};
   let currentRecord: Individual | Family | null = null;
   let currentSubRecord: string | null = null;
   let currentLevel1Tag: string | null = null;
   let currentLevel2Tag: string | null = null;
+  let currentStandaloneNoteId: string | null = null;
 
   for (const line of lines) {
     const trimmed = line.trim();
@@ -63,7 +65,13 @@ export function parseGedcom(text: string): GedcomData {
       currentSubRecord = null;
       currentLevel1Tag = null;
       currentLevel2Tag = null;
-      if (tag === 'INDI' && id) {
+      currentStandaloneNoteId = null;
+      if (tag === 'NOTE' && id) {
+        // Standalone NOTE record: "0 @ID@ NOTE [optional first line]"
+        currentRecord = null;
+        currentStandaloneNoteId = id;
+        standaloneNotes[id] = value || '';
+      } else if (tag === 'INDI' && id) {
         currentRecord = {
           id,
           type: 'INDI',
@@ -73,9 +81,11 @@ export function parseGedcom(text: string): GedcomData {
           sex: null,
           birth: '',
           birthPlace: '',
+          birthDescription: '',
           birthNotes: '',
           death: '',
           deathPlace: '',
+          deathDescription: '',
           deathNotes: '',
           notes: '',
           isDeceased: false,
@@ -95,6 +105,13 @@ export function parseGedcom(text: string): GedcomData {
         families[id] = currentRecord;
       } else {
         currentRecord = null;
+      }
+    } else if (currentStandaloneNoteId && level === 1 && (tag === 'CONT' || tag === 'CONC')) {
+      // Continuation of a standalone NOTE record
+      if (tag === 'CONT') {
+        standaloneNotes[currentStandaloneNoteId] += '\n' + (value || '');
+      } else {
+        standaloneNotes[currentStandaloneNoteId] += (value || '');
       }
     } else if (currentRecord) {
       if (level === 1) {
@@ -119,10 +136,25 @@ export function parseGedcom(text: string): GedcomData {
             }
           } else if (tag === 'SEX') {
             indi.sex = value === 'M' ? 'M' : value === 'F' ? 'F' : null;
+          } else if (tag === 'BIRT') {
+            // Capture inline event descriptor (e.g., "1 BIRT born at home")
+            if (value && value.trim()) {
+              indi.birthDescription = value.trim();
+            }
           } else if (tag === 'DEAT') {
             indi.isDeceased = true;
+            // Capture inline event descriptor (e.g., "1 DEAT توفيت بالسرطان")
+            if (value && value.trim() && value.trim() !== 'Y') {
+              indi.deathDescription = value.trim();
+            }
           } else if (tag === 'NOTE') {
-            indi.notes = value || '';
+            const noteVal = value || '';
+            if (noteVal.startsWith('@') && noteVal.endsWith('@')) {
+              // NOTE reference — will be resolved after parsing
+              indi.notes = noteVal;
+            } else {
+              indi.notes = noteVal;
+            }
           } else if (tag === 'FAMS' && value) {
             indi.familiesAsSpouse.push(value);
           } else if (tag === 'FAMC' && value) {
@@ -158,6 +190,12 @@ export function parseGedcom(text: string): GedcomData {
               indi.birthPlace = value || '';
             } else if (currentSubRecord === 'DEAT') {
               indi.deathPlace = value || '';
+            }
+          } else if (tag === 'CAUS') {
+            if (currentSubRecord === 'BIRT') {
+              indi.birthDescription = value || '';
+            } else if (currentSubRecord === 'DEAT') {
+              indi.deathDescription = value || '';
             }
           } else if (tag === 'NOTE' && (currentSubRecord === 'BIRT' || currentSubRecord === 'DEAT')) {
             if (currentSubRecord === 'BIRT') {
@@ -195,6 +233,23 @@ export function parseGedcom(text: string): GedcomData {
           }
         }
       }
+    }
+  }
+
+  // Resolve standalone NOTE references on individuals
+  for (const id in individuals) {
+    const indi = individuals[id];
+    if (indi.notes.startsWith('@') && indi.notes.endsWith('@')) {
+      const resolved = standaloneNotes[indi.notes];
+      indi.notes = resolved !== undefined ? resolved : '';
+    }
+    if (indi.birthNotes.startsWith('@') && indi.birthNotes.endsWith('@')) {
+      const resolved = standaloneNotes[indi.birthNotes];
+      indi.birthNotes = resolved !== undefined ? resolved : '';
+    }
+    if (indi.deathNotes.startsWith('@') && indi.deathNotes.endsWith('@')) {
+      const resolved = standaloneNotes[indi.deathNotes];
+      indi.deathNotes = resolved !== undefined ? resolved : '';
     }
   }
 

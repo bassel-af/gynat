@@ -503,6 +503,11 @@
   font-style: italic;
 }
 
+.eventDescription {
+  color: var(--alpha-white-50);
+  font-size: inherit;
+}
+
 .eventNote {
   font-style: italic;
   color: var(--alpha-white-40);

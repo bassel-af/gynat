@@ -445,45 +445,71 @@ Notification
 **📝 Notes for future phases:**
 - In-memory rate limiter is single-process — replace with Redis/Upstash before horizontal scaling
 
-### Phase 3 — Family-Aware Relationship Editing
+### Phase 3 — Family-Aware Relationship Editing ✅ COMPLETE
 
-Phase 2 introduced basic tree editing, but the "Add child" flow has a gap: when a person has multiple families (e.g., a man with two wives, or a woman who remarried), the UI adds the child to the first family without asking the user which family/spouse the child belongs to. This must be fixed before the tree editor is usable for real polygamous family data.
+**✅ Family picker for add-child:**
+- `FamilyPickerModal` component shows when a person has multiple `familiesAsSpouse`
+- Displays spouse name per family (e.g., "أبناء من سارة") or "عائلة بدون زوج/زوجة" for single-parent families
+- If only one family, proceeds directly (no picker)
 
-**Family picker for add-child:**
-- When a person has multiple `familiesAsSpouse`, the "Add child" action must show a picker asking which family (spouse) the child belongs to
-- The picker displays the other spouse's name for each family (e.g., "أبناء من سارة" / "أبناء من هدى")
-- If a family has no other spouse (single parent), show it as "عائلة بدون زوج/زوجة"
-- If the person has only one family, skip the picker (current behavior)
+**✅ Family picker for add-parent:**
+- When both parents exist: "إضافة والد/والدة" button is hidden entirely
+- When one parent exists: form opens with sex locked (radio disabled) to the missing parent role
+- When no `familyAsChild`: form opens normally, creates new family
+- Server-side parent-slot validation: PATCH family returns 409 if slot already occupied
 
-**Family picker for add-parent:**
-- When adding a parent to a person who already has a `familyAsChild` with one parent, the new parent is added to that existing family — no picker needed
-- When adding a parent to a person with no `familyAsChild`, a new family is created — no picker needed
-- When adding a parent to a person whose `familyAsChild` already has both husband and wife, show an error: "هذا الشخص لديه والدان بالفعل"
+**✅ Move child between families:**
+- New atomic endpoint: `POST .../families/[familyId]/children/[individualId]/move` with `{ targetFamilyId }`
+- Wrapped in `prisma.$transaction()` for atomicity (delete from source + create in target + audit log)
+- Full validation: UUID params, cross-tree prevention, duplicate check, source/target equality check
+- Amber-colored "نقل إلى عائلة أخرى" button in action bar, visible only when alternative families exist
 
-**Move child between families:**
-- A tree editor can move a child from one family to another (remove from old family, add to new family)
-- This handles corrections when a child was added to the wrong family
+**✅ Mark deceased without dates:**
+- `isDeceased` checkbox ("متوفى/متوفية") in edit form, death date/place fields hidden until checked
+- Display: shows "متوفى"/"متوفية" (sex-aware) in PersonDetail when no death date exists
+- `isDeceased` added to update API schema (was already in create schema)
 
-**Mark deceased without dates:**
-- The `isDeceased` DB column already exists — add a checkbox to the edit person form so a person can be marked as deceased without requiring death date/place
-- Check if GEDCOM `DEAT` tag without a `DATE` sub-tag is already parsed correctly by the existing parser
+**✅ Birth/death places in UI:**
+- `birthPlace` and `deathPlace` added to `Individual` type, GEDCOM parser (`PLAC` tag), mapper, and seed helpers
+- PersonDetail hero shows "الميلاد: 1950 — مكة المكرمة" format; relationship rows show dates only (compact mode)
+- Edit form pre-fills places; privacy redaction clears them for private individuals
 
-**Birth place in UI:**
-- The `birthPlace` field exists in the DB and API but is missing from both the person detail view and the edit person form — add it to both
+**✅ Notes field on individuals:**
+- `notes` DB column (`TEXT`), API schemas (`.max(5000)`), textarea in form ("ملاحظات"), display section in PersonDetail
+- GEDCOM `NOTE` tag parsed at level 1 with `CONT`/`CONC` multi-line continuation
+- Standalone NOTE records (`0 @ID@ NOTE` with `1 CONT`) collected and resolved when referenced by individuals (`1 NOTE @ID@`)
+- Resolution covers `notes`, `birthNotes`, and `deathNotes` fields
 
-**Notes field on individuals:**
-- Add a `notes` text field to individual records (DB + API + UI)
-- Check if GEDCOM `NOTE` tag should be parsed and stored during import
+**✅ Birth/death notes (event-level):**
+- `birthNotes` and `deathNotes` DB columns (`TEXT`), API schemas (`.max(5000)`)
+- GEDCOM level 2 `NOTE` under `BIRT`/`DEAT` parsed with level 3 `CONT`/`CONC` support (new `currentLevel2Tag` tracker)
+- Textareas in form: "ملاحظات الميلاد" (always visible), "ملاحظات الوفاة" (inside isDeceased conditional)
+- Display: italic muted text under birth/death dates in hero section
 
-**Fix seed script — subtree-per-workspace seeding:**
-- Currently, the seed script imports the entire GEDCOM file (all 551 individuals) into every workspace. This is wrong — each workspace should only contain its own family subtree.
-- Each family config has a `rootId` — the topmost ancestor for that family. The seed script must:
-  1. Parse the full GEDCOM file
-  2. Starting from the family's `rootId`, walk downward: collect the root, their spouses, all descendants, and all descendants' spouses
-  3. Only import this subtree into the workspace — not the entire file
-  4. Import the corresponding Family and FamilyChild records for only those individuals
-- This means each workspace gets a distinct, non-overlapping subset of the GEDCOM data (unless families share members via marriage, in which case both workspaces get their own copy of that person)
-Also, we need to make sure we are parsing birth place and death place 
+**✅ Birth/death description (cause):**
+- `birthDescription` and `deathDescription` DB columns (`VARCHAR(500)`), API schemas (`.max(500)`)
+- GEDCOM `CAUS` tag at level 2 under `BIRT`/`DEAT` parsed
+- Inline event descriptors on `BIRT`/`DEAT` lines also captured (e.g., `1 DEAT توفيت بالسرطان`)
+- Single-line inputs in form: "وصف الميلاد", "سبب الوفاة"
+- Display: non-italic `alpha-white-50` in hero; death prefixed with "سبب الوفاة:"
+
+**✅ Subtree-per-workspace seeding:**
+- `extractSubtree()` in `graph.ts` filters `GedcomData` to root + descendants + their spouses
+- Seed script calls `extractSubtree(gedcomData, config.rootId)` per workspace before seeding
+- Each workspace gets only its family subtree (177, 97, 104, 138 individuals instead of 551 each)
+
+**✅ Security fixes (existing code):**
+- DELETE child: `findUnique` check before delete — returns 404 instead of unhandled P2025 error
+- Individual DELETE: wrapped in `prisma.$transaction()` for atomicity
+- Parent-slot validation: PATCH family returns 409 when setting husband/wife if slot already occupied
+- UUID path param validation on move endpoint
+- All new fields (`notes`, `birthNotes`, `deathNotes`, `birthDescription`, `deathDescription`, `birthPlace`, `deathPlace`) redacted for private individuals
+
+**✅ UI polish:**
+- Modal scrollable: `max-height: 85vh` + `overflow-y: auto` on content
+- Deceased person visibility: removed aggressive `opacity: 0.5`, using direct color values (names 55%, dates 40%)
+- Disabled input styling: `opacity: 0.35`, `cursor: not-allowed`
+- 166 new tests (489 total), 0 regressions
 
 ### Phase 4 — User-Tree Linking + Branch Pointers
 

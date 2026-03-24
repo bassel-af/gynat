@@ -24,9 +24,11 @@ function makeIndividual(overrides: Partial<Individual> = {}): Individual {
     sex: 'M',
     birth: '',
     birthPlace: '',
+    birthDescription: '',
     birthNotes: '',
     death: '',
     deathPlace: '',
+    deathDescription: '',
     deathNotes: '',
     notes: '',
     isDeceased: false,
@@ -116,8 +118,30 @@ describe('PersonDetail Phase 3 – birthNotes / deathNotes display', () => {
   })
 })
 
+describe('PersonDetail Phase 3 – birthDescription / deathDescription display', () => {
+  it('person with birthDescription should have birthDescription accessible', () => {
+    const person = makeIndividual({ birthDescription: 'ولادة طبيعية في المنزل' })
+    expect(person.birthDescription).toBe('ولادة طبيعية في المنزل')
+  })
+
+  it('person with deathDescription should have deathDescription accessible', () => {
+    const person = makeIndividual({ deathDescription: 'نوبة قلبية' })
+    expect(person.deathDescription).toBe('نوبة قلبية')
+  })
+
+  it('person without birthDescription has empty string', () => {
+    const person = makeIndividual({})
+    expect(person.birthDescription).toBe('')
+  })
+
+  it('person without deathDescription has empty string', () => {
+    const person = makeIndividual({})
+    expect(person.deathDescription).toBe('')
+  })
+})
+
 describe('PersonDetail Phase 3 – edit form pre-fill', () => {
-  it('includes birthPlace, deathPlace, isDeceased, notes, birthNotes, deathNotes in initial data', () => {
+  it('includes birthPlace, deathPlace, isDeceased, notes, birthNotes, deathNotes, birthDescription, deathDescription in initial data', () => {
     const person = makeIndividual({
       givenName: 'أحمد',
       surname: 'السعيد',
@@ -131,6 +155,8 @@ describe('PersonDetail Phase 3 – edit form pre-fill', () => {
       notes: 'ملاحظة',
       birthNotes: 'ملاحظة ميلاد',
       deathNotes: 'ملاحظة وفاة',
+      birthDescription: 'وصف ميلاد',
+      deathDescription: 'سبب وفاة',
     })
     const data = buildEditInitialData(person)
     expect(data).toEqual({
@@ -139,13 +165,28 @@ describe('PersonDetail Phase 3 – edit form pre-fill', () => {
       sex: 'M',
       birthDate: '1950',
       birthPlace: 'مكة المكرمة',
+      birthDescription: 'وصف ميلاد',
       deathDate: '2020',
       deathPlace: 'المدينة المنورة',
+      deathDescription: 'سبب وفاة',
       isDeceased: true,
       isPrivate: false,
       notes: 'ملاحظة',
       birthNotes: 'ملاحظة ميلاد',
       deathNotes: 'ملاحظة وفاة',
+    })
+  })
+
+  it('includes birthDescription and deathDescription in initial data', () => {
+    const person = makeIndividual({
+      givenName: 'أحمد',
+      birthDescription: 'ولادة طبيعية في المنزل',
+      deathDescription: 'نوبة قلبية',
+    })
+    const data = buildEditInitialData(person)
+    expect(data).toMatchObject({
+      birthDescription: 'ولادة طبيعية في المنزل',
+      deathDescription: 'نوبة قلبية',
     })
   })
 })

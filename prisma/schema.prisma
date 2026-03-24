@@ -191,9 +191,11 @@ model Individual {
   sex         String?  // M, F, or null
   birthDate   String?  @map("birth_date")
   birthPlace  String?  @map("birth_place")
+  birthDescription String? @map("birth_description") @db.VarChar(500)
   birthNotes  String?  @map("birth_notes") @db.Text
   deathDate   String?  @map("death_date")
   deathPlace  String?  @map("death_place")
+  deathDescription String? @map("death_description") @db.VarChar(500)
   deathNotes  String?  @map("death_notes") @db.Text
   notes       String?  @db.Text
   isDeceased  Boolean  @default(false) @map("is_deceased")

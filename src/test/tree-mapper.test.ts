@@ -18,9 +18,11 @@ interface DbIndividual {
   birthDate: string | null
   birthPlace: string | null
   birthNotes: string | null
+  birthDescription: string | null
   deathDate: string | null
   deathPlace: string | null
   deathNotes: string | null
+  deathDescription: string | null
   notes: string | null
   isDeceased: boolean
   isPrivate: boolean
@@ -60,9 +62,11 @@ function makeIndividual(overrides: Partial<DbIndividual> & { id: string; treeId:
     birthDate: null,
     birthPlace: null,
     birthNotes: null,
+    birthDescription: null,
     deathDate: null,
     deathPlace: null,
     deathNotes: null,
+    deathDescription: null,
     notes: null,
     isDeceased: false,
     isPrivate: false,
@@ -812,6 +816,112 @@ describe('redactPrivateIndividuals — birthNotes and deathNotes', () => {
 
     expect(ind.birthNotes).toBe('Public birth note')
     expect(ind.deathNotes).toBe('Public death note')
+  })
+})
+
+describe('dbTreeToGedcomData — birthDescription and deathDescription mapping', () => {
+  const TREE_ID = 'tree-001'
+  const WORKSPACE_ID = 'ws-001'
+
+  it('maps birthDescription and deathDescription from DB fields', () => {
+    const dbTree: DbTree = {
+      id: TREE_ID,
+      workspaceId: WORKSPACE_ID,
+      individuals: [
+        makeIndividual({
+          id: 'ind-1',
+          treeId: TREE_ID,
+          givenName: 'Ahmad',
+          birthDescription: 'Natural birth',
+          deathDescription: 'Heart attack',
+        }),
+      ],
+      families: [],
+    }
+
+    const result = dbTreeToGedcomData(dbTree)
+    const ind = result.individuals['ind-1']
+
+    expect(ind.birthDescription).toBe('Natural birth')
+    expect(ind.deathDescription).toBe('Heart attack')
+  })
+
+  it('defaults birthDescription and deathDescription to empty string when DB values are null', () => {
+    const dbTree: DbTree = {
+      id: TREE_ID,
+      workspaceId: WORKSPACE_ID,
+      individuals: [
+        makeIndividual({
+          id: 'ind-1',
+          treeId: TREE_ID,
+          givenName: 'Ahmad',
+          birthDescription: null,
+          deathDescription: null,
+        }),
+      ],
+      families: [],
+    }
+
+    const result = dbTreeToGedcomData(dbTree)
+    const ind = result.individuals['ind-1']
+
+    expect(ind.birthDescription).toBe('')
+    expect(ind.deathDescription).toBe('')
+  })
+})
+
+describe('redactPrivateIndividuals — birthDescription and deathDescription', () => {
+  const TREE_ID = 'tree-001'
+  const WORKSPACE_ID = 'ws-001'
+
+  it('redacts birthDescription and deathDescription for private individuals', () => {
+    const dbTree: DbTree = {
+      id: TREE_ID,
+      workspaceId: WORKSPACE_ID,
+      individuals: [
+        makeIndividual({
+          id: 'ind-1',
+          treeId: TREE_ID,
+          givenName: 'Ahmad',
+          birthDescription: 'Private birth desc',
+          deathDescription: 'Private death desc',
+          isPrivate: true,
+        }),
+      ],
+      families: [],
+    }
+
+    const gedcom = dbTreeToGedcomData(dbTree)
+    const result = redactPrivateIndividuals(gedcom)
+    const ind = result.individuals['ind-1']
+
+    expect(ind.birthDescription).toBe('')
+    expect(ind.deathDescription).toBe('')
+  })
+
+  it('does not redact birthDescription and deathDescription for non-private individuals', () => {
+    const dbTree: DbTree = {
+      id: TREE_ID,
+      workspaceId: WORKSPACE_ID,
+      individuals: [
+        makeIndividual({
+          id: 'ind-1',
+          treeId: TREE_ID,
+          givenName: 'Ahmad',
+          birthDescription: 'Public birth desc',
+          deathDescription: 'Public death desc',
+          isPrivate: false,
+        }),
+      ],
+      families: [],
+    }
+
+    const gedcom = dbTreeToGedcomData(dbTree)
+    const result = redactPrivateIndividuals(gedcom)
+    const ind = result.individuals['ind-1']
+
+    expect(ind.birthDescription).toBe('Public birth desc')
+    expect(ind.deathDescription).toBe('Public death desc')
   })
 })
 
