@@ -20,7 +20,7 @@ describe('FamilyEventForm', () => {
 
   it('renders divorce section header', () => {
     render(<FamilyEventForm {...defaultProps} />)
-    expect(screen.getByText('الطلاق')).toBeInTheDocument()
+    expect(screen.getByText('الانفصال')).toBeInTheDocument()
   })
 
   it('expands section when header is clicked', () => {
@@ -73,19 +73,19 @@ describe('FamilyEventForm', () => {
   it('hides divorce detail fields when isDivorced is unchecked', () => {
     render(<FamilyEventForm {...defaultProps} />)
     // Expand divorce section
-    fireEvent.click(screen.getByText('الطلاق'))
+    fireEvent.click(screen.getByText('الانفصال'))
     // isDivorced checkbox should be visible but date should not
     expect(screen.getByLabelText('مطلقان')).toBeInTheDocument()
-    expect(screen.queryByLabelText('تاريخ الطلاق')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('تاريخ الانفصال')).not.toBeInTheDocument()
   })
 
   it('shows divorce detail fields when isDivorced is checked', () => {
     render(<FamilyEventForm {...defaultProps} />)
     // Expand divorce section
-    fireEvent.click(screen.getByText('الطلاق'))
+    fireEvent.click(screen.getByText('الانفصال'))
     // Check isDivorced
     fireEvent.click(screen.getByLabelText('مطلقان'))
-    expect(screen.getByLabelText('تاريخ الطلاق')).toBeInTheDocument()
+    expect(screen.getByLabelText('تاريخ الانفصال')).toBeInTheDocument()
   })
 
   it('auto-expands divorce section when isDivorced is true in initial data', () => {
@@ -95,6 +95,6 @@ describe('FamilyEventForm', () => {
         initialData={{ isDivorced: true, divorceDate: '2023' }}
       />,
     )
-    expect(screen.getByLabelText('تاريخ الطلاق')).toBeInTheDocument()
+    expect(screen.getByLabelText('تاريخ الانفصال')).toBeInTheDocument()
   })
 })

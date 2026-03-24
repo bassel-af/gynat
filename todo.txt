@@ -1,11 +1,9 @@
-
+Fix lines shape
 
 Check other inputs in MacFamilyTree
 تعريب مكان الميلاد
 مكان الميلاد يتم اختياره وليس فقط كتابته
 
-
-divorce/khol3, etc
 
 Show also members in tree above descendents in someway.
 
@@ -26,9 +24,5 @@ Version control
 
 UI latest touches.
 
-الهجري والميلادي
 
-when a person is a man, show إضافة زوجة and vice versa.
-also, the gender shall be selected in the modal,
-do not allow to change.
-Fix lines shape
+divorce/khol3, etc

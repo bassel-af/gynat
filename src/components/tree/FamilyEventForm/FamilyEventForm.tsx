@@ -296,7 +296,7 @@ export function FamilyEventForm({
             className={styles.eventSectionHeader}
             onClick={() => toggleSection('divorce')}
           >
-            الطلاق
+            الانفصال
             {chevronSvg(expandedSections.has('divorce'))}
           </button>
           {expandedSections.has('divorce') && (
@@ -315,7 +315,7 @@ export function FamilyEventForm({
                 <>
                   <Input
                     id="divorceDate"
-                    label="تاريخ الطلاق"
+                    label="تاريخ الانفصال"
                     value={formData.divorceDate}
                     onChange={(e) => updateField('divorceDate', e.target.value)}
                     placeholder="مثال: 2023"
