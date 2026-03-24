@@ -503,6 +503,12 @@
   font-style: italic;
 }
 
+.eventNote {
+  font-style: italic;
+  color: var(--alpha-white-40);
+  font-size: inherit;
+}
+
 /* ============================================
    NOTES SECTION
    ============================================ */

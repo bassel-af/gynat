@@ -24,8 +24,10 @@ function makeIndividual(overrides: Partial<Individual> = {}): Individual {
     sex: 'M',
     birth: '',
     birthPlace: '',
+    birthNotes: '',
     death: '',
     deathPlace: '',
+    deathNotes: '',
     notes: '',
     isDeceased: false,
     isPrivate: false,
@@ -92,8 +94,30 @@ describe('PersonDetail Phase 3 – notes display', () => {
   })
 })
 
+describe('PersonDetail Phase 3 – birthNotes / deathNotes display', () => {
+  it('person with birthNotes should have birthNotes accessible', () => {
+    const person = makeIndividual({ birthNotes: 'ولد في عاصفة ثلجية' })
+    expect(person.birthNotes).toBe('ولد في عاصفة ثلجية')
+  })
+
+  it('person with deathNotes should have deathNotes accessible', () => {
+    const person = makeIndividual({ deathNotes: 'توفي بسلام في منزله' })
+    expect(person.deathNotes).toBe('توفي بسلام في منزله')
+  })
+
+  it('person without birthNotes has empty string', () => {
+    const person = makeIndividual({})
+    expect(person.birthNotes).toBe('')
+  })
+
+  it('person without deathNotes has empty string', () => {
+    const person = makeIndividual({})
+    expect(person.deathNotes).toBe('')
+  })
+})
+
 describe('PersonDetail Phase 3 – edit form pre-fill', () => {
-  it('includes birthPlace, deathPlace, isDeceased, notes in initial data', () => {
+  it('includes birthPlace, deathPlace, isDeceased, notes, birthNotes, deathNotes in initial data', () => {
     const person = makeIndividual({
       givenName: 'أحمد',
       surname: 'السعيد',
@@ -105,6 +129,8 @@ describe('PersonDetail Phase 3 – edit form pre-fill', () => {
       isDeceased: true,
       isPrivate: false,
       notes: 'ملاحظة',
+      birthNotes: 'ملاحظة ميلاد',
+      deathNotes: 'ملاحظة وفاة',
     })
     const data = buildEditInitialData(person)
     expect(data).toEqual({
@@ -118,6 +144,8 @@ describe('PersonDetail Phase 3 – edit form pre-fill', () => {
       isDeceased: true,
       isPrivate: false,
       notes: 'ملاحظة',
+      birthNotes: 'ملاحظة ميلاد',
+      deathNotes: 'ملاحظة وفاة',
     })
   })
 })

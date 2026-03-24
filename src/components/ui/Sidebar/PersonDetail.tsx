@@ -50,9 +50,9 @@ type FormMode =
 // Sub-components
 // ---------------------------------------------------------------------------
 
-function DateInfo({ person, className }: { person: Individual; className?: string }) {
-  const birthDisplay = formatDateWithPlace(person.birth, person.birthPlace);
-  const deathDisplay = formatDateWithPlace(person.death, person.deathPlace);
+function DateInfo({ person, className, compact }: { person: Individual; className?: string; compact?: boolean }) {
+  const birthDisplay = compact ? person.birth : formatDateWithPlace(person.birth, person.birthPlace);
+  const deathDisplay = compact ? person.death : formatDateWithPlace(person.death, person.deathPlace);
   const deceasedLabel = getDeceasedLabel(person);
 
   if (!birthDisplay && !deathDisplay && !deceasedLabel) return null;
@@ -64,10 +64,16 @@ function DateInfo({ person, className }: { person: Individual; className?: strin
           الميلاد: {birthDisplay}
         </span>
       )}
+      {!compact && person.birthNotes && (
+        <span className={styles.eventNote}>{person.birthNotes}</span>
+      )}
       {deathDisplay && (
         <span>
           الوفاة: {deathDisplay}
         </span>
+      )}
+      {!compact && person.deathNotes && (
+        <span className={styles.eventNote}>{person.deathNotes}</span>
       )}
       {deceasedLabel && !deathDisplay && (
         <span className={styles.deceasedLabel}>{deceasedLabel}</span>
@@ -113,7 +119,7 @@ function RelationshipSection({ title, people, visiblePersonIds, onPersonClick, h
             >
               <div className={styles.relPersonInfo}>
                 <span className={styles.relPersonName}>{name}</span>
-                <DateInfo person={person} className={styles.relPersonDates} />
+                <DateInfo person={person} className={styles.relPersonDates} compact />
               </div>
               <svg className={styles.relChevron} width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -133,7 +139,7 @@ function RelationshipSection({ title, people, visiblePersonIds, onPersonClick, h
           >
             <div className={styles.relPersonInfo}>
               <span className={styles.relPersonName}>{name}</span>
-              <DateInfo person={person} className={styles.relPersonDates} />
+              <DateInfo person={person} className={styles.relPersonDates} compact />
             </div>
           </span>
         );
@@ -219,8 +225,10 @@ export function PersonDetail({ personId }: PersonDetailProps) {
         sex: formData.sex || undefined,
         birthDate: formData.birthDate || undefined,
         birthPlace: formData.birthPlace || undefined,
+        birthNotes: formData.birthNotes || undefined,
         deathDate: formData.deathDate || undefined,
         deathPlace: formData.deathPlace || undefined,
+        deathNotes: formData.deathNotes || undefined,
         isDeceased: formData.isDeceased,
         isPrivate: formData.isPrivate,
         notes: formData.notes || undefined,
@@ -318,8 +326,10 @@ export function PersonDetail({ personId }: PersonDetailProps) {
           sex: formData.sex || undefined,
           birthDate: formData.birthDate || undefined,
           birthPlace: formData.birthPlace || undefined,
+          birthNotes: formData.birthNotes || undefined,
           deathDate: formData.deathDate || undefined,
           deathPlace: formData.deathPlace || undefined,
+          deathNotes: formData.deathNotes || undefined,
           isDeceased: formData.isDeceased,
           isPrivate: formData.isPrivate,
           notes: formData.notes || undefined,

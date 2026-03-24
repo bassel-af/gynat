@@ -35,6 +35,7 @@ export function parseGedcom(text: string): GedcomData {
   let currentRecord: Individual | Family | null = null;
   let currentSubRecord: string | null = null;
   let currentLevel1Tag: string | null = null;
+  let currentLevel2Tag: string | null = null;
 
   for (const line of lines) {
     const trimmed = line.trim();
@@ -61,6 +62,7 @@ export function parseGedcom(text: string): GedcomData {
     if (level === 0) {
       currentSubRecord = null;
       currentLevel1Tag = null;
+      currentLevel2Tag = null;
       if (tag === 'INDI' && id) {
         currentRecord = {
           id,
@@ -71,8 +73,10 @@ export function parseGedcom(text: string): GedcomData {
           sex: null,
           birth: '',
           birthPlace: '',
+          birthNotes: '',
           death: '',
           deathPlace: '',
+          deathNotes: '',
           notes: '',
           isDeceased: false,
           isPrivate: false,
@@ -96,6 +100,7 @@ export function parseGedcom(text: string): GedcomData {
       if (level === 1) {
         currentSubRecord = tag;
         currentLevel1Tag = tag;
+        currentLevel2Tag = null;
         if (currentRecord.type === 'INDI') {
           const indi = currentRecord as Individual;
           if (tag === 'NAME') {
@@ -154,11 +159,38 @@ export function parseGedcom(text: string): GedcomData {
             } else if (currentSubRecord === 'DEAT') {
               indi.deathPlace = value || '';
             }
-          } else if (currentLevel1Tag === 'NOTE') {
+          } else if (tag === 'NOTE' && (currentSubRecord === 'BIRT' || currentSubRecord === 'DEAT')) {
+            if (currentSubRecord === 'BIRT') {
+              indi.birthNotes = value || '';
+            } else {
+              indi.deathNotes = value || '';
+            }
+            currentLevel2Tag = 'NOTE';
+          } else if (currentLevel1Tag === 'NOTE' && (tag === 'CONT' || tag === 'CONC')) {
+            // General note continuation — don't update currentLevel2Tag
             if (tag === 'CONT') {
               indi.notes += '\n' + (value || '');
-            } else if (tag === 'CONC') {
+            } else {
               indi.notes += (value || '');
+            }
+          } else {
+            currentLevel2Tag = tag;
+          }
+        }
+      } else if (level === 3) {
+        if (currentRecord.type === 'INDI' && currentLevel2Tag === 'NOTE') {
+          const indi = currentRecord as Individual;
+          if (currentSubRecord === 'BIRT') {
+            if (tag === 'CONT') {
+              indi.birthNotes += '\n' + (value || '');
+            } else if (tag === 'CONC') {
+              indi.birthNotes += (value || '');
+            }
+          } else if (currentSubRecord === 'DEAT') {
+            if (tag === 'CONT') {
+              indi.deathNotes += '\n' + (value || '');
+            } else if (tag === 'CONC') {
+              indi.deathNotes += (value || '');
             }
           }
         }

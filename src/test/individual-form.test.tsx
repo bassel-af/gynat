@@ -130,6 +130,81 @@ describe('IndividualForm', () => {
     })
   })
 
+  describe('birthNotes textarea', () => {
+    it('renders birthNotes textarea with correct label', () => {
+      render(<IndividualForm {...defaultProps} />)
+      expect(screen.getByLabelText('ملاحظات الميلاد')).toBeInTheDocument()
+    })
+
+    it('shows correct placeholder', () => {
+      render(<IndividualForm {...defaultProps} />)
+      const textarea = screen.getByLabelText('ملاحظات الميلاد')
+      expect(textarea).toHaveAttribute('placeholder', 'مثال: ولد في عاصفة ثلجية')
+    })
+
+    it('enforces max 2000 character limit', () => {
+      render(<IndividualForm {...defaultProps} />)
+      const textarea = screen.getByLabelText('ملاحظات الميلاد')
+      expect(textarea).toHaveAttribute('maxLength', '2000')
+    })
+
+    it('includes birthNotes in submitted data', async () => {
+      const onSubmit = vi.fn().mockResolvedValue(undefined)
+      render(<IndividualForm {...defaultProps} onSubmit={onSubmit} initialData={{ givenName: 'أحمد' }} />)
+      const textarea = screen.getByLabelText('ملاحظات الميلاد')
+      fireEvent.change(textarea, { target: { value: 'ملاحظة ميلاد' } })
+      fireEvent.submit(document.getElementById('individual-form')!)
+      await waitFor(() => {
+        expect(onSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({ birthNotes: 'ملاحظة ميلاد' })
+        )
+      })
+    })
+
+    it('pre-fills birthNotes from initialData', () => {
+      render(<IndividualForm {...defaultProps} initialData={{ birthNotes: 'ملاحظة سابقة' }} />)
+      const textarea = screen.getByLabelText('ملاحظات الميلاد') as HTMLTextAreaElement
+      expect(textarea.value).toBe('ملاحظة سابقة')
+    })
+  })
+
+  describe('deathNotes textarea', () => {
+    it('does not render deathNotes when isDeceased is false', () => {
+      render(<IndividualForm {...defaultProps} />)
+      expect(screen.queryByLabelText('ملاحظات الوفاة')).not.toBeInTheDocument()
+    })
+
+    it('renders deathNotes textarea when isDeceased is checked', () => {
+      render(<IndividualForm {...defaultProps} initialData={{ isDeceased: true }} />)
+      expect(screen.getByLabelText('ملاحظات الوفاة')).toBeInTheDocument()
+    })
+
+    it('shows correct placeholder', () => {
+      render(<IndividualForm {...defaultProps} initialData={{ isDeceased: true }} />)
+      const textarea = screen.getByLabelText('ملاحظات الوفاة')
+      expect(textarea).toHaveAttribute('placeholder', 'مثال: توفي بسلام في منزله')
+    })
+
+    it('enforces max 2000 character limit', () => {
+      render(<IndividualForm {...defaultProps} initialData={{ isDeceased: true }} />)
+      const textarea = screen.getByLabelText('ملاحظات الوفاة')
+      expect(textarea).toHaveAttribute('maxLength', '2000')
+    })
+
+    it('includes deathNotes in submitted data', async () => {
+      const onSubmit = vi.fn().mockResolvedValue(undefined)
+      render(<IndividualForm {...defaultProps} onSubmit={onSubmit} initialData={{ givenName: 'أحمد', isDeceased: true }} />)
+      const textarea = screen.getByLabelText('ملاحظات الوفاة')
+      fireEvent.change(textarea, { target: { value: 'ملاحظة وفاة' } })
+      fireEvent.submit(document.getElementById('individual-form')!)
+      await waitFor(() => {
+        expect(onSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({ deathNotes: 'ملاحظة وفاة' })
+        )
+      })
+    })
+  })
+
   describe('birthPlace in form', () => {
     it('renders birthPlace input', () => {
       render(<IndividualForm {...defaultProps} />)

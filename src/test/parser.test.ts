@@ -69,6 +69,121 @@ describe('parseGedcom — birthPlace and deathPlace', () => {
   })
 })
 
+describe('parseGedcom — birthNotes and deathNotes', () => {
+  it('parses level 2 NOTE under BIRT as birthNotes', () => {
+    const gedcom = `
+0 @I1@ INDI
+1 NAME Ahmad
+1 BIRT
+2 DATE 1 JAN 1950
+2 NOTE Born at home
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.individuals['@I1@'].birthNotes).toBe('Born at home')
+  })
+
+  it('parses level 2 NOTE under DEAT as deathNotes', () => {
+    const gedcom = `
+0 @I1@ INDI
+1 NAME Ahmad
+1 DEAT
+2 DATE 15 MAR 2020
+2 NOTE Died peacefully
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.individuals['@I1@'].deathNotes).toBe('Died peacefully')
+  })
+
+  it('handles multi-line birth notes with level 3 CONT/CONC', () => {
+    const gedcom = `
+0 @I1@ INDI
+1 NAME Ahmad
+1 BIRT
+2 DATE 1 JAN 1950
+2 NOTE First line of birth
+3 CONT Second line of birth.
+3 CONC And more.
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.individuals['@I1@'].birthNotes).toBe('First line of birth\nSecond line of birth.And more.')
+  })
+
+  it('handles multi-line death notes with level 3 CONT/CONC', () => {
+    const gedcom = `
+0 @I1@ INDI
+1 NAME Ahmad
+1 DEAT
+2 DATE 15 MAR 2020
+2 NOTE First line of death
+3 CONT Second line of death.
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.individuals['@I1@'].deathNotes).toBe('First line of death\nSecond line of death.')
+  })
+
+  it('does NOT confuse level 1 NOTE with level 2 NOTE under events', () => {
+    const gedcom = `
+0 @I1@ INDI
+1 NAME Ahmad
+1 BIRT
+2 NOTE Birth note here
+1 NOTE General note here
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.individuals['@I1@'].birthNotes).toBe('Birth note here')
+    expect(data.individuals['@I1@'].notes).toBe('General note here')
+  })
+
+  it('both birth note and general note coexist on same individual', () => {
+    const gedcom = `
+0 @I1@ INDI
+1 NAME Ahmad
+1 BIRT
+2 DATE 1950
+2 NOTE Born in the countryside
+1 DEAT
+2 NOTE Died in city hospital
+1 NOTE This is a general note.
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.individuals['@I1@'].birthNotes).toBe('Born in the countryside')
+    expect(data.individuals['@I1@'].deathNotes).toBe('Died in city hospital')
+    expect(data.individuals['@I1@'].notes).toBe('This is a general note.')
+  })
+
+  it('defaults birthNotes and deathNotes to empty string', () => {
+    const gedcom = `
+0 @I1@ INDI
+1 NAME Ahmad
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.individuals['@I1@'].birthNotes).toBe('')
+    expect(data.individuals['@I1@'].deathNotes).toBe('')
+  })
+
+  it('general note CONT/CONC still works alongside birth/death notes', () => {
+    const gedcom = `
+0 @I1@ INDI
+1 NAME Ahmad
+1 BIRT
+2 NOTE Birth note
+1 NOTE General first line
+2 CONT General second line
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.individuals['@I1@'].birthNotes).toBe('Birth note')
+    expect(data.individuals['@I1@'].notes).toBe('General first line\nGeneral second line')
+  })
+})
+
 describe('parseGedcom — notes', () => {
   it('parses a simple NOTE tag', () => {
     const gedcom = `

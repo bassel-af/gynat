@@ -12,8 +12,10 @@ export interface IndividualFormData {
   sex: 'M' | 'F' | '';
   birthDate: string;
   birthPlace: string;
+  birthNotes: string;
   deathDate: string;
   deathPlace: string;
+  deathNotes: string;
   isDeceased: boolean;
   isPrivate: boolean;
   notes: string;
@@ -35,8 +37,10 @@ const EMPTY_FORM: IndividualFormData = {
   sex: '',
   birthDate: '',
   birthPlace: '',
+  birthNotes: '',
   deathDate: '',
   deathPlace: '',
+  deathNotes: '',
   isDeceased: false,
   isPrivate: false,
   notes: '',
@@ -190,6 +194,18 @@ export function IndividualForm({
             placeholder="مثال: مكة المكرمة"
           />
         </div>
+        <div className={styles.fieldGroup}>
+          <label htmlFor="birthNotes" className={styles.label}>ملاحظات الميلاد</label>
+          <textarea
+            id="birthNotes"
+            className={styles.textarea}
+            value={formData.birthNotes}
+            onChange={(e) => updateField('birthNotes', e.target.value)}
+            placeholder="مثال: ولد في عاصفة ثلجية"
+            maxLength={2000}
+            rows={2}
+          />
+        </div>
 
         {/* Death info */}
         <span className={styles.sectionLabel}>بيانات الوفاة</span>
@@ -203,22 +219,36 @@ export function IndividualForm({
           متوفى/متوفية
         </label>
         {formData.isDeceased && (
-          <div className={styles.row}>
-            <Input
-              id="deathDate"
-              label="تاريخ الوفاة"
-              value={formData.deathDate}
-              onChange={(e) => updateField('deathDate', e.target.value)}
-              placeholder="مثال: 2020"
-            />
-            <Input
-              id="deathPlace"
-              label="مكان الوفاة"
-              value={formData.deathPlace}
-              onChange={(e) => updateField('deathPlace', e.target.value)}
-              placeholder="مثال: المدينة المنورة"
-            />
-          </div>
+          <>
+            <div className={styles.row}>
+              <Input
+                id="deathDate"
+                label="تاريخ الوفاة"
+                value={formData.deathDate}
+                onChange={(e) => updateField('deathDate', e.target.value)}
+                placeholder="مثال: 2020"
+              />
+              <Input
+                id="deathPlace"
+                label="مكان الوفاة"
+                value={formData.deathPlace}
+                onChange={(e) => updateField('deathPlace', e.target.value)}
+                placeholder="مثال: المدينة المنورة"
+              />
+            </div>
+            <div className={styles.fieldGroup}>
+              <label htmlFor="deathNotes" className={styles.label}>ملاحظات الوفاة</label>
+              <textarea
+                id="deathNotes"
+                className={styles.textarea}
+                value={formData.deathNotes}
+                onChange={(e) => updateField('deathNotes', e.target.value)}
+                placeholder="مثال: توفي بسلام في منزله"
+                maxLength={2000}
+                rows={2}
+              />
+            </div>
+          </>
         )}
 
         <hr className={styles.sectionDivider} />
