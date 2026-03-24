@@ -349,17 +349,13 @@
   composes: relPerson;
 }
 
-/* Deceased person — grey out to indicate they are dead */
-.relPerson.deceased {
-  opacity: 0.5;
-}
-
+/* Deceased person — subtle dimming, still readable */
 .relPerson.deceased .relPersonName {
-  color: var(--alpha-white-50);
+  color: rgba(255, 255, 255, 0.55);
 }
 
 .relPerson.deceased .relPersonDates {
-  color: rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .relPerson.deceased.male::before {
@@ -433,6 +429,99 @@
 }
 
 /* ============================================
+   MOVE CHILD BUTTON (amber)
+   ============================================ */
+
+.actionButtonMove {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: transparent;
+  border: 1px solid rgba(246, 173, 85, 0.3);
+  border-radius: var(--radius-md);
+  color: rgba(246, 173, 85, 0.8);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  font-family: inherit;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.actionButtonMove:hover {
+  background: rgba(246, 173, 85, 0.1);
+  border-color: rgba(246, 173, 85, 0.5);
+  color: var(--color-accent);
+}
+
+.actionButtonMove:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(246, 173, 85, 0.15);
+  border-color: var(--color-accent);
+}
+
+.actionButtonMove:active {
+  transform: scale(0.97);
+}
+
+.actionButtonMove svg {
+  flex-shrink: 0;
+}
+
+/* ============================================
+   ACTION ERROR BANNER
+   ============================================ */
+
+.actionError {
+  padding: var(--space-3) var(--space-9);
+  background: rgba(229, 62, 62, 0.1);
+  border-bottom: 1px solid rgba(229, 62, 62, 0.2);
+  color: #fc8181;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  animation: slideDown var(--transition-fast) ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ============================================
+   DECEASED LABEL
+   ============================================ */
+
+.deceasedLabel {
+  color: var(--alpha-white-40);
+  font-style: italic;
+}
+
+/* ============================================
+   NOTES SECTION
+   ============================================ */
+
+.notesSection {
+  flex-shrink: 0;
+  border-top: 1px solid var(--alpha-white-06);
+}
+
+.notesContent {
+  padding: var(--space-4) var(--space-9);
+  font-size: var(--font-size-sm);
+  color: var(--alpha-white-60);
+  line-height: var(--line-height-relaxed);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ============================================
    RESPONSIVE STYLES
    ============================================ */
 
@@ -470,6 +559,14 @@
   .deleteSection {
     padding: var(--space-4) var(--space-7);
   }
+
+  .actionError {
+    padding: var(--space-3) var(--space-7);
+  }
+
+  .notesContent {
+    padding: var(--space-3) var(--space-7);
+  }
 }
 
 @media (max-width: 480px) {
@@ -505,6 +602,14 @@
   }
 
   .deleteSection {
+    padding: var(--space-3) var(--space-6);
+  }
+
+  .actionError {
+    padding: var(--space-3) var(--space-6);
+  }
+
+  .notesContent {
     padding: var(--space-3) var(--space-6);
   }
 }

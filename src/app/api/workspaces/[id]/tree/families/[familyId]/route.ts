@@ -51,6 +51,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   // Verify new husband if provided (not null — null means "remove")
   if (parsed.data.husbandId !== undefined) {
     if (parsed.data.husbandId !== null) {
+      // Check if slot is already occupied by a different person
+      if (existing.husbandId !== null && existing.husbandId !== parsed.data.husbandId) {
+        return NextResponse.json(
+          { error: 'هذا الشخص لديه والدان بالفعل' },
+          { status: 409 },
+        );
+      }
       const husband = await getTreeIndividual(tree.id, parsed.data.husbandId);
       if (!husband) {
         return NextResponse.json(
@@ -65,6 +72,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   // Verify new wife if provided (not null — null means "remove")
   if (parsed.data.wifeId !== undefined) {
     if (parsed.data.wifeId !== null) {
+      // Check if slot is already occupied by a different person
+      if (existing.wifeId !== null && existing.wifeId !== parsed.data.wifeId) {
+        return NextResponse.json(
+          { error: 'هذا الشخص لديه والدان بالفعل' },
+          { status: 409 },
+        );
+      }
       const wife = await getTreeIndividual(tree.id, parsed.data.wifeId);
       if (!wife) {
         return NextResponse.json(

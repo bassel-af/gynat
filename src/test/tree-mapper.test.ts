@@ -19,6 +19,7 @@ interface DbIndividual {
   birthPlace: string | null
   deathDate: string | null
   deathPlace: string | null
+  notes: string | null
   isDeceased: boolean
   isPrivate: boolean
   createdById: string | null
@@ -58,6 +59,7 @@ function makeIndividual(overrides: Partial<DbIndividual> & { id: string; treeId:
     birthPlace: null,
     deathDate: null,
     deathPlace: null,
+    notes: null,
     isDeceased: false,
     isPrivate: false,
     createdById: null,
@@ -642,5 +644,118 @@ describe('redactPrivateIndividuals', () => {
 
     // Original should be unchanged
     expect(gedcom.individuals['ind-1'].name).toBe(originalName)
+  })
+
+  it('redacts birthPlace, deathPlace, and notes for private individuals', () => {
+    const dbTree: DbTree = {
+      id: TREE_ID,
+      workspaceId: WORKSPACE_ID,
+      individuals: [
+        makeIndividual({
+          id: 'ind-1',
+          treeId: TREE_ID,
+          givenName: 'Ahmad',
+          surname: 'Saeed',
+          birthDate: '1950',
+          birthPlace: 'Mecca',
+          deathDate: '2020',
+          deathPlace: 'Jeddah',
+          notes: 'Some private notes',
+          isPrivate: true,
+          isDeceased: true,
+        }),
+      ],
+      families: [],
+    }
+
+    const gedcom = dbTreeToGedcomData(dbTree)
+    const result = redactPrivateIndividuals(gedcom)
+    const ind = result.individuals['ind-1']
+
+    expect(ind.birthPlace).toBe('')
+    expect(ind.deathPlace).toBe('')
+    expect(ind.notes).toBe('')
+  })
+
+  it('does not redact birthPlace, deathPlace, and notes for non-private individuals', () => {
+    const dbTree: DbTree = {
+      id: TREE_ID,
+      workspaceId: WORKSPACE_ID,
+      individuals: [
+        makeIndividual({
+          id: 'ind-1',
+          treeId: TREE_ID,
+          givenName: 'Ahmad',
+          birthPlace: 'Mecca',
+          deathPlace: 'Jeddah',
+          notes: 'Public notes',
+          isPrivate: false,
+        }),
+      ],
+      families: [],
+    }
+
+    const gedcom = dbTreeToGedcomData(dbTree)
+    const result = redactPrivateIndividuals(gedcom)
+    const ind = result.individuals['ind-1']
+
+    expect(ind.birthPlace).toBe('Mecca')
+    expect(ind.deathPlace).toBe('Jeddah')
+    expect(ind.notes).toBe('Public notes')
+  })
+})
+
+describe('dbTreeToGedcomData — birthPlace, deathPlace, notes mapping', () => {
+  const TREE_ID = 'tree-001'
+  const WORKSPACE_ID = 'ws-001'
+
+  it('maps birthPlace, deathPlace, and notes from DB fields', () => {
+    const dbTree: DbTree = {
+      id: TREE_ID,
+      workspaceId: WORKSPACE_ID,
+      individuals: [
+        makeIndividual({
+          id: 'ind-1',
+          treeId: TREE_ID,
+          givenName: 'Ahmad',
+          birthPlace: 'Mecca',
+          deathPlace: 'Jeddah',
+          notes: 'A note about Ahmad.',
+        }),
+      ],
+      families: [],
+    }
+
+    const result = dbTreeToGedcomData(dbTree)
+    const ind = result.individuals['ind-1']
+
+    expect(ind.birthPlace).toBe('Mecca')
+    expect(ind.deathPlace).toBe('Jeddah')
+    expect(ind.notes).toBe('A note about Ahmad.')
+  })
+
+  it('defaults birthPlace, deathPlace, and notes to empty string when DB values are null', () => {
+    const dbTree: DbTree = {
+      id: TREE_ID,
+      workspaceId: WORKSPACE_ID,
+      individuals: [
+        makeIndividual({
+          id: 'ind-1',
+          treeId: TREE_ID,
+          givenName: 'Ahmad',
+          birthPlace: null,
+          deathPlace: null,
+          notes: null,
+        }),
+      ],
+      families: [],
+    }
+
+    const result = dbTreeToGedcomData(dbTree)
+    const ind = result.individuals['ind-1']
+
+    expect(ind.birthPlace).toBe('')
+    expect(ind.deathPlace).toBe('')
+    expect(ind.notes).toBe('')
   })
 })

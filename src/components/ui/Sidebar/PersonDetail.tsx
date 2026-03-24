@@ -7,7 +7,19 @@ import { useWorkspaceTree } from '@/context/WorkspaceTreeContext';
 import { getDisplayName, getPersonRelationships } from '@/lib/gedcom';
 import type { Individual } from '@/lib/gedcom';
 import { IndividualForm, type IndividualFormData } from '@/components/tree/IndividualForm/IndividualForm';
+import { FamilyPickerModal } from '@/components/tree/FamilyPickerModal/FamilyPickerModal';
 import { apiFetch } from '@/lib/api/client';
+import {
+  formatDateWithPlace,
+  getDeceasedLabel,
+  needsFamilyPickerForAddChild,
+  validateAddParent,
+  canMoveChild,
+  getAlternativeFamilies,
+  buildEditInitialData,
+  getFamiliesForPicker,
+} from '@/lib/person-detail-helpers';
+import type { AddParentResult } from '@/lib/person-detail-helpers';
 import styles from './PersonDetail.module.css';
 
 // ---------------------------------------------------------------------------
@@ -30,20 +42,36 @@ function useOptionalWorkspaceTree() {
 
 type FormMode =
   | { kind: 'edit' }
-  | { kind: 'addChild' }
+  | { kind: 'addChild'; targetFamilyId?: string }
   | { kind: 'addSpouse' }
-  | { kind: 'addParent' };
+  | { kind: 'addParent'; lockedSex?: 'M' | 'F' };
 
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
 
 function DateInfo({ person, className }: { person: Individual; className?: string }) {
-  if (!person.birth && !person.death) return null;
+  const birthDisplay = formatDateWithPlace(person.birth, person.birthPlace);
+  const deathDisplay = formatDateWithPlace(person.death, person.deathPlace);
+  const deceasedLabel = getDeceasedLabel(person);
+
+  if (!birthDisplay && !deathDisplay && !deceasedLabel) return null;
+
   return (
     <span className={className}>
-      {person.birth && <span>الميلاد: {person.birth}</span>}
-      {person.death && <span>الوفاة: {person.death}</span>}
+      {birthDisplay && (
+        <span>
+          الميلاد: {birthDisplay}
+        </span>
+      )}
+      {deathDisplay && (
+        <span>
+          الوفاة: {deathDisplay}
+        </span>
+      )}
+      {deceasedLabel && !deathDisplay && (
+        <span className={styles.deceasedLabel}>{deceasedLabel}</span>
+      )}
     </span>
   );
 }
@@ -142,6 +170,9 @@ export function PersonDetail({ personId }: PersonDetailProps) {
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState('');
 
+  // Family picker state
+  const [familyPickerMode, setFamilyPickerMode] = useState<'addChild' | 'moveChild' | null>(null);
+
   // Delete confirmation state
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -190,7 +221,9 @@ export function PersonDetail({ personId }: PersonDetailProps) {
         birthPlace: formData.birthPlace || undefined,
         deathDate: formData.deathDate || undefined,
         deathPlace: formData.deathPlace || undefined,
+        isDeceased: formData.isDeceased,
         isPrivate: formData.isPrivate,
+        notes: formData.notes || undefined,
       }),
     });
     if (!res.ok) {
@@ -242,6 +275,31 @@ export function PersonDetail({ personId }: PersonDetailProps) {
     }
   }, [workspace]);
 
+  const moveChild = useCallback(async (targetFamilyId: string) => {
+    if (!workspace || !person?.familyAsChild) return;
+    setFormLoading(true);
+    try {
+      const res = await apiFetch(
+        `/api/workspaces/${workspace.workspaceId}/tree/families/${person.familyAsChild}/children/${personId}/move`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ targetFamilyId }),
+        },
+      );
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.error ?? 'حدث خطأ');
+      }
+      setFamilyPickerMode(null);
+      await workspace.refreshTree();
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'حدث خطأ');
+    } finally {
+      setFormLoading(false);
+    }
+  }, [workspace, person, personId]);
+
   // -------------------------------------------------------------------------
   // Form submit handlers
   // -------------------------------------------------------------------------
@@ -262,7 +320,9 @@ export function PersonDetail({ personId }: PersonDetailProps) {
           birthPlace: formData.birthPlace || undefined,
           deathDate: formData.deathDate || undefined,
           deathPlace: formData.deathPlace || undefined,
+          isDeceased: formData.isDeceased,
           isPrivate: formData.isPrivate,
+          notes: formData.notes || undefined,
         }),
       });
       if (!res.ok) {
@@ -285,8 +345,12 @@ export function PersonDetail({ personId }: PersonDetailProps) {
     try {
       const newPerson = await createIndividual(formData);
 
-      // Find the first family where this person is a spouse
-      if (person.familiesAsSpouse.length > 0) {
+      // Use the target family from the form mode, or the first family
+      const targetFamilyId = formMode?.kind === 'addChild' ? formMode.targetFamilyId : undefined;
+
+      if (targetFamilyId) {
+        await addChildToFamily(targetFamilyId, newPerson.id);
+      } else if (person.familiesAsSpouse.length > 0) {
         const familyId = person.familiesAsSpouse[0];
         await addChildToFamily(familyId, newPerson.id);
       } else {
@@ -309,7 +373,7 @@ export function PersonDetail({ personId }: PersonDetailProps) {
     } finally {
       setFormLoading(false);
     }
-  }, [workspace, person, data, personId, createIndividual, addChildToFamily, createFamily]);
+  }, [workspace, person, data, personId, formMode, createIndividual, addChildToFamily, createFamily]);
 
   const handleAddSpouseSubmit = useCallback(async (formData: IndividualFormData) => {
     if (!workspace || !person) return;
@@ -378,6 +442,45 @@ export function PersonDetail({ personId }: PersonDetailProps) {
   }, [workspace, person, data, personId, createIndividual, patchFamily, createFamily]);
 
   // -------------------------------------------------------------------------
+  // Action handlers with validation
+  // -------------------------------------------------------------------------
+
+  const handleAddChildClick = useCallback(() => {
+    setFormError('');
+    if (!person || !data) return;
+
+    if (needsFamilyPickerForAddChild(person)) {
+      setFamilyPickerMode('addChild');
+    } else {
+      setFormMode({ kind: 'addChild' });
+    }
+  }, [person, data]);
+
+  const handleAddChildFamilySelect = useCallback((familyId: string) => {
+    setFamilyPickerMode(null);
+    setFormMode({ kind: 'addChild', targetFamilyId: familyId });
+    setFormError('');
+  }, []);
+
+  const handleAddParentClick = useCallback(() => {
+    setFormError('');
+    if (!person || !data) return;
+
+    const result: AddParentResult = validateAddParent(person, data);
+    if (!result.allowed) return;
+    setFormMode({ kind: 'addParent', lockedSex: result.lockedSex });
+  }, [person, data]);
+
+  const handleMoveChildClick = useCallback(() => {
+    setFormError('');
+    setFamilyPickerMode('moveChild');
+  }, []);
+
+  const handleMoveChildSelect = useCallback((targetFamilyId: string) => {
+    moveChild(targetFamilyId);
+  }, [moveChild]);
+
+  // -------------------------------------------------------------------------
   // Delete handler
   // -------------------------------------------------------------------------
 
@@ -417,15 +520,18 @@ export function PersonDetail({ personId }: PersonDetailProps) {
     : undefined;
 
   const formInitialData: Partial<IndividualFormData> | undefined = formMode?.kind === 'edit' && person
-    ? {
-        givenName: person.givenName,
-        surname: person.surname,
-        sex: person.sex ?? '',
-        birthDate: person.birth,
-        deathDate: person.death,
-        isPrivate: person.isPrivate,
-      }
+    ? buildEditInitialData(person) as Partial<IndividualFormData>
     : undefined;
+
+  const formLockedSex = formMode?.kind === 'addParent' ? formMode.lockedSex : undefined;
+
+  // -------------------------------------------------------------------------
+  // Derived: move child and family picker data
+  // -------------------------------------------------------------------------
+
+  const showMoveChild = canEdit && person && data && canMoveChild(person, data);
+  const alternativeFamilies = person && data ? getAlternativeFamilies(person, data) : [];
+  const familiesForPicker = person && data ? getFamiliesForPicker(person, data) : [];
 
   // -------------------------------------------------------------------------
   // Render
@@ -487,7 +593,7 @@ export function PersonDetail({ personId }: PersonDetailProps) {
         <div className={styles.actionBar}>
           <button
             className={styles.actionButton}
-            onClick={() => { setFormMode({ kind: 'addChild' }); setFormError(''); }}
+            onClick={handleAddChildClick}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
               <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
@@ -503,15 +609,28 @@ export function PersonDetail({ personId }: PersonDetailProps) {
             </svg>
             إضافة زوج/زوجة
           </button>
-          <button
-            className={styles.actionButton}
-            onClick={() => { setFormMode({ kind: 'addParent' }); setFormError(''); }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
-            إضافة والد/والدة
-          </button>
+          {person && data && validateAddParent(person, data).allowed && (
+            <button
+              className={styles.actionButton}
+              onClick={handleAddParentClick}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+              إضافة والد/والدة
+            </button>
+          )}
+          {showMoveChild && (
+            <button
+              className={styles.actionButtonMove}
+              onClick={handleMoveChildClick}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              نقل إلى عائلة أخرى
+            </button>
+          )}
         </div>
       )}
 
@@ -549,6 +668,13 @@ export function PersonDetail({ personId }: PersonDetailProps) {
           hideNonVisible
         />
       </div>
+
+      {person.notes && (
+        <div className={styles.notesSection}>
+          <h3 className={styles.sectionTitle}>ملاحظات</h3>
+          <div className={styles.notesContent}>{person.notes}</div>
+        </div>
+      )}
 
       {canEdit && (
         <div className={styles.deleteSection}>
@@ -594,6 +720,27 @@ export function PersonDetail({ personId }: PersonDetailProps) {
           onClose={() => { setFormMode(null); setFormError(''); }}
           isLoading={formLoading}
           error={formError}
+          lockedSex={formLockedSex}
+        />
+      )}
+
+      {familyPickerMode === 'addChild' && (
+        <FamilyPickerModal
+          isOpen
+          onClose={() => setFamilyPickerMode(null)}
+          onSelect={handleAddChildFamilySelect}
+          families={familiesForPicker}
+          title="اختر العائلة"
+        />
+      )}
+
+      {familyPickerMode === 'moveChild' && (
+        <FamilyPickerModal
+          isOpen
+          onClose={() => setFamilyPickerMode(null)}
+          onSelect={handleMoveChildSelect}
+          families={alternativeFamilies}
+          title="نقل إلى عائلة أخرى"
         />
       )}
     </div>

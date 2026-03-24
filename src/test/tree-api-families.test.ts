@@ -377,7 +377,14 @@ describe('PATCH /api/workspaces/[id]/tree/families/[familyId]', () => {
     mockAuth();
     mockTreeEditor();
     mockExistingTree();
-    mockFamilyExists();
+    // Family has husband but no wife — setting wifeId should work
+    mockFamilyFindFirst.mockResolvedValue({
+      id: famId,
+      treeId,
+      husbandId,
+      wifeId: null,
+      children: [],
+    });
     mockIndividualsExist([husbandId, 'a0000000-0000-4000-a000-000000000004']);
     mockTreeEditLogCreate.mockResolvedValue({});
 
@@ -438,7 +445,14 @@ describe('PATCH /api/workspaces/[id]/tree/families/[familyId]', () => {
     mockAuth();
     mockTreeEditor();
     mockExistingTree();
-    mockFamilyExists();
+    // Family has no husband — so the 409 check won't fire
+    mockFamilyFindFirst.mockResolvedValue({
+      id: famId,
+      treeId,
+      husbandId: null,
+      wifeId: null,
+      children: [],
+    });
     mockIndividualFindFirst.mockResolvedValue(null);
 
     const { PATCH } = await import(
@@ -784,6 +798,7 @@ describe('DELETE /api/workspaces/[id]/tree/families/[familyId]/children/[individ
     mockTreeEditor();
     mockExistingTree();
     mockFamilyExists();
+    mockFamilyChildFindUnique.mockResolvedValue({ familyId: famId, individualId: childId });
     mockFamilyChildDelete.mockResolvedValue({});
     mockTreeEditLogCreate.mockResolvedValue({});
 
@@ -804,6 +819,7 @@ describe('DELETE /api/workspaces/[id]/tree/families/[familyId]/children/[individ
     mockTreeEditor();
     mockExistingTree();
     mockFamilyExists();
+    mockFamilyChildFindUnique.mockResolvedValue({ familyId: famId, individualId: childId });
     mockFamilyChildDelete.mockResolvedValue({});
     mockTreeEditLogCreate.mockResolvedValue({});
 
@@ -825,5 +841,178 @@ describe('DELETE /api/workspaces/[id]/tree/families/[familyId]/children/[individ
         entityId: famId,
       }),
     });
+  });
+
+  test('returns 404 if child-family link does not exist', async () => {
+    mockAuth();
+    mockTreeEditor();
+    mockExistingTree();
+    mockFamilyExists();
+    // The child link does not exist in the database
+    mockFamilyChildFindUnique.mockResolvedValue(null);
+
+    const { DELETE } = await import(
+      '@/app/api/workspaces/[id]/tree/families/[familyId]/children/[individualId]/route'
+    );
+    const req = makeRequest(
+      `http://localhost:3000/api/workspaces/${wsId}/tree/families/${famId}/children/${childId}`,
+      { method: 'DELETE' },
+    );
+    const res = await DELETE(req, childParams);
+    expect(res.status).toBe(404);
+  });
+});
+
+// ============================================================================
+// PATCH family — parent-slot validation (Security finding 2A)
+// ============================================================================
+describe('PATCH family — parent-slot conflict validation', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  test('returns 409 when setting husbandId on family that already has a different husband', async () => {
+    mockAuth();
+    mockTreeEditor();
+    mockExistingTree();
+    // Family already has husbandId set
+    mockFamilyFindFirst.mockResolvedValue({
+      id: famId,
+      treeId,
+      husbandId,
+      wifeId: null,
+      children: [],
+    });
+    const newHusbandId = 'a0000000-0000-4000-a000-000000000009';
+    mockIndividualsExist([newHusbandId]);
+
+    const { PATCH } = await import(
+      '@/app/api/workspaces/[id]/tree/families/[familyId]/route'
+    );
+    const req = makeRequest(
+      `http://localhost:3000/api/workspaces/${wsId}/tree/families/${famId}`,
+      { method: 'PATCH', body: { husbandId: newHusbandId } },
+    );
+    const res = await PATCH(req, familyParams);
+    expect(res.status).toBe(409);
+  });
+
+  test('returns 409 when setting wifeId on family that already has a different wife', async () => {
+    mockAuth();
+    mockTreeEditor();
+    mockExistingTree();
+    // Family already has wifeId set
+    mockFamilyFindFirst.mockResolvedValue({
+      id: famId,
+      treeId,
+      husbandId: null,
+      wifeId,
+      children: [],
+    });
+    const newWifeId = 'a0000000-0000-4000-a000-000000000009';
+    mockIndividualsExist([newWifeId]);
+
+    const { PATCH } = await import(
+      '@/app/api/workspaces/[id]/tree/families/[familyId]/route'
+    );
+    const req = makeRequest(
+      `http://localhost:3000/api/workspaces/${wsId}/tree/families/${famId}`,
+      { method: 'PATCH', body: { wifeId: newWifeId } },
+    );
+    const res = await PATCH(req, familyParams);
+    expect(res.status).toBe(409);
+  });
+
+  test('allows setting husbandId to same value as existing (no-op)', async () => {
+    mockAuth();
+    mockTreeEditor();
+    mockExistingTree();
+    mockFamilyFindFirst.mockResolvedValue({
+      id: famId,
+      treeId,
+      husbandId,
+      wifeId: null,
+      children: [],
+    });
+    mockIndividualsExist([husbandId]);
+    mockTreeEditLogCreate.mockResolvedValue({});
+    mockFamilyUpdate.mockResolvedValue({
+      id: famId,
+      treeId,
+      husbandId,
+      wifeId: null,
+      children: [],
+    });
+
+    const { PATCH } = await import(
+      '@/app/api/workspaces/[id]/tree/families/[familyId]/route'
+    );
+    const req = makeRequest(
+      `http://localhost:3000/api/workspaces/${wsId}/tree/families/${famId}`,
+      { method: 'PATCH', body: { husbandId } },
+    );
+    const res = await PATCH(req, familyParams);
+    expect(res.status).toBe(200);
+  });
+
+  test('allows setting husbandId when slot is currently null', async () => {
+    mockAuth();
+    mockTreeEditor();
+    mockExistingTree();
+    mockFamilyFindFirst.mockResolvedValue({
+      id: famId,
+      treeId,
+      husbandId: null,
+      wifeId: null,
+      children: [],
+    });
+    mockIndividualsExist([husbandId]);
+    mockTreeEditLogCreate.mockResolvedValue({});
+    mockFamilyUpdate.mockResolvedValue({
+      id: famId,
+      treeId,
+      husbandId,
+      wifeId: null,
+      children: [],
+    });
+
+    const { PATCH } = await import(
+      '@/app/api/workspaces/[id]/tree/families/[familyId]/route'
+    );
+    const req = makeRequest(
+      `http://localhost:3000/api/workspaces/${wsId}/tree/families/${famId}`,
+      { method: 'PATCH', body: { husbandId } },
+    );
+    const res = await PATCH(req, familyParams);
+    expect(res.status).toBe(200);
+  });
+
+  test('allows setting slot to null (removing parent)', async () => {
+    mockAuth();
+    mockTreeEditor();
+    mockExistingTree();
+    mockFamilyFindFirst.mockResolvedValue({
+      id: famId,
+      treeId,
+      husbandId,
+      wifeId,
+      children: [],
+    });
+    mockTreeEditLogCreate.mockResolvedValue({});
+    mockFamilyUpdate.mockResolvedValue({
+      id: famId,
+      treeId,
+      husbandId: null,
+      wifeId,
+      children: [],
+    });
+
+    const { PATCH } = await import(
+      '@/app/api/workspaces/[id]/tree/families/[familyId]/route'
+    );
+    const req = makeRequest(
+      `http://localhost:3000/api/workspaces/${wsId}/tree/families/${famId}`,
+      { method: 'PATCH', body: { husbandId: null } },
+    );
+    const res = await PATCH(req, familyParams);
+    expect(res.status).toBe(200);
   });
 });

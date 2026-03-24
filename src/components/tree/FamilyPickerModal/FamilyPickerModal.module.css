@@ -1,0 +1,75 @@
+.modal {
+  max-width: 420px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--alpha-white-04);
+  border: 1px solid var(--alpha-white-10);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.row:hover {
+  background: var(--alpha-white-06);
+  border-color: var(--alpha-white-15);
+}
+
+.rowSelected {
+  background: rgba(74, 144, 217, 0.1);
+  border-color: rgba(99, 179, 237, 0.3);
+}
+
+.rowSelected:hover {
+  background: rgba(74, 144, 217, 0.15);
+  border-color: rgba(99, 179, 237, 0.4);
+}
+
+.radioInput {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--alpha-white-25);
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  transition: border-color var(--transition-base), box-shadow var(--transition-base);
+  position: relative;
+  flex-shrink: 0;
+}
+
+.radioInput:checked {
+  border-color: var(--color-primary);
+}
+
+.radioInput:checked::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-primary);
+}
+
+.radioInput:focus-visible {
+  box-shadow: var(--shadow-focus-primary);
+}
+
+.familyLabel {
+  font-size: var(--font-size-base);
+  color: var(--alpha-white-85);
+  font-weight: var(--font-weight-medium);
+}

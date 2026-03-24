@@ -16,7 +16,9 @@ const updateIndividualSchema = z.object({
   birthPlace: z.string().max(500).optional(),
   deathDate: z.string().max(50).optional(),
   deathPlace: z.string().max(500).optional(),
+  isDeceased: z.boolean().optional(),
   isPrivate: z.boolean().optional(),
+  notes: z.string().max(5000).optional(),
 });
 
 // PATCH /api/workspaces/[id]/tree/individuals/[individualId] — Update an individual
@@ -91,21 +93,26 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     );
   }
 
-  // Clean up family references before deleting
-  await prisma.familyChild.deleteMany({
-    where: { individualId },
-  });
-  await prisma.family.updateMany({
-    where: { husbandId: individualId },
-    data: { husbandId: null },
-  });
-  await prisma.family.updateMany({
-    where: { wifeId: individualId },
-    data: { wifeId: null },
-  });
-
-  await prisma.individual.delete({
-    where: { id: individualId },
+  // Clean up family references and delete in a single transaction
+  await prisma.$transaction(async (tx: {
+    familyChild: { deleteMany: typeof prisma.familyChild.deleteMany };
+    family: { updateMany: typeof prisma.family.updateMany };
+    individual: { delete: typeof prisma.individual.delete };
+  }) => {
+    await tx.familyChild.deleteMany({
+      where: { individualId },
+    });
+    await tx.family.updateMany({
+      where: { husbandId: individualId },
+      data: { husbandId: null },
+    });
+    await tx.family.updateMany({
+      where: { wifeId: individualId },
+      data: { wifeId: null },
+    });
+    await tx.individual.delete({
+      where: { id: individualId },
+    });
   });
 
   await prisma.treeEditLog.create({

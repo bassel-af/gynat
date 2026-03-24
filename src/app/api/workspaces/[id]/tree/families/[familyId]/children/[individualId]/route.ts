@@ -25,6 +25,22 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     );
   }
 
+  const childLink = await prisma.familyChild.findUnique({
+    where: {
+      familyId_individualId: {
+        familyId,
+        individualId,
+      },
+    },
+  });
+
+  if (!childLink) {
+    return NextResponse.json(
+      { error: 'الطفل غير موجود في هذه العائلة' },
+      { status: 404 },
+    );
+  }
+
   await prisma.familyChild.delete({
     where: {
       familyId_individualId: {

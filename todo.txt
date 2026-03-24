@@ -10,3 +10,7 @@ be indexed.
 
 Undo - Redo
 Version control
+
+Marriage place
+كتب الكتاب
+Check other inputs in MacFamilyTree

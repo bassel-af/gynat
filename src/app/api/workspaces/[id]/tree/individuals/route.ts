@@ -18,6 +18,7 @@ const createIndividualSchema = z.object({
   deathPlace: z.string().max(500).optional(),
   isDeceased: z.boolean().optional(),
   isPrivate: z.boolean().optional().default(false),
+  notes: z.string().max(5000).optional(),
 }).refine(
   (data) => data.givenName || data.fullName,
   { message: 'يجب تقديم الاسم الأول أو الاسم الكامل' },

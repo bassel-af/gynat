@@ -14,7 +14,9 @@ export interface IndividualFormData {
   birthPlace: string;
   deathDate: string;
   deathPlace: string;
+  isDeceased: boolean;
   isPrivate: boolean;
+  notes: string;
 }
 
 interface IndividualFormProps {
@@ -24,6 +26,7 @@ interface IndividualFormProps {
   onClose: () => void;
   isLoading?: boolean;
   error?: string;
+  lockedSex?: 'M' | 'F';
 }
 
 const EMPTY_FORM: IndividualFormData = {
@@ -34,7 +37,9 @@ const EMPTY_FORM: IndividualFormData = {
   birthPlace: '',
   deathDate: '',
   deathPlace: '',
+  isDeceased: false,
   isPrivate: false,
+  notes: '',
 };
 
 export function IndividualForm({
@@ -44,10 +49,14 @@ export function IndividualForm({
   onClose,
   isLoading = false,
   error,
+  lockedSex,
 }: IndividualFormProps) {
-  const [formData, setFormData] = useState<IndividualFormData>({
-    ...EMPTY_FORM,
-    ...initialData,
+  const [formData, setFormData] = useState<IndividualFormData>(() => {
+    const base = { ...EMPTY_FORM, ...initialData };
+    if (lockedSex) {
+      base.sex = lockedSex;
+    }
+    return base;
   });
 
   const title = mode === 'create' ? 'إضافة شخص جديد' : 'تعديل بيانات الشخص';
@@ -55,7 +64,14 @@ export function IndividualForm({
 
   const updateField = useCallback(
     <K extends keyof IndividualFormData>(key: K, value: IndividualFormData[K]) => {
-      setFormData((prev) => ({ ...prev, [key]: value }));
+      setFormData((prev) => {
+        const next = { ...prev, [key]: value };
+        // Auto-check isDeceased when a death date is entered
+        if (key === 'deathDate' && typeof value === 'string' && value.trim()) {
+          next.isDeceased = true;
+        }
+        return next;
+      });
     },
     [],
   );
@@ -133,6 +149,8 @@ export function IndividualForm({
                 checked={formData.sex === 'M'}
                 onChange={() => updateField('sex', 'M')}
                 className={styles.radioInput}
+                disabled={!!lockedSex}
+                aria-label="ذكر"
               />
               ذكر
             </label>
@@ -144,6 +162,8 @@ export function IndividualForm({
                 checked={formData.sex === 'F'}
                 onChange={() => updateField('sex', 'F')}
                 className={styles.radioInput}
+                disabled={!!lockedSex}
+                aria-label="أنثى"
               />
               أنثى
             </label>
@@ -173,22 +193,33 @@ export function IndividualForm({
 
         {/* Death info */}
         <span className={styles.sectionLabel}>بيانات الوفاة</span>
-        <div className={styles.row}>
-          <Input
-            id="deathDate"
-            label="تاريخ الوفاة"
-            value={formData.deathDate}
-            onChange={(e) => updateField('deathDate', e.target.value)}
-            placeholder="مثال: 2020"
+        <label className={styles.checkboxLabel}>
+          <input
+            type="checkbox"
+            checked={formData.isDeceased}
+            onChange={(e) => updateField('isDeceased', e.target.checked)}
+            className={styles.checkbox}
           />
-          <Input
-            id="deathPlace"
-            label="مكان الوفاة"
-            value={formData.deathPlace}
-            onChange={(e) => updateField('deathPlace', e.target.value)}
-            placeholder="مثال: المدينة المنورة"
-          />
-        </div>
+          متوفى/متوفية
+        </label>
+        {formData.isDeceased && (
+          <div className={styles.row}>
+            <Input
+              id="deathDate"
+              label="تاريخ الوفاة"
+              value={formData.deathDate}
+              onChange={(e) => updateField('deathDate', e.target.value)}
+              placeholder="مثال: 2020"
+            />
+            <Input
+              id="deathPlace"
+              label="مكان الوفاة"
+              value={formData.deathPlace}
+              onChange={(e) => updateField('deathPlace', e.target.value)}
+              placeholder="مثال: المدينة المنورة"
+            />
+          </div>
+        )}
 
         <hr className={styles.sectionDivider} />
 
@@ -202,6 +233,20 @@ export function IndividualForm({
           />
           إخفاء المعلومات الشخصية
         </label>
+
+        {/* Notes */}
+        <div className={styles.fieldGroup}>
+          <label htmlFor="notes" className={styles.label}>ملاحظات</label>
+          <textarea
+            id="notes"
+            className={styles.textarea}
+            value={formData.notes}
+            onChange={(e) => updateField('notes', e.target.value)}
+            placeholder="أضف ملاحظات عن هذا الشخص..."
+            maxLength={5000}
+            rows={3}
+          />
+        </div>
       </form>
     </Modal>
   );

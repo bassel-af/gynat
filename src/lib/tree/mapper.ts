@@ -21,6 +21,7 @@ export interface DbIndividual {
   birthPlace: string | null
   deathDate: string | null
   deathPlace: string | null
+  notes: string | null
   isDeceased: boolean
   isPrivate: boolean
   createdById: string | null
@@ -112,7 +113,10 @@ function mapIndividual(
     surname,
     sex,
     birth: dbInd.birthDate ?? '',
+    birthPlace: dbInd.birthPlace ?? '',
     death: dbInd.deathDate ?? '',
+    deathPlace: dbInd.deathPlace ?? '',
+    notes: dbInd.notes ?? '',
     isDeceased: dbInd.isDeceased,
     isPrivate: dbInd.isPrivate,
     familiesAsSpouse: spouseFamilies.get(dbInd.id) ?? [],
@@ -163,7 +167,10 @@ export function redactPrivateIndividuals(data: GedcomData): GedcomData {
         givenName: PRIVATE_PLACEHOLDER,
         surname: '',
         birth: '',
+        birthPlace: '',
         death: '',
+        deathPlace: '',
+        notes: '',
       }
     } else {
       redacted[id] = ind

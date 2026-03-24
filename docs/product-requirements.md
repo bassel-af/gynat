@@ -483,6 +483,7 @@ Phase 2 introduced basic tree editing, but the "Add child" flow has a gap: when 
   3. Only import this subtree into the workspace — not the entire file
   4. Import the corresponding Family and FamilyChild records for only those individuals
 - This means each workspace gets a distinct, non-overlapping subset of the GEDCOM data (unless families share members via marriage, in which case both workspaces get their own copy of that person)
+Also, we need to make sure we are parsing birth place and death place 
 
 ### Phase 4 — User-Tree Linking + Branch Pointers
 

@@ -30,6 +30,13 @@
   border-color: var(--color-primary);
 }
 
+.input:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  border-color: var(--alpha-white-06);
+  background: transparent;
+}
+
 .inputError {
   border-color: var(--color-error);
 }

@@ -193,6 +193,7 @@ model Individual {
   birthPlace  String?  @map("birth_place")
   deathDate   String?  @map("death_date")
   deathPlace  String?  @map("death_place")
+  notes       String?  @db.Text
   isDeceased  Boolean  @default(false) @map("is_deceased")
   isPrivate   Boolean  @default(false) @map("is_private")
   createdById String?  @map("created_by") @db.Uuid

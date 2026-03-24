@@ -78,7 +78,10 @@ describe('seedTreeFromGedcomData', () => {
           surname: 'Saeed',
           sex: 'M',
           birth: '01/01/1950',
+          birthPlace: '',
           death: '',
+          deathPlace: '',
+          notes: '',
           isDeceased: false,
           isPrivate: false,
           familiesAsSpouse: ['@F1@'],
@@ -92,7 +95,10 @@ describe('seedTreeFromGedcomData', () => {
           surname: 'Ali',
           sex: 'F',
           birth: '06/1955',
+          birthPlace: '',
           death: '',
+          deathPlace: '',
+          notes: '',
           isDeceased: false,
           isPrivate: false,
           familiesAsSpouse: ['@F1@'],
@@ -106,7 +112,10 @@ describe('seedTreeFromGedcomData', () => {
           surname: 'Saeed',
           sex: 'M',
           birth: '15/03/1980',
+          birthPlace: '',
           death: '',
+          deathPlace: '',
+          notes: '',
           isDeceased: false,
           isPrivate: false,
           familiesAsSpouse: [],
@@ -163,17 +172,17 @@ describe('seedTreeFromGedcomData', () => {
       individuals: {
         '@I1@': {
           id: '@I1@', type: 'INDI', name: 'Father', givenName: 'Father', surname: '',
-          sex: 'M', birth: '', death: '', isDeceased: false, isPrivate: false,
+          sex: 'M', birth: '', birthPlace: '', death: '', deathPlace: '', notes: '', isDeceased: false, isPrivate: false,
           familiesAsSpouse: ['@F1@'], familyAsChild: null,
         },
         '@I2@': {
           id: '@I2@', type: 'INDI', name: 'Mother', givenName: 'Mother', surname: '',
-          sex: 'F', birth: '', death: '', isDeceased: false, isPrivate: false,
+          sex: 'F', birth: '', birthPlace: '', death: '', deathPlace: '', notes: '', isDeceased: false, isPrivate: false,
           familiesAsSpouse: ['@F1@'], familyAsChild: null,
         },
         '@I3@': {
           id: '@I3@', type: 'INDI', name: 'Child', givenName: 'Child', surname: '',
-          sex: 'M', birth: '', death: '', isDeceased: false, isPrivate: false,
+          sex: 'M', birth: '', birthPlace: '', death: '', deathPlace: '', notes: '', isDeceased: false, isPrivate: false,
           familiesAsSpouse: [], familyAsChild: '@F1@',
         },
       },
@@ -215,7 +224,7 @@ describe('seedTreeFromGedcomData', () => {
       individuals: {
         '@I1@': {
           id: '@I1@', type: 'INDI', name: 'Unknown Person', givenName: 'Unknown Person', surname: '',
-          sex: null, birth: '', death: '', isDeceased: false, isPrivate: false,
+          sex: null, birth: '', birthPlace: '', death: '', deathPlace: '', notes: '', isDeceased: false, isPrivate: false,
           familiesAsSpouse: [], familyAsChild: null,
         },
       },
@@ -274,7 +283,7 @@ describe('seedTreeFromGedcomData', () => {
       individuals: {
         '@I1@': {
           id: '@I1@', type: 'INDI', name: 'Ahmad', givenName: 'Ahmad', surname: '',
-          sex: 'M', birth: '', death: '', isDeceased: false, isPrivate: false,
+          sex: 'M', birth: '', birthPlace: '', death: '', deathPlace: '', notes: '', isDeceased: false, isPrivate: false,
           familiesAsSpouse: [], familyAsChild: null,
         },
       },
@@ -302,27 +311,27 @@ describe('seedTreeFromGedcomData', () => {
       individuals: {
         '@I1@': {
           id: '@I1@', type: 'INDI', name: 'Grandfather', givenName: 'Grandfather', surname: '',
-          sex: 'M', birth: '', death: '', isDeceased: false, isPrivate: false,
+          sex: 'M', birth: '', birthPlace: '', death: '', deathPlace: '', notes: '', isDeceased: false, isPrivate: false,
           familiesAsSpouse: ['@F1@', '@F2@'], familyAsChild: null,
         },
         '@I2@': {
           id: '@I2@', type: 'INDI', name: 'Wife One', givenName: 'Wife One', surname: '',
-          sex: 'F', birth: '', death: '', isDeceased: false, isPrivate: false,
+          sex: 'F', birth: '', birthPlace: '', death: '', deathPlace: '', notes: '', isDeceased: false, isPrivate: false,
           familiesAsSpouse: ['@F1@'], familyAsChild: null,
         },
         '@I3@': {
           id: '@I3@', type: 'INDI', name: 'Wife Two', givenName: 'Wife Two', surname: '',
-          sex: 'F', birth: '', death: '', isDeceased: false, isPrivate: false,
+          sex: 'F', birth: '', birthPlace: '', death: '', deathPlace: '', notes: '', isDeceased: false, isPrivate: false,
           familiesAsSpouse: ['@F2@'], familyAsChild: null,
         },
         '@I4@': {
           id: '@I4@', type: 'INDI', name: 'Child A', givenName: 'Child A', surname: '',
-          sex: 'M', birth: '', death: '', isDeceased: false, isPrivate: false,
+          sex: 'M', birth: '', birthPlace: '', death: '', deathPlace: '', notes: '', isDeceased: false, isPrivate: false,
           familiesAsSpouse: [], familyAsChild: '@F1@',
         },
         '@I5@': {
           id: '@I5@', type: 'INDI', name: 'Child B', givenName: 'Child B', surname: '',
-          sex: 'F', birth: '', death: '', isDeceased: false, isPrivate: false,
+          sex: 'F', birth: '', birthPlace: '', death: '', deathPlace: '', notes: '', isDeceased: false, isPrivate: false,
           familiesAsSpouse: [], familyAsChild: '@F2@',
         },
       },
@@ -375,7 +384,7 @@ describe('seedTreeFromGedcomData', () => {
       individuals: {
         '@I1@': {
           id: '@I1@', type: 'INDI', name: 'Test', givenName: 'Test', surname: '',
-          sex: 'M', birth: '', death: '', isDeceased: false, isPrivate: false,
+          sex: 'M', birth: '', birthPlace: '', death: '', deathPlace: '', notes: '', isDeceased: false, isPrivate: false,
           familiesAsSpouse: [], familyAsChild: null,
         },
       },

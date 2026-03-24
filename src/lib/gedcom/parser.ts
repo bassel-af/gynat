@@ -34,6 +34,7 @@ export function parseGedcom(text: string): GedcomData {
   const families: Record<string, Family> = {};
   let currentRecord: Individual | Family | null = null;
   let currentSubRecord: string | null = null;
+  let currentLevel1Tag: string | null = null;
 
   for (const line of lines) {
     const trimmed = line.trim();
@@ -59,6 +60,7 @@ export function parseGedcom(text: string): GedcomData {
 
     if (level === 0) {
       currentSubRecord = null;
+      currentLevel1Tag = null;
       if (tag === 'INDI' && id) {
         currentRecord = {
           id,
@@ -68,7 +70,10 @@ export function parseGedcom(text: string): GedcomData {
           surname: '',
           sex: null,
           birth: '',
+          birthPlace: '',
           death: '',
+          deathPlace: '',
+          notes: '',
           isDeceased: false,
           isPrivate: false,
           familiesAsSpouse: [],
@@ -90,6 +95,7 @@ export function parseGedcom(text: string): GedcomData {
     } else if (currentRecord) {
       if (level === 1) {
         currentSubRecord = tag;
+        currentLevel1Tag = tag;
         if (currentRecord.type === 'INDI') {
           const indi = currentRecord as Individual;
           if (tag === 'NAME') {
@@ -110,6 +116,8 @@ export function parseGedcom(text: string): GedcomData {
             indi.sex = value === 'M' ? 'M' : value === 'F' ? 'F' : null;
           } else if (tag === 'DEAT') {
             indi.isDeceased = true;
+          } else if (tag === 'NOTE') {
+            indi.notes = value || '';
           } else if (tag === 'FAMS' && value) {
             indi.familiesAsSpouse.push(value);
           } else if (tag === 'FAMC' && value) {
@@ -139,6 +147,18 @@ export function parseGedcom(text: string): GedcomData {
               indi.birth = formatGedcomDate(value || '');
             } else if (currentSubRecord === 'DEAT') {
               indi.death = formatGedcomDate(value || '');
+            }
+          } else if (tag === 'PLAC') {
+            if (currentSubRecord === 'BIRT') {
+              indi.birthPlace = value || '';
+            } else if (currentSubRecord === 'DEAT') {
+              indi.deathPlace = value || '';
+            }
+          } else if (currentLevel1Tag === 'NOTE') {
+            if (tag === 'CONT') {
+              indi.notes += '\n' + (value || '');
+            } else if (tag === 'CONC') {
+              indi.notes += (value || '');
             }
           }
         }
