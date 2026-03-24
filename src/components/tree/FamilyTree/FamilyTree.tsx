@@ -233,8 +233,8 @@ function getLayoutedElements(
 ): { nodes: Node[]; edges: Edge[] } {
   if (nodes.length === 0) return { nodes: [], edges };
 
-  const HORIZONTAL_GAP = 30; // Gap between siblings
-  const VERTICAL_GAP = 80; // Gap between generations
+  const HORIZONTAL_GAP = 40; // Gap between siblings
+  const VERTICAL_GAP = 120; // Gap between generations
 
   // Build node width map
   const nodeWidths = new Map<string, number>();
@@ -505,7 +505,7 @@ function buildTreeData(
         type: 'smoothstep',
         style: { stroke: edgeColor, strokeWidth: 2 },
         className: edgeClassName,
-        data: { pathOptions: { offset: edgeOffset } },
+        pathOptions: { offset: edgeOffset, borderRadius: 8 },
       });
       // Add to queue for BFS traversal
       queue.push([childId, depth + 1]);
