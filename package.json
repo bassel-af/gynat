@@ -12,7 +12,9 @@
     "lint": "next lint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "seed": "npx tsx prisma/seed.ts"
+    "seed": "npx tsx prisma/seed.ts",
+    "preprocess-geonames": "npx tsx scripts/preprocess-geonames.ts",
+    "seed:places": "npx tsx src/lib/seed/run-seed-places.ts"
   },
   "dependencies": {
     "@dagrejs/dagre": "^1.1.8",

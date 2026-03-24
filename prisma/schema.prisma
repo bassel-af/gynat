@@ -61,6 +61,7 @@ model Workspace {
   albums      Album[]
   events      Event[]
   userTreeLinks UserTreeLink[]
+  places      Place[]
 
   @@map("workspaces")
 }
@@ -417,4 +418,27 @@ model Notification {
 
   @@index([userId, isRead])
   @@map("notifications")
+}
+
+// =============================================================================
+// Places — hierarchical location data for autocomplete
+// =============================================================================
+
+model Place {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId String?   @map("workspace_id") @db.Uuid // null = global/seeded place
+  nameAr      String    @map("name_ar")
+  nameEn      String?   @map("name_en")
+  parentId    String?   @map("parent_id") @db.Uuid
+  latitude    Float?
+  longitude   Float?
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  parent    Place?     @relation("PlaceHierarchy", fields: [parentId], references: [id])
+  children  Place[]    @relation("PlaceHierarchy")
+
+  @@unique([workspaceId, nameAr])
+  @@map("places")
 }

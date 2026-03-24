@@ -53,3 +53,6 @@ CLAUDE.local.md
 .playwright-mcp
 
 /generated/prisma
+
+# GeoNames raw downloads (large, not committed)
+scripts/geonames-data/

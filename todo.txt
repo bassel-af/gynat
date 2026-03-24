@@ -1,3 +1,5 @@
+Structure directories and files.
+
 تعريب مكان الميلاد
 مكان الميلاد يتم اختياره وليس فقط كتابته
 
@@ -8,12 +10,17 @@ We need to control search engines indexing. Only
 the landing and policy pages shall
 be indexed.
 
+
 الإخوة من الرضاعة من نفس الأقارب في شجرة العائلة وليس من خارجها
 وتعديل على الستاندارد الخاص بجيدكوم
 
 Check other inputs in MacFamilyTree
 
+link redirects
+
 المحارم
+
+Do pnpm build.
 
 Low priority now:
 Undo - Redo
@@ -21,3 +28,4 @@ Version control
 إصدار نعوة
 UI latest touches.
 divorce/khol3, etc
+

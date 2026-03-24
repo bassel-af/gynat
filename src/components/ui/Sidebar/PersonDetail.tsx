@@ -637,6 +637,7 @@ export function PersonDetail({ personId }: PersonDetailProps) {
           isLoading={formLoading}
           error={formError}
           lockedSex={formLockedSex}
+          workspaceId={workspace?.workspaceId}
         />
       )}
 
@@ -671,6 +672,7 @@ export function PersonDetail({ personId }: PersonDetailProps) {
           onClose={() => { setFormMode(null); setFormError(''); }}
           isLoading={formLoading}
           error={formError}
+          workspaceId={workspace?.workspaceId}
         />
       )}
     </div>

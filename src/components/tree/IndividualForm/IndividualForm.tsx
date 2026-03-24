@@ -3,6 +3,7 @@
 import { useState, useCallback, type FormEvent } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
+import { PlaceComboBox } from '@/components/ui/PlaceComboBox';
 import { Button } from '@/components/ui/Button';
 import styles from './IndividualForm.module.css';
 
@@ -33,6 +34,7 @@ interface IndividualFormProps {
   isLoading?: boolean;
   error?: string;
   lockedSex?: 'M' | 'F';
+  workspaceId?: string;
 }
 
 const EMPTY_FORM: IndividualFormData = {
@@ -62,6 +64,7 @@ export function IndividualForm({
   isLoading = false,
   error,
   lockedSex,
+  workspaceId,
 }: IndividualFormProps) {
   const [formData, setFormData] = useState<IndividualFormData>(() => {
     const base = { ...EMPTY_FORM, ...initialData };
@@ -194,13 +197,24 @@ export function IndividualForm({
             onChange={(e) => updateField('birthDate', e.target.value)}
             placeholder="مثال: 1950 أو 15/3/1950"
           />
-          <Input
-            id="birthPlace"
-            label="مكان الميلاد"
-            value={formData.birthPlace}
-            onChange={(e) => updateField('birthPlace', e.target.value)}
-            placeholder="مثال: مكة المكرمة"
-          />
+          {workspaceId ? (
+            <PlaceComboBox
+              id="birthPlace"
+              label="مكان الميلاد"
+              value={formData.birthPlace}
+              onChange={(val) => updateField('birthPlace', val)}
+              workspaceId={workspaceId}
+              placeholder="مثال: مكة المكرمة"
+            />
+          ) : (
+            <Input
+              id="birthPlace"
+              label="مكان الميلاد"
+              value={formData.birthPlace}
+              onChange={(e) => updateField('birthPlace', e.target.value)}
+              placeholder="مثال: مكة المكرمة"
+            />
+          )}
         </div>
         <Input
           id="birthDescription"
@@ -252,13 +266,24 @@ export function IndividualForm({
                 onChange={(e) => updateField('deathDate', e.target.value)}
                 placeholder="مثال: 2020"
               />
-              <Input
-                id="deathPlace"
-                label="مكان الوفاة"
-                value={formData.deathPlace}
-                onChange={(e) => updateField('deathPlace', e.target.value)}
-                placeholder="مثال: المدينة المنورة"
-              />
+              {workspaceId ? (
+                <PlaceComboBox
+                  id="deathPlace"
+                  label="مكان الوفاة"
+                  value={formData.deathPlace}
+                  onChange={(val) => updateField('deathPlace', val)}
+                  workspaceId={workspaceId}
+                  placeholder="مثال: المدينة المنورة"
+                />
+              ) : (
+                <Input
+                  id="deathPlace"
+                  label="مكان الوفاة"
+                  value={formData.deathPlace}
+                  onChange={(e) => updateField('deathPlace', e.target.value)}
+                  placeholder="مثال: المدينة المنورة"
+                />
+              )}
             </div>
             <Input
               id="deathDescription"

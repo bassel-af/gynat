@@ -4,6 +4,7 @@ import { useState, useCallback, type FormEvent } from 'react';
 import clsx from 'clsx';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
+import { PlaceComboBox } from '@/components/ui/PlaceComboBox';
 import { Button } from '@/components/ui/Button';
 import styles from './FamilyEventForm.module.css';
 
@@ -32,6 +33,7 @@ interface FamilyEventFormProps {
   onClose: () => void;
   isLoading?: boolean;
   error?: string;
+  workspaceId?: string;
 }
 
 const EMPTY_FORM: FamilyEventFormData = {
@@ -90,6 +92,7 @@ export function FamilyEventForm({
   onClose,
   isLoading = false,
   error,
+  workspaceId,
 }: FamilyEventFormProps) {
   const [formData, setFormData] = useState<FamilyEventFormData>(() => ({
     ...EMPTY_FORM,
@@ -201,13 +204,24 @@ export function FamilyEventForm({
                   placeholder="مثال: 5 رمضان 1441"
                 />
               </div>
-              <Input
-                id="marriageContractPlace"
-                label="المكان"
-                value={formData.marriageContractPlace}
-                onChange={(e) => updateField('marriageContractPlace', e.target.value)}
-                placeholder="مثال: مكة المكرمة"
-              />
+              {workspaceId ? (
+                <PlaceComboBox
+                  id="marriageContractPlace"
+                  label="المكان"
+                  value={formData.marriageContractPlace}
+                  onChange={(val) => updateField('marriageContractPlace', val)}
+                  workspaceId={workspaceId}
+                  placeholder="مثال: مكة المكرمة"
+                />
+              ) : (
+                <Input
+                  id="marriageContractPlace"
+                  label="المكان"
+                  value={formData.marriageContractPlace}
+                  onChange={(e) => updateField('marriageContractPlace', e.target.value)}
+                  placeholder="مثال: مكة المكرمة"
+                />
+              )}
               <Input
                 id="marriageContractDescription"
                 label="الوصف"
@@ -259,13 +273,24 @@ export function FamilyEventForm({
                   placeholder="مثال: 10 شوال 1442"
                 />
               </div>
-              <Input
-                id="marriagePlace"
-                label="المكان"
-                value={formData.marriagePlace}
-                onChange={(e) => updateField('marriagePlace', e.target.value)}
-                placeholder="مثال: جدة"
-              />
+              {workspaceId ? (
+                <PlaceComboBox
+                  id="marriagePlace"
+                  label="المكان"
+                  value={formData.marriagePlace}
+                  onChange={(val) => updateField('marriagePlace', val)}
+                  workspaceId={workspaceId}
+                  placeholder="مثال: جدة"
+                />
+              ) : (
+                <Input
+                  id="marriagePlace"
+                  label="المكان"
+                  value={formData.marriagePlace}
+                  onChange={(e) => updateField('marriagePlace', e.target.value)}
+                  placeholder="مثال: جدة"
+                />
+              )}
               <Input
                 id="marriageDescription"
                 label="الوصف"
@@ -329,13 +354,24 @@ export function FamilyEventForm({
                       placeholder="مثال: 1 ذو الحجة 1444"
                     />
                   </div>
-                  <Input
-                    id="divorcePlace"
-                    label="المكان"
-                    value={formData.divorcePlace}
-                    onChange={(e) => updateField('divorcePlace', e.target.value)}
-                    placeholder="المكان"
-                  />
+                  {workspaceId ? (
+                    <PlaceComboBox
+                      id="divorcePlace"
+                      label="المكان"
+                      value={formData.divorcePlace}
+                      onChange={(val) => updateField('divorcePlace', val)}
+                      workspaceId={workspaceId}
+                      placeholder="المكان"
+                    />
+                  ) : (
+                    <Input
+                      id="divorcePlace"
+                      label="المكان"
+                      value={formData.divorcePlace}
+                      onChange={(e) => updateField('divorcePlace', e.target.value)}
+                      placeholder="المكان"
+                    />
+                  )}
                   <Input
                     id="divorceDescription"
                     label="الوصف"

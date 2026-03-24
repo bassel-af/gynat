@@ -7,6 +7,8 @@ import { FAMILIES } from '../src/config/families';
 import { parseGedcom } from '../src/lib/gedcom/parser';
 import { extractSubtree } from '../src/lib/gedcom/graph';
 import { seedTreeFromGedcomData } from '../src/lib/tree/seed-helpers';
+import { seedPlaces } from '../src/lib/seed/seed-places';
+import type { PlacesData } from '../src/lib/seed/seed-places';
 
 // We can't use the @/ alias or the singleton from src/lib/db.ts here
 // because this script runs outside of Next.js/Vite.
@@ -81,6 +83,23 @@ async function main() {
           console.log(`    GEDCOM file not found: ${gedcomPath}, skipping tree seed.`);
         }
       }
+    }
+
+    // --- Seed places ---
+    const placesPath = path.resolve(__dirname, 'seed-data', 'places.json');
+    if (fs.existsSync(placesPath)) {
+      console.log('\nSeeding places...');
+      const raw = fs.readFileSync(placesPath, 'utf-8');
+      const placesData: PlacesData = JSON.parse(raw);
+      const placesResult = await seedPlaces(prisma, placesData);
+
+      if (placesResult.skipped) {
+        console.log('  Places already seeded, skipped.');
+      } else {
+        console.log(`  Seeded: ${placesResult.countryCount} countries, ${placesResult.regionCount} regions, ${placesResult.cityCount} cities`);
+      }
+    } else {
+      console.log('\nNo places.json found, skipping places seed. Run "pnpm preprocess-geonames" to generate it.');
     }
 
     console.log('Seed completed successfully.');
