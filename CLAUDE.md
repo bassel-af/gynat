@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This repository ("solalah") is a **private family collaboration platform** evolving from a read-only genealogy viewer. Built with Next.js 15 (App Router) + React 19 + TypeScript, backed by PostgreSQL (Prisma ORM) and Supabase Auth (self-hosted via Docker Compose). The app is RTL (right-to-left) with Arabic as the primary language. See `docs/product-requirements.md` for the full PRD and `docs/auth-provider-decisions.md` for auth architecture decisions.
 
-**Current state**: Phase 1 (Auth & Workspace Foundation) is complete. Auth (email/password + Google OAuth), workspace CRUD, membership/invitations, dashboard UI, and policy page are all working. Phase 2 (Branch Infrastructure) is next. The tree visualization still reads from static GEDCOM files in `/public/` — database-backed trees come in Phase 4.
+**Current state**: Phase 1 (Auth & Workspace Foundation) and Phase 2 (Editable Family Tree) are complete, including security hardening. Auth (email/password + Google OAuth), workspace CRUD, membership/invitations, dashboard UI, policy page, and database-backed editable family tree are all working. Phase 3 (Family-Aware Relationship Editing) is next. The tree visualization reads from the database via `GET /api/workspaces/[id]/tree`; static GEDCOM files in `/public/` are preserved for the legacy `/{familySlug}` routes and seeding.
 
 ## Package Management
 
@@ -151,11 +151,12 @@ The GEDCOM file (`public/saeed-family.ged`):
 - Start: `cd docker && docker compose up -d`
 - Services: `db` (PostgreSQL 15), `gotrue` (Supabase Auth v2.186.0), `kong` (API gateway), `studio` (admin UI), `pg-meta`
 - Ports: PostgreSQL 5432, GoTrue 9999, Kong 8000 (public API), Studio 3001
-- Kong config at `docker/kong.yml` — routes `/auth/v1/*` to GoTrue with CORS headers
-- Secrets in `docker/.env` (gitignored)
+- Kong config at `docker/kong.yml` — routes `/auth/v1/*` to GoTrue with CORS headers and rate limiting (30/min per IP)
+- Non-public ports bound to `127.0.0.1` (PostgreSQL, GoTrue, Studio); Kong 8000 is the only externally accessible port
+- Secrets in `docker/.env` (gitignored) — all security-sensitive vars use `:?` syntax (Docker fails to start if missing)
 
 **Prisma** (`prisma/schema.prisma`):
-- 20 tables: users, workspaces, workspace_memberships, workspace_invitations, branches, branch_memberships, branch_invitations, user_tree_links, family_trees, individuals, families, family_children, tree_edit_logs, posts, albums, album_media, events, event_rsvps, notifications
+- 16 tables: users, workspaces, workspace_memberships, workspace_invitations, user_tree_links, family_trees, individuals, families, family_children, tree_edit_logs, posts, albums, album_media, events, event_rsvps, notifications (branch tables removed in Phase 2)
 - Prisma v7 uses driver adapters — client instantiation requires `PrismaPg` from `@prisma/adapter-pg`
 - Generated client output: `generated/prisma/` (gitignored)
 - Run migrations: `npx prisma migrate dev`
@@ -172,14 +173,17 @@ The GEDCOM file (`public/saeed-family.ged`):
 - Login: `src/app/auth/login/page.tsx` → GoTrue `/auth/v1/token?grant_type=password` + Google OAuth
 - Callback: `src/app/auth/callback/route.ts` — handles OAuth redirects, email confirmations, sets cookies, syncs user to DB
 - User sync: `POST /api/auth/sync-user` + shared helper `src/lib/auth/sync-user.ts` — mirrors GoTrue user to `public.users`
-- Middleware: `src/middleware.ts` — uses `@supabase/ssr` to verify/refresh sessions, redirects unauthenticated users to `/auth/login`
+- Redirect validation: `src/lib/auth/validate-redirect.ts` — validates `?next` parameter to prevent open redirects
+- Middleware: `src/middleware.ts` — three code paths: static assets (skip), API routes (session refresh only, no login redirect), page routes (session refresh + login redirect)
 - After login/signup, users are redirected to `/dashboard`
 
 **API Utilities**:
 - Auth guard: `src/lib/api/auth.ts` — `getAuthenticatedUser(request)` parses Bearer token, verifies via Supabase
-- Workspace guards: `src/lib/api/workspace-auth.ts` — `requireWorkspaceMember()`, `requireWorkspaceAdmin()`
+- Workspace guards: `src/lib/api/workspace-auth.ts` — `requireWorkspaceMember()`, `requireWorkspaceAdmin()`, `requireTreeEditor()`
+- Rate limiting: `src/lib/api/rate-limit.ts` — in-memory `RateLimiter` class with pre-configured instances per endpoint (single-process; needs Redis before horizontal scaling)
 - Client fetch: `src/lib/api/client.ts` — `apiFetch(path, options)` auto-attaches Bearer token
 - Serialization: `src/lib/api/serialize.ts` — `serializeBigInt()` for JSON responses with BigInt fields
+- HTML escaping: `src/lib/utils/html-escape.ts` — `escapeHtml()` for email templates
 
 **Workspace API Routes** (`src/app/api/workspaces/`):
 - `POST /api/workspaces` — create workspace (any authenticated user, creator becomes `workspace_admin`)
@@ -192,12 +196,38 @@ The GEDCOM file (`public/saeed-family.ged`):
 - `PATCH /api/workspaces/[id]/members/[userId]` — update role/permissions (admin only)
 - `DELETE /api/workspaces/[id]/members/[userId]` — remove member (admin only, last-admin protected)
 - `POST /api/workspaces/[id]/invitations/code` — generate join code (admin only)
-- `POST /api/workspaces/join` — join via code
+- `POST /api/workspaces/join` — join via code (atomic transaction, rate limited)
+- `POST /api/invitations/[id]/accept` — accept email invitation (atomic transaction)
+
+**Tree API Routes** (`src/app/api/workspaces/[id]/tree/`):
+- `GET /api/workspaces/[id]/tree` — full tree as `GedcomData` (private individuals redacted server-side)
+- `POST /api/workspaces/[id]/tree/individuals` — create individual (`tree_editor` or admin)
+- `PATCH /api/workspaces/[id]/tree/individuals/[id]` — update individual
+- `DELETE /api/workspaces/[id]/tree/individuals/[id]` — delete individual
+- `POST /api/workspaces/[id]/tree/families` — create family
+- `PATCH /api/workspaces/[id]/tree/families/[id]` — update family
+- `DELETE /api/workspaces/[id]/tree/families/[id]` — delete family
+- `POST /api/workspaces/[id]/tree/families/[id]/children` — add child to family
+- `DELETE /api/workspaces/[id]/tree/families/[id]/children/[individualId]` — remove child from family
+
+**Tree Library** (`src/lib/tree/`):
+- `queries.ts` — database query helpers for tree CRUD
+- `mapper.ts` — `dbTreeToGedcomData()` maps DB records to `GedcomData` shape; `redactPrivateIndividuals()` strips PII from private individuals
+- `seed-helpers.ts` — helpers for seeding tree data from GEDCOM
+
+**Email** (`src/lib/email/`):
+- `transport.ts` — Nodemailer with Gmail SMTP
+- `templates/invite.ts` — Arabic RTL invitation email (HTML-escaped dynamic values, URL-validated links, header-injection-safe subjects)
+
+**Join Code Generation** (`src/lib/workspace/join-code.ts`):
+- Uses `crypto.randomBytes()` with 8 random characters (A-Z0-9), format: `SLUG_PREFIX-XXXXXXXX`
 
 **Dashboard & Workspace UI**:
 - `/dashboard` — workspace list (مساحات العائلة), create button, logout
 - `/dashboard/create` — create workspace form (اسم العائلة, slug, description)
 - `/workspaces/[slug]` — workspace detail with members, invite modal, tree link
+- `/workspaces/[slug]/tree` — database-backed tree view with edit controls (add/edit individual, add child/spouse/parent, delete)
+- `/invite/[id]` — invitation acceptance page
 - `/policy` — public policy page (Arabic + English)
 
 **Environment Variables** (see `.env.example`):
@@ -208,6 +238,16 @@ The GEDCOM file (`public/saeed-family.ged`):
 ### Dev Tools
 
 - `?playground` query param renders `Playground.tsx` (SVG-line-based tree layout experiment) instead of the main app
+
+### Security
+
+- **Security headers**: `next.config.ts` sets X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, HSTS, X-DNS-Prefetch-Control on all routes
+- **Rate limiting**: Kong plugin (30/min on auth routes) + in-memory per-user rate limiting on API routes (see `src/lib/api/rate-limit.ts`)
+- **Input validation**: All Zod schemas have `.max()` constraints on string fields
+- **Privacy enforcement**: `isPrivate` individuals have PII redacted server-side before API response (names → "خاص", dates/places cleared, tree structure preserved)
+- **Error handling**: Unknown errors return generic 500 responses — no stack trace leakage
+- **Workspace limits**: Max 5 owned workspaces per user; workspace creation rate limited
+- **Invitation security**: Generic error messages prevent enumeration; member list returns only `id`/`displayName`/`avatarUrl`
 
 ## TypeScript Configuration
 
