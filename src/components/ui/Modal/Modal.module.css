@@ -30,6 +30,7 @@
 }
 
 .content {
+  composes: thin from '../../../styles/scrollbar.module.css';
   display: flex;
   flex-direction: column;
   gap: var(--space-4);

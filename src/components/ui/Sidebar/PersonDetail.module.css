@@ -288,22 +288,10 @@
 
 /* Relationship Sections */
 .sections {
+  composes: thin from '../../../styles/scrollbar.module.css';
   flex: 1;
   overflow-y: auto;
   padding: var(--space-5) 0;
-}
-
-.sections::-webkit-scrollbar {
-  width: 6px;
-}
-
-.sections::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.sections::-webkit-scrollbar-thumb {
-  background: var(--alpha-white-15);
-  border-radius: var(--radius-sm);
 }
 
 .sectionTitle {

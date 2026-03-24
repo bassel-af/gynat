@@ -4,8 +4,7 @@ Check other inputs in MacFamilyTree
 تعريب مكان الميلاد
 مكان الميلاد يتم اختياره وليس فقط كتابته
 
-Death notes
-Birth notes
+
 divorce/khol3, etc
 
 Show also members in tree above descendents in someway.
@@ -32,3 +31,4 @@ UI latest touches.
 when a person is a man, show إضافة زوجة and vice versa.
 also, the gender shall be selected in the modal,
 do not allow to change.
+Fix lines shape

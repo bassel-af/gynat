@@ -247,28 +247,12 @@
 
 /* People List */
 .peopleList {
+  composes: thin from '../../../styles/scrollbar.module.css';
   flex: 1;
   overflow-y: auto;
   list-style: none;
   margin: 0;
   padding: var(--space-3);
-}
-
-.peopleList::-webkit-scrollbar {
-  width: 6px;
-}
-
-.peopleList::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.peopleList::-webkit-scrollbar-thumb {
-  background: var(--alpha-white-15);
-  border-radius: var(--radius-sm);
-}
-
-.peopleList::-webkit-scrollbar-thumb:hover {
-  background: var(--alpha-white-25);
 }
 
 /* Person Item */

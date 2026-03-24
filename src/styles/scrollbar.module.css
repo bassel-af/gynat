@@ -1,0 +1,21 @@
+.thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--alpha-white-15) transparent;
+}
+
+.thin::-webkit-scrollbar {
+  width: 6px;
+}
+
+.thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.thin::-webkit-scrollbar-thumb {
+  background: var(--alpha-white-15);
+  border-radius: var(--radius-sm);
+}
+
+.thin::-webkit-scrollbar-thumb:hover {
+  background: var(--alpha-white-25);
+}

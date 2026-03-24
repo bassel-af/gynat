@@ -187,7 +187,7 @@ function MarriageEventDisplay({
   calendarPreference,
 }: {
   label: string;
-  event: { date: string; hijriDate: string; place: string };
+  event: { date: string; hijriDate: string; place: string; description: string; notes: string };
   calendarPreference: CalendarPreference;
 }) {
   const primary = getPreferredDate(event.date, event.hijriDate, calendarPreference);
@@ -200,6 +200,8 @@ function MarriageEventDisplay({
       {primary && <span className={styles.marriageEventDate}>{primary}{suffix ? ` ${suffix}` : ''}</span>}
       {secondary && <span className={styles.marriageEventDateSecondary}>{secondary}</span>}
       {event.place && <span className={styles.marriageEventPlace}>{event.place}</span>}
+      {event.description && <span className={styles.eventDescription}>{event.description}</span>}
+      {event.notes && <span className={styles.eventNote}>{event.notes}</span>}
     </div>
   );
 }
@@ -526,6 +528,7 @@ export function PersonDetail({ personId }: PersonDetailProps) {
               if (!family) return null;
               const spouseId = family.husband === personId ? family.wife : family.husband;
               const spouse = spouseId ? data.individuals[spouseId] : null;
+              if (spouse?.isPrivate) return null;
               const spouseName = spouse ? getDisplayName(spouse) : null;
               const hasAnyEvent = family.marriageContract.date || family.marriageContract.hijriDate ||
                 family.marriage.date || family.marriage.hijriDate ||
@@ -560,22 +563,17 @@ export function PersonDetail({ personId }: PersonDetailProps) {
                   )}
                   {(family.marriage.date || family.marriage.hijriDate) && (
                     <MarriageEventDisplay
-                      label="حفل الزفاف"
+                      label="الزفاف"
                       event={family.marriage}
                       calendarPreference={calendarPreference}
                     />
                   )}
-                  {family.isDivorced && (
-                    <div className={styles.marriageEvent}>
-                      <span className={styles.divorceBadge}>مطلقان</span>
-                      {(family.divorce.date || family.divorce.hijriDate) && (
-                        <MarriageEventDisplay
-                          label="الطلاق"
-                          event={family.divorce}
-                          calendarPreference={calendarPreference}
-                        />
-                      )}
-                    </div>
+                  {family.isDivorced && (family.divorce.date || family.divorce.hijriDate) && (
+                    <MarriageEventDisplay
+                      label="الانفصال"
+                      event={family.divorce}
+                      calendarPreference={calendarPreference}
+                    />
                   )}
                   {!hasAnyEvent && (
                     <span className={styles.marriageEventPlace}>لا توجد بيانات</span>
