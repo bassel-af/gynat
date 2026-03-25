@@ -1,6 +1,8 @@
 Phase 4:
 - Show also members in tree above descendents in someway.
 - Branch linking and sharing and extending.
+
+Phase 7
 - Logout UI and info of the logged person.
 - Change person email, password etc.
 
