@@ -1,11 +1,9 @@
-Phase 3:
-- We need to control search engines indexing. Only
-the landing and policy pages shall be indexed.
-- Build
-
 Phase 4:
 - Show also members in tree above descendents in someway.
 - Branch linking and sharing and extending.
+- Logout UI and info of the logged person.
+- Change person email, password etc.
+
 
 Next phases:
 - Assign existing relative (assign parent that already exists to person with no parent)

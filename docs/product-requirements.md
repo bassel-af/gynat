@@ -560,7 +560,17 @@ Notification
 - Disabled input styling: `opacity: 0.35`, `cursor: not-allowed`
 - Marriage section inside scrollable area (not sticky)
 - Tree edge routing: increased vertical gap (120px) and horizontal gap (40px) to prevent edge overlap; `pathOptions` applied correctly on edges
-- 291 new tests (614 total), 0 regressions
+- 759 tests total, 0 regressions
+
+**✅ Search engine indexing:**
+- `robots.txt`: disallow-all default with explicit allow-list for 6 public pages; blocks `?next=` slug leaks
+- `sitemap.xml`: 5 public URLs (landing, policy, islamic-gedcom, login, signup)
+- `X-Robots-Tag: noindex` header on all `/api/*` routes
+- `/islamic-gedcom` added to middleware PUBLIC_PATHS
+
+**✅ Security hardening:**
+- Family DELETE wrapped in `$transaction` for atomicity (was sequential)
+- POST /places requires `tree_editor` permission (was `workspace_member`)
 
 ### Phase 4 — User-Tree Linking + Branch Pointers
 
