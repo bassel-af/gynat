@@ -572,9 +572,46 @@ Notification
 - Family DELETE wrapped in `$transaction` for atomicity (was sequential)
 - POST /places requires `tree_editor` permission (was `workspace_member`)
 
-### Phase 4 — Branch Pointers
+### Phase 4 — In-Law Visibility & Multi-Root View ✅ COMPLETE
 
-**Branch pointers:**
+**✅ Re-root on spouse's ancestor (Solution 1):**
+- Married-in spouse detection via `hasExternalFamily()` — checks if a spouse has parent/sibling data outside the current root's tree
+- `findTopmostAncestor()` walks up `familyAsChild` chains to find the root ancestor of any person
+- 22px badge with `lucide:git-branch` icon on married-in spouse cards (top-left corner in RTL); hover/active states
+- Clicking the badge updates `selectedRootId` to the spouse's topmost ancestor, re-rendering the tree from that root
+- `RootBackChip` floating chip at top-left of canvas for returning to the original root after re-root
+- Viewport save/restore: saves pan/zoom position when navigating away from initial root, restores when returning
+- `initialRootId` tracked in TreeContext to distinguish the original root from re-rooted state
+
+**✅ View mode toggle:**
+- `ViewMode` type (`'single' | 'multi'`) in TreeContext
+- `ViewModeToggle` segmented pill at top-center of canvas — switches between جذر واحد (single) and عدة جذور (multi)
+- Responsive labels: full text on desktop, abbreviated on mobile
+
+**✅ Multi-root view (Solution 2):**
+- In multi mode, all root ancestors from `rootsList` render side-by-side on the same canvas
+- `fitView()` on init to show all trees at once (vs single mode which scrolls to root node)
+- `RootBackChip` hidden in multi mode (not applicable)
+
+**✅ Inline spouse family expansion (Solution 2 enhancement):**
+- `computeGraftDescriptors()` builds `GraftDescriptor[]` per spouse — contains `parentIds`, `siblingIds`, `totalSiblingCount`
+- `MAX_GRAFT_SIBLINGS = 4` — caps visible siblings; overflow shown as "+N" card
+- Layout algorithm reserves graft envelopes — extra width around spouse cards for inline parent/sibling rendering
+- `graftLabel` custom node shows spouse name as section header above parents
+- `graftOverflow` custom node shows "+N آخرين" when siblings exceed cap
+- Graft nodes use `graft-(parent|sibling)-{personId}` ID prefix; stripped on click to resolve real person ID
+- `visiblePersonIds` in TreeContext expanded to include graft individuals (parents + siblings) in multi mode
+- Graft person cards styled with `in-law-expansion` class (subtler appearance)
+
+**✅ Graph utilities:**
+- `extractSubtree()` — extracts self-contained `GedcomData` for a given root (used by seed and multi-root)
+- `computeGraftDescriptors()` — analyzes all married-in spouses to build inline expansion data
+- `hasExternalFamily()` — O(1) check per spouse for badge visibility
+- `findTopmostAncestor()` — upward traversal for re-root target
+
+### Phase 5 — Branch Pointers
+
+**Branch pointers (not started):**
 - Add `branch_sharing_policy` column to `workspaces` table
 - Add `BranchPointer` table
 - Admin configures workspace sharing policy (shareable / copyable_only / none)
@@ -584,36 +621,36 @@ Notification
 - Revoke or source deletion triggers deep-copy conversion + notification to target admin
 - Hard copy option: target can break the live link and get an independent editable copy
 
-### Phase 5 — GEDCOM Import/Export
+### Phase 6 — GEDCOM Import/Export
 
 - **Import**: workspace admin or `tree_editor` can upload a `.ged` file to populate or update the tree
 - Reuses the existing GEDCOM parser (`src/lib/gedcom/parser.ts`) as the import engine
 - **Export**: any workspace member can export the full tree as a `.ged` file at any time
 - Database -> generate `.ged` file -> download
 
-### Phase 6 — Content
+### Phase 7 — Content
 
 - News posts (workspace-scoped): rich text, media attachments, reactions, comments, pinning
 - Events (workspace-scoped): calendar entries with RSVP, auto-generated birthdays/anniversaries from tree data
 
-### Phase 7 — Polish & Growth
+### Phase 8 — Polish & Growth
 
 - Magic link sign-in (passwordless email login)
 - Mobile app (Expo / React Native) — tracked separately
 - Phone OTP sign-in activated (SMS gateway configured)
 - Public sharing links for specific content (opt-in)
 
-### Phase 8 — Audit & Content
+### Phase 9 — Audit & Content
 
 - Audit log for all tree edits (TreeEditLog)
 
-### Phase 9 — Albums & Notifications
+### Phase 10 — Albums & Notifications
 
 - Albums (workspace-scoped): photo/video collections, tagging to individuals in the tree
 - Storage tracking and quota enforcement
 - Notifications (in-app + email)
 
-### Phase 10 — User-Tree Linking & Cross-Workspace Identity
+### Phase 11 — User-Tree Linking & Cross-Workspace Identity
 
 - User-tree linking: Flow A (invite-with-link), Flow B (member requests link with admin approval), link status on member profiles
 - Cross-workspace identity linking: a lightweight link recognizing the same real person across workspaces — each workspace retains its own copy of the individual (no shared data, no sync). The link is informational only.
@@ -622,7 +659,7 @@ Notification
 
 ## 8. Out of Scope (for now)
 
-- **User-tree linking + cross-workspace identity**: deferred to Phase 10. The `UserTreeLink` table exists in the schema but is not active. Full linking UI is deferred. The data model must not prevent it.
+- **User-tree linking + cross-workspace identity**: deferred to Phase 11. The `UserTreeLink` table exists in the schema but is not active. Full linking UI is deferred. The data model must not prevent it.
 - **Public workspace discovery**: workspaces are private and not discoverable
 - **Real-time collaboration** (e.g., live cursors in tree editing)
 - **Native mobile app**: tracked in a separate document
