@@ -600,8 +600,14 @@ Notification
 - `graftLabel` custom node shows spouse name as section header above parents
 - `graftOverflow` custom node shows "+N آخرين" when siblings exceed cap
 - Graft nodes use `graft-(parent|sibling)-{personId}` ID prefix; stripped on click to resolve real person ID
-- `visiblePersonIds` in TreeContext expanded to include graft individuals (parents + siblings) in multi mode
+- `visiblePersonIds` in TreeContext expanded to include graft individuals (parents + siblings) in all view modes
+- `graftPersonIds` Set in TreeContext distinguishes graft-only individuals from core tree members
 - Graft person cards styled with `in-law-expansion` class (subtler appearance)
+- Per-parent graft labels — each parent card gets its own "عائلة الزوج/الزوجة" label (consistent with sibling labels)
+- Graft relatives searchable and listed in sidebar in all view modes (not just multi)
+- Clicking a graft relative in sidebar re-roots tree to their topmost ancestor (or to themselves if they are the topmost)
+- Re-root via graft badge centers viewport on the married-in spouse (not the new root)
+- `ViewModeToggle` hidden when navigated away from initial root (re-root context)
 
 **✅ Add sibling:**
 - "إضافة أخ/أخت" button in PersonDetail sidebar, placed between Add Child and Add Spouse
@@ -612,8 +618,17 @@ Notification
 - Reuses existing create individual + add child to family API endpoints (no new backend routes)
 - New `addSibling` mode in `usePersonActions` state machine with `handleAddSiblingSubmit` handler
 
+**✅ Graft seed expansion:**
+- `expandGraftFamilies(subtree, fullData, rootId)` — post-processes `extractSubtree()` output to include parents and siblings of married-in spouses who share the root's surname
+- Surname comparison uses `stripArabicDiacritics()` for diacritic-insensitive matching
+- One level only (no cascading) — siblings' own spouses are not expanded
+- Private siblings (`isPrivate`) excluded; sibling count capped at `MAX_GRAFT_SIBLINGS`
+- Cross-references scoped to result (dangling family/individual refs filtered out)
+- Seed script calls `extractSubtree()` then `expandGraftFamilies()` per workspace
+
 **✅ Graph utilities:**
 - `extractSubtree()` — extracts self-contained `GedcomData` for a given root (used by seed and multi-root)
+- `expandGraftFamilies()` — extends subtree with same-surname in-law families for seeding
 - `computeGraftDescriptors()` — analyzes all married-in spouses to build inline expansion data
 - `hasExternalFamily()` — O(1) check per spouse for badge visibility
 - `findTopmostAncestor()` — upward traversal for re-root target
