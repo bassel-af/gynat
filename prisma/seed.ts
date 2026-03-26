@@ -5,7 +5,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../generated/prisma/client';
 import { FAMILIES } from '../src/config/families';
 import { parseGedcom } from '../src/lib/gedcom/parser';
-import { extractSubtree } from '../src/lib/gedcom/graph';
+import { extractSubtree, expandGraftFamilies } from '../src/lib/gedcom/graph';
 import { seedTreeFromGedcomData } from '../src/lib/tree/seed-helpers';
 import { resolveGedcomPlaces } from '../src/lib/tree/seed-place-mapping';
 import { seedPlaces } from '../src/lib/seed/seed-places';
@@ -104,11 +104,13 @@ async function main() {
         if (fs.existsSync(gedcomPath)) {
           const gedcomText = fs.readFileSync(gedcomPath, 'utf-8');
           const fullData = parseGedcom(gedcomText);
-          const gedcomData = extractSubtree(fullData, config.rootId);
+          const subtreeData = extractSubtree(fullData, config.rootId);
+          const gedcomData = expandGraftFamilies(subtreeData, fullData, config.rootId);
 
           const fullCount = Object.keys(fullData.individuals).length;
-          const subtreeCount = Object.keys(gedcomData.individuals).length;
-          console.log(`    Subtree: ${subtreeCount} of ${fullCount} individuals (root: ${config.rootId})`);
+          const subtreeCount = Object.keys(subtreeData.individuals).length;
+          const expandedCount = Object.keys(gedcomData.individuals).length;
+          console.log(`    Subtree: ${subtreeCount} of ${fullCount} individuals (root: ${config.rootId}), expanded: ${expandedCount}`);
 
           // Resolve GEDCOM place strings to Arabic names + Place IDs
           const resolvedData = resolveGedcomPlaces(gedcomData, placeNameToId);

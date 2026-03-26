@@ -326,18 +326,18 @@ export function getLayoutedElements(
         });
       }
 
-      // Graft label node above graft parent (use actual parentStartX after collision shift)
-      const actualParentCenter = parentStartX + parentRowWidth / 2;
-      const labelX = actualParentCenter - 60;
-      const labelY = parentY - 30;
-      graftNodes.push({
-        id: `graft-label-${spouseId}`,
-        type: 'graftLabel',
-        position: { x: labelX, y: labelY },
-        data: { isInLawExpansion: true, spouseId, spouseSex },
-        draggable: false,
-        selectable: false,
-      });
+      // Graft label node above each graft parent
+      for (let i = 0; i < parentIds.length; i++) {
+        const parentX = parentStartX + i * (NODE_WIDTH + HORIZONTAL_GAP);
+        graftNodes.push({
+          id: `graft-label-parent-${parentIds[i]}`,
+          type: 'graftLabel',
+          position: { x: parentX + NODE_WIDTH / 2 - 60, y: parentY - 30 },
+          data: { isInLawExpansion: true, spouseId, spouseSex },
+          draggable: false,
+          selectable: false,
+        });
+      }
 
       // Label above each sibling
       for (let i = 0; i < siblingIds.length; i++) {

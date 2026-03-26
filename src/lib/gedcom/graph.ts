@@ -1,4 +1,5 @@
 import type { Individual, Family, GedcomData } from './types';
+import { stripArabicDiacritics } from '../utils/search';
 
 /**
  * Get all ancestors of a person (parents, grandparents, etc.)
@@ -517,5 +518,182 @@ export function computeGraftDescriptors(
   }
 
   return result;
+}
+
+// ---------------------------------------------------------------------------
+// Expand graft families (seed-time in-law expansion)
+// ---------------------------------------------------------------------------
+
+/**
+ * Expand a subtree to include parents and siblings of married-in spouses
+ * who share the same surname as the root ancestor.
+ *
+ * Used at seed time to pre-populate in-law family data so it is available
+ * in the database without requiring a second pass.
+ *
+ * Does NOT mutate the input `subtree` or `fullData` — returns a new object.
+ * Only expands one level (no cascading).
+ */
+export function expandGraftFamilies(
+  subtree: GedcomData,
+  fullData: GedcomData,
+  rootId: string
+): GedcomData {
+  // 1. Get root's surname from fullData
+  const root = fullData.individuals[rootId];
+  if (!root) return { individuals: { ...subtree.individuals }, families: { ...subtree.families } };
+
+  const rootSurname = root.surname?.trim();
+  if (!rootSurname) {
+    // Return a shallow copy so we don't return the same reference
+    return {
+      individuals: { ...subtree.individuals },
+      families: { ...subtree.families },
+    };
+  }
+  const normalizedRootSurname = stripArabicDiacritics(rootSurname);
+
+  // 2. Identify core IDs: rootId + all descendants in subtree
+  const coreIds = new Set<string>([rootId]);
+  const descendants = getAllDescendants(subtree, rootId);
+  for (const id of descendants) {
+    coreIds.add(id);
+  }
+
+  // Deep copy subtree entities into result
+  const resultIndividuals: Record<string, Individual> = {};
+  for (const [id, ind] of Object.entries(subtree.individuals)) {
+    resultIndividuals[id] = { ...ind, familiesAsSpouse: [...ind.familiesAsSpouse] };
+  }
+  const resultFamilies: Record<string, Family> = {};
+  for (const [id, fam] of Object.entries(subtree.families)) {
+    resultFamilies[id] = { ...fam, children: [...fam.children] };
+  }
+
+  // Track which families and individuals we add for cross-reference scoping
+  const addedFamilyIds = new Set<string>();
+
+  // 3. For each core person, find married-in spouses
+  for (const personId of coreIds) {
+    const person = subtree.individuals[personId];
+    if (!person) continue;
+
+    for (const familyId of person.familiesAsSpouse) {
+      const family = subtree.families[familyId];
+      if (!family) continue;
+
+      const spouseId = family.husband === personId ? family.wife : family.husband;
+      if (!spouseId) continue;
+      // Spouse must NOT be in coreIds (married-in)
+      if (coreIds.has(spouseId)) continue;
+
+      // 4. Check surname match using fullData
+      const spouseFull = fullData.individuals[spouseId];
+      if (!spouseFull) continue;
+
+      const spouseSurname = spouseFull.surname?.trim();
+      if (!spouseSurname) continue;
+      if (stripArabicDiacritics(spouseSurname) !== normalizedRootSurname) continue;
+
+      // 5. Look up spouse's familyAsChild in fullData
+      const originFamilyId = spouseFull.familyAsChild;
+      if (!originFamilyId) continue;
+
+      const originFamily = fullData.families[originFamilyId];
+      if (!originFamily) continue;
+
+      // 6. Collect parents
+      const parentIds: string[] = [];
+      if (originFamily.husband && fullData.individuals[originFamily.husband]) {
+        parentIds.push(originFamily.husband);
+      }
+      if (originFamily.wife && fullData.individuals[originFamily.wife]) {
+        parentIds.push(originFamily.wife);
+      }
+      if (parentIds.length === 0) continue;
+
+      // 7. Collect siblings (excluding the spouse, excluding private)
+      const allSiblingIds = originFamily.children.filter(
+        (childId) =>
+          childId !== spouseId &&
+          fullData.individuals[childId] &&
+          !fullData.individuals[childId].isPrivate
+      );
+      const siblingIds = allSiblingIds.slice(0, MAX_GRAFT_SIBLINGS);
+
+      // 8. Add the origin family, parents, and siblings to result
+      addedFamilyIds.add(originFamilyId);
+
+      // Add parents
+      for (const parentId of parentIds) {
+        const parentFull = fullData.individuals[parentId];
+        if (parentFull) {
+          resultIndividuals[parentId] = {
+            ...parentFull,
+            familiesAsSpouse: [...parentFull.familiesAsSpouse],
+          };
+        }
+      }
+
+      // Add siblings
+      for (const sibId of siblingIds) {
+        const sibFull = fullData.individuals[sibId];
+        if (sibFull) {
+          resultIndividuals[sibId] = {
+            ...sibFull,
+            familiesAsSpouse: [...sibFull.familiesAsSpouse],
+          };
+        }
+      }
+
+      // Add origin family (will be scoped in step 10)
+      resultFamilies[originFamilyId] = {
+        ...originFamily,
+        children: [...originFamily.children],
+      };
+
+      // 11. Update the married-in spouse's familyAsChild in the result
+      if (resultIndividuals[spouseId]) {
+        resultIndividuals[spouseId] = {
+          ...resultIndividuals[spouseId],
+          familiesAsSpouse: [...resultIndividuals[spouseId].familiesAsSpouse],
+          familyAsChild: originFamilyId,
+        };
+      }
+    }
+  }
+
+  // Collect all family IDs in result for scoping
+  const allResultFamilyIds = new Set(Object.keys(resultFamilies));
+  const allResultIndividualIds = new Set(Object.keys(resultIndividuals));
+
+  // 9. Scope newly added individuals' familiesAsSpouse to families present in result
+  // 10. Scope newly added families' husband/wife/children to individuals present in result
+  for (const famId of addedFamilyIds) {
+    const fam = resultFamilies[famId];
+    if (!fam) continue;
+
+    resultFamilies[famId] = {
+      ...fam,
+      husband: fam.husband && allResultIndividualIds.has(fam.husband) ? fam.husband : null,
+      wife: fam.wife && allResultIndividualIds.has(fam.wife) ? fam.wife : null,
+      children: fam.children.filter((childId) => allResultIndividualIds.has(childId)),
+    };
+  }
+
+  for (const [id, ind] of Object.entries(resultIndividuals)) {
+    // Only need to scope individuals that were newly added
+    if (subtree.individuals[id]) continue;
+
+    resultIndividuals[id] = {
+      ...ind,
+      familiesAsSpouse: ind.familiesAsSpouse.filter((famId) => allResultFamilyIds.has(famId)),
+      familyAsChild: ind.familyAsChild && allResultFamilyIds.has(ind.familyAsChild)
+        ? ind.familyAsChild
+        : null,
+    };
+  }
+
+  return { individuals: resultIndividuals, families: resultFamilies };
 }
 

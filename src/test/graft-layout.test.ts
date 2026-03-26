@@ -245,7 +245,7 @@ describe('getLayoutedElements with graft descriptors', () => {
     expect(result.edges).toHaveLength(1);
   });
 
-  test('graft label node is created for each graft group', () => {
+  test('graft label node is created for each parent and sibling', () => {
     const nodes = [makeNode('root'), makeNode('child', 1)];
     const edges = [makeEdge('root', 'child')];
 
@@ -253,15 +253,18 @@ describe('getLayoutedElements with graft descriptors', () => {
     grafts.set('child', [{
       spouseId: 'sp1',
       hubPersonId: 'child',
-      parentIds: ['p1'],
-      siblingIds: [],
-      totalSiblingCount: 0,
+      parentIds: ['p1', 'p2'],
+      siblingIds: ['sib1'],
+      totalSiblingCount: 1,
       spouseSex: 'F',
     }]);
 
     const result = getLayoutedElements(nodes, edges, grafts);
     const labelNodes = result.nodes.filter((n) => n.id.startsWith('graft-label-'));
 
-    expect(labelNodes.length).toBe(1);
+    // 2 parent labels + 1 sibling label = 3
+    expect(labelNodes.length).toBe(3);
+    expect(labelNodes.filter((n) => n.id.startsWith('graft-label-parent-')).length).toBe(2);
+    expect(labelNodes.filter((n) => n.id.startsWith('graft-label-sibling-')).length).toBe(1);
   });
 });

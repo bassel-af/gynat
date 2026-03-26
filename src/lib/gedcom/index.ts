@@ -1,7 +1,7 @@
 export { parseGedcom } from './parser';
 export { getDisplayName, getDisplayNameWithNasab, DEFAULT_NASAB_DEPTH } from './display';
 export { findRootAncestors, findDefaultRoot } from './roots';
-export { buildChildrenGraph, calculateDescendantCounts, getAllAncestors, getAllDescendants, extractSubtree, getTreeVisibleIndividuals, filterOutPrivate, isDisplayable, findTopmostAncestor, hasExternalFamily, computeGraftDescriptors, MAX_GRAFT_SIBLINGS } from './graph';
+export { buildChildrenGraph, calculateDescendantCounts, getAllAncestors, getAllDescendants, extractSubtree, getTreeVisibleIndividuals, filterOutPrivate, isDisplayable, findTopmostAncestor, hasExternalFamily, computeGraftDescriptors, expandGraftFamilies, MAX_GRAFT_SIBLINGS } from './graph';
 export type { GraftDescriptor } from './graph';
 export { getPersonRelationships } from './relationships';
 export type { PersonRelationships } from './relationships';
