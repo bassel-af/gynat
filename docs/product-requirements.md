@@ -609,6 +609,11 @@ Notification
 - Re-root via graft badge centers viewport on the married-in spouse (not the new root)
 - `ViewModeToggle` hidden when navigated away from initial root (re-root context)
 
+**🔲 Graft full family in multi-root (TODO):**
+- Currently grafts show only parents + up to `MAX_GRAFT_SIBLINGS` siblings of married-in spouses
+- In multi-root mode, grafts should show the **full family** — all generations up and down, not just parents + siblings
+- Single-root mode can keep the current shallow graft display
+
 **✅ Add sibling:**
 - "إضافة أخ/أخت" button in PersonDetail sidebar, placed between Add Child and Add Spouse
 - `validateAddSibling(person, data)` helper — returns `{ allowed: true, targetFamilyId }` when `familyAsChild` exists and references a valid family; `{ allowed: false }` otherwise
@@ -635,15 +640,54 @@ Notification
 
 ### Phase 5 — Branch Pointers
 
-**Branch pointers (not started):**
-- Add `branch_sharing_policy` column to `workspaces` table
-- Add `BranchPointer` table
-- Admin configures workspace sharing policy (shareable / copyable_only / none)
-- Admin can generate a shareable link for any branch (ancestor + all descendants downward)
-- Target workspace adds the branch as a read-only pointer
-- Pointer reads live from source — edits in source are visible automatically
-- Revoke or source deletion triggers deep-copy conversion + notification to target admin
-- Hard copy option: target can break the live link and get an independent editable copy
+**Motivating scenario:** فدوى شربك exists in both `/saeed` (married in) and `/sharbek` (maiden family). Her descendants are maintained in `/saeed`. The `/sharbek` workspace can link to her branch instead of duplicating and maintaining it separately.
+
+**Data model:**
+- `BranchSharingPolicy` enum on Workspace: `shareable` / `copyable_only` / `none` (default: `none`)
+- `BranchShareToken` table: token string, source workspace, root individual, depth limit, target workspace slug (scoped) or null (public), expiry, max uses, revoked flag
+- `BranchPointer` table: source workspace + root individual → target workspace + anchor individual, status (`active` / `revoked` / `broken`), relationship type (child/sibling/spouse/parent)
+
+**Share creation flow (source workspace admin):**
+- Select a person as the root of the shared branch
+- Set optional depth limit (number of generations below the root; no limit = entire subtree)
+- Toggle: include married-in spouse families yes/no (if yes, graft data included as-is, no separate depth setting)
+- Preview: renders the shared branch as a read-only mini-tree so admin sees exactly what will be visible
+- Scope: type the target workspace slug (only that workspace can redeem) OR mark as public (any workspace)
+- Generate shareable token/link
+
+**Visual indicator on source tree:**
+- Shared branch root person gets a visible badge/marker in the source tree so it's easy to find which branches are being shared
+
+**Target redemption flow (target workspace admin):**
+- Inside any "add" modal (child/sibling/spouse/parent), a subtle toggle: "ربط من مساحة أخرى" (link from another workspace)
+- Paste the share token → preview the branch → confirm
+- The anchor individual is always required — the linked branch attaches to a specific person in the target tree
+- The relationship type (child/sibling/spouse/parent) is determined by which add modal the user is in
+
+**Live sync:**
+- Target's `GET /tree` merges source subtree at query time — no data duplication
+- Pointed individuals are marked read-only in the API response
+- Edits in source are visible automatically in target
+
+**Read-only enforcement:**
+- Pointed individuals: edit/delete/add buttons hidden in sidebar
+- Pointed PersonCards: visual indicator (badge, border, or tint) distinguishing them from native individuals
+- Server-side guard: mutation endpoints reject changes to pointed individuals
+
+**Break pointer (target action):**
+- Target admin can break the live link at any time
+- Triggers automatic deep copy of the entire linked branch into the target workspace
+- Branch becomes independent editable data from that point on
+
+**Revocation / source deletion:**
+- Source admin can revoke a pointer, OR source deletes the linked person
+- Triggers automatic deep copy into target workspace + notification to target admin
+- No data loss — target gets an independent copy with a notification explaining what happened
+
+**Boundary rules:**
+- Depth limit applies to the main branch (generations below the root person)
+- Married-in spouse families (graft data) have no separate depth setting — included as-is if the toggle is on
+- The share token encodes: root person + depth limit + include-grafts flag + target scope
 
 ### Phase 6 — GEDCOM Import/Export
 

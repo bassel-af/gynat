@@ -6,6 +6,8 @@ Phase 7
 - Change person email, password etc.
 
 
+point the line to the right person, not the center.
+
 Next phases:
 - Assign existing relative (assign parent that already exists to person with no parent)
 الإخوة من الرضاعة من نفس الأقارب في شجرة العائلة وليس من خارجها
@@ -13,6 +15,8 @@ Next phases:
 
 
 Check other inputs in MacFamilyTree
+
+Handle deleting a parent.
 
 Previous links redirects. e.g. /saeed, /sharbek, etc. Request access from admin
 
@@ -23,10 +27,14 @@ title - الكنية, standard or not in gedcom. shall we create tag?
 Do pnpm build.
 
 Low priority now:
-Undo - Redo
+
 Version control
 إصدار نعوة
 UI latest touches.
 divorce/khol3, etc
 
 Make people close together. do not make them this much far away.
+
+Search is good but sort it so the result which
+has first word matches search first word appears first.
+or let us say first name matches first word appears first.
