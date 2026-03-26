@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 import type { GedcomData, RootAncestor, TreeConfig } from '@/lib/gedcom';
-import { findRootAncestors, findDefaultRoot, getDisplayNameWithNasab, DEFAULT_NASAB_DEPTH, getAllDescendants, getTreeVisibleIndividuals } from '@/lib/gedcom';
+import { findRootAncestors, findDefaultRoot, getDisplayNameWithNasab, DEFAULT_NASAB_DEPTH, getAllDescendants, getTreeVisibleIndividuals, findTopmostAncestor } from '@/lib/gedcom';
 
 export type RootFilterStrategy = 'all' | 'descendants';
 
@@ -98,7 +98,13 @@ export function TreeProvider({ children, forcedRootId }: TreeProviderProps) {
 
     if (targetRoot) {
       setInitialRootId(targetRoot.id);
-      setSelectedRootIdState(targetRoot.id);
+      setSelectedRootIdState((prev) => {
+        if (!prev || !newData.individuals[prev]) return targetRoot!.id;
+        // If the current root now has parents (parent added above it),
+        // walk up to the new topmost ancestor
+        const topAncestor = findTopmostAncestor(newData, prev);
+        return topAncestor ?? prev;
+      });
 
       // Build list of descendants of the initial root (including the root itself)
       const descendantIds = getAllDescendants(newData, targetRoot.id);

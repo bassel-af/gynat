@@ -18,8 +18,9 @@ import {
 import '@xyflow/react/dist/style.css';
 
 import type { GedcomData, Individual } from '@/lib/gedcom';
-import { getDisplayName, getAllAncestors, getAllDescendants } from '@/lib/gedcom';
+import { getDisplayName, getAllAncestors, getAllDescendants, findTopmostAncestor, hasExternalFamily } from '@/lib/gedcom';
 import { useTree } from '@/context/TreeContext';
+import { RootBackChip } from '@/components/tree/RootBackChip/RootBackChip';
 
 // Highlight state for lineage tracing
 interface HighlightState {
@@ -33,6 +34,8 @@ interface SpouseWithColor {
   spouse: Individual;
   color: string;
   highlightClass: string;
+  hasExternalFamily: boolean;
+  topAncestorId: string | null;
 }
 
 interface PersonNodeData {
@@ -47,11 +50,12 @@ interface PersonNodeData {
   selectedPersonId: string | null;
   onPersonClick: (personId: string) => void;
   onOpenSidebar: () => void;
+  onRerootToAncestor: (ancestorId: string) => void;
   [key: string]: unknown;
 }
 
 function PersonNode({ data }: { data: PersonNodeData }) {
-  const { person, spouses, isRoot, searchQuery, isHighlightedPerson, isAncestor, isDescendant, hasHighlight, selectedPersonId, onPersonClick, onOpenSidebar } = data;
+  const { person, spouses, isRoot, searchQuery, isHighlightedPerson, isAncestor, isDescendant, hasHighlight, selectedPersonId, onPersonClick, onOpenSidebar, onRerootToAncestor } = data;
 
   const getHighlightClass = (_personId: string, isMainPerson: boolean) => {
     if (!hasHighlight) return '';
@@ -161,8 +165,34 @@ function PersonNode({ data }: { data: PersonNodeData }) {
             );
           })}
           {/* Wife cards */}
-          {spouses.map(({ spouse, highlightClass }) => (
+          {spouses.map(({ spouse, highlightClass, hasExternalFamily: hasExtFam, topAncestorId }) => (
             <div key={spouse.id} className="spouse-card-wrapper" style={{ marginLeft: 20 }}>
+              {hasExtFam && topAncestorId && (
+                <div
+                  className="spouse-family-badge"
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`عرض عائلة ${getDisplayName(spouse)}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRerootToAncestor(topAncestorId);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onRerootToAncestor(topAncestorId);
+                    }
+                  }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M6 3v12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                    <path d="M18 9a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" strokeWidth="2"/>
+                    <path d="M6 21a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" strokeWidth="2"/>
+                    <path d="M15 6h-4a2 2 0 00-2 2v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                </div>
+              )}
               {renderPersonCard(spouse, false, highlightClass)}
             </div>
           ))}
@@ -349,11 +379,16 @@ function buildTreeData(
   highlightState: HighlightState,
   selectedPersonId: string | null,
   onPersonClick: (personId: string) => void,
-  onOpenSidebar: () => void
+  onOpenSidebar: () => void,
+  onRerootToAncestor: (ancestorId: string) => void
 ): { nodes: Node[]; edges: Edge[] } {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
   const visited = new Set<string>();
+
+  // Compute root descendants once for badge detection
+  const rootDescendants = getAllDescendants(data, rootId);
+  rootDescendants.add(rootId);
 
   // Queue for breadth-first traversal: [personId, depth]
   const queue: Array<[string, number]> = [[rootId, 0]];
@@ -394,15 +429,18 @@ function buildTreeData(
       return 'lineage-dimmed';
     };
 
-    // Create spouses array with colors and highlight classes
+    // Create spouses array with colors, highlight classes, and external family info
     const spousesWithColors: SpouseWithColor[] = spouseIds
       .map((id, index) => {
         const spouse = data.individuals[id];
         if (!spouse) return null;
+        const hasExtFam = hasExternalFamily(data, id, rootDescendants);
         return {
           spouse,
           color: SPOUSE_EDGE_COLORS[index % SPOUSE_EDGE_COLORS.length],
           highlightClass: getPersonHighlightClass(id),
+          hasExternalFamily: hasExtFam,
+          topAncestorId: hasExtFam ? findTopmostAncestor(data, id) : null,
         };
       })
       .filter((s): s is SpouseWithColor => s !== null);
@@ -429,6 +467,7 @@ function buildTreeData(
         selectedPersonId,
         onPersonClick,
         onOpenSidebar,
+        onRerootToAncestor,
       } as PersonNodeData,
     });
 
@@ -516,7 +555,7 @@ function buildTreeData(
 }
 
 function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
-  const { data, selectedRootId, config, searchQuery, focusPersonId, selectedPersonId, highlightedPersonId, setHighlightedPersonId, setSelectedPersonId, setFocusPersonId, setMobileSidebarOpen } = useTree();
+  const { data, selectedRootId, config, searchQuery, focusPersonId, selectedPersonId, highlightedPersonId, setHighlightedPersonId, setSelectedPersonId, setSelectedRootId, setFocusPersonId, setMobileSidebarOpen } = useTree();
   const { setViewport, setCenter, getZoom } = useReactFlow();
   const [isReady, setIsReady] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -544,6 +583,12 @@ function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
   const handleOpenSidebar = useCallback(() => {
     setMobileSidebarOpen(true);
   }, [setMobileSidebarOpen]);
+
+  // Re-root to a spouse's topmost ancestor
+  const handleRerootToAncestor = useCallback((ancestorId: string) => {
+    setSelectedRootId(ancestorId);
+    setSelectedPersonId(null);
+  }, [setSelectedRootId, setSelectedPersonId]);
 
   // Clear highlight when root changes
   useEffect(() => {
@@ -604,11 +649,12 @@ function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
       highlightState,
       selectedPersonId,
       handlePersonClick,
-      handleOpenSidebar
+      handleOpenSidebar,
+      handleRerootToAncestor
     );
 
     return { initialNodes: nodes, initialEdges: edges };
-  }, [data, selectedRootId, config.maxDepth, searchQuery, highlightState, selectedPersonId, handlePersonClick, handleOpenSidebar]);
+  }, [data, selectedRootId, config.maxDepth, searchQuery, highlightState, selectedPersonId, handlePersonClick, handleOpenSidebar, handleRerootToAncestor]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -682,6 +728,7 @@ function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
 
   return (
     <div id="tree-container" ref={containerRef} style={{ opacity: isReady ? 1 : 0 }}>
+      <RootBackChip />
       <ReactFlow
         nodes={nodes}
         edges={edges}

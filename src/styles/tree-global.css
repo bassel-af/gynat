@@ -263,3 +263,65 @@
     display: flex;
   }
 }
+
+/* ============================================
+   SPOUSE FAMILY BADGE (re-root indicator)
+   ============================================ */
+
+.spouse-card-wrapper {
+  position: relative;
+}
+
+.spouse-family-badge {
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(99, 179, 237, 0.15);
+  border: 1px solid rgba(99, 179, 237, 0.3);
+  color: var(--color-primary-light);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.spouse-family-badge svg {
+  opacity: 0.7;
+  transition: opacity var(--transition-fast);
+}
+
+.spouse-family-badge:hover {
+  background: rgba(99, 179, 237, 0.25);
+  transform: scale(1.1);
+}
+
+.spouse-family-badge:hover svg {
+  opacity: 1;
+}
+
+.spouse-family-badge:active {
+  transform: scale(0.95);
+  background: rgba(99, 179, 237, 0.3);
+}
+
+.spouse-family-badge:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(99, 179, 237, 0.25);
+}
+
+@media (max-width: 768px) {
+  .spouse-family-badge {
+    width: 28px;
+    height: 28px;
+  }
+
+  .spouse-family-badge svg {
+    width: 16px;
+    height: 16px;
+  }
+}

@@ -4,7 +4,7 @@ import clsx from 'clsx';
 import { useMemo, useState, useCallback } from 'react';
 import { useTree } from '@/context/TreeContext';
 import { useWorkspaceTree } from '@/context/WorkspaceTreeContext';
-import { getDisplayName, getPersonRelationships } from '@/lib/gedcom';
+import { getDisplayName, getPersonRelationships, getAllDescendants, findTopmostAncestor, hasExternalFamily } from '@/lib/gedcom';
 import type { Individual } from '@/lib/gedcom';
 import { IndividualForm, type IndividualFormData } from '@/components/tree/IndividualForm/IndividualForm';
 import { FamilyPickerModal } from '@/components/tree/FamilyPickerModal/FamilyPickerModal';
@@ -217,10 +217,13 @@ interface PersonDetailProps {
 export function PersonDetail({ personId }: PersonDetailProps) {
   const {
     data,
+    selectedRootId,
     visiblePersonIds,
     setSelectedPersonId,
+    setSelectedRootId,
     setFocusPersonId,
     setHighlightedPersonId,
+    setMobileSidebarOpen,
   } = useTree();
 
   const workspace = useOptionalWorkspaceTree();
@@ -256,6 +259,17 @@ export function PersonDetail({ personId }: PersonDetailProps) {
     return getPersonRelationships(data, personId);
   }, [data, personId]);
 
+  // Compute whether this person has an external family tree to navigate to
+  const externalFamilyInfo = useMemo(() => {
+    if (!data || !selectedRootId || !person) return null;
+    const rootDescendants = getAllDescendants(data, selectedRootId);
+    rootDescendants.add(selectedRootId);
+    if (!hasExternalFamily(data, personId, rootDescendants)) return null;
+    const topAncestorId = findTopmostAncestor(data, personId);
+    if (!topAncestorId) return null;
+    return { topAncestorId };
+  }, [data, selectedRootId, person, personId]);
+
   // -------------------------------------------------------------------------
   // Navigation handlers
   // -------------------------------------------------------------------------
@@ -276,6 +290,16 @@ export function PersonDetail({ personId }: PersonDetailProps) {
       setSelectedPersonId(null);
     }
   }, [personId, setFocusPersonId, setSelectedPersonId]);
+
+  const handleViewFamilyTree = useCallback(() => {
+    if (!externalFamilyInfo) return;
+    setSelectedRootId(externalFamilyInfo.topAncestorId);
+    setSelectedPersonId(null);
+    // Close mobile sidebar so the new tree is visible
+    if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+      setMobileSidebarOpen(false);
+    }
+  }, [externalFamilyInfo, setSelectedRootId, setSelectedPersonId, setMobileSidebarOpen]);
 
   // -------------------------------------------------------------------------
   // Action handlers with validation
@@ -413,6 +437,21 @@ export function PersonDetail({ personId }: PersonDetailProps) {
                 ميلادي
               </button>
             </div>
+          )}
+          {externalFamilyInfo && (
+            <button
+              className={styles.focusButton}
+              onClick={handleViewFamilyTree}
+              aria-label={person.sex === 'F' ? 'عرض شجرة عائلتها' : 'عرض شجرة عائلته'}
+              title={person.sex === 'F' ? 'عرض شجرة عائلتها' : 'عرض شجرة عائلته'}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M6 3v12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M18 9a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" strokeWidth="2"/>
+                <path d="M6 21a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" strokeWidth="2"/>
+                <path d="M15 6h-4a2 2 0 00-2 2v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            </button>
           )}
           <button
             className={styles.focusButton}

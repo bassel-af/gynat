@@ -319,3 +319,93 @@ export function extractSubtree(data: GedcomData, rootId: string): GedcomData {
 
   return { individuals: filteredIndividuals, families: filteredFamilies };
 }
+
+/**
+ * Find the topmost ancestor of a person by walking up `familyAsChild` chains.
+ * Returns the ID of the individual with no parents, or `null` if the person
+ * already has no parents (is already a root) or does not exist.
+ *
+ * Uses a visited set and max depth of 100 to guard against circular references.
+ */
+export function findTopmostAncestor(data: GedcomData, personId: string): string | null {
+  const { individuals, families } = data;
+  const person = individuals[personId];
+  if (!person) return null;
+
+  // If person has no familyAsChild, they are already a root
+  if (!person.familyAsChild) return null;
+
+  const visited = new Set<string>();
+  let currentId = personId;
+  const MAX_DEPTH = 100;
+
+  for (let depth = 0; depth < MAX_DEPTH; depth++) {
+    const current = individuals[currentId];
+    if (!current) break;
+
+    visited.add(currentId);
+
+    const familyId = current.familyAsChild;
+    if (!familyId) {
+      // Reached a person with no parents — this is the topmost ancestor
+      return currentId === personId ? null : currentId;
+    }
+
+    const family = families[familyId];
+    if (!family) {
+      // Family reference is dangling — treat current as topmost
+      return currentId === personId ? null : currentId;
+    }
+
+    // Pick a parent (prefer husband, fall back to wife)
+    const parentId = family.husband ?? family.wife;
+    if (!parentId || !individuals[parentId]) {
+      // Family has no parent records — treat current as topmost
+      return currentId === personId ? null : currentId;
+    }
+
+    if (visited.has(parentId)) {
+      // Circular reference — return whatever we have
+      return currentId === personId ? null : currentId;
+    }
+
+    currentId = parentId;
+  }
+
+  // Max depth reached — return whatever we have
+  return currentId === personId ? null : currentId;
+}
+
+/**
+ * Check whether a person has an "external family" — i.e., they are NOT
+ * a descendant of the current root AND they have at least one parent
+ * in the database (via `familyAsChild` -> family -> husband/wife exists).
+ *
+ * Used to determine if a married-in spouse's family tree badge should be shown.
+ */
+export function hasExternalFamily(
+  data: GedcomData,
+  personId: string,
+  rootDescendants: Set<string>
+): boolean {
+  const { individuals, families } = data;
+  const person = individuals[personId];
+  if (!person) return false;
+
+  // If the person IS a descendant (or the root), they are not "external"
+  if (rootDescendants.has(personId)) return false;
+
+  // Check if person has at least one parent in the database
+  const familyId = person.familyAsChild;
+  if (!familyId) return false;
+
+  const family = families[familyId];
+  if (!family) return false;
+
+  // Check if at least one parent exists in the data
+  const hasParent =
+    (family.husband !== null && individuals[family.husband] !== undefined) ||
+    (family.wife !== null && individuals[family.wife] !== undefined);
+
+  return hasParent;
+}
