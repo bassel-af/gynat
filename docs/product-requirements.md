@@ -694,17 +694,19 @@ Notification
 - 939 tests pass (12 new test files, 117 new tests)
 - Covers: token generation, schemas, extraction, merge, mutation guards, API endpoints, deep copy
 
-**⚠️ TODO — Relationship stitching scenarios (needs design + testing):**
-The merge stitching logic currently handles the basic case but does not account for all relationship scenarios. The following cases need to be designed, validated, and tested before Phase 5 is complete:
+**Relationship stitching rules (designed, needs implementation + testing):**
 
-- **Sibling with different parents**: If the selected person (خالد) already has parents (فدوى + عبدالناصر) in the source tree, linking him as a sibling to someone (عماد) who has different parents (رلى + محمد) is semantically invalid — they can't share a parent family. The system should either: (a) reject this combination, (b) show خالد's own parents from the source alongside him, or (c) present a different UX for this case.
-- **Child when selected person has parents**: If linking خالد as a child of someone, should his source parents (فدوى) also appear in the tree above him?
-- **Parent linking**: Linking a source person as a parent of a target person — how does the source person's own ancestry appear?
-- **Spouse linking**: Linking a source person as a spouse — simplest case, but need to verify children rendering
-- **Selected person vs boundary root**: When the selected person is deep in the branch (not the root), what subset of the pointed subtree should be visible? Just the selected person + their descendants? Or the full boundary from root down?
-- **Multiple pointers to the same anchor**: Can a target person have multiple branch pointers attached? How do they render?
+- **Rule 1 — Child and sibling require selected = root:** If the admin picks "child" or "sibling," the selected person must be the top of the shared branch (`selectedIndividualId === rootIndividualId`). Otherwise reject with an error.
+  **Why:** If the selected person has parents in the subtree, they would conflict with the anchor's parents (sibling case) or imply the anchor is a parent while the real parents are visible above (child case).
 
-These scenarios must be resolved before marking Phase 5 complete. See `docs/design-branch-pointers.md` for the full technical design.
+- **Rule 2 — Parent: no duplicate gender:** If the admin picks "parent," reject if the anchor already has a parent of the same gender as the selected person in the target workspace's tree.
+  **Why:** A person cannot have two mothers or two fathers. The anchor's existing parent would conflict with the selected person.
+
+- **Rule 3 — Spouse: ask about fatherless/motherless children:** If the admin picks "spouse," and the selected person has children in the subtree without a parent matching the anchor's gender, ask: "is the anchor their father/mother?" Store the answer as `linkChildrenToAnchor` on the BranchPointer. At merge time, if true, add the children to the synthetic family with the anchor as parent; if false, children stay in their source family separately.
+  **Why:** If the children have no father and the anchor is male, leaving them unlinked is incorrect if he is actually their father. The pointed data cannot be modified, so this is handled natively through the synthetic family at merge time.
+
+- **Rule 4 — One pointer per anchor:** An anchor person can only have one branch pointer attached. If they already have one, show a message that this is not supported in the current version.
+  **Why:** Multiple pointers on the same person creates complex rendering and unclear hierarchy. Restrict now and relax later if needed.
 
 ### Phase 6 — GEDCOM Import/Export
 
