@@ -48,7 +48,7 @@ interface TreeContextValue extends TreeState {
 }
 
 const defaultConfig: TreeConfig = {
-  maxDepth: 8,
+  maxDepth: 50,
 };
 
 const TreeContext = createContext<TreeContextValue | null>(null);

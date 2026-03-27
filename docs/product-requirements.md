@@ -583,12 +583,13 @@ Notification
 - Viewport save/restore: saves pan/zoom position when navigating away from initial root, restores when returning
 - `initialRootId` tracked in TreeContext to distinguish the original root from re-rooted state
 
-**✅ View mode toggle:**
-- `ViewMode` type (`'single' | 'multi'`) in TreeContext
-- `ViewModeToggle` segmented pill at top-center of canvas — switches between جذر واحد (single) and عدة جذور (multi)
+**✅ View mode toggle (DISABLED):**
+- `ViewMode` type (`'single' | 'multi'`) in TreeContext — code preserved but multi-root mode disabled; may re-enable in future
+- `ViewModeToggle` hidden — segmented pill component exists but is not rendered
 - Responsive labels: full text on desktop, abbreviated on mobile
 
-**✅ Multi-root view (Solution 2):**
+**✅ Multi-root view (Solution 2) (DISABLED):**
+- Code preserved but disabled to reduce complexity while building branch pointers (Phase 5)
 - In multi mode, all root ancestors from `rootsList` render side-by-side on the same canvas
 - `fitView()` on init to show all trees at once (vs single mode which scrolls to root node)
 - `RootBackChip` hidden in multi mode (not applicable)
@@ -608,11 +609,6 @@ Notification
 - Clicking a graft relative in sidebar re-roots tree to their topmost ancestor (or to themselves if they are the topmost)
 - Re-root via graft badge centers viewport on the married-in spouse (not the new root)
 - `ViewModeToggle` hidden when navigated away from initial root (re-root context)
-
-**🔲 Graft full family in multi-root (TODO):**
-- Currently grafts show only parents + up to `MAX_GRAFT_SIBLINGS` siblings of married-in spouses
-- In multi-root mode, grafts should show the **full family** — all generations up and down, not just parents + siblings
-- Single-root mode can keep the current shallow graft display
 
 **✅ Add sibling:**
 - "إضافة أخ/أخت" button in PersonDetail sidebar, placed between Add Child and Add Spouse

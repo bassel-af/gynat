@@ -697,3 +697,97 @@ export function expandGraftFamilies(
   return { individuals: resultIndividuals, families: resultFamilies };
 }
 
+// ---------------------------------------------------------------------------
+// Full-family graft descriptors (multi-root mode)
+// ---------------------------------------------------------------------------
+
+/**
+ * Describes a full in-law family tree to be grafted inline in multi-root mode.
+ * Unlike GraftDescriptor (which only includes parents + siblings), this includes
+ * the entire subtree rooted at the spouse's topmost ancestor.
+ */
+export interface FullGraftDescriptor {
+  /** The topmost ancestor of the married-in spouse's family */
+  graftRootId: string;
+  /** Full subtree extracted via extractSubtree() */
+  subtree: GedcomData;
+  /** All spouse connections linking this graft to the main tree */
+  spouseConnections: Array<{ spouseId: string; hubPersonId: string; spouseSex: string }>;
+}
+
+/**
+ * For each married-in spouse (not a descendant of root, has familyAsChild),
+ * find their topmost ancestor and extract the full subtree.
+ * Deduplicates by graftRootId: if two spouses share the same root ancestor,
+ * one graft subtree serves both (with multiple spouseConnections).
+ *
+ * @returns Map keyed by graftRootId -> FullGraftDescriptor
+ */
+export function computeFullGraftDescriptors(
+  data: GedcomData,
+  rootId: string
+): Map<string, FullGraftDescriptor> {
+  const { individuals, families } = data;
+  const result = new Map<string, FullGraftDescriptor>();
+
+  // Compute all descendants of the root
+  const rootDescendants = getAllDescendants(data, rootId);
+  rootDescendants.add(rootId);
+
+  // For each person in the tree (root + descendants)
+  for (const personId of rootDescendants) {
+    const person = individuals[personId];
+    if (!person || person.isPrivate) continue;
+
+    // Check each spouse
+    for (const familyId of person.familiesAsSpouse) {
+      const family = families[familyId];
+      if (!family) continue;
+
+      const spouseId = family.husband === personId ? family.wife : family.husband;
+      if (!spouseId) continue;
+
+      const spouse = individuals[spouseId];
+      if (!spouse || spouse.isPrivate) continue;
+
+      // Spouse must NOT be a descendant of root (married-in)
+      if (rootDescendants.has(spouseId)) continue;
+
+      // Spouse must have a familyAsChild
+      if (!spouse.familyAsChild) continue;
+
+      // Find the topmost ancestor of the spouse
+      const graftRootId = findTopmostAncestor(data, spouseId) ?? spouseId;
+
+      // Skip if the graft root doesn't exist
+      if (!individuals[graftRootId]) continue;
+
+      const connection = {
+        spouseId,
+        hubPersonId: personId,
+        spouseSex: spouse.sex || '',
+      };
+
+      // Deduplicate: if we already have a descriptor for this graftRootId, just add the connection
+      const existing = result.get(graftRootId);
+      if (existing) {
+        // Only add if this spouse isn't already connected
+        if (!existing.spouseConnections.some(c => c.spouseId === spouseId)) {
+          existing.spouseConnections.push(connection);
+        }
+      } else {
+        // Extract the full subtree rooted at the graft root
+        const subtree = extractSubtree(data, graftRootId);
+
+        result.set(graftRootId, {
+          graftRootId,
+          subtree,
+          spouseConnections: [connection],
+        });
+      }
+    }
+  }
+
+  return result;
+}
+

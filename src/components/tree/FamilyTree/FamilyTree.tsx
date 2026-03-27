@@ -692,8 +692,9 @@ function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
 
   return (
     <div id="tree-container" ref={containerRef} style={{ opacity: isReady ? 1 : 0 }}>
-      {selectedRootId === initialRootId && <ViewModeToggle />}
-      {viewMode === 'single' && <RootBackChip />}
+      {/* DISABLED: multi-root mode disabled for now — may re-enable in future */}
+      {/* {selectedRootId === initialRootId && <ViewModeToggle />} */}
+      <RootBackChip />
       <ReactFlow
         nodes={nodes}
         edges={edges}

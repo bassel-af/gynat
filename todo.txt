@@ -1,11 +1,11 @@
 Phase 4:
 - Branch linking and sharing and extending.
-
+- Test mobile.
 Phase 7
 - Logout UI and info of the logged person.
 - Change person email, password etc.
 
-
+Create multiple test trees for each phase that run only for specific users.
 point the line to the right person, not the center.
 
 Next phases:

@@ -54,8 +54,8 @@ The project uses `@/` as an alias for the `/src/` directory, configured in `tsco
 **TreeContext** (`src/context/TreeContext.tsx`) is the central state manager using React Context:
 - Stores the parsed GEDCOM data (`GedcomData`)
 - Tracks selected root ancestor (`selectedRootId`) and `initialRootId` (for back navigation)
-- `ViewMode` (`'single' | 'multi'`) — single-root vs multi-root canvas mode
-- `RootFilterStrategy` (`'all' | 'descendants'`) — controls visible subset in multi-root mode
+- `ViewMode` (`'single' | 'multi'`) — single-root vs multi-root canvas mode (multi-root DISABLED, code preserved for future)
+- `RootFilterStrategy` (`'all' | 'descendants'`) — controls visible subset in multi-root mode (DISABLED)
 - Manages search query, focus/selection/highlight person IDs, tree configuration (max depth), loading state, and errors
 - Provides `useTree()` hook for consuming components
 
@@ -153,7 +153,7 @@ The `FamilyTree` component (`src/components/tree/FamilyTree/FamilyTree.tsx`) use
 **In-law visibility** (see `docs/in-law-visibility.md`):
 - **Re-root on spouse's ancestor**: Button on married-in spouse cards navigates tree to that spouse's topmost ancestor; `RootBackChip` provides back navigation
 - **Inline spouse family expansion**: In multi-root mode, spouse's parents and siblings render inline as a graft envelope next to the spouse card
-- **Multi-root view**: `ViewModeToggle` switches between single/multi canvas modes; multi-root lays out multiple root ancestor trees side-by-side
+- **Multi-root view** (DISABLED): `ViewModeToggle` code preserved but not rendered; multi-root lays out multiple root ancestor trees side-by-side
 
 **Tree editing components** (`src/components/tree/`):
 - `IndividualForm` — form for creating/editing individuals (name, sex, birth/death with hijri dates, notes)
@@ -162,7 +162,7 @@ The `FamilyTree` component (`src/components/tree/FamilyTree/FamilyTree.tsx`) use
 - `CoupleRow` — displays marriage event information between spouses
 - `PersonCard` — individual node card in the tree
 - `RootBackChip` — floating chip to navigate back to previous root after re-root
-- `ViewModeToggle` — segmented pill to switch between single/multi-root view modes
+- `ViewModeToggle` — segmented pill to switch between single/multi-root view modes (DISABLED, not rendered)
 - `EmptyTreeState` — placeholder for workspaces with no tree data
 
 ### GEDCOM File
