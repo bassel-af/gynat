@@ -679,24 +679,38 @@ Notification
 - `usePersonActions` state machine: all edit modes disabled for pointed individuals
 
 **✅ Frontend components:**
-- `ShareBranchModal` — person search, depth limit, grafts toggle, target slug, token generation
-- `ShareTokenList` — list outgoing tokens with revoke buttons
-- `IncomingPointerList` — list incoming pointers with break/copy buttons
+- `ShareBranchModal` — person search (nasab names for disambiguation), depth limit, grafts toggle, target slug, token generation
+- `ShareTokenList` — list outgoing tokens with root person name, depth, active pointer count, dates. Two distinct actions: تعطيل رمز المشاركة (disable — reversible, pointers unaffected) and إلغاء الربط (revoke — auto deep-copy + disconnect). Three visual states: active / معطّل (amber) / ملغى (red). No raw UUIDs shown.
+- `IncomingPointerList` — read-only status dashboard (نشط/مفصول/ملغى). All pointer actions moved to tree canvas sidebar.
 - Teal design tokens added to `colors.css` (6 new CSS custom properties)
 - Workspace settings page: "مشاركة الفروع" and "الفروع المرتبطة" sections (admin only)
 
+**✅ Pointer management in tree canvas:**
+- Sidebar pointer banner shows فصل (disconnect) and نسخ (copy) buttons for admin users
+- فصل: inline confirmation warning that data will be removed and cannot be recovered
+- نسخ: inline confirmation explaining data becomes a local editable copy, no longer synced
+- `_pointerId` set on all pointed individuals/families in merge output
+- GET /tree returns pointer metadata (sourceWorkspaceNameAr, relationship) for sidebar display
+- `isAdmin` wired through WorkspaceTreeContext for admin-only actions
+- `usePointerActions` shared hook for break/copy API calls
+
 **✅ Deep copy mechanism:**
 - `prepareDeepCopy()` — new UUIDs, full ID remapping, workspace-specific placeIds nulled
-- Break pointer endpoint: target admin triggers deep copy, pointer status set to `broken`
-- Auto deep-copy on revocation/source deletion with notification
+- `persistDeepCopy()` — shared function for DB persistence (individuals, families, familyChildren, stitchFamily)
+- نسخ (copy) endpoint: target admin triggers deep copy, pointer status set to `broken`
+- فصل (disconnect) endpoint: just marks pointer as `broken`, data disappears (no deep copy)
+- Auto deep-copy on token revocation: source admin revokes token → all active pointers get deep-copied into target workspaces → pointers marked `revoked`
+- Token disable (تعطيل): stops new links without affecting existing pointers (reversible via إعادة تفعيل)
+- Race condition protection: redeem transaction re-checks token revocation
 
-**✅ Tests:**
-- 939 tests pass (12 new test files, 117 new tests)
-- Covers: token generation, schemas, extraction, merge, mutation guards, API endpoints, deep copy
+**✅ Centralized gender validation:**
+- `validateFamilyGender()` in `family-validators.ts` — prevents same-sex spouse assignment
+- Called from POST /families, PATCH /families, and POST /branch-pointers (spouse relationship)
+- Rejects known-same sex, allows unknown sex for incomplete records
 
-**Relationship stitching rules (designed, needs implementation + testing):**
+**✅ Relationship stitching rules (implemented + tested):**
 
-- **Rule 1 — Child and sibling require selected = root:** If the admin picks "child" or "sibling," the selected person must be the top of the shared branch (`selectedIndividualId === rootIndividualId`). Otherwise reject with an error.
+- **Rule 1 — Child/sibling: no parents in subtree:** If the admin picks "child" or "sibling," reject if the selected person has parents in the source subtree. Married-in spouses (no parents) are allowed.
   **Why:** If the selected person has parents in the subtree, they would conflict with the anchor's parents (sibling case) or imply the anchor is a parent while the real parents are visible above (child case).
 
 - **Rule 2 — Parent: no duplicate gender:** If the admin picks "parent," reject if the anchor already has a parent of the same gender as the selected person in the target workspace's tree.
@@ -707,6 +721,22 @@ Notification
 
 - **Rule 4 — One pointer per anchor:** An anchor person can only have one branch pointer attached. If they already have one, show a message that this is not supported in the current version.
   **Why:** Multiple pointers on the same person creates complex rendering and unclear hierarchy. Restrict now and relax later if needed.
+
+**✅ Tree rendering fixes:**
+- BFS traversal: pointed spouses' source family children now render via untraversed-families pass
+- PersonNode: `default` source Handle added to single-spouse case (fixes missing child-stitch edges)
+- Person pickers (ShareBranchModal + IndividualForm) show nasab names (بن/بنت) for disambiguation
+
+**✅ Tests:**
+- 1001 tests pass (91 test files)
+- Covers: stitching rules, gender validation, deep copy persistence, token revocation, pointer management, race conditions
+
+**✅ Dev scripts:**
+- `pnpm clean:links` — delete all branch pointers + share tokens
+- `pnpm reseed:tree` — clean + re-seed tree data from GEDCOM
+- `pnpm reseed:places` — clean + re-seed places
+- `pnpm reseed:all` — clean + re-seed everything
+- `pnpm start:fresh` — clean all + re-seed all
 
 ### Phase 6 — GEDCOM Import/Export
 
