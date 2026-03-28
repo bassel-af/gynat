@@ -1,7 +1,7 @@
-Phase 4:
-- Branch linking and sharing and extending.
 - Test mobile.
+
 Phase 7
+- Profile
 - Logout UI and info of the logged person.
 - Change person email, password etc.
 

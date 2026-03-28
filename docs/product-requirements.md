@@ -634,7 +634,7 @@ Notification
 - `hasExternalFamily()` — O(1) check per spouse for badge visibility
 - `findTopmostAncestor()` — upward traversal for re-root target
 
-### Phase 5 — Branch Pointers (IN PROGRESS)
+### Phase 5 — Branch Pointers (COMPLETE)
 
 **Motivating scenario:** فدوى شربك exists in both `/saeed` (married in) and `/sharbek` (maiden family). Her descendants are maintained in `/saeed`. The `/sharbek` workspace can link to her branch instead of duplicating and maintaining it separately.
 
