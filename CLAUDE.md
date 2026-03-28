@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This repository ("solalah") is a **private family collaboration platform** evolving from a read-only genealogy viewer. Built with Next.js 15 (App Router) + React 19 + TypeScript, backed by PostgreSQL (Prisma ORM) and Supabase Auth (self-hosted via Docker Compose). The app is RTL (right-to-left) with Arabic as the primary language. See `docs/product-requirements.md` for the full PRD and `docs/auth-provider-decisions.md` for auth architecture decisions.
 
-**Current state**: Phases 1–4 are complete. Phase 1 (Auth & Workspace Foundation): email/password + Google OAuth, workspace CRUD, membership/invitations, dashboard UI, policy page. Phase 2 (Editable Family Tree): database-backed tree with full CRUD. Phase 3 (Family-Aware Relationship Editing): add child/spouse/parent, move child between families, marriage events (MARC/MARR/DIV), Hijri date support, calendar preference. Phase 4 (In-Law Visibility & Multi-Root View): re-root on spouse's ancestor, view mode toggle (single/multi), multi-root side-by-side layout, inline spouse family graft expansion. The tree visualization reads from the database via `GET /api/workspaces/[id]/tree`; static GEDCOM files in `/public/` are preserved for the legacy `/{familySlug}` routes and seeding.
+**Current state**: Phases 1–5 are complete. Phase 1 (Auth & Workspace Foundation): email/password + Google OAuth, workspace CRUD, membership/invitations, dashboard UI, policy page. Phase 2 (Editable Family Tree): database-backed tree with full CRUD. Phase 3 (Family-Aware Relationship Editing): add child/spouse/parent, move child between families, marriage events (MARC/MARR/DIV), Hijri date support, calendar preference. Phase 4 (In-Law Visibility & Multi-Root View): re-root on spouse's ancestor, view mode toggle (single/multi), multi-root side-by-side layout, inline spouse family graft expansion. Phase 5 (Branch Pointers): cross-workspace branch linking with live sync, deep copy, stitching rules, pointer management in canvas sidebar. The tree visualization reads from the database via `GET /api/workspaces/[id]/tree`; static GEDCOM files in `/public/` are preserved for the legacy `/{familySlug}` routes and seeding.
 
 ## Package Management
 
@@ -29,6 +29,11 @@ This project uses **pnpm** as the package manager (version 10.28.0).
 - `npx prisma studio` - Open Prisma Studio (database browser)
 - `pnpm seed` - Seed workspaces + tree data + places for local dev (requires admin user in DB first; see `docs/setup.md`)
 - `pnpm seed:places` - Seed Place table from preprocessed GeoNames data only
+- `pnpm clean:links` - Delete all branch pointers + share tokens
+- `pnpm reseed:tree` - Clean tree data + re-seed from GEDCOM files
+- `pnpm reseed:places` - Clean places + re-seed from places.json
+- `pnpm reseed:all` - Clean everything + re-seed places + tree
+- `pnpm start:fresh` - Clean links + clean tree + clean places + re-seed all
 
 ## Technology Stack
 
@@ -62,7 +67,8 @@ The project uses `@/` as an alias for the `/src/` directory, configured in `tsco
 The app wraps the entire application in `<TreeProvider>` via `src/app/providers.tsx` (client component).
 
 **WorkspaceTreeContext** (`src/context/WorkspaceTreeContext.tsx`) manages workspace-specific tree state:
-- `workspaceId`, `canEdit`, `refreshTree()` — consumed via `useWorkspaceTree()` hook
+- `workspaceId`, `canEdit`, `isAdmin`, `refreshTree()`, `pointers` — consumed via `useWorkspaceTree()` hook
+- `pointers` contains `PointerMetadata[]` (id, sourceWorkspaceNameAr, relationship, anchorIndividualId) from GET /tree response
 
 **ToastContext** (`src/context/ToastContext.tsx`) provides app-wide toast notifications.
 
@@ -120,6 +126,7 @@ The app wraps the entire application in `<TreeProvider>` via `src/app/providers.
 - `useCalendarPreference` — manages hijri/gregorian preference with localStorage persistence and server sync
 - `usePersonActions` — Phase 3 editing state machine (modes: `edit`, `addChild`, `addSpouse`, `addParent`, `editFamilyEvent`) with submit/delete handlers and child-move support
 - `useWorkspaceTreeData` — fetches and manages workspace tree data
+- `usePointerActions` — shared hook for branch pointer break/copy API calls (used by sidebar)
 - `useGedcomData` — fetches GEDCOM file from `/public/` for legacy routes
 - `useTreeLines` — SVG line drawing for playground mode
 
@@ -210,11 +217,14 @@ The GEDCOM file (`public/saeed-family.ged`):
 - Secrets in `docker/.env` (gitignored) — all security-sensitive vars use `:?` syntax (Docker fails to start if missing)
 
 **Prisma** (`prisma/schema.prisma`):
-- 17 models: User, Workspace, WorkspaceMembership, WorkspaceInvitation, UserTreeLink, FamilyTree, Individual, Family, FamilyChild, TreeEditLog, Post, Album, AlbumMedia, Event, EventRsvp, Notification, Place
+- 19 models: User, Workspace, WorkspaceMembership, WorkspaceInvitation, UserTreeLink, FamilyTree, Individual, Family, FamilyChild, TreeEditLog, BranchShareToken, BranchPointer, Post, Album, AlbumMedia, Event, EventRsvp, Notification, Place
+- `BranchShareToken` — SHA-256 hashed token with root individual, depth limit, target workspace scope, revoke flag
+- `BranchPointer` — links source subtree to target workspace anchor; status (`active`/`revoked`/`broken`), relationship type, `linkChildrenToAnchor` flag, `shareTokenId` FK
 - `User` has `calendarPreference` field (default: `'hijri'`)
 - `Individual` has `birthHijriDate`, `deathHijriDate`, `birthNotes`, `deathNotes`, `birthDescription`, `deathDescription`
 - `Family` has marriage contract (MARC), marriage (MARR), and divorce (DIV) event fields: `{type}Date`, `{type}HijriDate`, `{type}Place`, `{type}Description`, `{type}Notes`, plus `isDivorced`
 - Prisma v7 uses driver adapters — client instantiation requires `PrismaPg` from `@prisma/adapter-pg`
+- **Prisma v7 limitation**: `_count` with `where` filters inside `include` is NOT supported with driver adapters. Use separate `groupBy` queries instead.
 - Generated client output: `generated/prisma/` (gitignored)
 - Run migrations: `npx prisma migrate dev`
 - Config: `prisma.config.ts` loads `DATABASE_URL` from `.env` via `dotenv/config`
@@ -277,11 +287,29 @@ The GEDCOM file (`public/saeed-family.ged`):
 - `GET /api/users/me/preferences` — get user preferences (calendar preference)
 - `PATCH /api/users/me/preferences` — update user preferences
 
+**Branch Pointer API Routes** (`src/app/api/workspaces/[id]/branch-pointers/`):
+- `POST /api/workspaces/[id]/branch-pointers` — redeem share token, create pointer (with 4 stitching rules + gender validation + race condition protection)
+- `DELETE /api/workspaces/[id]/branch-pointers/[pointerId]` — disconnect pointer (no deep copy, data disappears)
+- `POST /api/workspaces/[id]/branch-pointers/[pointerId]/copy` — deep copy pointed subtree as native data, then mark pointer `broken`
+
+**Share Token API Routes** (`src/app/api/workspaces/[id]/share-tokens/`):
+- `POST /api/workspaces/[id]/share-tokens` — create share token (admin only)
+- `GET /api/workspaces/[id]/share-tokens` — list tokens with root person name, active pointer count, expiry
+- `PATCH /api/workspaces/[id]/share-tokens/[tokenId]` — disable/re-enable token (toggles `isRevoked` without touching pointers)
+- `DELETE /api/workspaces/[id]/share-tokens/[tokenId]` — revoke token + auto deep-copy all active pointers into target workspaces
+- `POST /api/workspaces/[id]/share-tokens/preview` — preview a token's subtree before redeeming
+
 **Tree Library** (`src/lib/tree/`):
 - `queries.ts` — database query helpers for tree CRUD
 - `mapper.ts` — `dbTreeToGedcomData()` maps DB records to `GedcomData` shape; `redactPrivateIndividuals()` strips PII from private individuals
 - `seed-helpers.ts` — helpers for seeding tree data from GEDCOM
 - `schemas.ts` — Zod validation schemas for tree API requests
+- `branch-pointer-merge.ts` — `extractPointedSubtree()`, `mergePointedSubtree()`, `detectOrphanedChildren()`, stitching helpers (child/sibling/spouse/parent)
+- `branch-pointer-deep-copy.ts` — `prepareDeepCopy()` (pure, new UUIDs + ID remapping) and `persistDeepCopy()` (DB writes for individuals, families, familyChildren, stitchFamily)
+- `branch-pointer-schemas.ts` — Zod schemas for redeem token, share token creation
+- `branch-pointer-queries.ts` — `getActivePointersForWorkspace()` with source workspace name join
+- `branch-pointer-guards.ts` — `isSyntheticFamilyId()` for mutation guards on synthetic families
+- `family-validators.ts` — centralized gender validation: `validateFamilyGender()` (DB), `validateSpouseGender()` (pure)
 
 **Email** (`src/lib/email/`):
 - `transport.ts` — Nodemailer with Gmail SMTP
