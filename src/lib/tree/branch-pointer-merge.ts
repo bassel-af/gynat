@@ -395,6 +395,7 @@ export function mergePointedSubtree(
       familiesAsSpouse: [...ind.familiesAsSpouse],
       _pointed: true,
       _sourceWorkspaceId: sourceWorkspaceId,
+      _pointerId: pointerId,
     };
   }
 
@@ -405,6 +406,7 @@ export function mergePointedSubtree(
       children: [...fam.children],
       _pointed: true,
       _sourceWorkspaceId: sourceWorkspaceId,
+      _pointerId: pointerId,
     };
   }
 
@@ -423,16 +425,16 @@ export function mergePointedSubtree(
   // Create synthetic stitching family based on relationship type
   switch (relationship) {
     case 'child':
-      stitchAsChild(individuals, families, syntheticFamId, anchor, anchorIndividualId, pointedRoot, pointedRootId, sourceWorkspaceId);
+      stitchAsChild(individuals, families, syntheticFamId, anchor, anchorIndividualId, pointedRoot, pointedRootId, sourceWorkspaceId, pointerId);
       break;
     case 'sibling':
-      stitchAsSibling(individuals, families, syntheticFamId, anchor, anchorIndividualId, pointedRoot, pointedRootId, sourceWorkspaceId);
+      stitchAsSibling(individuals, families, syntheticFamId, anchor, anchorIndividualId, pointedRoot, pointedRootId, sourceWorkspaceId, pointerId);
       break;
     case 'spouse':
-      stitchAsSpouse(individuals, families, syntheticFamId, anchor, anchorIndividualId, pointedRoot, pointedRootId, sourceWorkspaceId, config.linkChildrenToAnchor ?? false);
+      stitchAsSpouse(individuals, families, syntheticFamId, anchor, anchorIndividualId, pointedRoot, pointedRootId, sourceWorkspaceId, pointerId, config.linkChildrenToAnchor ?? false);
       break;
     case 'parent':
-      stitchAsParent(individuals, families, syntheticFamId, anchor, anchorIndividualId, pointedRoot, pointedRootId, sourceWorkspaceId);
+      stitchAsParent(individuals, families, syntheticFamId, anchor, anchorIndividualId, pointedRoot, pointedRootId, sourceWorkspaceId, pointerId);
       break;
   }
 
@@ -458,6 +460,7 @@ function findPointedRoot(pointed: GedcomData): string | null {
 function makeSyntheticFamily(
   id: string,
   sourceWorkspaceId: string,
+  pointerId: string,
   overrides: Partial<Family>,
 ): Family {
   return {
@@ -472,6 +475,7 @@ function makeSyntheticFamily(
     isDivorced: false,
     _pointed: true,
     _sourceWorkspaceId: sourceWorkspaceId,
+    _pointerId: pointerId,
     ...overrides,
   };
 }
@@ -486,9 +490,10 @@ function stitchAsChild(
   _pointedRoot: Individual,
   pointedRootId: string,
   sourceWorkspaceId: string,
+  pointerId: string,
 ): void {
   const parentRole = anchor.sex === 'F' ? 'wife' : 'husband';
-  families[syntheticFamId] = makeSyntheticFamily(syntheticFamId, sourceWorkspaceId, {
+  families[syntheticFamId] = makeSyntheticFamily(syntheticFamId, sourceWorkspaceId, pointerId, {
     [parentRole]: anchorId,
     children: [pointedRootId],
   });
@@ -513,6 +518,7 @@ function stitchAsSibling(
   _pointedRoot: Individual,
   pointedRootId: string,
   sourceWorkspaceId: string,
+  pointerId: string,
 ): void {
   if (anchor.familyAsChild && families[anchor.familyAsChild]) {
     // Add pointed root as another child in the same family
@@ -527,7 +533,7 @@ function stitchAsSibling(
     };
   } else {
     // No parent family — create a synthetic one with both as children
-    families[syntheticFamId] = makeSyntheticFamily(syntheticFamId, sourceWorkspaceId, {
+    families[syntheticFamId] = makeSyntheticFamily(syntheticFamId, sourceWorkspaceId, pointerId, {
       children: [anchorId, pointedRootId],
     });
     individuals[anchorId] = {
@@ -551,6 +557,7 @@ function stitchAsSpouse(
   pointedRoot: Individual,
   pointedRootId: string,
   sourceWorkspaceId: string,
+  pointerId: string,
   linkChildrenToAnchor: boolean = false,
 ): void {
   // Determine husband/wife based on sex
@@ -589,7 +596,7 @@ function stitchAsSpouse(
     }
   }
 
-  families[syntheticFamId] = makeSyntheticFamily(syntheticFamId, sourceWorkspaceId, {
+  families[syntheticFamId] = makeSyntheticFamily(syntheticFamId, sourceWorkspaceId, pointerId, {
     husband,
     wife,
     children: orphanedChildIds,
@@ -615,9 +622,10 @@ function stitchAsParent(
   pointedRoot: Individual,
   pointedRootId: string,
   sourceWorkspaceId: string,
+  pointerId: string,
 ): void {
   const parentRole = pointedRoot.sex === 'F' ? 'wife' : 'husband';
-  families[syntheticFamId] = makeSyntheticFamily(syntheticFamId, sourceWorkspaceId, {
+  families[syntheticFamId] = makeSyntheticFamily(syntheticFamId, sourceWorkspaceId, pointerId, {
     [parentRole]: pointedRootId,
     children: [anchorId],
   });

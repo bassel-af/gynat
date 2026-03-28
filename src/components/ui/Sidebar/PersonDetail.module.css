@@ -129,7 +129,7 @@
 
 .pointerBanner {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-4) var(--space-9);
   background: var(--color-pointer-bg);
@@ -139,9 +139,170 @@
   font-weight: var(--font-weight-medium);
 }
 
-.pointerBanner svg {
+.pointerBannerInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.pointerBannerInfo svg {
   flex-shrink: 0;
   color: var(--color-pointer);
+}
+
+.pointerBannerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.pointerCopyButton {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-4);
+  background: transparent;
+  border: 1px solid var(--color-pointer-border);
+  border-radius: var(--radius-md);
+  color: var(--color-pointer-light);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  font-family: inherit;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.pointerCopyButton:hover {
+  background: var(--color-pointer-bg);
+  border-color: var(--color-pointer);
+  color: var(--color-pointer);
+}
+
+.pointerCopyButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pointerBreakButton {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-4);
+  background: transparent;
+  border: 1px solid rgba(229, 62, 62, 0.25);
+  border-radius: var(--radius-md);
+  color: rgba(229, 62, 62, 0.7);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  font-family: inherit;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.pointerBreakButton:hover {
+  background: rgba(229, 62, 62, 0.1);
+  border-color: rgba(229, 62, 62, 0.4);
+  color: var(--color-error);
+}
+
+.pointerBreakButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pointerBannerConfirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.pointerBannerConfirmText {
+  font-size: var(--font-size-xs);
+  color: rgba(229, 62, 62, 0.8);
+}
+
+.pointerBannerConfirmButtons {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.pointerBreakConfirmButton {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-4);
+  background: rgba(229, 62, 62, 0.15);
+  border: 1px solid rgba(229, 62, 62, 0.4);
+  border-radius: var(--radius-md);
+  color: var(--color-error);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  font-family: inherit;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.pointerBreakConfirmButton:hover {
+  background: rgba(229, 62, 62, 0.25);
+}
+
+.pointerBreakConfirmButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pointerCancelButton {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-4);
+  background: transparent;
+  border: 1px solid var(--alpha-white-15);
+  border-radius: var(--radius-md);
+  color: var(--alpha-white-60);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  font-family: inherit;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.pointerCancelButton:hover {
+  background: var(--alpha-white-08);
+  color: var(--color-text-inverse);
+}
+
+.pointerCancelButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pointerBannerConfirmCopyText {
+  font-size: var(--font-size-xs);
+  color: var(--color-pointer-light);
+  line-height: 1.5;
+}
+
+.pointerCopyConfirmButton {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-4);
+  background: var(--color-pointer-bg);
+  border: 1px solid var(--color-pointer-border);
+  border-radius: var(--radius-md);
+  color: var(--color-pointer-light);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  font-family: inherit;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.pointerCopyConfirmButton:hover {
+  background: var(--color-pointer);
+  color: var(--color-bg);
+}
+
+.pointerCopyConfirmButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* ============================================

@@ -65,13 +65,14 @@ export function WorkspaceTreeClient({ slug }: WorkspaceTreeClientProps) {
     );
   }
 
+  const isAdmin = workspace.currentUserRole === 'workspace_admin';
   const canEdit =
-    workspace.currentUserRole === 'workspace_admin' ||
+    isAdmin ||
     (workspace.currentUserPermissions ?? []).includes('tree_editor');
 
   return (
     <TreeProvider>
-      <TreeContent workspace={workspace} canEdit={canEdit} />
+      <TreeContent workspace={workspace} canEdit={canEdit} isAdmin={isAdmin} />
     </TreeProvider>
   );
 }
@@ -79,9 +80,11 @@ export function WorkspaceTreeClient({ slug }: WorkspaceTreeClientProps) {
 function TreeContent({
   workspace,
   canEdit,
+  isAdmin,
 }: {
   workspace: WorkspaceInfo;
   canEdit: boolean;
+  isAdmin: boolean;
 }) {
   const { isLoading, error, data } = useTree();
   const { refreshTree, pointers } = useWorkspaceTreeData(workspace.id);
@@ -107,6 +110,7 @@ function TreeContent({
       <WorkspaceTreeProvider
         workspaceId={workspace.id}
         canEdit={canEdit}
+        isAdmin={isAdmin}
         refreshTree={refreshTree}
         pointers={pointers}
       >
@@ -119,6 +123,7 @@ function TreeContent({
     <WorkspaceTreeProvider
       workspaceId={workspace.id}
       canEdit={canEdit}
+      isAdmin={isAdmin}
       refreshTree={refreshTree}
       pointers={pointers}
     >

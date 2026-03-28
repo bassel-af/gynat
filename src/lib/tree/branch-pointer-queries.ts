@@ -15,6 +15,9 @@ export interface ActivePointer {
   anchorIndividualId: string;
   relationship: 'child' | 'sibling' | 'spouse' | 'parent';
   linkChildrenToAnchor: boolean;
+  sourceWorkspaceNameAr?: string;
+  sourceWorkspaceSlug?: string;
+  sourceRootName?: string;
 }
 
 /**
@@ -40,10 +43,23 @@ export async function getActivePointersForWorkspace(
       anchorIndividualId: true,
       relationship: true,
       linkChildrenToAnchor: true,
+      sourceWorkspace: {
+        select: { nameAr: true, slug: true },
+      },
+      rootIndividual: {
+        select: { givenName: true, surname: true },
+      },
     },
   });
 
-  return pointers as ActivePointer[];
+  return pointers.map((p) => ({
+    ...p,
+    sourceWorkspaceNameAr: p.sourceWorkspace.nameAr,
+    sourceWorkspaceSlug: p.sourceWorkspace.slug,
+    sourceRootName: [p.rootIndividual.givenName, p.rootIndividual.surname]
+      .filter(Boolean)
+      .join(' ') || undefined,
+  })) as ActivePointer[];
 }
 
 /**

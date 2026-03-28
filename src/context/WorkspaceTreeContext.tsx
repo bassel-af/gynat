@@ -16,6 +16,7 @@ export interface PointerMetadata {
 interface WorkspaceTreeContextValue {
   workspaceId: string;
   canEdit: boolean;
+  isAdmin: boolean;
   refreshTree: () => Promise<void>;
   /** Branch pointer metadata from GET /tree response */
   pointers?: PointerMetadata[];
@@ -27,6 +28,7 @@ interface WorkspaceTreeProviderProps {
   children: ReactNode;
   workspaceId: string;
   canEdit: boolean;
+  isAdmin: boolean;
   refreshTree: () => Promise<void>;
   pointers?: PointerMetadata[];
 }
@@ -35,11 +37,12 @@ export function WorkspaceTreeProvider({
   children,
   workspaceId,
   canEdit,
+  isAdmin,
   refreshTree,
   pointers,
 }: WorkspaceTreeProviderProps) {
   return (
-    <WorkspaceTreeContext.Provider value={{ workspaceId, canEdit, refreshTree, pointers }}>
+    <WorkspaceTreeContext.Provider value={{ workspaceId, canEdit, isAdmin, refreshTree, pointers }}>
       {children}
     </WorkspaceTreeContext.Provider>
   );

@@ -623,6 +623,199 @@ describe('Rule 2 — parent: no duplicate gender', () => {
 });
 
 // ---------------------------------------------------------------------------
+// _pointerId propagation in mergePointedSubtree
+// ---------------------------------------------------------------------------
+
+describe('mergePointedSubtree — _pointerId propagation', () => {
+  test('sets _pointerId on all pointed individuals', async () => {
+    const { mergePointedSubtree } = await import('@/lib/tree/branch-pointer-merge');
+
+    const target: GedcomData = {
+      individuals: {
+        anchor: makeIndividual({ id: 'anchor', sex: 'M', givenName: 'سعد' }),
+      },
+      families: {},
+    };
+
+    const pointed: GedcomData = {
+      individuals: {
+        selected: makeIndividual({ id: 'selected', sex: 'M', familiesAsSpouse: ['pfam1'] }),
+        grandchild: makeIndividual({ id: 'grandchild', familyAsChild: 'pfam1' }),
+      },
+      families: {
+        pfam1: makeFamily({ id: 'pfam1', husband: 'selected', children: ['grandchild'] }),
+      },
+    };
+
+    const result = mergePointedSubtree(target, pointed, {
+      pointerId: 'bp-123',
+      anchorIndividualId: 'anchor',
+      selectedIndividualId: 'selected',
+      relationship: 'child',
+      sourceWorkspaceId: 'ws-src',
+    });
+
+    // All pointed individuals should have _pointerId
+    expect(result.individuals['selected']._pointerId).toBe('bp-123');
+    expect(result.individuals['grandchild']._pointerId).toBe('bp-123');
+    // Anchor should NOT have _pointerId
+    expect(result.individuals['anchor']._pointerId).toBeUndefined();
+  });
+
+  test('sets _pointerId on all pointed families', async () => {
+    const { mergePointedSubtree } = await import('@/lib/tree/branch-pointer-merge');
+
+    const target: GedcomData = {
+      individuals: {
+        anchor: makeIndividual({ id: 'anchor', sex: 'M' }),
+      },
+      families: {},
+    };
+
+    const pointed: GedcomData = {
+      individuals: {
+        selected: makeIndividual({ id: 'selected', sex: 'M', familiesAsSpouse: ['pfam1'] }),
+        child: makeIndividual({ id: 'child', familyAsChild: 'pfam1' }),
+      },
+      families: {
+        pfam1: makeFamily({ id: 'pfam1', husband: 'selected', children: ['child'] }),
+      },
+    };
+
+    const result = mergePointedSubtree(target, pointed, {
+      pointerId: 'bp-456',
+      anchorIndividualId: 'anchor',
+      selectedIndividualId: 'selected',
+      relationship: 'child',
+      sourceWorkspaceId: 'ws-src',
+    });
+
+    // Pointed family should have _pointerId
+    expect(result.families['pfam1']._pointerId).toBe('bp-456');
+  });
+
+  test('sets _pointerId on synthetic stitching family', async () => {
+    const { mergePointedSubtree } = await import('@/lib/tree/branch-pointer-merge');
+
+    const target: GedcomData = {
+      individuals: {
+        anchor: makeIndividual({ id: 'anchor', sex: 'M' }),
+      },
+      families: {},
+    };
+
+    const pointed: GedcomData = {
+      individuals: {
+        selected: makeIndividual({ id: 'selected', sex: 'M' }),
+      },
+      families: {},
+    };
+
+    const result = mergePointedSubtree(target, pointed, {
+      pointerId: 'bp-789',
+      anchorIndividualId: 'anchor',
+      selectedIndividualId: 'selected',
+      relationship: 'child',
+      sourceWorkspaceId: 'ws-src',
+    });
+
+    const syntheticFam = result.families['ptr-bp-789-fam'];
+    expect(syntheticFam).toBeDefined();
+    expect(syntheticFam._pointerId).toBe('bp-789');
+  });
+
+  test('sets _pointerId on synthetic family for sibling stitch (no existing parent)', async () => {
+    const { mergePointedSubtree } = await import('@/lib/tree/branch-pointer-merge');
+
+    const target: GedcomData = {
+      individuals: {
+        anchor: makeIndividual({ id: 'anchor', sex: 'M' }),
+      },
+      families: {},
+    };
+
+    const pointed: GedcomData = {
+      individuals: {
+        selected: makeIndividual({ id: 'selected', sex: 'M' }),
+      },
+      families: {},
+    };
+
+    const result = mergePointedSubtree(target, pointed, {
+      pointerId: 'bp-sib',
+      anchorIndividualId: 'anchor',
+      selectedIndividualId: 'selected',
+      relationship: 'sibling',
+      sourceWorkspaceId: 'ws-src',
+    });
+
+    const syntheticFam = result.families['ptr-bp-sib-fam'];
+    expect(syntheticFam).toBeDefined();
+    expect(syntheticFam._pointerId).toBe('bp-sib');
+  });
+
+  test('sets _pointerId on synthetic family for spouse stitch', async () => {
+    const { mergePointedSubtree } = await import('@/lib/tree/branch-pointer-merge');
+
+    const target: GedcomData = {
+      individuals: {
+        anchor: makeIndividual({ id: 'anchor', sex: 'F' }),
+      },
+      families: {},
+    };
+
+    const pointed: GedcomData = {
+      individuals: {
+        selected: makeIndividual({ id: 'selected', sex: 'M' }),
+      },
+      families: {},
+    };
+
+    const result = mergePointedSubtree(target, pointed, {
+      pointerId: 'bp-sp',
+      anchorIndividualId: 'anchor',
+      selectedIndividualId: 'selected',
+      relationship: 'spouse',
+      sourceWorkspaceId: 'ws-src',
+    });
+
+    const syntheticFam = result.families['ptr-bp-sp-fam'];
+    expect(syntheticFam).toBeDefined();
+    expect(syntheticFam._pointerId).toBe('bp-sp');
+  });
+
+  test('sets _pointerId on synthetic family for parent stitch', async () => {
+    const { mergePointedSubtree } = await import('@/lib/tree/branch-pointer-merge');
+
+    const target: GedcomData = {
+      individuals: {
+        anchor: makeIndividual({ id: 'anchor', sex: 'M' }),
+      },
+      families: {},
+    };
+
+    const pointed: GedcomData = {
+      individuals: {
+        selected: makeIndividual({ id: 'selected', sex: 'M' }),
+      },
+      families: {},
+    };
+
+    const result = mergePointedSubtree(target, pointed, {
+      pointerId: 'bp-par',
+      anchorIndividualId: 'anchor',
+      selectedIndividualId: 'selected',
+      relationship: 'parent',
+      sourceWorkspaceId: 'ws-src',
+    });
+
+    const syntheticFam = result.families['ptr-bp-par-fam'];
+    expect(syntheticFam).toBeDefined();
+    expect(syntheticFam._pointerId).toBe('bp-par');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Security hardening: generic Zod error
 // ---------------------------------------------------------------------------
 

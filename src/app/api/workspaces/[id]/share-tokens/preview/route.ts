@@ -10,7 +10,7 @@ import { z } from 'zod';
 type RouteParams = { params: Promise<{ id: string }> };
 
 const previewSchema = z.object({
-  token: z.string().min(1).max(200),
+  token: z.string().min(1).max(500),
 });
 
 // POST /api/workspaces/[id]/share-tokens/preview — Preview a share token's subtree
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   const parsed = previewSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: parsed.error.issues[0].message },
+      { error: 'بيانات غير صالحة' },
       { status: 400 },
     );
   }

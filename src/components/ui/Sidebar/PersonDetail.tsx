@@ -13,6 +13,7 @@ import { getPreferredDate, getSecondaryDate, getDateSuffix } from '@/lib/calenda
 import type { CalendarPreference } from '@/lib/calendar-helpers';
 import { useCalendarPreference } from '@/hooks/useCalendarPreference';
 import { usePersonActions } from '@/hooks/usePersonActions';
+import { usePointerActions } from '@/hooks/usePointerActions';
 import {
   formatDateWithPlace,
   getDeceasedLabel,
@@ -258,6 +259,12 @@ export function PersonDetail({ personId }: PersonDetailProps) {
 
   // Family picker state (stays local — it controls which modal is open)
   const [familyPickerMode, setFamilyPickerMode] = useState<'addChild' | 'moveChild' | null>(null);
+
+  // Pointer actions (admin only)
+  const isAdmin = workspace?.isAdmin ?? false;
+  const { breakPointer, copyPointer, isLoading: pointerActionLoading } = usePointerActions(workspace?.workspaceId ?? '');
+  const [breakConfirmPointerId, setBreakConfirmPointerId] = useState<string | null>(null);
+  const [copyConfirmPointerId, setCopyConfirmPointerId] = useState<string | null>(null);
   const relationships = useMemo(() => {
     if (!data) return null;
     return getPersonRelationships(data, personId);
@@ -524,26 +531,107 @@ export function PersonDetail({ personId }: PersonDetailProps) {
         </div>
       </div>
 
-      {person._pointed && (
-        <div className={styles.pointerBanner}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          <span>
-            {(() => {
-              // Look up source workspace name from pointer metadata (admin only)
-              const pointer = workspace?.pointers?.find(
-                (p) => p.id === person._pointerId,
-              );
-              if (pointer?.sourceWorkspaceNameAr) {
-                return `مرتبط من: ${pointer.sourceWorkspaceNameAr} — للقراءة فقط`;
-              }
-              return 'فرع مرتبط — للقراءة فقط';
-            })()}
-          </span>
-        </div>
-      )}
+      {person._pointed && (() => {
+        const pointer = workspace?.pointers?.find(
+          (p) => p.id === person._pointerId,
+        );
+        const currentPointerId = person._pointerId;
+        return (
+          <div className={styles.pointerBanner}>
+            <div className={styles.pointerBannerInfo}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <span>
+                {pointer?.sourceWorkspaceNameAr
+                  ? `مرتبط من: ${pointer.sourceWorkspaceNameAr} — للقراءة فقط`
+                  : 'فرع مرتبط — للقراءة فقط'}
+              </span>
+            </div>
+            {isAdmin && currentPointerId && (
+              <>
+                {breakConfirmPointerId === currentPointerId ? (
+                  <div className={styles.pointerBannerConfirm}>
+                    <span className={styles.pointerBannerConfirmText}>
+                      فصل الفرع؟ سيتم إزالة البيانات المرتبطة من الشجرة ولن يمكن استرجاعها.
+                    </span>
+                    <div className={styles.pointerBannerConfirmButtons}>
+                      <button
+                        className={styles.pointerBreakConfirmButton}
+                        disabled={pointerActionLoading}
+                        onClick={async () => {
+                          const ok = await breakPointer(currentPointerId);
+                          if (ok) {
+                            setBreakConfirmPointerId(null);
+                            setSelectedPersonId(null);
+                            await workspace?.refreshTree();
+                          }
+                        }}
+                      >
+                        {pointerActionLoading ? '...' : 'نعم، فصل'}
+                      </button>
+                      <button
+                        className={styles.pointerCancelButton}
+                        disabled={pointerActionLoading}
+                        onClick={() => setBreakConfirmPointerId(null)}
+                      >
+                        إلغاء
+                      </button>
+                    </div>
+                  </div>
+                ) : copyConfirmPointerId === currentPointerId ? (
+                  <div className={styles.pointerBannerConfirm}>
+                    <span className={styles.pointerBannerConfirmCopyText}>
+                      نسخ الفرع؟ سيتم تحويله لنسخة محلية قابلة للتعديل، ولن تتزامن مع المصدر بعد ذلك.
+                    </span>
+                    <div className={styles.pointerBannerConfirmButtons}>
+                      <button
+                        className={styles.pointerCopyConfirmButton}
+                        disabled={pointerActionLoading}
+                        onClick={async () => {
+                          const ok = await copyPointer(currentPointerId);
+                          if (ok) {
+                            setCopyConfirmPointerId(null);
+                            setSelectedPersonId(null);
+                            await workspace?.refreshTree();
+                          }
+                        }}
+                      >
+                        {pointerActionLoading ? '...' : 'نعم، نسخ'}
+                      </button>
+                      <button
+                        className={styles.pointerCancelButton}
+                        disabled={pointerActionLoading}
+                        onClick={() => setCopyConfirmPointerId(null)}
+                      >
+                        إلغاء
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className={styles.pointerBannerActions}>
+                    <button
+                      className={styles.pointerCopyButton}
+                      disabled={pointerActionLoading}
+                      onClick={() => setCopyConfirmPointerId(currentPointerId)}
+                    >
+                      نسخ
+                    </button>
+                    <button
+                      className={styles.pointerBreakButton}
+                      disabled={pointerActionLoading}
+                      onClick={() => setBreakConfirmPointerId(currentPointerId)}
+                    >
+                      فصل
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        );
+      })()}
 
       {canEdit && !person._pointed && (
         <div className={styles.actionBar}>

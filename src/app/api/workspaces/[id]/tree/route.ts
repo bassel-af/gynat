@@ -43,5 +43,16 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
   const safeData = redactPrivateIndividuals(gedcomData);
 
-  return NextResponse.json({ data: safeData });
+  // Build pointer metadata for the frontend
+  const pointerMetadata = pointers.map((p) => ({
+    id: p.id,
+    sourceWorkspaceNameAr: p.sourceWorkspaceNameAr,
+    sourceWorkspaceSlug: p.sourceWorkspaceSlug,
+    sourceRootName: p.sourceRootName || 'غير معروف',
+    anchorIndividualId: p.anchorIndividualId,
+    relationship: p.relationship,
+    status: 'active' as const,
+  }));
+
+  return NextResponse.json({ data: safeData, pointers: pointerMetadata });
 }
