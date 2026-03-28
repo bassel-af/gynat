@@ -35,7 +35,7 @@
 }
 
 .backLink {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
   color: var(--alpha-white-40);
   text-decoration: none;
   transition: color var(--transition-base);
@@ -85,7 +85,7 @@
   border: 1px solid var(--alpha-white-15);
   background: transparent;
   color: var(--alpha-white-50);
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-base);
   font-weight: var(--font-weight-medium);
   cursor: pointer;
   transition: background var(--transition-base), color var(--transition-base);
@@ -117,7 +117,7 @@
 }
 
 .stat {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
   color: var(--alpha-white-35);
 }
 
@@ -177,7 +177,7 @@
   border: 1px solid var(--color-primary);
   background: transparent;
   color: var(--color-primary-light);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
   font-weight: var(--font-weight-medium);
   cursor: pointer;
   transition: background var(--transition-base);
@@ -223,7 +223,7 @@
   border: 1px solid var(--alpha-white-15);
   background: transparent;
   color: var(--alpha-white-50);
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-base);
   cursor: pointer;
   transition: background var(--transition-base), color var(--transition-base);
 }
@@ -244,7 +244,7 @@
   border: 1px solid rgba(229, 62, 62, 0.3);
   background: transparent;
   color: #fc8181;
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-base);
   cursor: pointer;
   transition: background var(--transition-base);
 }
@@ -271,14 +271,14 @@
 }
 
 .memberEmail {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
   color: var(--alpha-white-35);
   direction: ltr;
   unicode-bidi: isolate;
 }
 
 .memberRole {
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-base);
   color: var(--color-primary-light);
   background: rgba(74, 144, 217, 0.1);
   padding: var(--space-1) var(--space-3);
@@ -311,7 +311,7 @@
   background: rgba(229, 62, 62, 0.1);
   border: 1px solid rgba(229, 62, 62, 0.25);
   color: #fc8181;
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
   text-align: center;
   margin-bottom: var(--space-6);
 }
@@ -380,7 +380,7 @@
   border: 1px solid var(--alpha-white-10);
   background: transparent;
   color: var(--alpha-white-50);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
   cursor: pointer;
   transition: background var(--transition-base);
 }
@@ -395,7 +395,7 @@
   border: none;
   background: var(--gradient-primary);
   color: var(--color-text-inverse);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
   font-weight: var(--font-weight-semibold);
   cursor: pointer;
   transition: opacity var(--transition-base);
@@ -416,7 +416,7 @@
   border: 1px solid rgba(229, 62, 62, 0.4);
   background: rgba(229, 62, 62, 0.15);
   color: #fc8181;
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
   font-weight: var(--font-weight-semibold);
   cursor: pointer;
   transition: background var(--transition-base);
@@ -438,7 +438,7 @@
 }
 
 .fieldLabel {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
   color: var(--alpha-white-50);
   font-weight: var(--font-weight-medium);
 }
@@ -470,7 +470,7 @@
   background: rgba(72, 187, 120, 0.1);
   border: 1px solid rgba(72, 187, 120, 0.25);
   color: #68d391;
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
 }
 
 .confirmText {

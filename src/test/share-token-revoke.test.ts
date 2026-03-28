@@ -20,6 +20,7 @@ const mockShareTokenUpdate = vi.fn();
 const mockBranchPointerUpdateMany = vi.fn();
 const mockBranchPointerUpdate = vi.fn();
 const mockBranchPointerFindMany = vi.fn();
+const mockBranchPointerCount = vi.fn();
 const mockNotificationCreateMany = vi.fn();
 const mockTreeEditLogCreate = vi.fn();
 const mockTransaction = vi.fn();
@@ -41,6 +42,7 @@ const mockPrisma = {
     updateMany: (...args: unknown[]) => mockBranchPointerUpdateMany(...args),
     update: (...args: unknown[]) => mockBranchPointerUpdate(...args),
     findMany: (...args: unknown[]) => mockBranchPointerFindMany(...args),
+    count: (...args: unknown[]) => mockBranchPointerCount(...args),
   },
   notification: {
     createMany: (...args: unknown[]) => mockNotificationCreateMany(...args),
@@ -447,7 +449,7 @@ describe('DELETE /api/workspaces/[id]/share-tokens/[tokenId] — revoke with aut
     expect(mockGetTreeByWorkspaceId).not.toHaveBeenCalled();
   });
 
-  test('already-revoked token returns 400', async () => {
+  test('fully-revoked token (no active pointers) returns 400', async () => {
     mockAuth();
     mockAdmin();
 
@@ -456,6 +458,8 @@ describe('DELETE /api/workspaces/[id]/share-tokens/[tokenId] — revoke with aut
       sourceWorkspaceId: wsId,
       isRevoked: true,
     });
+    // No active pointers — fully revoked
+    mockBranchPointerCount.mockResolvedValue(0);
 
     const { DELETE } = await import(
       '@/app/api/workspaces/[id]/share-tokens/[tokenId]/route'
@@ -465,6 +469,56 @@ describe('DELETE /api/workspaces/[id]/share-tokens/[tokenId] — revoke with aut
     );
     const res = await DELETE(req, routeParams);
     expect(res.status).toBe(400);
+  });
+
+  test('disabled token (isRevoked but has active pointers) allows DELETE for nuclear revoke', async () => {
+    mockAuth();
+    mockAdmin();
+    setupTransactionPassthrough();
+
+    mockShareTokenFindUnique.mockResolvedValue({
+      id: tokenId,
+      sourceWorkspaceId: wsId,
+      isRevoked: true, // Already disabled via PATCH
+    });
+    // Has active pointers — this is a disabled token, not fully revoked
+    mockBranchPointerCount.mockResolvedValue(2);
+
+    const ptr1 = makeActivePointer('ptr-1', 'ws-target-1');
+    const ptr2 = makeActivePointer('ptr-2', 'ws-target-2');
+    mockBranchPointerFindMany.mockResolvedValue([ptr1, ptr2]);
+
+    // Source tree
+    const sourceTree = { id: 'tree-source', workspaceId: wsId, individuals: [], families: [] };
+    mockGetTreeByWorkspaceId.mockResolvedValue(sourceTree);
+    mockDbTreeToGedcomData.mockReturnValue({ individuals: {}, families: {} });
+    mockExtractPointedSubtree.mockReturnValue({ individuals: {}, families: {} });
+    mockPrepareDeepCopy.mockReturnValue({
+      individuals: { 'new-ind': {} },
+      families: {},
+      idMap: new Map(),
+      stitchFamily: null,
+    });
+    mockGetOrCreateTree.mockResolvedValue({ id: 'target-tree' });
+    mockPersistDeepCopy.mockResolvedValue(undefined);
+    mockBranchPointerUpdate.mockResolvedValue({});
+    mockTreeEditLogCreate.mockResolvedValue({});
+    mockMembershipFindMany.mockResolvedValue([]);
+    mockNotificationCreateMany.mockResolvedValue({ count: 0 });
+
+    const { DELETE } = await import(
+      '@/app/api/workspaces/[id]/share-tokens/[tokenId]/route'
+    );
+    const req = makeDeleteRequest(
+      `http://localhost:3000/api/workspaces/${wsId}/share-tokens/${tokenId}`,
+    );
+    const res = await DELETE(req, routeParams);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.copiedPointers).toBe(2);
+    // Should NOT re-update the token since it's already isRevoked
+    expect(mockShareTokenUpdate).not.toHaveBeenCalled();
   });
 
   test('notifications are created for target workspace admins', async () => {

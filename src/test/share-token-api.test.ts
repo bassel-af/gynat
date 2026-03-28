@@ -41,6 +41,7 @@ vi.mock('@/lib/db', () => ({
     },
     branchPointer: {
       findMany: (...args: unknown[]) => mockBranchPointerFindMany(...args),
+      groupBy: vi.fn().mockResolvedValue([]),
     },
   },
 }));
@@ -249,5 +250,9 @@ describe('GET /api/workspaces/[id]/share-tokens — list tokens', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.data).toHaveLength(1);
+    // Verify shaped response
+    expect(body.data[0].rootPersonName).toBe('أحمد السعيد');
+    expect(body.data[0].activePointerCount).toBe(0);
+    expect(body.data[0]).not.toHaveProperty('rootIndividualId');
   });
 });

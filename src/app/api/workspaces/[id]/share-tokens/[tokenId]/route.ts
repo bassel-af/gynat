@@ -8,6 +8,49 @@ import { prepareDeepCopy, persistDeepCopy } from '@/lib/tree/branch-pointer-deep
 
 type RouteParams = { params: Promise<{ id: string; tokenId: string }> };
 
+// PATCH /api/workspaces/[id]/share-tokens/[tokenId] — Disable or re-enable a share token
+export async function PATCH(request: NextRequest, { params }: RouteParams) {
+  const { id: workspaceId, tokenId } = await params;
+
+  const result = await requireWorkspaceAdmin(request, workspaceId);
+  if (isErrorResponse(result)) return result;
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'جسم الطلب غير صالح' }, { status: 400 });
+  }
+
+  if (
+    typeof body !== 'object' ||
+    body === null ||
+    typeof (body as Record<string, unknown>).isRevoked !== 'boolean'
+  ) {
+    return NextResponse.json(
+      { error: 'يجب تقديم isRevoked كقيمة منطقية' },
+      { status: 400 },
+    );
+  }
+
+  const { isRevoked } = body as { isRevoked: boolean };
+
+  const token = await prisma.branchShareToken.findUnique({
+    where: { id: tokenId },
+  });
+
+  if (!token || token.sourceWorkspaceId !== workspaceId) {
+    return NextResponse.json({ error: 'الرمز غير موجود' }, { status: 404 });
+  }
+
+  await prisma.branchShareToken.update({
+    where: { id: tokenId },
+    data: { isRevoked },
+  });
+
+  return NextResponse.json({ success: true });
+}
+
 // DELETE /api/workspaces/[id]/share-tokens/[tokenId] — Revoke a share token
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   const { id: workspaceId, tokenId } = await params;
@@ -25,14 +68,23 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   }
 
   if (token.isRevoked) {
-    return NextResponse.json({ error: 'الرمز ملغى بالفعل' }, { status: 400 });
+    // If disabled (still has active pointers), allow the nuclear revoke.
+    // If fully revoked (no active pointers), reject.
+    const activeCount = await prisma.branchPointer.count({
+      where: { shareTokenId: tokenId, status: 'active' },
+    });
+    if (activeCount === 0) {
+      return NextResponse.json({ error: 'الرمز ملغى بالفعل' }, { status: 400 });
+    }
   }
 
-  // Step 1: Mark token as revoked FIRST (unconditional)
-  await prisma.branchShareToken.update({
-    where: { id: tokenId },
-    data: { isRevoked: true },
-  });
+  // Step 1: Mark token as revoked FIRST (unconditional — may already be true if disabled)
+  if (!token.isRevoked) {
+    await prisma.branchShareToken.update({
+      where: { id: tokenId },
+      data: { isRevoked: true },
+    });
+  }
 
   // Step 2: Find all active pointers created from this token
   const activePointers = await prisma.branchPointer.findMany({

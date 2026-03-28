@@ -8,25 +8,47 @@
 
 .tokenCard {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-4);
   border-radius: 8px;
   border: 1px solid var(--alpha-white-06);
   background: var(--alpha-white-04);
-  gap: var(--space-3);
+}
+
+.tokenDisabled {
+  opacity: 0.75;
+  border-color: rgba(221, 173, 46, 0.2);
+}
+
+.tokenRevoked {
+  opacity: 0.75;
+  border-color: rgba(229, 62, 62, 0.15);
 }
 
 .tokenInfo {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-2);
   min-width: 0;
+  flex: 1;
+}
+
+.tokenRow1 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.tokenRow1End {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
 }
 
 .tokenRootName {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
   color: var(--alpha-white-70);
 }
 
@@ -34,32 +56,83 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  font-size: var(--font-size-xs);
-  color: var(--alpha-white-35);
+  font-size: var(--font-size-sm);
+  color: var(--alpha-white-50);
+}
+
+.tokenDates {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--font-size-sm);
+  color: var(--alpha-white-40);
 }
 
 .tokenActions {
   display: flex;
   gap: var(--space-2);
-  flex-shrink: 0;
+  margin-top: var(--space-1);
 }
 
-.revokeButton {
+/* Ghost button — disable action (safe, reversible) */
+.disableButton {
   padding: var(--space-1) var(--space-3);
   border-radius: 6px;
-  border: 1px solid rgba(229, 62, 62, 0.3);
+  border: 1px solid var(--alpha-white-15);
   background: transparent;
-  color: #fc8181;
-  font-size: var(--font-size-xs);
+  color: var(--alpha-white-50);
+  font-size: var(--font-size-sm);
   cursor: pointer;
   transition: background var(--transition-base);
 }
 
-.revokeButton:hover:not(:disabled) {
-  background: rgba(229, 62, 62, 0.1);
+.disableButton:hover:not(:disabled) {
+  background: var(--alpha-white-06);
 }
 
-.revokeButton:disabled {
+.disableButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Re-enable button */
+.reEnableButton {
+  padding: var(--space-1) var(--space-3);
+  border-radius: 6px;
+  border: 1px solid rgba(221, 173, 46, 0.25);
+  background: transparent;
+  color: rgba(221, 173, 46, 0.8);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: background var(--transition-base);
+}
+
+.reEnableButton:hover:not(:disabled) {
+  background: rgba(221, 173, 46, 0.08);
+}
+
+.reEnableButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Text-only red button — revoke action (destructive) */
+.revokeButtonText {
+  padding: var(--space-1) var(--space-3);
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: #fc8181;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: background var(--transition-base);
+}
+
+.revokeButtonText:hover:not(:disabled) {
+  background: rgba(229, 62, 62, 0.08);
+}
+
+.revokeButtonText:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
@@ -90,4 +163,123 @@
   background: rgba(229, 62, 62, 0.1);
   color: rgba(229, 62, 62, 0.7);
   border: 1px solid rgba(229, 62, 62, 0.15);
+}
+
+.disabledBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-3);
+  border-radius: 999px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  background: rgba(221, 173, 46, 0.1);
+  color: rgba(221, 173, 46, 0.8);
+  border: 1px solid rgba(221, 173, 46, 0.2);
+}
+
+.expiredBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-3);
+  border-radius: 999px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  background: rgba(221, 173, 46, 0.1);
+  color: rgba(221, 173, 46, 0.8);
+  border: 1px solid rgba(221, 173, 46, 0.2);
+}
+
+/* Revoke confirmation box */
+.revokeConfirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  margin-top: var(--space-1);
+  border-top: 1px solid rgba(229, 62, 62, 0.15);
+}
+
+.confirmText {
+  font-size: var(--font-size-sm);
+  color: rgba(229, 62, 62, 0.85);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.5;
+}
+
+.confirmButtons {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.confirmYes {
+  padding: var(--space-1) var(--space-3);
+  border-radius: 6px;
+  border: 1px solid rgba(229, 62, 62, 0.35);
+  background: rgba(229, 62, 62, 0.15);
+  color: #fc8181;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.confirmYes:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.confirmNo {
+  padding: var(--space-1) var(--space-3);
+  border-radius: 6px;
+  border: 1px solid var(--alpha-white-15);
+  background: transparent;
+  color: var(--alpha-white-50);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* Disable confirmation */
+.disableConfirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  margin-top: var(--space-1);
+  border-top: 1px solid rgba(221, 173, 46, 0.15);
+}
+
+.disableConfirmText {
+  font-size: var(--font-size-sm);
+  color: rgba(221, 173, 46, 0.85);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.5;
+}
+
+.disableConfirmButton {
+  padding: var(--space-1) var(--space-3);
+  border-radius: 6px;
+  border: 1px solid rgba(221, 173, 46, 0.35);
+  background: rgba(221, 173, 46, 0.15);
+  color: rgba(221, 173, 46, 0.9);
+  font-size: var(--font-size-sm);
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.disableConfirmButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.cancelButton {
+  padding: var(--space-1) var(--space-3);
+  border-radius: 6px;
+  border: 1px solid var(--alpha-white-15);
+  background: transparent;
+  color: var(--alpha-white-50);
+  font-size: var(--font-size-sm);
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
 }

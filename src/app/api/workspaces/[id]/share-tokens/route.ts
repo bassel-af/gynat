@@ -131,5 +131,33 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     },
   });
 
-  return NextResponse.json({ data: tokens });
+  // Count active pointers per token via groupBy (Prisma v7 driver adapters don't support _count with where in include)
+  const tokenIds = tokens.map((t) => t.id);
+  const activeCounts = tokenIds.length > 0
+    ? await prisma.branchPointer.groupBy({
+        by: ['shareTokenId'],
+        where: {
+          shareTokenId: { in: tokenIds },
+          status: 'active',
+        },
+        _count: { id: true },
+      })
+    : [];
+  const countMap = new Map(activeCounts.map((r) => [r.shareTokenId, r._count.id]));
+
+  const shaped = tokens.map((t) => ({
+    id: t.id,
+    rootPersonName: [t.rootIndividual.givenName, t.rootIndividual.surname]
+      .filter(Boolean)
+      .join(' '),
+    depthLimit: t.depthLimit,
+    activePointerCount: countMap.get(t.id) ?? 0,
+    isPublic: t.isPublic,
+    targetWorkspaceName: t.targetWorkspace?.nameAr ?? null,
+    isRevoked: t.isRevoked,
+    expiresAt: t.expiresAt,
+    createdAt: t.createdAt,
+  }));
+
+  return NextResponse.json({ data: shaped });
 }

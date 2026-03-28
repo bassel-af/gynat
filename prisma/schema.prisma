@@ -472,6 +472,7 @@ model BranchShareToken {
   targetWorkspace  Workspace?  @relation("ShareTokenTarget", fields: [targetWorkspaceId], references: [id])
   rootIndividual   Individual  @relation(fields: [rootIndividualId], references: [id])
   createdBy        User        @relation(fields: [createdById], references: [id])
+  pointers         BranchPointer[]
 
   @@index([sourceWorkspaceId])
   @@index([targetWorkspaceId])
@@ -517,6 +518,7 @@ model BranchPointer {
   rootIndividual      Individual  @relation("PointerRoot", fields: [rootIndividualId], references: [id])
   selectedIndividual  Individual  @relation("PointerSelected", fields: [selectedIndividualId], references: [id])
   anchorIndividual    Individual  @relation("PointerAnchor", fields: [anchorIndividualId], references: [id])
+  shareToken       BranchShareToken? @relation(fields: [shareTokenId], references: [id])
   createdBy        User        @relation(fields: [createdById], references: [id])
 
   @@index([targetWorkspaceId, status])
