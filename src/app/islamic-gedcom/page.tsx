@@ -22,6 +22,8 @@ export const metadata: Metadata = {
     'الرضاعة',
     'Rada milk kinship GEDCOM',
     '_RADA_FAM',
+    '_UMM_WALAD',
+    'أم ولد',
     'GEDCOM 5.5.1',
     'GEDCOM 7',
     '_HIJR',
@@ -99,6 +101,39 @@ export default function IslamicGedcomPage() {
             </div>
             <div className={styles.note}>
               الصيغة: يوم/شهر/سنة هجرية. مثال: 15/05/1410
+            </div>
+          </div>
+
+          {/* _UMM_WALAD */}
+          <div className={styles.tagBlock}>
+            <div className={styles.tagHeader}>
+              <span className={`${styles.tagBadge} ${styles.tagBadgeCustom}`}>_UMM_WALAD</span>
+              <span className={styles.tagLabel}>امتداد</span>
+              <span className={styles.tagName}>أم ولد</span>
+            </div>
+            <p className={styles.tagDesc}>
+              في التاريخ الإسلامي، كان يحق للرجل أن تكون له إماء (جوارٍ)،
+              وإذا أنجبت الأَمَة من سيدها سُمّيت &laquo;أم ولد&raquo; — وهو مصطلح فقهي
+              يمنحها مكانة خاصة.
+            </p>
+            <p className={styles.tagDesc}>
+              يوضع على سجل العائلة (<span className={styles.inlineCode}>FAM</span>) للإشارة
+              إلى أن الأم هي أم ولد وليست زوجة بعقد نكاح.
+              الأبناء في هذه العائلة هم أبناء شرعيون في النسب ولا فرق بينهم وبين أبناء الزوجة.
+              غياب هذه العلامة يعني أن العلاقة علاقة نكاح بشكل افتراضي.
+            </p>
+            <div className={styles.codeBlock}>
+              <span className={styles.codeId}>0 @F2@ FAM</span>{'\n'}
+              <span className={styles.codeCustomTag}>1 _UMM_WALAD</span> <span className={styles.codeVal}>Y</span>{'\n'}
+              <span className={styles.codeTag}>1 HUSB</span> <span className={styles.codeId}>@I1@</span>{'\n'}
+              <span className={styles.codeTag}>1 WIFE</span> <span className={styles.codeId}>@I5@</span>{'\n'}
+              <span className={styles.codeTag}>1 CHIL</span> <span className={styles.codeId}>@I10@</span>{'\n'}
+              <span className={styles.codeTag}>1 CHIL</span> <span className={styles.codeId}>@I11@</span>
+            </div>
+            <div className={styles.note}>
+              هذا التوثيق يخص الحالات التاريخية. ملك اليمين كان شائعاً في التاريخ الإسلامي
+              وكثير من الشخصيات البارزة كانوا أبناء جوارٍ.
+              العلامة لا تؤثر على بنية الشجرة — الأبناء يظهرون كأي أبناء آخرين.
             </div>
           </div>
         </section>
@@ -357,7 +392,8 @@ export default function IslamicGedcomPage() {
                 <span className={styles.inlineCode}>_RADA_FAMC</span>,{' '}
                 <span className={styles.inlineCode}>_RADA_HUSB</span>,{' '}
                 <span className={styles.inlineCode}>_RADA_WIFE</span>,{' '}
-                <span className={styles.inlineCode}>_RADA_CHIL</span>) تتبع
+                <span className={styles.inlineCode}>_RADA_CHIL</span>,{' '}
+                <span className={styles.inlineCode}>_UMM_WALAD</span>) تتبع
                 اتفاقية الشرطة السفلية المعتمدة.
               </p>
             </div>
