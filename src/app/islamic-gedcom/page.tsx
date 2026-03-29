@@ -134,6 +134,12 @@ export default function IslamicGedcomPage() {
               هذا التوثيق يخص الحالات التاريخية. ملك اليمين كان شائعاً في التاريخ الإسلامي
               وكثير من الشخصيات البارزة كانوا أبناء جوارٍ.
               العلامة لا تؤثر على بنية الشجرة — الأبناء يظهرون كأي أبناء آخرين.
+              <br /><br />
+              <span className={styles.inlineCode}>_UMM_WALAD</span> و<span className={styles.inlineCode}>MARC</span>/<span className={styles.inlineCode}>MARR</span>{' '}
+              متعارضان: عائلة أم الولد لا يكون فيها عقد قران ولا زفاف.
+              وجود <span className={styles.inlineCode}>_UMM_WALAD Y</span> يعني عدم وجود{' '}
+              <span className={styles.inlineCode}>MARC</span> أو{' '}
+              <span className={styles.inlineCode}>MARR</span> في نفس السجل.
             </div>
           </div>
         </section>

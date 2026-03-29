@@ -747,7 +747,12 @@ Notification
 ### Phase 6 — Islamic GEDCOM Tags, Export & Import
 
 **Phase 6a — Islamic Tags & Visualization:**
-- Implement `_UMM_WALAD` flag on family records (database field + API + UI indicator)
+- ✅ `_UMM_WALAD` flag on family records: `Family.isUmmWalad` database field, workspace-level `enableUmmWalad` toggle, API support (create/update family), UI checkbox in add-spouse and edit-individual forms
+  - Workspace admin enables via settings toggle; checkbox appears in IndividualForm when adding a spouse or editing a person in a single spouse family
+  - Toggling on clears MARC/MARR fields (server-enforced); confirmation dialog when existing marriage data present
+  - Sidebar: men see "أمهات الأولاد" section listing umm walad families; women see "السيّد" label for spouse (no redundant marriage section)
+  - FamilyEventForm also supports toggling isUmmWalad with MARC/MARR section visibility
+  - After adding umm walad spouse, form closes directly (no empty marriage event form)
 - Implement rada'a data model: `_RADA_FAM` / `_RADA_WIFE` / `_RADA_HUSB` / `_RADA_CHIL` / `_RADA_FAMC` (database tables/fields + API + UI)
 - Visualize rada'a relationships in the tree or person detail sidebar
 - Validate that all Islamic GEDCOM reference tags are implementable and the data model is sound before building export/import
