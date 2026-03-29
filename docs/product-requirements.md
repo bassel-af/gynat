@@ -544,6 +544,7 @@ Notification
 - Public page at `/islamic-gedcom` — comprehensive reference for documenting Islamic genealogy in GEDCOM format
 - Custom extension tag: `_HIJR` (Hijri date subtag on any event)
 - Standard GEDCOM tag mappings to Islamic marriage: `MARC` → عقد القران, `MARR` → الزفاف, `DIV` → الطلاق/الخلع
+- `_UMM_WALAD` flag on FAM records for historical أم ولد (bondwoman who bore children from her master) — children are legitimate nasab, absence implies nikah
 - Rada'a (milk kinship) extension: `_RADA_FAM` (milk family record), `_RADA_WIFE` / `_RADA_HUSB` / `_RADA_CHIL` (milk parents and nursed children), `_RADA_FAMC` (individual's milk family link) — all custom-namespaced to prevent mixing with nasab data
 - Rada'a records do not alter the nasab tree; they document kinship between existing tree members for sharia implications (e.g., marriage prohibition)
 - Covers GEDCOM 5.5.1 and 7.0 compatibility
