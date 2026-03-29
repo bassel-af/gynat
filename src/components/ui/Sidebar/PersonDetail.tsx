@@ -281,6 +281,25 @@ export function PersonDetail({ personId }: PersonDetailProps) {
     return { topAncestorId };
   }, [data, selectedRootId, person, personId]);
 
+  // Compute umm walad edit context for single-family spouses
+  const ummWaladEditContext = useMemo(() => {
+    if (!workspace?.enableUmmWalad || !person || !data) return null;
+    if (person.familiesAsSpouse.length !== 1) return null;
+    const familyId = person.familiesAsSpouse[0];
+    const family = data.families[familyId];
+    if (!family || family._pointed) return null;
+    const mc = family.marriageContract;
+    const m = family.marriage;
+    return {
+      familyId,
+      isUmmWalad: family.isUmmWalad ?? false,
+      hasMarriageData: !!(
+        mc.date || mc.hijriDate || mc.place || mc.description || mc.notes ||
+        m.date || m.hijriDate || m.place || m.description || m.notes
+      ),
+    };
+  }, [workspace?.enableUmmWalad, person, data]);
+
   // -------------------------------------------------------------------------
   // Navigation handlers
   // -------------------------------------------------------------------------
@@ -518,7 +537,16 @@ export function PersonDetail({ personId }: PersonDetailProps) {
           {canEdit && !person._pointed && (
             <button
               className={styles.focusButton}
-              onClick={() => { setFormMode({ kind: 'edit' }); setFormError(''); }}
+              onClick={() => {
+                setFormMode({
+                  kind: 'edit',
+                  ...(ummWaladEditContext && {
+                    ummWaladFamilyId: ummWaladEditContext.familyId,
+                    ummWaladInitialValue: ummWaladEditContext.isUmmWalad,
+                  }),
+                });
+                setFormError('');
+              }}
               aria-label="تعديل البيانات"
               title="تعديل البيانات"
             >
@@ -710,7 +738,12 @@ export function PersonDetail({ personId }: PersonDetailProps) {
           hideNonVisible
         />
         <RelationshipSection
-          title={person.sex === 'F' ? 'الزوج' : 'الزوجة'}
+          title={(() => {
+            if (person.sex === 'M') return 'الزوجة';
+            const allUmmWalad = person.familiesAsSpouse.length > 0 &&
+              person.familiesAsSpouse.every((fid) => data.families[fid]?.isUmmWalad);
+            return allUmmWalad ? 'السيّد' : 'الزوج';
+          })()}
           people={relationships.spouses}
           visiblePersonIds={visiblePersonIds}
           onPersonClick={handlePersonClick}
@@ -729,32 +762,42 @@ export function PersonDetail({ personId }: PersonDetailProps) {
           hideNonVisible
         />
 
-        {person.familiesAsSpouse.length > 0 && (
-          <div>
-            <h3 className={styles.sectionTitle}>معلومات الزواج</h3>
-            {person.familiesAsSpouse.map((familyId) => {
+        {person.familiesAsSpouse.length > 0 && (() => {
+          const nikahFamilies: string[] = [];
+          const ummWaladFamilies: string[] = [];
+          for (const familyId of person.familiesAsSpouse) {
+            const family = data.families[familyId];
+            if (!family) continue;
+            if (family.isUmmWalad) ummWaladFamilies.push(familyId);
+            else nikahFamilies.push(familyId);
+          }
+
+          const renderFamily = (familyId: string) => {
               const family = data.families[familyId];
               if (!family) return null;
               const spouseId = family.husband === personId ? family.wife : family.husband;
               const spouse = spouseId ? data.individuals[spouseId] : null;
               if (spouse?.isPrivate) return null;
               const spouseName = spouse ? getDisplayName(spouse) : null;
-              const hasAnyEvent = family.marriageContract.date || family.marriageContract.hijriDate ||
-                family.marriage.date || family.marriage.hijriDate ||
-                family.isDivorced;
+              const isUmmWaladFamily = family.isUmmWalad === true;
+              const hasAnyEvent = !isUmmWaladFamily &&
+                (family.marriageContract.date || family.marriageContract.hijriDate ||
+                  family.marriage.date || family.marriage.hijriDate ||
+                  family.isDivorced);
 
               return (
                 <div key={familyId} className={styles.marriageBlock}>
                   <div className={styles.marriageBlockHeader}>
                     <span className={styles.marriageSpouseName}>
-                      {spouseName ?? 'بدون زوج/زوجة'}
+                      {spouseName ?? (isUmmWaladFamily ? 'غير محدد' : 'بدون زوج/زوجة')}
+                      {isUmmWaladFamily && person.sex === 'M' && ' (أم ولد)'}
                     </span>
                     {canEdit && !person._pointed && !family._pointed && (
                       <button
                         className={styles.marriageEditButton}
                         onClick={() => { setFormMode({ kind: 'editFamilyEvent', familyId }); setFormError(''); }}
-                        aria-label="تعديل أحداث الزواج"
-                        title="تعديل أحداث الزواج"
+                        aria-label={isUmmWaladFamily ? 'تعديل بيانات أم ولد' : 'تعديل أحداث الزواج'}
+                        title={isUmmWaladFamily ? 'تعديل بيانات أم ولد' : 'تعديل أحداث الزواج'}
                       >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                           <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -763,35 +806,51 @@ export function PersonDetail({ personId }: PersonDetailProps) {
                       </button>
                     )}
                   </div>
-                  {(family.marriageContract.date || family.marriageContract.hijriDate) && (
+                  {!isUmmWaladFamily && (family.marriageContract.date || family.marriageContract.hijriDate) && (
                     <MarriageEventDisplay
                       label="عقد القران"
                       event={family.marriageContract}
                       calendarPreference={calendarPreference}
                     />
                   )}
-                  {(family.marriage.date || family.marriage.hijriDate) && (
+                  {!isUmmWaladFamily && (family.marriage.date || family.marriage.hijriDate) && (
                     <MarriageEventDisplay
                       label="الزفاف"
                       event={family.marriage}
                       calendarPreference={calendarPreference}
                     />
                   )}
-                  {family.isDivorced && (family.divorce.date || family.divorce.hijriDate) && (
+                  {!isUmmWaladFamily && family.isDivorced && (family.divorce.date || family.divorce.hijriDate) && (
                     <MarriageEventDisplay
                       label="الانفصال"
                       event={family.divorce}
                       calendarPreference={calendarPreference}
                     />
                   )}
-                  {!hasAnyEvent && (
+                  {!hasAnyEvent && !isUmmWaladFamily && (
                     <span className={styles.marriageEventPlace}>لا توجد بيانات</span>
                   )}
                 </div>
               );
-            })}
-          </div>
-        )}
+          };
+
+          return (
+            <>
+              {nikahFamilies.length > 0 && (
+                <div>
+                  <h3 className={styles.sectionTitle}>معلومات الزواج</h3>
+                  {nikahFamilies.map(renderFamily)}
+                </div>
+              )}
+              {ummWaladFamilies.length > 0 && person.sex === 'M' && (
+                <div>
+                  <h3 className={styles.sectionTitle}>أمهات الأولاد</h3>
+                  {ummWaladFamilies.map(renderFamily)}
+                </div>
+              )}
+            </>
+          );
+        })()}
 
         {person.notes && (
           <div>
@@ -858,6 +917,11 @@ export function PersonDetail({ personId }: PersonDetailProps) {
           }
           anchorSex={person?.sex || ''}
           anchorName={person ? getDisplayName(person) : ''}
+          enableUmmWalad={workspace?.enableUmmWalad}
+          isAddSpouse={formMode.kind === 'addSpouse'}
+          ummWaladFamilyId={formMode.kind === 'edit' ? formMode.ummWaladFamilyId : undefined}
+          ummWaladInitialValue={formMode.kind === 'edit' ? formMode.ummWaladInitialValue : undefined}
+          ummWaladHasMarriageData={formMode.kind === 'edit' && ummWaladEditContext ? ummWaladEditContext.hasMarriageData : undefined}
         />
       )}
 
@@ -893,6 +957,7 @@ export function PersonDetail({ personId }: PersonDetailProps) {
           isLoading={formLoading}
           error={formError}
           workspaceId={workspace?.workspaceId}
+          enableUmmWalad={workspace?.enableUmmWalad}
         />
       )}
     </div>

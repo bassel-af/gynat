@@ -59,6 +59,7 @@ model Workspace {
   createdById          String               @map("created_by") @db.Uuid
   storageQuotaBytes    BigInt               @default(5368709120) @map("storage_quota_bytes") // 5 GB
   branchSharingPolicy  BranchSharingPolicy  @default(shareable) @map("branch_sharing_policy")
+  enableUmmWalad       Boolean              @default(false) @map("enable_umm_walad")
   createdAt            DateTime             @default(now()) @map("created_at")
 
   // Relations
@@ -264,6 +265,9 @@ model Family {
   marriagePlaceId     String? @map("marriage_place_id") @db.Uuid
   marriageDescription String? @map("marriage_description") @db.VarChar(500)
   marriageNotes       String? @map("marriage_notes") @db.Text
+
+  // Umm walad
+  isUmmWalad           Boolean @default(false) @map("is_umm_walad")
 
   // Divorce (DIV)
   isDivorced           Boolean @default(false) @map("is_divorced")

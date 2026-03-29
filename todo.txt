@@ -26,6 +26,24 @@ title - الكنية, standard or not in gedcom. shall we create tag?
 
 Do pnpm build.
 
+Think about religion:
+- How does the platform handle religious context (e.g. Islamic family structure, naming conventions)
+- Religious events and their relation to family records
+
+Think about mirath (inheritance):
+- Mirath/inheritance calculations based on family tree
+- Islamic inheritance rules and how to represent them
+
+MCP (Model Context Protocol):
+- Consider exposing solalah as an MCP server so AI assistants can query/navigate the family tree
+- Use cases: answer questions about relatives, generate summaries, assist with mirath calculations,
+Read tree of a person in book or website and populate it.
+
+API / Platform integrations:
+- Expose an API so the platform can be integrated with external services
+- Think about what data to expose, auth, and use cases
+- Think about adding to the tree.
+
 Low priority now:
 
 Version control

@@ -10,12 +10,12 @@ import { serializeIndividualForm } from '@/lib/person-detail-helpers';
 // ---------------------------------------------------------------------------
 
 export type FormMode =
-  | { kind: 'edit' }
+  | { kind: 'edit'; ummWaladFamilyId?: string; ummWaladInitialValue?: boolean }
   | { kind: 'addChild'; targetFamilyId?: string }
   | { kind: 'addSpouse'; lockedSex?: 'M' | 'F' }
   | { kind: 'addParent'; lockedSex?: 'M' | 'F' }
   | { kind: 'addSibling'; targetFamilyId: string }
-  | { kind: 'editFamilyEvent'; familyId: string };
+  | { kind: 'editFamilyEvent'; familyId: string; isUmmWalad?: boolean };
 
 // ---------------------------------------------------------------------------
 // Hook params and return type
@@ -163,6 +163,25 @@ export function usePersonActions({
         const json = await res.json();
         throw new Error(json.error ?? 'حدث خطأ');
       }
+      // Update family isUmmWalad if changed
+      if (formMode?.kind === 'edit' && formMode.ummWaladFamilyId) {
+        const newVal = formData.isUmmWalad ?? false;
+        const oldVal = formMode.ummWaladInitialValue ?? false;
+        if (newVal !== oldVal) {
+          const famRes = await apiFetch(
+            `/api/workspaces/${workspace.workspaceId}/tree/families/${formMode.ummWaladFamilyId}`,
+            {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ isUmmWalad: newVal }),
+            },
+          );
+          if (!famRes.ok) {
+            const json = await famRes.json();
+            throw new Error(json.error ?? 'حدث خطأ');
+          }
+        }
+      }
       setFormMode(null);
       await workspace.refreshTree();
     } catch (err) {
@@ -170,7 +189,7 @@ export function usePersonActions({
     } finally {
       setFormLoading(false);
     }
-  }, [workspace, personId, isPointed]);
+  }, [workspace, personId, isPointed, formMode]);
 
   const handleAddChildSubmit = useCallback(async (formData: IndividualFormData) => {
     if (!workspace || !person || !data || isPointed) return;
@@ -217,7 +236,7 @@ export function usePersonActions({
       const newPerson = await createIndividual(formData);
 
       // Create family with both spouses
-      const familyOpts: { husbandId?: string; wifeId?: string } = {};
+      const familyOpts: { husbandId?: string; wifeId?: string; isUmmWalad?: boolean } = {};
       if (person.sex === 'F') {
         familyOpts.wifeId = personId;
         familyOpts.husbandId = newPerson.id;
@@ -225,11 +244,19 @@ export function usePersonActions({
         familyOpts.husbandId = personId;
         familyOpts.wifeId = newPerson.id;
       }
+      if (formData.isUmmWalad) {
+        familyOpts.isUmmWalad = true;
+      }
       const newFamily = await createFamily(familyOpts);
 
       await workspace.refreshTree();
-      // Auto-open family event form so user can fill marriage info in the same flow
-      setFormMode({ kind: 'editFamilyEvent', familyId: newFamily.id });
+      if (formData.isUmmWalad) {
+        // Umm walad has no marriage events — just close the form
+        setFormMode(null);
+      } else {
+        // Auto-open family event form so user can fill marriage info in the same flow
+        setFormMode({ kind: 'editFamilyEvent', familyId: newFamily.id });
+      }
       setFormError('');
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'حدث خطأ');
@@ -302,6 +329,7 @@ export function usePersonActions({
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          isUmmWalad: eventData.isUmmWalad ?? false,
           marriageContractDate: eventData.marriageContractDate || null,
           marriageContractHijriDate: eventData.marriageContractHijriDate || null,
           marriageContractPlace: eventData.marriageContractPlace || null,

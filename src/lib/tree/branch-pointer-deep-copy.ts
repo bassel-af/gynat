@@ -211,6 +211,7 @@ export async function persistDeepCopy(
     divorceDescription: fam.divorce?.description || null,
     divorceNotes: fam.divorce?.notes || null,
     isDivorced: fam.isDivorced,
+    isUmmWalad: fam.isUmmWalad ?? false,
   }));
 
   if (familyData.length > 0) {
@@ -274,6 +275,7 @@ function makeStitchFamily(
     marriage: EMPTY_EVENT,
     divorce: EMPTY_EVENT,
     isDivorced: false,
+    isUmmWalad: false,
     ...overrides,
   };
 }

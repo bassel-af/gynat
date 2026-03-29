@@ -20,6 +20,7 @@ interface Workspace {
   memberCount: number;
   currentUserRole: string;
   currentUserId: string;
+  enableUmmWalad?: boolean;
 }
 
 interface Member {
@@ -330,6 +331,38 @@ export default function WorkspaceDetailPage() {
           </span>
           عرض شجرة العائلة
         </Link>
+
+        {/* Umm walad toggle (admin only) */}
+        {isAdmin && (
+          <div className={styles.infoCard}>
+            <label className={styles.toggleLabel}>
+              <input
+                type="checkbox"
+                checked={workspace.enableUmmWalad ?? false}
+                onChange={async (e) => {
+                  const newVal = e.target.checked;
+                  try {
+                    const res = await apiFetch(`/api/workspaces/${workspace.id}`, {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ enableUmmWalad: newVal }),
+                    });
+                    if (res.ok) {
+                      setWorkspace((prev) => prev ? { ...prev, enableUmmWalad: newVal } : prev);
+                    }
+                  } catch {
+                    // silently fail
+                  }
+                }}
+                className={styles.toggleCheckbox}
+              />
+              تفعيل ميزة{' '}
+              <a href="/islamic-gedcom#umm-walad" target="_blank" rel="noopener noreferrer" className={styles.inlineLink}>
+                أم ولد
+              </a>
+            </label>
+          </div>
+        )}
 
         {/* Members section */}
         <div className={styles.section}>

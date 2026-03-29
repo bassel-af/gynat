@@ -141,6 +141,7 @@ export function buildEditInitialData(person: Individual): Record<string, unknown
 /** Build initial data for family event form from a Family object */
 export function buildFamilyEventInitialData(family: Family) {
   const result: Record<string, unknown> = {
+    isUmmWalad: family.isUmmWalad ?? false,
     marriageContractDate: family.marriageContract.date,
     marriageContractHijriDate: family.marriageContract.hijriDate,
     marriageContractPlace: family.marriageContract.place,

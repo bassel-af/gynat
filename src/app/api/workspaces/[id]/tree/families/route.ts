@@ -36,6 +36,17 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   const tree = await getOrCreateTree(workspaceId);
   const { husbandId, wifeId, childrenIds, ...eventFields } = parsed.data;
 
+  // Guard: isUmmWalad requires workspace enableUmmWalad
+  if (eventFields.isUmmWalad) {
+    const workspace = await prisma.workspace.findUnique({ where: { id: workspaceId }, select: { enableUmmWalad: true } });
+    if (!workspace?.enableUmmWalad) {
+      return NextResponse.json(
+        { error: 'ميزة أم ولد غير مفعّلة في هذه المساحة' },
+        { status: 400 },
+      );
+    }
+  }
+
   // Verify husband belongs to this tree
   if (husbandId) {
     const husband = await getTreeIndividual(tree.id, husbandId);

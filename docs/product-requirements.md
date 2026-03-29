@@ -744,12 +744,23 @@ Notification
 - `pnpm reseed:all` — clean + re-seed everything
 - `pnpm start:fresh` — clean all + re-seed all
 
-### Phase 6 — GEDCOM Import/Export
+### Phase 6 — Islamic GEDCOM Tags, Export & Import
 
-- **Import**: workspace admin or `tree_editor` can upload a `.ged` file to populate or update the tree
+**Phase 6a — Islamic Tags & Visualization:**
+- Implement `_UMM_WALAD` flag on family records (database field + API + UI indicator)
+- Implement rada'a data model: `_RADA_FAM` / `_RADA_WIFE` / `_RADA_HUSB` / `_RADA_CHIL` / `_RADA_FAMC` (database tables/fields + API + UI)
+- Visualize rada'a relationships in the tree or person detail sidebar
+- Validate that all Islamic GEDCOM reference tags are implementable and the data model is sound before building export/import
+
+**Phase 6b — Export:**
+- Any workspace member can export the full tree as a `.ged` file at any time
+- Database → generate `.ged` file → download
+- Includes all custom Islamic tags (`_HIJR`, `_UMM_WALAD`, `_RADA_FAM`, etc.)
+
+**Phase 6c — Import:**
+- Workspace admin or `tree_editor` can upload a `.ged` file to populate the tree
 - Reuses the existing GEDCOM parser (`src/lib/gedcom/parser.ts`) as the import engine
-- **Export**: any workspace member can export the full tree as a `.ged` file at any time
-- Database -> generate `.ged` file -> download
+- Parses and stores custom Islamic tags
 
 ### Phase 7 — Content
 

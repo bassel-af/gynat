@@ -20,6 +20,8 @@ interface WorkspaceTreeContextValue {
   refreshTree: () => Promise<void>;
   /** Branch pointer metadata from GET /tree response */
   pointers?: PointerMetadata[];
+  /** Whether the workspace has umm walad feature enabled */
+  enableUmmWalad?: boolean;
 }
 
 const WorkspaceTreeContext = createContext<WorkspaceTreeContextValue | null>(null);
@@ -31,6 +33,7 @@ interface WorkspaceTreeProviderProps {
   isAdmin: boolean;
   refreshTree: () => Promise<void>;
   pointers?: PointerMetadata[];
+  enableUmmWalad?: boolean;
 }
 
 export function WorkspaceTreeProvider({
@@ -40,9 +43,10 @@ export function WorkspaceTreeProvider({
   isAdmin,
   refreshTree,
   pointers,
+  enableUmmWalad,
 }: WorkspaceTreeProviderProps) {
   return (
-    <WorkspaceTreeContext.Provider value={{ workspaceId, canEdit, isAdmin, refreshTree, pointers }}>
+    <WorkspaceTreeContext.Provider value={{ workspaceId, canEdit, isAdmin, refreshTree, pointers, enableUmmWalad }}>
       {children}
     </WorkspaceTreeContext.Provider>
   );

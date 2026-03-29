@@ -473,6 +473,7 @@ function makeSyntheticFamily(
     marriage: EMPTY_EVENT,
     divorce: EMPTY_EVENT,
     isDivorced: false,
+    isUmmWalad: false,
     _pointed: true,
     _sourceWorkspaceId: sourceWorkspaceId,
     _pointerId: pointerId,

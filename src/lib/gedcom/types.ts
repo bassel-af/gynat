@@ -51,6 +51,7 @@ export interface Family {
   marriage: FamilyEvent;
   divorce: FamilyEvent;
   isDivorced: boolean;
+  isUmmWalad?: boolean;
   /** Set on families merged from a branch pointer (read-only in target tree) */
   _pointed?: boolean;
   /** Source workspace ID for pointed families */

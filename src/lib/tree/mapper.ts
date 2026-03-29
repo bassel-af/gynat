@@ -83,6 +83,8 @@ export interface DbFamily {
   marriagePlaceRef?: DbPlaceRef | null
   marriageDescription: string | null
   marriageNotes: string | null
+  // Umm walad
+  isUmmWalad: boolean
   // Divorce
   isDivorced: boolean
   divorceDate: string | null
@@ -303,5 +305,6 @@ function mapFamily(dbFam: DbFamily): Family {
     marriage,
     divorce,
     isDivorced: dbFam.isDivorced,
+    isUmmWalad: dbFam.isUmmWalad,
   }
 }

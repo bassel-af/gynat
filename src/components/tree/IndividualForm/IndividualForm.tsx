@@ -28,6 +28,8 @@ export interface IndividualFormData {
   isDeceased: boolean;
   isPrivate: boolean;
   notes: string;
+  /** Set when adding an umm walad spouse (family-level flag, not stored on individual) */
+  isUmmWalad?: boolean;
 }
 
 interface IndividualFormProps {
@@ -49,6 +51,16 @@ interface IndividualFormProps {
   anchorSex?: 'M' | 'F' | '';
   /** The anchor person's display name (shown in Rule 3 prompt) */
   anchorName?: string;
+  /** Whether the workspace has umm walad feature enabled */
+  enableUmmWalad?: boolean;
+  /** Whether this form is in addSpouse mode (shows umm walad checkbox) */
+  isAddSpouse?: boolean;
+  /** In edit mode: the family ID to update isUmmWalad on (signals checkbox should show) */
+  ummWaladFamilyId?: string;
+  /** In edit mode: the current isUmmWalad value */
+  ummWaladInitialValue?: boolean;
+  /** In edit mode: whether the family has existing MARC/MARR data (triggers confirmation) */
+  ummWaladHasMarriageData?: boolean;
 }
 
 const EMPTY_FORM: IndividualFormData = {
@@ -84,6 +96,11 @@ export function IndividualForm({
   relationshipType,
   anchorSex,
   anchorName,
+  enableUmmWalad = false,
+  isAddSpouse = false,
+  ummWaladFamilyId,
+  ummWaladInitialValue,
+  ummWaladHasMarriageData,
 }: IndividualFormProps) {
   const [formData, setFormData] = useState<IndividualFormData>(() => {
     const base = { ...EMPTY_FORM, ...initialData };
@@ -92,6 +109,9 @@ export function IndividualForm({
     }
     return base;
   });
+
+  // Umm walad state (relevant in addSpouse mode and edit mode with single family)
+  const [isUmmWalad, setIsUmmWalad] = useState(ummWaladInitialValue ?? false);
 
   // Branch link state
   const [branchLinkMode, setBranchLinkMode] = useState(false);
@@ -111,6 +131,10 @@ export function IndividualForm({
   const [branchSubtree, setBranchSubtree] = useState<Record<string, unknown> | null>(null);
 
   const showBranchToggle = allowBranchLink && mode === 'create' && !!onBranchLink;
+  const showUmmWaladCheckbox = enableUmmWalad && (
+    (isAddSpouse && mode === 'create' && !branchLinkMode) ||
+    (mode === 'edit' && !!ummWaladFamilyId)
+  );
 
   const title = branchLinkMode ? 'ربط فرع من مساحة أخرى' : (mode === 'create' ? 'إضافة شخص جديد' : 'تعديل بيانات الشخص');
   const submitLabel = branchLinkMode
@@ -227,9 +251,10 @@ export function IndividualForm({
         }
         return;
       }
-      await onSubmit(formData);
+      const submitData = showUmmWaladCheckbox ? { ...formData, isUmmWalad } : formData;
+      await onSubmit(submitData);
     },
-    [formData, onSubmit, branchLinkMode, onBranchLink, branchToken, selectedBranchPersonId, orphanedChildNames, linkChildrenToAnchor],
+    [formData, onSubmit, branchLinkMode, onBranchLink, branchToken, selectedBranchPersonId, orphanedChildNames, linkChildrenToAnchor, isUmmWalad, showUmmWaladCheckbox],
   );
 
   const effectiveLoading = branchLinkMode ? branchLinkLoading : isLoading;
@@ -439,6 +464,26 @@ export function IndividualForm({
             </label>
           </div>
         </div>
+
+        {showUmmWaladCheckbox && (
+          <label className={styles.checkboxLabel}>
+            <input
+              type="checkbox"
+              checked={isUmmWalad}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                if (checked && ummWaladHasMarriageData) {
+                  const ok = window.confirm('تفعيل أم ولد سيحذف بيانات عقد القران والزفاف. هل تريد المتابعة؟');
+                  if (!ok) return;
+                }
+                setIsUmmWalad(checked);
+              }}
+              className={styles.checkbox}
+              aria-label="أم ولد"
+            />
+            أم ولد
+          </label>
+        )}
 
         <hr className={styles.sectionDivider} />
 

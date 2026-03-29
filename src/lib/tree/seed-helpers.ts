@@ -150,6 +150,7 @@ export async function seedTreeFromGedcomData(
             marriageDescription: fam.marriage.description || null,
             marriageNotes: fam.marriage.notes || null,
             isDivorced: fam.isDivorced,
+            isUmmWalad: fam.isUmmWalad ?? false,
             divorceDate: fam.divorce.date || null,
             divorceHijriDate: fam.divorce.hijriDate || null,
             divorcePlace: fam.divorce.place || null,

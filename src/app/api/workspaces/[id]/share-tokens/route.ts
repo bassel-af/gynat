@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireWorkspaceAdmin, requireWorkspaceMember, isErrorResponse } from '@/lib/api/workspace-auth';
+import { requireWorkspaceAdmin, isErrorResponse } from '@/lib/api/workspace-auth';
 import { createShareTokenSchema } from '@/lib/tree/branch-pointer-schemas';
 import { generateShareToken, hashToken } from '@/lib/tree/branch-share-token';
 

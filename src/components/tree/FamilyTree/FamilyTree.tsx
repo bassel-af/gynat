@@ -21,7 +21,6 @@ import type { GedcomData, Individual } from '@/lib/gedcom';
 import { getDisplayName, getAllAncestors, getAllDescendants, findTopmostAncestor, hasExternalFamily, computeGraftDescriptors } from '@/lib/gedcom';
 import { useTree } from '@/context/TreeContext';
 import { RootBackChip } from '@/components/tree/RootBackChip/RootBackChip';
-import { ViewModeToggle } from '@/components/tree/ViewModeToggle/ViewModeToggle';
 import { getLayoutedElements, NODE_WIDTH, NODE_HEIGHT, SPOUSE_WIDTH, type GraftNodeBuilder } from './layout';
 
 // Highlight state for lineage tracing

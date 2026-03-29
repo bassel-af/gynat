@@ -53,6 +53,7 @@ function makeFamily(overrides: Partial<DbFamily> & { id: string; treeId: string 
     marriagePlaceId: null,
     marriageDescription: null,
     marriageNotes: null,
+    isUmmWalad: false,
     isDivorced: false,
     divorceDate: null,
     divorceHijriDate: null,

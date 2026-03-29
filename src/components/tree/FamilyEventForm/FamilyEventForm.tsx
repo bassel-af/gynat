@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import styles from './FamilyEventForm.module.css';
 
 export interface FamilyEventFormData {
+  isUmmWalad?: boolean;
   marriageContractDate: string;
   marriageContractHijriDate: string;
   marriageContractPlace: string;
@@ -37,9 +38,16 @@ interface FamilyEventFormProps {
   isLoading?: boolean;
   error?: string;
   workspaceId?: string;
+  enableUmmWalad?: boolean;
+  /**
+   * @deprecated Use `initialData.isUmmWalad` instead. Kept for backward compatibility.
+   * When provided, overrides the initial isUmmWalad value from initialData.
+   */
+  isUmmWalad?: boolean;
 }
 
 const EMPTY_FORM: FamilyEventFormData = {
+  isUmmWalad: false,
   marriageContractDate: '',
   marriageContractHijriDate: '',
   marriageContractPlace: '',
@@ -57,6 +65,14 @@ const EMPTY_FORM: FamilyEventFormData = {
   divorceDescription: '',
   divorceNotes: '',
 };
+
+/** Fields that are cleared when isUmmWalad is enabled */
+const MARC_MARR_KEYS: (keyof FamilyEventFormData)[] = [
+  'marriageContractDate', 'marriageContractHijriDate', 'marriageContractPlace',
+  'marriageContractDescription', 'marriageContractNotes',
+  'marriageDate', 'marriageHijriDate', 'marriagePlace',
+  'marriageDescription', 'marriageNotes',
+];
 
 function hasMarriageContractData(data: Partial<FamilyEventFormData>): boolean {
   return !!(
@@ -96,11 +112,17 @@ export function FamilyEventForm({
   isLoading = false,
   error,
   workspaceId,
+  enableUmmWalad,
+  isUmmWalad: isUmmWaladProp,
 }: FamilyEventFormProps) {
   const [formData, setFormData] = useState<FamilyEventFormData>(() => ({
     ...EMPTY_FORM,
     ...initialData,
+    // Prop override takes precedence over initialData when explicitly provided
+    ...(isUmmWaladProp !== undefined ? { isUmmWalad: isUmmWaladProp } : {}),
   }));
+
+  const isUmmWalad = formData.isUmmWalad ?? false;
 
   const [expandedSections, setExpandedSections] = useState<Set<string>>(() => {
     const initial = new Set<string>();
@@ -128,6 +150,36 @@ export function FamilyEventForm({
     },
     [],
   );
+
+  /** Toggle isUmmWalad with a confirmation when enabling it would clear MARC/MARR data */
+  const handleUmmWaladToggle = useCallback((checked: boolean) => {
+    if (!checked) {
+      // Disabling umm walad — no data loss, just allow it
+      updateField('isUmmWalad', false);
+      return;
+    }
+    // Enabling umm walad — check if initial data has any MARC/MARR values
+    const hasExistingMarcMarr = initialData && (
+      hasMarriageContractData(initialData) || hasMarriageData(initialData)
+    );
+    if (hasExistingMarcMarr) {
+      const confirmed = window.confirm(
+        'تفعيل أم ولد سيحذف بيانات عقد القران والزفاف. هل تريد المتابعة؟',
+      );
+      if (!confirmed) return;
+    }
+    // Clear all MARC/MARR fields and enable umm walad
+    setFormData((prev) => {
+      const next = { ...prev, isUmmWalad: true };
+      for (const key of MARC_MARR_KEYS) {
+        (next as Record<string, unknown>)[key] = '';
+      }
+      // Also clear place IDs
+      next.marriageContractPlaceId = null;
+      next.marriagePlaceId = null;
+      return next;
+    });
+  }, [initialData, updateField]);
 
   const handleSubmit = useCallback(
     async (e: FormEvent) => {
@@ -168,7 +220,7 @@ export function FamilyEventForm({
     <Modal
       isOpen
       onClose={onClose}
-      title="أحداث الزواج"
+      title={isUmmWalad ? 'بيانات أم ولد' : 'أحداث الزواج'}
       actions={actions}
       className={styles.modal}
     >
@@ -179,8 +231,22 @@ export function FamilyEventForm({
       >
         {error && <div className={styles.error}>{error}</div>}
 
+        {/* Umm Walad toggle — visible when workspace enableUmmWalad=true */}
+        {enableUmmWalad && (
+          <label className={styles.ummWaladLabel}>
+            <input
+              type="checkbox"
+              checked={isUmmWalad}
+              onChange={(e) => handleUmmWaladToggle(e.target.checked)}
+              className={styles.checkbox}
+              aria-label="أم ولد"
+            />
+            أم ولد
+          </label>
+        )}
+
         {/* Marriage Contract Section */}
-        <div className={styles.eventSection}>
+        {!isUmmWalad && <div className={styles.eventSection}>
           <button
             type="button"
             className={styles.eventSectionHeader}
@@ -250,10 +316,10 @@ export function FamilyEventForm({
               </div>
             </div>
           )}
-        </div>
+        </div>}
 
         {/* Wedding Section */}
-        <div className={styles.eventSection}>
+        {!isUmmWalad && <div className={styles.eventSection}>
           <button
             type="button"
             className={styles.eventSectionHeader}
@@ -323,10 +389,10 @@ export function FamilyEventForm({
               </div>
             </div>
           )}
-        </div>
+        </div>}
 
-        {/* Divorce Section */}
-        <div className={clsx(styles.eventSection, styles.divorceSection)}>
+        {/* Divorce Section — hidden for umm walad (no marriage to dissolve) */}
+        {!isUmmWalad && <div className={clsx(styles.eventSection, styles.divorceSection)}>
           <button
             type="button"
             className={styles.eventSectionHeader}
@@ -410,7 +476,7 @@ export function FamilyEventForm({
               )}
             </div>
           )}
-        </div>
+        </div>}
       </form>
     </Modal>
   );

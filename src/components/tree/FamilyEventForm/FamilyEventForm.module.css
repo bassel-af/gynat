@@ -91,6 +91,12 @@
   composes: fieldGroup from '../../../styles/form-elements.module.css';
 }
 
+/* Umm walad toggle */
+.ummWaladLabel {
+  composes: checkboxLabel from '../../../styles/form-elements.module.css';
+  padding: var(--space-3) 0;
+}
+
 /* Error area */
 .error {
   composes: error from '../../../styles/form-elements.module.css';

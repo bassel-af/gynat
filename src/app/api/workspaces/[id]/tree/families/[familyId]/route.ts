@@ -51,6 +51,50 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     );
   }
 
+  // Guard: isUmmWalad requires workspace enableUmmWalad
+  if (parsed.data.isUmmWalad) {
+    const workspace = await prisma.workspace.findUnique({ where: { id: workspaceId }, select: { enableUmmWalad: true } });
+    if (!workspace?.enableUmmWalad) {
+      return NextResponse.json(
+        { error: 'ميزة أم ولد غير مفعّلة في هذه المساحة' },
+        { status: 400 },
+      );
+    }
+    // Clear MARC/MARR fields when setting isUmmWalad=true
+    parsed.data.marriageContractDate = null;
+    parsed.data.marriageContractHijriDate = null;
+    parsed.data.marriageContractPlace = null;
+    parsed.data.marriageContractPlaceId = null;
+    parsed.data.marriageContractDescription = null;
+    parsed.data.marriageContractNotes = null;
+    parsed.data.marriageDate = null;
+    parsed.data.marriageHijriDate = null;
+    parsed.data.marriagePlace = null;
+    parsed.data.marriagePlaceId = null;
+    parsed.data.marriageDescription = null;
+    parsed.data.marriageNotes = null;
+  }
+
+  // Guard: reject MARC/MARR data if effective isUmmWalad would be true
+  const effectiveIsUmmWalad = parsed.data.isUmmWalad !== undefined ? parsed.data.isUmmWalad : existing.isUmmWalad;
+  if (effectiveIsUmmWalad && !parsed.data.isUmmWalad) {
+    // Existing family is ummWalad and the update is not changing it — reject any MARC/MARR
+    const marcMarrFields = [
+      parsed.data.marriageContractDate, parsed.data.marriageContractHijriDate,
+      parsed.data.marriageContractPlace, parsed.data.marriageContractPlaceId,
+      parsed.data.marriageContractDescription, parsed.data.marriageContractNotes,
+      parsed.data.marriageDate, parsed.data.marriageHijriDate,
+      parsed.data.marriagePlace, parsed.data.marriagePlaceId,
+      parsed.data.marriageDescription, parsed.data.marriageNotes,
+    ];
+    if (marcMarrFields.some((v) => v !== undefined && v !== null && v !== '')) {
+      return NextResponse.json(
+        { error: 'أم ولد لا يمكن أن يكون لها عقد قران أو زفاف' },
+        { status: 400 },
+      );
+    }
+  }
+
   // Verify new husband if provided (not null — null means "remove")
   if (parsed.data.husbandId !== undefined) {
     if (parsed.data.husbandId !== null) {

@@ -105,7 +105,7 @@ export default function IslamicGedcomPage() {
           </div>
 
           {/* _UMM_WALAD */}
-          <div className={styles.tagBlock}>
+          <div id="umm-walad" className={styles.tagBlock}>
             <div className={styles.tagHeader}>
               <span className={`${styles.tagBadge} ${styles.tagBadgeCustom}`}>_UMM_WALAD</span>
               <span className={styles.tagLabel}>امتداد</span>
