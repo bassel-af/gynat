@@ -4,6 +4,7 @@ import { requireWorkspaceMember, requireWorkspaceAdmin, isErrorResponse } from '
 import { sendEmail } from '@/lib/email/transport';
 import { buildInviteEmail } from '@/lib/email/templates/invite';
 import { z } from 'zod';
+import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -32,20 +33,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   const result = await requireWorkspaceAdmin(request, id);
   if (isErrorResponse(result)) return result;
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
-  }
-
-  const parsed = inviteSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues[0].message },
-      { status: 400 },
-    );
-  }
+  const parsed = await parseValidatedBody(request, inviteSchema);
+  if (isParseError(parsed)) return parsed;
 
   const { email, individualId } = parsed.data;
 

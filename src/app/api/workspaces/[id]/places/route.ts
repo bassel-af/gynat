@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { requireWorkspaceMember, requireTreeEditor, isErrorResponse } from '@/lib/api/workspace-auth';
 import { searchPlacesSchema, createPlaceSchema } from '@/lib/places/schemas';
 import { stripArabicDiacritics, ARABIC_DIACRITICS_CHARS } from '@/lib/utils/search';
+import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -126,20 +127,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   const authResult = await requireTreeEditor(request, workspaceId);
   if (isErrorResponse(authResult)) return authResult;
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
-  }
-
-  const parsed = createPlaceSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues[0].message },
-      { status: 400 },
-    );
-  }
+  const parsed = await parseValidatedBody(request, createPlaceSchema);
+  if (isParseError(parsed)) return parsed;
 
   const { nameAr, nameEn, parentId } = parsed.data;
 

@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireTreeEditor, isErrorResponse } from '@/lib/api/workspace-auth';
 import { treeMutateLimiter, rateLimitResponse } from '@/lib/api/rate-limit';
-import { getOrCreateTree, getTreeFamily, getTreeIndividual } from '@/lib/tree/queries';
+import { getOrCreateTree, getTreeFamily, getTreeIndividual, touchTreeTimestamp } from '@/lib/tree/queries';
 import { z } from 'zod';
+import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
 
 type RouteParams = { params: Promise<{ id: string; familyId: string }> };
 
@@ -21,20 +22,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   const { allowed, retryAfterSeconds } = treeMutateLimiter.check(result.user.id);
   if (!allowed) return rateLimitResponse(retryAfterSeconds);
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
-  }
-
-  const parsed = addChildSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues[0].message },
-      { status: 400 },
-    );
-  }
+  const parsed = await parseValidatedBody(request, addChildSchema);
+  if (isParseError(parsed)) return parsed;
 
   const tree = await getOrCreateTree(workspaceId);
   const family = await getTreeFamily(tree.id, familyId);
@@ -76,15 +65,18 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     },
   });
 
-  await prisma.treeEditLog.create({
-    data: {
-      treeId: tree.id,
-      userId: result.user.id,
-      action: 'create',
-      entityType: 'family_child',
-      entityId: familyId,
-    },
-  });
+  await Promise.all([
+    prisma.treeEditLog.create({
+      data: {
+        treeId: tree.id,
+        userId: result.user.id,
+        action: 'create',
+        entityType: 'family_child',
+        entityId: familyId,
+      },
+    }),
+    touchTreeTimestamp(tree.id),
+  ]);
 
   return NextResponse.json({ data: familyChild }, { status: 201 });
 }

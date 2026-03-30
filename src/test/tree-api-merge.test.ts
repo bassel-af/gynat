@@ -87,6 +87,7 @@ function mockTargetTree() {
   mockFamilyTreeFindUnique.mockResolvedValue({
     id: 'tree-target',
     workspaceId: wsId,
+    lastModifiedAt: now,
     individuals: [
       {
         id: 'father', treeId: 'tree-target', gedcomId: null,

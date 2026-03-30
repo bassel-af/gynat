@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { getAuthenticatedUser } from '@/lib/api/auth';
 import { treeMutateLimiter } from '@/lib/api/rate-limit';
 import { z } from 'zod';
+import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
 
 const updatePreferencesSchema = z.object({
   calendarPreference: z.enum(['hijri', 'gregorian']),
@@ -38,20 +39,8 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
   }
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
-  }
-
-  const parsed = updatePreferencesSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues[0].message },
-      { status: 400 },
-    );
-  }
+  const parsed = await parseValidatedBody(request, updatePreferencesSchema);
+  if (isParseError(parsed)) return parsed;
 
   const updated = await prisma.user.update({
     where: { id: user.id },

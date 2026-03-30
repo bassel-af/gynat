@@ -4,6 +4,7 @@ import { requireWorkspaceMember, requireTreeEditor, isErrorResponse } from '@/li
 import { redeemTokenSchema } from '@/lib/tree/branch-pointer-schemas';
 import { hashToken } from '@/lib/tree/branch-share-token';
 import { validateSpouseGender } from '@/lib/tree/family-validators';
+import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -54,20 +55,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   const result = await requireTreeEditor(request, workspaceId);
   if (isErrorResponse(result)) return result;
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
-  }
-
-  const parsed = redeemTokenSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: 'بيانات غير صالحة' },
-      { status: 400 },
-    );
-  }
+  const parsed = await parseValidatedBody(request, redeemTokenSchema);
+  if (isParseError(parsed)) return parsed;
 
   const { token, anchorIndividualId, selectedPersonId, relationship, linkChildrenToAnchor } = parsed.data;
 

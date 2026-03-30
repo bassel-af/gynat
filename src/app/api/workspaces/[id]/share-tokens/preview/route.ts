@@ -6,6 +6,7 @@ import { getTreeByWorkspaceId } from '@/lib/tree/queries';
 import { dbTreeToGedcomData, redactPrivateIndividuals } from '@/lib/tree/mapper';
 import { extractPointedSubtree } from '@/lib/tree/branch-pointer-merge';
 import { z } from 'zod';
+import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -20,20 +21,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   const result = await requireWorkspaceAdmin(request, workspaceId);
   if (isErrorResponse(result)) return result;
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
-  }
-
-  const parsed = previewSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: 'بيانات غير صالحة' },
-      { status: 400 },
-    );
-  }
+  const parsed = await parseValidatedBody(request, previewSchema);
+  if (isParseError(parsed)) return parsed;
 
   const { token } = parsed.data;
   const tokenHash = hashToken(token);

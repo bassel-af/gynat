@@ -229,7 +229,7 @@ export default function IslamicGedcomPage() {
             <p className={styles.tagDesc}>
               إنهاء عقد الزواج، سواء بطلاق أو خلع.
               لا يؤثر على شجرة النسب — الأطفال يبقون مرتبطين بسجل العائلة
-              وبكلا الوالدين بعد الطلاق.
+              وبكلا الوالدين بعد الطلاق، لذا ليس هناك داع لعلامات مخصصة.
             </p>
             <div className={styles.codeBlock}>
               <span className={styles.codeId}>0 @F1@ FAM</span>{'\n'}
@@ -317,7 +317,7 @@ export default function IslamicGedcomPage() {
             <div className={styles.tagHeader}>
               <span className={`${styles.tagBadge} ${styles.tagBadgeCustom}`}>_RADA_FAMC</span>
               <span className={styles.tagLabel}>امتداد</span>
-              <span className={styles.tagName}>الانتماء لعائلة رضاعة</span>
+              <span className={styles.tagName}>الانتماء لعائلة من رضاعة</span>
             </div>
             <p className={styles.tagDesc}>
               يوضع على سجل الفرد للإشارة إلى عائلة الرضاعة التي ينتمي إليها.

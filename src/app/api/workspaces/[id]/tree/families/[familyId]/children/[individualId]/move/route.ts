@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireTreeEditor, isErrorResponse } from '@/lib/api/workspace-auth';
 import { treeMutateLimiter, rateLimitResponse } from '@/lib/api/rate-limit';
-import { getOrCreateTree, getTreeFamily } from '@/lib/tree/queries';
+import { getOrCreateTree, getTreeFamily, touchTreeTimestamp } from '@/lib/tree/queries';
 import { z } from 'zod';
+import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
 
 type RouteParams = {
   params: Promise<{ id: string; familyId: string; individualId: string }>;
@@ -28,20 +29,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   if (!allowed) return rateLimitResponse(retryAfterSeconds);
 
   // 3. Parse body
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
-  }
-
-  const parsed = moveChildSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues[0].message },
-      { status: 400 },
-    );
-  }
+  const parsed = await parseValidatedBody(request, moveChildSchema);
+  if (isParseError(parsed)) return parsed;
 
   const { targetFamilyId } = parsed.data;
 
@@ -165,6 +154,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         },
       });
     });
+
+    await touchTreeTimestamp(tree.id);
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch {

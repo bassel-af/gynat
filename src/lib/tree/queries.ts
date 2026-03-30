@@ -66,6 +66,17 @@ export async function getOrCreateTree(workspaceId: string) {
 }
 
 /**
+ * Update the lastModifiedAt timestamp on the tree for a workspace.
+ * Called after any tree mutation to invalidate ETags.
+ */
+export async function touchTreeTimestamp(treeId: string) {
+  return prisma.familyTree.update({
+    where: { id: treeId },
+    data: { lastModifiedAt: new Date() },
+  })
+}
+
+/**
  * Get a single individual, verifying it belongs to the specified tree.
  */
 export async function getTreeIndividual(treeId: string, individualId: string) {

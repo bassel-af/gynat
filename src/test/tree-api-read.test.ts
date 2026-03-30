@@ -116,6 +116,7 @@ describe('GET /api/workspaces/[id]/tree', () => {
     mockFamilyTreeCreate.mockResolvedValue({
       id: 'tree-uuid-1',
       workspaceId: wsId,
+      lastModifiedAt: new Date(),
       individuals: [],
       families: [],
     });
@@ -137,6 +138,7 @@ describe('GET /api/workspaces/[id]/tree', () => {
     mockFamilyTreeFindUnique.mockResolvedValue({
       id: 'tree-uuid-1',
       workspaceId: wsId,
+      lastModifiedAt: now,
       individuals: [
         {
           id: 'ind-1',
@@ -227,6 +229,7 @@ describe('GET /api/workspaces/[id]/tree', () => {
     mockFamilyTreeFindUnique.mockResolvedValue({
       id: 'tree-uuid-1',
       workspaceId: wsId,
+      lastModifiedAt: new Date(),
       individuals: [],
       families: [],
     });
@@ -252,6 +255,7 @@ describe('GET /api/workspaces/[id]/tree', () => {
     mockFamilyTreeFindUnique.mockResolvedValue({
       id: 'tree-uuid-1',
       workspaceId: wsId,
+      lastModifiedAt: now,
       individuals: [
         {
           id: 'ind-public',

@@ -16,6 +16,7 @@ vi.mock('@supabase/supabase-js', () => ({
 const mockMembershipFindUnique = vi.fn();
 const mockFamilyTreeFindUnique = vi.fn();
 const mockFamilyTreeCreate = vi.fn();
+const mockFamilyTreeUpdate = vi.fn();
 const mockFamilyFindFirst = vi.fn();
 const mockFamilyChildFindUnique = vi.fn();
 const mockFamilyChildCreate = vi.fn();
@@ -31,6 +32,7 @@ vi.mock('@/lib/db', () => ({
     familyTree: {
       findUnique: (...args: unknown[]) => mockFamilyTreeFindUnique(...args),
       create: (...args: unknown[]) => mockFamilyTreeCreate(...args),
+      update: (...args: unknown[]) => mockFamilyTreeUpdate(...args),
     },
     family: {
       findFirst: (...args: unknown[]) => mockFamilyFindFirst(...args),

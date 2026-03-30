@@ -146,14 +146,29 @@ export function usePersonActions({
   }, [workspace]);
 
   // -------------------------------------------------------------------------
+  // Shared form action wrapper — handles loading, error, and refresh
+  // -------------------------------------------------------------------------
+
+  const withFormAction = useCallback(async (action: () => Promise<void>) => {
+    setFormLoading(true);
+    setFormError('');
+    try {
+      await action();
+      await workspace!.refreshTree();
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'حدث خطأ');
+    } finally {
+      setFormLoading(false);
+    }
+  }, [workspace]);
+
+  // -------------------------------------------------------------------------
   // Form submit handlers
   // -------------------------------------------------------------------------
 
   const handleEditSubmit = useCallback(async (formData: IndividualFormData) => {
     if (!workspace || isPointed) return;
-    setFormLoading(true);
-    setFormError('');
-    try {
+    await withFormAction(async () => {
       const res = await apiFetch(`/api/workspaces/${workspace.workspaceId}/tree/individuals/${personId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -183,19 +198,12 @@ export function usePersonActions({
         }
       }
       setFormMode(null);
-      await workspace.refreshTree();
-    } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'حدث خطأ');
-    } finally {
-      setFormLoading(false);
-    }
-  }, [workspace, personId, isPointed, formMode]);
+    });
+  }, [workspace, personId, isPointed, formMode, withFormAction]);
 
   const handleAddChildSubmit = useCallback(async (formData: IndividualFormData) => {
     if (!workspace || !person || !data || isPointed) return;
-    setFormLoading(true);
-    setFormError('');
-    try {
+    await withFormAction(async () => {
       const newPerson = await createIndividual(formData);
 
       // Use the target family from the form mode, or the first family
@@ -220,19 +228,12 @@ export function usePersonActions({
       }
 
       setFormMode(null);
-      await workspace.refreshTree();
-    } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'حدث خطأ');
-    } finally {
-      setFormLoading(false);
-    }
-  }, [workspace, person, data, personId, formMode, createIndividual, addChildToFamily, createFamily, isPointed]);
+    });
+  }, [workspace, person, data, personId, formMode, createIndividual, addChildToFamily, createFamily, isPointed, withFormAction]);
 
   const handleAddSpouseSubmit = useCallback(async (formData: IndividualFormData) => {
     if (!workspace || !person || isPointed) return;
-    setFormLoading(true);
-    setFormError('');
-    try {
+    await withFormAction(async () => {
       const newPerson = await createIndividual(formData);
 
       // Create family with both spouses
@@ -249,7 +250,6 @@ export function usePersonActions({
       }
       const newFamily = await createFamily(familyOpts);
 
-      await workspace.refreshTree();
       if (formData.isUmmWalad) {
         // Umm walad has no marriage events — just close the form
         setFormMode(null);
@@ -258,18 +258,12 @@ export function usePersonActions({
         setFormMode({ kind: 'editFamilyEvent', familyId: newFamily.id });
       }
       setFormError('');
-    } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'حدث خطأ');
-    } finally {
-      setFormLoading(false);
-    }
-  }, [workspace, person, personId, createIndividual, createFamily, isPointed]);
+    });
+  }, [workspace, person, personId, createIndividual, createFamily, isPointed, withFormAction]);
 
   const handleAddParentSubmit = useCallback(async (formData: IndividualFormData) => {
     if (!workspace || !person || !data || isPointed) return;
-    setFormLoading(true);
-    setFormError('');
-    try {
+    await withFormAction(async () => {
       const newPerson = await createIndividual(formData);
       const newSex = formData.sex;
 
@@ -296,35 +290,21 @@ export function usePersonActions({
       }
 
       setFormMode(null);
-      await workspace.refreshTree();
-    } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'حدث خطأ');
-    } finally {
-      setFormLoading(false);
-    }
-  }, [workspace, person, data, personId, createIndividual, patchFamily, createFamily, isPointed]);
+    });
+  }, [workspace, person, data, personId, createIndividual, patchFamily, createFamily, isPointed, withFormAction]);
 
   const handleAddSiblingSubmit = useCallback(async (formData: IndividualFormData) => {
     if (!workspace || formMode?.kind !== 'addSibling' || isPointed) return;
-    setFormLoading(true);
-    setFormError('');
-    try {
+    await withFormAction(async () => {
       const newPerson = await createIndividual(formData);
       await addChildToFamily(formMode.targetFamilyId, newPerson.id);
       setFormMode(null);
-      await workspace.refreshTree();
-    } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'حدث خطأ');
-    } finally {
-      setFormLoading(false);
-    }
-  }, [workspace, formMode, createIndividual, addChildToFamily, isPointed]);
+    });
+  }, [workspace, formMode, createIndividual, addChildToFamily, isPointed, withFormAction]);
 
   const handleFamilyEventSubmit = useCallback(async (eventData: FamilyEventFormData) => {
     if (!workspace || formMode?.kind !== 'editFamilyEvent' || isPointed) return;
-    setFormLoading(true);
-    setFormError('');
-    try {
+    await withFormAction(async () => {
       const res = await apiFetch(`/api/workspaces/${workspace.workspaceId}/tree/families/${formMode.familyId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -356,13 +336,8 @@ export function usePersonActions({
         throw new Error(json.error ?? 'حدث خطأ');
       }
       setFormMode(null);
-      await workspace.refreshTree();
-    } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'حدث خطأ');
-    } finally {
-      setFormLoading(false);
-    }
-  }, [workspace, formMode, isPointed]);
+    });
+  }, [workspace, formMode, isPointed, withFormAction]);
 
   // -------------------------------------------------------------------------
   // Move child
@@ -370,8 +345,7 @@ export function usePersonActions({
 
   const moveChild = useCallback(async (targetFamilyId: string) => {
     if (!workspace || !person?.familyAsChild || isPointed) return;
-    setFormLoading(true);
-    try {
+    await withFormAction(async () => {
       const res = await apiFetch(
         `/api/workspaces/${workspace.workspaceId}/tree/families/${person.familyAsChild}/children/${personId}/move`,
         {
@@ -384,13 +358,8 @@ export function usePersonActions({
         const json = await res.json();
         throw new Error(json.error ?? 'حدث خطأ');
       }
-      await workspace.refreshTree();
-    } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'حدث خطأ');
-    } finally {
-      setFormLoading(false);
-    }
-  }, [workspace, person, personId, isPointed]);
+    });
+  }, [workspace, person, personId, isPointed, withFormAction]);
 
   // -------------------------------------------------------------------------
   // Delete handler

@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireTreeEditor, isErrorResponse } from '@/lib/api/workspace-auth';
 import { treeMutateLimiter, rateLimitResponse } from '@/lib/api/rate-limit';
-import { getOrCreateTree, getTreeIndividual } from '@/lib/tree/queries';
+import { getOrCreateTree, getTreeIndividual, touchTreeTimestamp } from '@/lib/tree/queries';
 import { createFamilySchema } from '@/lib/tree/schemas';
 import { validateFamilyGender } from '@/lib/tree/family-validators';
+import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -18,20 +19,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   const { allowed, retryAfterSeconds } = treeMutateLimiter.check(result.user.id);
   if (!allowed) return rateLimitResponse(retryAfterSeconds);
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
-  }
-
-  const parsed = createFamilySchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues[0].message },
-      { status: 400 },
-    );
-  }
+  const parsed = await parseValidatedBody(request, createFamilySchema);
+  if (isParseError(parsed)) return parsed;
 
   const tree = await getOrCreateTree(workspaceId);
   const { husbandId, wifeId, childrenIds, ...eventFields } = parsed.data;
@@ -103,15 +92,18 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     include: { children: true },
   });
 
-  await prisma.treeEditLog.create({
-    data: {
-      treeId: tree.id,
-      userId: result.user.id,
-      action: 'create',
-      entityType: 'family',
-      entityId: family.id,
-    },
-  });
+  await Promise.all([
+    prisma.treeEditLog.create({
+      data: {
+        treeId: tree.id,
+        userId: result.user.id,
+        action: 'create',
+        entityType: 'family',
+        entityId: family.id,
+      },
+    }),
+    touchTreeTimestamp(tree.id),
+  ]);
 
   return NextResponse.json({ data: family }, { status: 201 });
 }

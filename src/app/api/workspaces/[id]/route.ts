@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { requireWorkspaceMember, requireWorkspaceAdmin, isErrorResponse } from '@/lib/api/workspace-auth';
 import { serializeBigInt } from '@/lib/api/serialize';
 import { z } from 'zod';
+import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -38,20 +39,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   const result = await requireWorkspaceAdmin(request, id);
   if (isErrorResponse(result)) return result;
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
-  }
-
-  const parsed = updateWorkspaceSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues[0].message },
-      { status: 400 },
-    );
-  }
+  const parsed = await parseValidatedBody(request, updateWorkspaceSchema);
+  if (isParseError(parsed)) return parsed;
 
   const workspace = await prisma.workspace.update({
     where: { id },

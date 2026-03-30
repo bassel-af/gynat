@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireTreeEditor, isErrorResponse } from '@/lib/api/workspace-auth';
 import { treeMutateLimiter, rateLimitResponse } from '@/lib/api/rate-limit';
-import { getOrCreateTree, getTreeFamily } from '@/lib/tree/queries';
+import { getOrCreateTree, getTreeFamily, touchTreeTimestamp } from '@/lib/tree/queries';
 
 type RouteParams = { params: Promise<{ id: string; familyId: string; individualId: string }> };
 
@@ -50,15 +50,18 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     },
   });
 
-  await prisma.treeEditLog.create({
-    data: {
-      treeId: tree.id,
-      userId: result.user.id,
-      action: 'delete',
-      entityType: 'family_child',
-      entityId: familyId,
-    },
-  });
+  await Promise.all([
+    prisma.treeEditLog.create({
+      data: {
+        treeId: tree.id,
+        userId: result.user.id,
+        action: 'delete',
+        entityType: 'family_child',
+        entityId: familyId,
+      },
+    }),
+    touchTreeTimestamp(tree.id),
+  ]);
 
   return new NextResponse(null, { status: 204 });
 }

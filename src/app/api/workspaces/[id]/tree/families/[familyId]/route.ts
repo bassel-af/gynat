@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireTreeEditor, isErrorResponse } from '@/lib/api/workspace-auth';
 import { treeMutateLimiter, rateLimitResponse } from '@/lib/api/rate-limit';
-import { getOrCreateTree, getTreeFamily, getTreeIndividual } from '@/lib/tree/queries';
+import { getOrCreateTree, getTreeFamily, getTreeIndividual, touchTreeTimestamp } from '@/lib/tree/queries';
 import { updateFamilySchema } from '@/lib/tree/schemas';
 import { validateFamilyGender } from '@/lib/tree/family-validators';
 import { isSyntheticFamilyId } from '@/lib/tree/branch-pointer-guards';
+import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
 
 type RouteParams = { params: Promise<{ id: string; familyId: string }> };
 
@@ -27,20 +28,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   const { allowed, retryAfterSeconds } = treeMutateLimiter.check(result.user.id);
   if (!allowed) return rateLimitResponse(retryAfterSeconds);
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
-  }
-
-  const parsed = updateFamilySchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues[0].message },
-      { status: 400 },
-    );
-  }
+  const parsed = await parseValidatedBody(request, updateFamilySchema);
+  if (isParseError(parsed)) return parsed;
 
   const tree = await getOrCreateTree(workspaceId);
   const existing = await getTreeFamily(tree.id, familyId);
@@ -149,16 +138,19 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     include: { children: true },
   });
 
-  await prisma.treeEditLog.create({
-    data: {
-      treeId: tree.id,
-      userId: result.user.id,
-      action: 'update',
-      entityType: 'family',
-      entityId: familyId,
-      payload: parsed.data,
-    },
-  });
+  await Promise.all([
+    prisma.treeEditLog.create({
+      data: {
+        treeId: tree.id,
+        userId: result.user.id,
+        action: 'update',
+        entityType: 'family',
+        entityId: familyId,
+        payload: parsed.data,
+      },
+    }),
+    touchTreeTimestamp(tree.id),
+  ]);
 
   return NextResponse.json({ data: family });
 }
@@ -209,6 +201,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       },
     });
   });
+
+  await touchTreeTimestamp(tree.id);
 
   return new NextResponse(null, { status: 204 });
 }

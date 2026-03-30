@@ -4,6 +4,7 @@ import { workspaceCreateLimiter, rateLimitResponse } from '@/lib/api/rate-limit'
 import { prisma } from '@/lib/db';
 import { z } from 'zod';
 import { serializeBigInt } from '@/lib/api/serialize';
+import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
 
 const createWorkspaceSchema = z.object({
   slug: z.string().max(64).regex(/^[a-z0-9-]+$/, 'Slug must contain only lowercase letters, numbers, and hyphens'),
@@ -22,20 +23,8 @@ export async function POST(request: NextRequest) {
   const { allowed, retryAfterSeconds } = workspaceCreateLimiter.check(user.id);
   if (!allowed) return rateLimitResponse(retryAfterSeconds);
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
-  }
-
-  const parsed = createWorkspaceSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues[0].message },
-      { status: 400 },
-    );
-  }
+  const parsed = await parseValidatedBody(request, createWorkspaceSchema);
+  if (isParseError(parsed)) return parsed;
 
   // Per-user workspace creation limit — count only workspaces the user owns (is admin of),
   // not all memberships, so being invited to workspaces doesn't block creating new ones

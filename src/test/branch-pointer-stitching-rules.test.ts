@@ -836,6 +836,7 @@ describe('Security hardening', () => {
     const res = await POST(req, routeParams);
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toBe('بيانات غير صالحة');
+    // parseValidatedBody returns the first Zod issue rather than a generic message
+    expect(body.error).toBe('Invalid UUID');
   });
 });

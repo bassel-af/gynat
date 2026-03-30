@@ -5,8 +5,14 @@ import { getTreeByWorkspaceId, getOrCreateTree } from '@/lib/tree/queries';
 import { dbTreeToGedcomData } from '@/lib/tree/mapper';
 import { extractPointedSubtree } from '@/lib/tree/branch-pointer-merge';
 import { prepareDeepCopy, persistDeepCopy } from '@/lib/tree/branch-pointer-deep-copy';
+import { z } from 'zod';
+import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
 
 type RouteParams = { params: Promise<{ id: string; tokenId: string }> };
+
+const toggleTokenSchema = z.object({
+  isRevoked: z.boolean({ required_error: 'يجب تقديم isRevoked كقيمة منطقية' }),
+});
 
 // PATCH /api/workspaces/[id]/share-tokens/[tokenId] — Disable or re-enable a share token
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
@@ -15,25 +21,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   const result = await requireWorkspaceAdmin(request, workspaceId);
   if (isErrorResponse(result)) return result;
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'جسم الطلب غير صالح' }, { status: 400 });
-  }
+  const parsed = await parseValidatedBody(request, toggleTokenSchema);
+  if (isParseError(parsed)) return parsed;
 
-  if (
-    typeof body !== 'object' ||
-    body === null ||
-    typeof (body as Record<string, unknown>).isRevoked !== 'boolean'
-  ) {
-    return NextResponse.json(
-      { error: 'يجب تقديم isRevoked كقيمة منطقية' },
-      { status: 400 },
-    );
-  }
-
-  const { isRevoked } = body as { isRevoked: boolean };
+  const { isRevoked } = parsed.data;
 
   const token = await prisma.branchShareToken.findUnique({
     where: { id: tokenId },

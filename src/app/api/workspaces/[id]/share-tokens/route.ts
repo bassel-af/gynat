@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { requireWorkspaceAdmin, isErrorResponse } from '@/lib/api/workspace-auth';
 import { createShareTokenSchema } from '@/lib/tree/branch-pointer-schemas';
 import { generateShareToken, hashToken } from '@/lib/tree/branch-share-token';
+import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -19,20 +20,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   const result = await requireWorkspaceAdmin(request, workspaceId);
   if (isErrorResponse(result)) return result;
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
-  }
-
-  const parsed = createShareTokenSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues[0].message },
-      { status: 400 },
-    );
-  }
+  const parsed = await parseValidatedBody(request, createShareTokenSchema);
+  if (isParseError(parsed)) return parsed;
 
   const { rootIndividualId, depthLimit, includeGrafts, targetWorkspaceSlug, isPublic } = parsed.data;
 

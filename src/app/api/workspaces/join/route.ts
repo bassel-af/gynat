@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from '@/lib/api/auth';
 import { joinCodeLimiter, rateLimitResponse } from '@/lib/api/rate-limit';
 import { prisma } from '@/lib/db';
 import { z } from 'zod';
+import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
 
 const joinSchema = z.object({
   code: z.string().min(1, 'Code is required').max(64),
@@ -18,20 +19,8 @@ export async function POST(request: NextRequest) {
   const { allowed, retryAfterSeconds } = joinCodeLimiter.check(user.id);
   if (!allowed) return rateLimitResponse(retryAfterSeconds);
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
-  }
-
-  const parsed = joinSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues[0].message },
-      { status: 400 },
-    );
-  }
+  const parsed = await parseValidatedBody(request, joinSchema);
+  if (isParseError(parsed)) return parsed;
 
   const { code } = parsed.data;
 

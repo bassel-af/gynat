@@ -593,6 +593,161 @@ describe('usePersonActions', () => {
   });
 
   // -----------------------------------------------------------------------
+  // handleAddSiblingSubmit
+  // -----------------------------------------------------------------------
+
+  it('handleAddSiblingSubmit creates individual, adds to family, clears form mode, and refreshes', async () => {
+    const person = makeIndividual({ familyAsChild: '@F1@' });
+    const data = makeGedcomData(
+      { [person.id]: person },
+      {
+        '@F1@': {
+          id: '@F1@', type: 'FAM', husband: '@I2@', wife: null, children: ['@I1@'],
+          marriageContract: makeEmptyEvent(), marriage: makeEmptyEvent(),
+          divorce: makeEmptyEvent(), isDivorced: false,
+        },
+      },
+    );
+
+    mockApiFetch
+      .mockResolvedValueOnce(okResponse({ id: '@I99@' }))
+      .mockResolvedValueOnce(okResponse(undefined));
+
+    const { result } = renderHook(() =>
+      usePersonActions({
+        personId: person.id,
+        workspace: mockWorkspace,
+        person,
+        data,
+        setSelectedPersonId: mockSetSelectedPersonId,
+      }),
+    );
+
+    act(() => {
+      result.current.setFormMode({ kind: 'addSibling', targetFamilyId: '@F1@' });
+    });
+
+    await act(async () => {
+      await result.current.handleAddSiblingSubmit(makeFormData());
+    });
+
+    expect(mockApiFetch).toHaveBeenCalledTimes(2);
+    expect(mockApiFetch).toHaveBeenNthCalledWith(
+      2,
+      '/api/workspaces/ws-123/tree/families/@F1@/children',
+      expect.objectContaining({ method: 'POST' }),
+    );
+    expect(result.current.formMode).toBeNull();
+    expect(result.current.formLoading).toBe(false);
+    expect(mockWorkspace.refreshTree).toHaveBeenCalled();
+  });
+
+  it('handleAddSiblingSubmit sets formError on failure', async () => {
+    const person = makeIndividual({ familyAsChild: '@F1@' });
+    const data = makeGedcomData(
+      { [person.id]: person },
+      {
+        '@F1@': {
+          id: '@F1@', type: 'FAM', husband: '@I2@', wife: null, children: ['@I1@'],
+          marriageContract: makeEmptyEvent(), marriage: makeEmptyEvent(),
+          divorce: makeEmptyEvent(), isDivorced: false,
+        },
+      },
+    );
+
+    mockApiFetch.mockRejectedValueOnce(new Error('network error'));
+
+    const { result } = renderHook(() =>
+      usePersonActions({
+        personId: person.id,
+        workspace: mockWorkspace,
+        person,
+        data,
+        setSelectedPersonId: mockSetSelectedPersonId,
+      }),
+    );
+
+    act(() => {
+      result.current.setFormMode({ kind: 'addSibling', targetFamilyId: '@F1@' });
+    });
+
+    await act(async () => {
+      await result.current.handleAddSiblingSubmit(makeFormData());
+    });
+
+    expect(result.current.formError).toBe('network error');
+    expect(result.current.formLoading).toBe(false);
+  });
+
+  // -----------------------------------------------------------------------
+  // moveChild error handling
+  // -----------------------------------------------------------------------
+
+  it('moveChild sets formError on failure', async () => {
+    const person = makeIndividual({ familyAsChild: '@F1@' });
+    const data = makeGedcomData(
+      { [person.id]: person },
+      {
+        '@F1@': {
+          id: '@F1@', type: 'FAM', husband: '@I2@', wife: null, children: ['@I1@'],
+          marriageContract: makeEmptyEvent(), marriage: makeEmptyEvent(),
+          divorce: makeEmptyEvent(), isDivorced: false,
+        },
+      },
+    );
+
+    mockApiFetch.mockRejectedValueOnce(new Error('move failed'));
+
+    const { result } = renderHook(() =>
+      usePersonActions({
+        personId: person.id,
+        workspace: mockWorkspace,
+        person,
+        data,
+        setSelectedPersonId: mockSetSelectedPersonId,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.moveChild('@F2@');
+    });
+
+    expect(result.current.formError).toBe('move failed');
+    expect(result.current.formLoading).toBe(false);
+  });
+
+  // -----------------------------------------------------------------------
+  // Non-Error thrown in catch
+  // -----------------------------------------------------------------------
+
+  it('sets generic error when non-Error is thrown', async () => {
+    const person = makeIndividual();
+    const data = makeGedcomData({ [person.id]: person });
+    mockApiFetch.mockRejectedValueOnce('string error');
+
+    const { result } = renderHook(() =>
+      usePersonActions({
+        personId: person.id,
+        workspace: mockWorkspace,
+        person,
+        data,
+        setSelectedPersonId: mockSetSelectedPersonId,
+      }),
+    );
+
+    act(() => {
+      result.current.setFormMode({ kind: 'edit' });
+    });
+
+    await act(async () => {
+      await result.current.handleEditSubmit(makeFormData());
+    });
+
+    expect(result.current.formError).toBe('حدث خطأ');
+    expect(result.current.formLoading).toBe(false);
+  });
+
+  // -----------------------------------------------------------------------
   // No workspace
   // -----------------------------------------------------------------------
 

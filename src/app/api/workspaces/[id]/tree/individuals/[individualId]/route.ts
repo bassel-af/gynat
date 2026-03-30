@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireTreeEditor, isErrorResponse } from '@/lib/api/workspace-auth';
 import { treeMutateLimiter, rateLimitResponse } from '@/lib/api/rate-limit';
-import { getOrCreateTree, getTreeIndividual } from '@/lib/tree/queries';
+import { getOrCreateTree, getTreeIndividual, touchTreeTimestamp } from '@/lib/tree/queries';
 import { updateIndividualSchema } from '@/lib/tree/schemas';
 import { isPointedIndividualInWorkspace } from '@/lib/tree/branch-pointer-queries';
+import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
 
 type RouteParams = { params: Promise<{ id: string; individualId: string }> };
 
@@ -18,20 +19,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   const { allowed, retryAfterSeconds } = treeMutateLimiter.check(result.user.id);
   if (!allowed) return rateLimitResponse(retryAfterSeconds);
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
-  }
-
-  const parsed = updateIndividualSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues[0].message },
-      { status: 400 },
-    );
-  }
+  const parsed = await parseValidatedBody(request, updateIndividualSchema);
+  if (isParseError(parsed)) return parsed;
 
   // Reject mutations on pointed (read-only) individuals
   const isPointed = await isPointedIndividualInWorkspace(individualId, workspaceId);
@@ -56,16 +45,19 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     data: parsed.data,
   });
 
-  await prisma.treeEditLog.create({
-    data: {
-      treeId: tree.id,
-      userId: result.user.id,
-      action: 'update',
-      entityType: 'individual',
-      entityId: individualId,
-      payload: parsed.data,
-    },
-  });
+  await Promise.all([
+    prisma.treeEditLog.create({
+      data: {
+        treeId: tree.id,
+        userId: result.user.id,
+        action: 'update',
+        entityType: 'individual',
+        entityId: individualId,
+        payload: parsed.data,
+      },
+    }),
+    touchTreeTimestamp(tree.id),
+  ]);
 
   return NextResponse.json({ data: individual });
 }
@@ -120,15 +112,18 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     });
   });
 
-  await prisma.treeEditLog.create({
-    data: {
-      treeId: tree.id,
-      userId: result.user.id,
-      action: 'delete',
-      entityType: 'individual',
-      entityId: individualId,
-    },
-  });
+  await Promise.all([
+    prisma.treeEditLog.create({
+      data: {
+        treeId: tree.id,
+        userId: result.user.id,
+        action: 'delete',
+        entityType: 'individual',
+        entityId: individualId,
+      },
+    }),
+    touchTreeTimestamp(tree.id),
+  ]);
 
   return new NextResponse(null, { status: 204 });
 }

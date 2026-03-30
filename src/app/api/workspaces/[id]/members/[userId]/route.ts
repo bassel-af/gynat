@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireWorkspaceAdmin, isErrorResponse } from '@/lib/api/workspace-auth';
 import { z } from 'zod';
+import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
 
 type RouteParams = { params: Promise<{ id: string; userId: string }> };
 
@@ -25,20 +26,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   const result = await requireWorkspaceAdmin(request, id);
   if (isErrorResponse(result)) return result;
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
-  }
-
-  const parsed = updateMemberSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues[0].message },
-      { status: 400 },
-    );
-  }
+  const parsed = await parseValidatedBody(request, updateMemberSchema);
+  if (isParseError(parsed)) return parsed;
 
   // Check if demoting self as last admin
   if (targetUserId === result.user.id && parsed.data.role === 'workspace_member') {

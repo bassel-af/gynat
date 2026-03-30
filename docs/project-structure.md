@@ -1,10 +1,12 @@
 # Project Structure
 
-Last updated: 2026-03-25
+Last updated: 2026-03-30
 
 ## Overview
 
 This is a Next.js 15 + React 19 + TypeScript private family collaboration platform (evolving from a read-only genealogy viewer). The project uses the App Router with Turbopack, Prisma ORM with PostgreSQL, and Supabase Auth (self-hosted). It follows modern React conventions with a component-based architecture, Context API for state management, custom hooks for data fetching and UI logic, and CSS Modules for styling. The primary language is Arabic (RTL layout).
+
+The project is at Phase 5 (Branch Pointers) with Phases 1-5 complete.
 
 ## Directory Structure
 
@@ -24,23 +26,19 @@ This is a Next.js 15 + React 19 + TypeScript private family collaboration platfo
 **Documentation:**
 - `README.md` - Project readme
 - `CLAUDE.md` - Instructions for Claude Code AI assistant
-- `todo.txt` - Development task tracking
-
-**Development files (tracked but should be reviewed):**
-- `gedcom-marriage-explainer.html` - Standalone HTML explainer for GEDCOM marriage concepts
-- `mobile-fab-test.png` - Screenshot for mobile FAB testing
-- `mobile-sidebar-open.png` - Screenshot for mobile sidebar testing
+- `todo.txt` - Development task tracking (tracked in git)
 
 **Build Output (gitignored):**
 - `.next/` - Next.js build output
 - `generated/prisma/` - Prisma generated client
 - `tsconfig.tsbuildinfo` - TypeScript incremental compilation info
+- `next-env.d.ts` - Next.js TypeScript declarations (auto-generated)
 
 **Tool Directories:**
 - `.claude/` - Claude Code configuration (agents, commands, skills, design system, settings)
 - `.playwright-mcp/` - Playwright MCP configuration (gitignored)
 - `skills/` - Claude Code skill definitions (e.g., `explain-code/SKILL.md`)
-- `test-results/` - Test run results (`.last-run.json`)
+- `test-results/` - Test run results (`.last-run.json`, gitignored)
 
 ### `/docs/`
 
@@ -48,11 +46,17 @@ This is a Next.js 15 + React 19 + TypeScript private family collaboration platfo
 
 **Contents:**
 - `project-structure.md` - This file
-- `product-requirements.md` - Full PRD (Phases 1-3+)
+- `product-requirements.md` - Full PRD (Phases 1-5+)
 - `auth-provider-decisions.md` - Auth architecture decision record
 - `setup.md` - Development setup guide
 - `testing.md` - Testing guide and test mode query parameters
 - `workspaces-problem.md` - Design document for workspace architecture
+- `in-law-visibility.md` - In-law visibility feature design (Phase 4)
+- `design-reroot-on-spouse-ancestor.md` - Re-root on spouse's ancestor design (Phase 4)
+- `design-multi-root-view.md` - Multi-root view design (Phase 4, DISABLED)
+- `design-branch-pointers.md` - Branch pointers design (Phase 5)
+- `gedcom-marriage-explainer.html` - Standalone HTML explainer for GEDCOM marriage concepts
+- `screenshots/` - Mobile UI screenshots (`mobile-fab-test.png`, `mobile-sidebar-open.png`)
 
 ### `/docker/`
 
@@ -69,17 +73,22 @@ This is a Next.js 15 + React 19 + TypeScript private family collaboration platfo
 **Role:** Prisma ORM configuration, schema, migrations, and seed data
 
 **Contents:**
-- `schema.prisma` - Database schema (17 models: User, Workspace, WorkspaceMembership, WorkspaceInvitation, UserTreeLink, FamilyTree, Individual, Family, FamilyChild, TreeEditLog, Post, Album, AlbumMedia, Event, EventRsvp, Notification, Place)
+- `schema.prisma` - Database schema (19 models: User, Workspace, WorkspaceMembership, WorkspaceInvitation, UserTreeLink, FamilyTree, Individual, Family, FamilyChild, TreeEditLog, BranchShareToken, BranchPointer, Post, Album, AlbumMedia, Event, EventRsvp, Notification, Place)
 - `seed.ts` - Main seed script (workspaces + tree data from GEDCOM + places)
-- `migrations/` - Prisma migrations (10 migrations from init through place IDs)
+- `migrations/` - Prisma migrations (15 migrations from init through umm_walad)
 - `seed-data/places.json` - Pre-processed GeoNames place data (~5MB, countries/regions/cities with Arabic names)
 
 ### `/scripts/`
 
-**Role:** Standalone build/preprocessing scripts
+**Role:** Standalone build/preprocessing/maintenance scripts
 
 **Contents:**
 - `preprocess-geonames.ts` - Processes raw GeoNames data into `prisma/seed-data/places.json`
+- `clean-links.ts` - Delete all branch pointers + share tokens
+- `reseed-tree.ts` - Clean tree data + re-seed from GEDCOM files
+- `reseed-places.ts` - Clean places + re-seed from places.json
+- `reseed-all.ts` - Clean everything + re-seed places + tree
+- `start-fresh.ts` - Clean links + clean tree + clean places + re-seed all
 - `geonames-data/` - Raw GeoNames download files (~971MB, gitignored)
 
 ### `/public/`
@@ -106,6 +115,8 @@ This is a Next.js 15 + React 19 + TypeScript private family collaboration platfo
 - `globals.css` - Global CSS imports (tokens, base, tree-global)
 - `providers.tsx` - Client component wrapping legacy routes in `TreeProvider` + `CalendarPreferenceContext`
 - `global-providers.tsx` - Client component wrapping entire app in `ToastProvider`
+- `robots.ts` - Robots.txt generation
+- `sitemap.ts` - Sitemap generation
 
 **Route directories:**
 - `[familySlug]/` - Legacy family routes (`page.tsx`, `FamilyTreeClient.tsx`)
@@ -114,7 +125,7 @@ This is a Next.js 15 + React 19 + TypeScript private family collaboration platfo
 - `dashboard/` - Dashboard and workspace creation pages
 - `workspaces/[slug]/` - Workspace detail and tree view
   - `tree/` - Database-backed tree view (`WorkspaceTreeClient.tsx`)
-- `invite/[id]/` - Invitation acceptance page
+- `invite/[id]/` - Invitation acceptance page (`InviteAcceptClient.tsx`)
 - `policy/` - Public policy page
 - `islamic-gedcom/` - Public GEDCOM standard documentation page
 
@@ -125,6 +136,8 @@ This is a Next.js 15 + React 19 + TypeScript private family collaboration platfo
 - `workspaces/` - Full workspace CRUD, members, invitations
   - `[id]/places/route.ts` - Place search and creation (workspace-scoped)
   - `[id]/tree/` - Tree CRUD (individuals, families, children, move)
+  - `[id]/branch-pointers/` - Branch pointer CRUD (redeem, disconnect, deep copy)
+  - `[id]/share-tokens/` - Share token CRUD (create, list, disable, revoke, preview)
 - `workspaces/by-slug/[slug]/route.ts` - Workspace lookup by slug
 - `workspaces/join/route.ts` - Join workspace via code
 
@@ -134,14 +147,16 @@ This is a Next.js 15 + React 19 + TypeScript private family collaboration platfo
 
 ##### `/src/components/tree/`
 **Purpose:** Family tree visualization and editing components
-- `FamilyTree/` - Main tree renderer using @xyflow/react (custom layout algorithm)
+- `FamilyTree/` - Main tree renderer using @xyflow/react (custom layout algorithm in `layout.ts`; no CSS Module -- uses tree-global.css)
 - `PersonCard/` - Individual node card in the tree
 - `CoupleRow/` - Marriage event display between spouses
 - `IndividualForm/` - Form for creating/editing individuals
 - `FamilyEventForm/` - Form for marriage/divorce events
 - `FamilyPickerModal/` - Modal for selecting family (polygamy support)
 - `EmptyTreeState/` - Placeholder for workspaces with no tree data
-- `index.ts` - Barrel export
+- `RootBackChip/` - Floating chip to navigate back to previous root after re-root (no index.ts)
+- `ViewModeToggle/` - Segmented pill for view mode switching, DISABLED (no index.ts)
+- `index.ts` - Barrel export (exports FamilyTree, PersonCard, CoupleRow, EmptyTreeState, IndividualForm, FamilyPickerModal, FamilyEventForm)
 
 ##### `/src/components/ui/`
 **Purpose:** Reusable UI components
@@ -151,13 +166,21 @@ This is a Next.js 15 + React 19 + TypeScript private family collaboration platfo
 - `Input/` - Form input component
 - `Modal/` - Modal dialog component
 - `PlaceComboBox/` - Place search combobox with autocomplete
-- `Sidebar/` - Sidebar with person detail panel (`PersonDetail.tsx`)
+- `Sidebar/` - Sidebar with person detail panel (`PersonDetail.tsx`, `PersonDetail.module.css`)
 - `Spinner/` - Loading spinner
+- `SpouseFamilySidebar/` - Spouse family detail panel (no index.ts)
 - `Toast/` - Toast notification component
-- `RootSelector.tsx` - Dropdown to select root ancestor (standalone file)
-- `SearchBar.tsx` - Search functionality component (standalone file)
-- `Stats.tsx` - Tree statistics display (standalone file)
-- `index.ts` - Barrel export
+- `RootSelector.tsx` - Dropdown to select root ancestor (standalone file, no directory)
+- `SearchBar.tsx` - Search functionality component (standalone file, no directory)
+- `Stats.tsx` - Tree statistics display (standalone file, no directory)
+- `index.ts` - Barrel export (all components including PlaceComboBox and Toast)
+
+##### `/src/components/workspace/`
+**Purpose:** Workspace management components (Phase 5 branch pointers)
+- `IncomingPointerList/` - Lists incoming branch pointers for a workspace (no index.ts)
+- `ShareBranchModal/` - Modal for creating share tokens (no index.ts)
+- `ShareTokenList/` - Lists share tokens with management actions (no index.ts)
+- No `index.ts` barrel export for this domain group
 
 ##### `/src/components/dev/`
 **Purpose:** Development and experimental components
@@ -176,18 +199,21 @@ This is a Next.js 15 + React 19 + TypeScript private family collaboration platfo
 **Role:** React Context providers for global state management
 
 **Contents:**
-- `TreeContext.tsx` - Central tree state (GEDCOM data, selected root, search, config)
-- `WorkspaceTreeContext.tsx` - Workspace-specific tree state (workspaceId, canEdit, refresh)
+- `TreeContext.tsx` - Central tree state (GEDCOM data, selected root, search, config, view mode)
+- `WorkspaceTreeContext.tsx` - Workspace-specific tree state (workspaceId, canEdit, refresh, pointers)
 - `ToastContext.tsx` - App-wide toast notifications
+
+Note: `CalendarPreferenceContext` is defined inside `src/hooks/useCalendarPreference.ts` rather than in this directory.
 
 #### `/src/hooks/`
 
 **Role:** Custom React hooks
 
 **Contents:**
-- `useCalendarPreference.ts` - Hijri/Gregorian preference with localStorage + server sync
+- `useCalendarPreference.ts` - Hijri/Gregorian preference with localStorage + server sync (also exports `CalendarPreferenceContext`)
 - `useGedcomData.ts` - Fetches GEDCOM files for legacy routes
 - `usePersonActions.ts` - Phase 3 editing state machine (add/edit/delete individuals, families, events)
+- `usePointerActions.ts` - Shared hook for branch pointer break/copy API calls
 - `useTreeLines.ts` - SVG line drawing for playground mode
 - `useWorkspaceTreeData.ts` - Fetches and manages workspace tree data
 
@@ -219,7 +245,7 @@ This is a Next.js 15 + React 19 + TypeScript private family collaboration platfo
 - `parser.ts` - GEDCOM text parser
 - `display.ts` - Name display formatting (nasab/patronymic chains)
 - `roots.ts` - Root ancestor identification
-- `graph.ts` - Graph traversal, subtree extraction, descendant counting, privacy filtering
+- `graph.ts` - Graph traversal, subtree extraction, descendant counting, privacy filtering, graft descriptors
 - `relationships.ts` - Person relationship computation
 - `index.ts` - Barrel export
 
@@ -229,18 +255,25 @@ This is a Next.js 15 + React 19 + TypeScript private family collaboration platfo
 
 ##### `/src/lib/seed/`
 **Purpose:** Database seeding utilities
-- `seed-workspaces.ts` - Seed workspaces from family configs (legacy, used by old seed flow)
+- `seed-workspaces.ts` - Seed workspaces from family configs
 - `seed-places.ts` - Seed Place table from preprocessed GeoNames data
 - `run-seed-places.ts` - Standalone script entry point for `pnpm seed:places`
-- `geonames-parser.ts` - Pure GeoNames TSV line parsers (used by `scripts/preprocess-geonames.ts`)
+- `geonames-parser.ts` - Pure GeoNames TSV line parsers
 
 ##### `/src/lib/tree/`
-**Purpose:** Database-backed tree operations
+**Purpose:** Database-backed tree operations and branch pointer logic
 - `queries.ts` - Database query helpers for tree CRUD
 - `mapper.ts` - DB-to-GedcomData mapping + privacy redaction
 - `schemas.ts` - Zod validation schemas for tree API
 - `seed-helpers.ts` - Helpers for seeding tree data from GEDCOM
 - `seed-place-mapping.ts` - GEDCOM place string to Arabic name + Place ID resolution
+- `family-validators.ts` - Centralized gender validation for families
+- `branch-pointer-merge.ts` - Subtree extraction and merge for branch pointers
+- `branch-pointer-deep-copy.ts` - Deep copy logic (new UUIDs + ID remapping + DB persistence)
+- `branch-pointer-schemas.ts` - Zod schemas for redeem token, share token creation
+- `branch-pointer-queries.ts` - Active pointer queries with source workspace join
+- `branch-pointer-guards.ts` - Synthetic family ID mutation guards
+- `branch-share-token.ts` - Share token hashing and validation
 
 ##### `/src/lib/supabase/`
 **Purpose:** Supabase client wrappers
@@ -281,19 +314,23 @@ This is a Next.js 15 + React 19 + TypeScript private family collaboration platfo
 
 #### `/src/test/`
 
-**Role:** All test files (centralized)
+**Role:** All test files (centralized, not co-located with source)
 
-**Contents:** 50+ test files covering:
+**Contents:** 90+ test files covering:
 - GEDCOM parsing, display, search, relationships, graph operations
 - API routes (workspaces, tree CRUD, places, auth, invitations, members)
+- Branch pointer operations (redeem, stitching rules, deep copy, merge, schemas, mutation guards)
+- Share token operations (create, list, disable, revoke, preview, auto deep copy)
 - Components (IndividualForm, FamilyEventForm, FamilyPickerModal, PlaceComboBox, PersonDetail)
 - Hooks (usePersonActions, useCalendarPreference)
 - Utilities (rate-limit, html-escape, validate-redirect, calendar-helpers)
 - Security (headers, input validation)
 - Seeding (tree seed, place seed, geonames parser, place mapping)
+- SEO (robots.ts, sitemap.ts)
 
 **Subdirectory:**
 - `fixtures/` - Test data files (`saeed-family.ged`, `test-family.ged`)
+- `setup.ts` - Test setup configuration
 
 #### `/src/types/`
 
@@ -320,11 +357,10 @@ This is a Next.js 15 + React 19 + TypeScript private family collaboration platfo
 - `@/` resolves to `/src/` directory (configured in tsconfig.json)
 
 ### Component Organization
-- Components grouped by domain: `/tree/` for visualization, `/ui/` for reusable controls, `/dev/` for experiments
+- Components grouped by domain: `/tree/` for visualization, `/ui/` for reusable controls, `/workspace/` for workspace management, `/dev/` for experiments
 - Most components use the directory pattern: `ComponentName/ComponentName.tsx` + `ComponentName.module.css` + `index.ts`
 - Three legacy UI components remain as standalone files: `RootSelector.tsx`, `SearchBar.tsx`, `Stats.tsx`
-- Each component directory has an `index.ts` barrel export
-- UI barrel (`/src/components/ui/index.ts`) exports most components; `PlaceComboBox` and `Toast` are imported directly
+- Domain-level barrel exports at `/src/components/tree/index.ts` and `/src/components/ui/index.ts`
 
 ### Testing
 - All test files centralized in `/src/test/`
