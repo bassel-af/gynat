@@ -313,20 +313,20 @@ export default function IslamicGedcomPage() {
             </p>
             <div className={styles.codeBlock}>
               <span className={styles.codeComment}>{"// المرضعة وزوجها موجودان في شجرة النسب"}</span>{'\n'}
-              <span className={styles.codeId}>0 @_RF1@ _RADA_FAM</span>{'\n'}
+              <span className={styles.codeId}>0 @RF1@ _RADA_FAM</span>{'\n'}
               <span className={styles.codeCustomTag}>1 _RADA_HUSB</span> <span className={styles.codeId}>@I9@</span>{'\n'}
               <span className={styles.codeCustomTag}>1 _RADA_WIFE</span> <span className={styles.codeId}>@I10@</span>{'\n'}
               <span className={styles.codeCustomTag}>1 _RADA_CHIL</span> <span className={styles.codeId}>@I3@</span>{'\n'}
               <span className={styles.codeCustomTag}>1 _RADA_CHIL</span> <span className={styles.codeId}>@I7@</span>{'\n'}
               {'\n'}
               <span className={styles.codeComment}>{"// زوج المرضعة فقط في الشجرة (المرضعة ليست فيها)"}</span>{'\n'}
-              <span className={styles.codeId}>0 @_RF2@ _RADA_FAM</span>{'\n'}
+              <span className={styles.codeId}>0 @RF2@ _RADA_FAM</span>{'\n'}
               <span className={styles.codeCustomTag}>1 _RADA_HUSB</span> <span className={styles.codeId}>@I15@</span>{'\n'}
               <span className={styles.codeCustomTag}>1 _RADA_CHIL</span> <span className={styles.codeId}>@I5@</span>{'\n'}
               <span className={styles.codeCustomTag}>1 _RADA_CHIL</span> <span className={styles.codeId}>@I12@</span>{'\n'}
               {'\n'}
               <span className={styles.codeComment}>{"// كلاهما ليسا من شجرة النسب"}</span>{'\n'}
-              <span className={styles.codeId}>0 @_RF3@ _RADA_FAM</span>{'\n'}
+              <span className={styles.codeId}>0 @RF3@ _RADA_FAM</span>{'\n'}
               <span className={styles.codeTag}>1 NOTE</span> <span className={styles.codeVal}>المرضعة: فاطمة بنت أحمد</span>{'\n'}
               <span className={styles.codeCustomTag}>1 _RADA_CHIL</span> <span className={styles.codeId}>@I8@</span>{'\n'}
               <span className={styles.codeCustomTag}>1 _RADA_CHIL</span> <span className={styles.codeId}>@I14@</span>
@@ -351,7 +351,7 @@ export default function IslamicGedcomPage() {
               <span className={styles.codeTag}>1 SEX</span> <span className={styles.codeVal}>M</span>{'\n'}
               <span className={styles.codeTag}>1 FAMC</span> <span className={styles.codeId}>@F2@</span>
               <span className={styles.codeComment}>{"          // عائلته في النسب"}</span>{'\n'}
-              <span className={styles.codeCustomTag}>1 _RADA_FAMC</span> <span className={styles.codeId}>@_RF1@</span>
+              <span className={styles.codeCustomTag}>1 _RADA_FAMC</span> <span className={styles.codeId}>@RF1@</span>
               <span className={styles.codeComment}>{"   // عائلته من الرضاعة"}</span>
             </div>
             <div className={styles.note}>
