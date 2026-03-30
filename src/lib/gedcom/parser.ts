@@ -9,27 +9,49 @@ const GEDCOM_MONTHS: Record<string, string> = {
   JUL: '07', AUG: '08', SEP: '09', OCT: '10', NOV: '11', DEC: '12',
 };
 
-function formatGedcomDate(raw: string): string {
+const HIJRI_MONTHS: Record<string, string> = {
+  MUHAR: '01', SAFAR: '02', RABIA: '03', RABIT: '04',
+  JUMAA: '05', JUMAT: '06', RAJAB: '07', SHAAB: '08',
+  RAMAD: '09', SHAWW: '10', DHUAQ: '11', DHUAH: '12',
+};
+
+const DHIJRI_PREFIX = '@#DHIJRI@';
+
+function formatCalendarDate(
+  raw: string,
+  monthMap: Record<string, string>,
+  monthCodeLength: number,
+): string {
   const trimmed = raw.trim();
   if (!trimmed) return '';
 
-  // "1 JAN 1990" or "01 JAN 1990" → "01/01/1990"
-  const fullMatch = trimmed.match(/^(\d{1,2})\s+([A-Z]{3})\s+(\d{4})$/);
+  // "15 MUHAR 1410" or "1 JAN 1990" → "15/01/1410" or "01/01/1990"
+  const fullRe = new RegExp(`^(\\d{1,2})\\s+([A-Z]{${monthCodeLength}})\\s+(\\d{1,4})$`);
+  const fullMatch = trimmed.match(fullRe);
   if (fullMatch) {
     const day = fullMatch[1].padStart(2, '0');
-    const month = GEDCOM_MONTHS[fullMatch[2]] || fullMatch[2];
+    const month = monthMap[fullMatch[2]] || fullMatch[2];
     return `${day}/${month}/${fullMatch[3]}`;
   }
 
-  // "JAN 1990" → "01/1990"
-  const monthYearMatch = trimmed.match(/^([A-Z]{3})\s+(\d{4})$/);
+  // "MUHAR 1410" or "JAN 1990" → "01/1410" or "01/1990"
+  const monthYearRe = new RegExp(`^([A-Z]{${monthCodeLength}})\\s+(\\d{1,4})$`);
+  const monthYearMatch = trimmed.match(monthYearRe);
   if (monthYearMatch) {
-    const month = GEDCOM_MONTHS[monthYearMatch[1]] || monthYearMatch[1];
+    const month = monthMap[monthYearMatch[1]] || monthYearMatch[1];
     return `${month}/${monthYearMatch[2]}`;
   }
 
   // Already numeric or year-only — return as-is
   return trimmed;
+}
+
+function formatHijriDate(raw: string): string {
+  return formatCalendarDate(raw, HIJRI_MONTHS, 5);
+}
+
+function formatGedcomDate(raw: string): string {
+  return formatCalendarDate(raw, GEDCOM_MONTHS, 3);
 }
 
 export function parseGedcom(text: string): GedcomData {
@@ -204,10 +226,20 @@ export function parseGedcom(text: string): GedcomData {
               indi.surname = value || '';
             }
           } else if (tag === 'DATE') {
-            if (currentSubRecord === 'BIRT') {
-              indi.birth = formatGedcomDate(value || '');
-            } else if (currentSubRecord === 'DEAT') {
-              indi.death = formatGedcomDate(value || '');
+            const dateVal = value || '';
+            if (dateVal.startsWith(DHIJRI_PREFIX)) {
+              const hijriPart = dateVal.slice(DHIJRI_PREFIX.length).trim();
+              if (currentSubRecord === 'BIRT') {
+                indi.birthHijriDate = formatHijriDate(hijriPart);
+              } else if (currentSubRecord === 'DEAT') {
+                indi.deathHijriDate = formatHijriDate(hijriPart);
+              }
+            } else {
+              if (currentSubRecord === 'BIRT') {
+                indi.birth = formatGedcomDate(dateVal);
+              } else if (currentSubRecord === 'DEAT') {
+                indi.death = formatGedcomDate(dateVal);
+              }
             }
           } else if (tag === 'PLAC') {
             if (currentSubRecord === 'BIRT') {
@@ -254,7 +286,13 @@ export function parseGedcom(text: string): GedcomData {
           const event = eventMap[currentSubRecord ?? ''];
           if (event) {
             if (tag === 'DATE') {
-              event.date = formatGedcomDate(value || '');
+              const dateVal = value || '';
+              if (dateVal.startsWith(DHIJRI_PREFIX)) {
+                const hijriPart = dateVal.slice(DHIJRI_PREFIX.length).trim();
+                event.hijriDate = formatHijriDate(hijriPart);
+              } else {
+                event.date = formatGedcomDate(dateVal);
+              }
             } else if (tag === 'PLAC') {
               event.place = value || '';
             } else if (tag === '_HIJR') {

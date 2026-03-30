@@ -605,7 +605,9 @@ describe('parseGedcom — family marriage events (MARC/MARR/DIV)', () => {
   })
 })
 
-// ── _HIJR (Hijri dates) on individuals ──────────────────────────────
+// ── _HIJR (Hijri dates) on individuals — backward compatibility ─────
+
+// These tests verify that the legacy _HIJR tag continues to work.
 
 describe('parseGedcom — _HIJR (Hijri dates)', () => {
   it('parses _HIJR under BIRT as birthHijriDate', () => {
@@ -662,5 +664,189 @@ describe('parseGedcom — _HIJR (Hijri dates)', () => {
     expect(data.individuals['@I1@'].birthHijriDate).toBe('15/05/1410')
     expect(data.individuals['@I1@'].death).toBe('15/03/2020')
     expect(data.individuals['@I1@'].deathHijriDate).toBe('20/07/1441')
+  })
+})
+
+// ── @#DHIJRI@ calendar escape (Hijri dates) on individuals ─────────
+
+describe('parseGedcom — @#DHIJRI@ calendar escape on individuals', () => {
+  it('parses DATE @#DHIJRI@ under BIRT as birthHijriDate', () => {
+    const gedcom = `
+0 @I1@ INDI
+1 NAME Ahmad
+1 BIRT
+2 DATE @#DHIJRI@ 15 MUHAR 1410
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.individuals['@I1@'].birthHijriDate).toBe('15/01/1410')
+  })
+
+  it('parses DATE @#DHIJRI@ under DEAT as deathHijriDate', () => {
+    const gedcom = `
+0 @I1@ INDI
+1 NAME Ahmad
+1 DEAT
+2 DATE @#DHIJRI@ 20 RAJAB 1441
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.individuals['@I1@'].deathHijriDate).toBe('20/07/1441')
+  })
+
+  it('routes Gregorian DATE and @#DHIJRI@ DATE to separate fields', () => {
+    const gedcom = `
+0 @I1@ INDI
+1 NAME Ahmad
+1 BIRT
+2 DATE 1 JAN 1990
+2 DATE @#DHIJRI@ 15 JUMAA 1410
+2 PLAC مكة المكرمة
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.individuals['@I1@'].birth).toBe('01/01/1990')
+    expect(data.individuals['@I1@'].birthHijriDate).toBe('15/05/1410')
+    expect(data.individuals['@I1@'].birthPlace).toBe('مكة المكرمة')
+  })
+
+  it('handles Hijri-only date (no Gregorian)', () => {
+    const gedcom = `
+0 @I1@ INDI
+1 NAME Ahmad
+1 BIRT
+2 DATE @#DHIJRI@ 1 RAMAD 1400
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.individuals['@I1@'].birth).toBe('')
+    expect(data.individuals['@I1@'].birthHijriDate).toBe('01/09/1400')
+  })
+
+  it('handles month-year only Hijri date (no day)', () => {
+    const gedcom = `
+0 @I1@ INDI
+1 NAME Ahmad
+1 BIRT
+2 DATE @#DHIJRI@ SAFAR 1410
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.individuals['@I1@'].birthHijriDate).toBe('02/1410')
+  })
+
+  it('handles year-only Hijri date', () => {
+    const gedcom = `
+0 @I1@ INDI
+1 NAME Ahmad
+1 BIRT
+2 DATE @#DHIJRI@ 1410
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.individuals['@I1@'].birthHijriDate).toBe('1410')
+  })
+
+  it('parses both birth and death with @#DHIJRI@ alongside Gregorian', () => {
+    const gedcom = `
+0 @I1@ INDI
+1 NAME Ahmad
+1 BIRT
+2 DATE 1 JAN 1990
+2 DATE @#DHIJRI@ 15 MUHAR 1410
+1 DEAT
+2 DATE 15 MAR 2020
+2 DATE @#DHIJRI@ 20 RAJAB 1441
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.individuals['@I1@'].birth).toBe('01/01/1990')
+    expect(data.individuals['@I1@'].birthHijriDate).toBe('15/01/1410')
+    expect(data.individuals['@I1@'].death).toBe('15/03/2020')
+    expect(data.individuals['@I1@'].deathHijriDate).toBe('20/07/1441')
+  })
+
+  it('handles empty date after @#DHIJRI@ prefix', () => {
+    const gedcom = `
+0 @I1@ INDI
+1 NAME Ahmad
+1 BIRT
+2 DATE @#DHIJRI@
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.individuals['@I1@'].birthHijriDate).toBe('')
+  })
+
+  it('parses all 12 Hijri month codes correctly', () => {
+    const months = [
+      ['MUHAR', '01'], ['SAFAR', '02'], ['RABIA', '03'], ['RABIT', '04'],
+      ['JUMAA', '05'], ['JUMAT', '06'], ['RAJAB', '07'], ['SHAAB', '08'],
+      ['RAMAD', '09'], ['SHAWW', '10'], ['DHUAQ', '11'], ['DHUAH', '12'],
+    ]
+    for (const [code, num] of months) {
+      const gedcom = `
+0 @I1@ INDI
+1 NAME Ahmad
+1 BIRT
+2 DATE @#DHIJRI@ 1 ${code} 1440
+`.trim()
+      const data = parseGedcom(gedcom)
+      expect(data.individuals['@I1@'].birthHijriDate).toBe(`01/${num}/1440`)
+    }
+  })
+})
+
+// ── @#DHIJRI@ calendar escape on family events ─────────────────────
+
+describe('parseGedcom — @#DHIJRI@ calendar escape on family events', () => {
+  it('parses DATE @#DHIJRI@ under MARC/MARR/DIV', () => {
+    const gedcom = `
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+1 MARC
+2 DATE @#DHIJRI@ 12 DHUAH 1443
+1 MARR
+2 DATE @#DHIJRI@ 7 SHAWW 1444
+1 DIV
+2 DATE @#DHIJRI@ 15 JUMAT 1445
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.families['@F1@'].marriageContract.hijriDate).toBe('12/12/1443')
+    expect(data.families['@F1@'].marriage.hijriDate).toBe('07/10/1444')
+    expect(data.families['@F1@'].divorce.hijriDate).toBe('15/06/1445')
+  })
+
+  it('routes Gregorian and Hijri dates to correct fields on family events', () => {
+    const gedcom = `
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+1 MARC
+2 DATE 11 JUL 2022
+2 DATE @#DHIJRI@ 12 DHUAH 1443
+2 PLAC الرياض
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.families['@F1@'].marriageContract.date).toBe('11/07/2022')
+    expect(data.families['@F1@'].marriageContract.hijriDate).toBe('12/12/1443')
+    expect(data.families['@F1@'].marriageContract.place).toBe('الرياض')
+  })
+
+  it('handles Hijri-only family event date (no Gregorian)', () => {
+    const gedcom = `
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+1 MARR
+2 DATE @#DHIJRI@ 7 SHAWW 1444
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.families['@F1@'].marriage.date).toBe('')
+    expect(data.families['@F1@'].marriage.hijriDate).toBe('07/10/1444')
   })
 })

@@ -26,6 +26,7 @@ export const metadata: Metadata = {
     'أم ولد',
     'GEDCOM 5.5.1',
     'GEDCOM 7',
+    '@#DHIJRI@',
     '_HIJR',
     'Arabic genealogy',
   ],
@@ -73,6 +74,49 @@ export default function IslamicGedcomPage() {
           </p>
         </section>
 
+        {/* ─── Hijri Calendar ─── */}
+        <section className={styles.section}>
+          <h2 className={styles.sectionTitle}>التقويم الهجري</h2>
+          <p className={styles.desc}>
+            يُسجّل التاريخ الهجري باستخدام آلية معرّف التقويم (calendar escape)
+            القياسية في GEDCOM — نفس الآلية المستخدمة للتقويم العبري (<span className={styles.inlineCode}>@#DHEBREW@</span>)
+            واليولياني (<span className={styles.inlineCode}>@#DJULIAN@</span>).
+            يوضع <span className={styles.inlineCode}>@#DHIJRI@</span> كبادئة على سطر DATE تحت أي حدث
+            (ولادة، وفاة، زواج، عقد، طلاق). يمكن وضع سطرين DATE تحت نفس الحدث:
+            واحد ميلادي وواحد هجري.
+          </p>
+
+          <div className={styles.tagBlock}>
+            <div className={styles.tagHeader}>
+              <span className={`${styles.tagBadge} ${styles.tagBadgeStandard}`}>@#DHIJRI@</span>
+              <span className={styles.tagLabel}>معرّف تقويم</span>
+              <span className={styles.tagName}>التاريخ الهجري</span>
+            </div>
+            <p className={styles.tagDesc}>
+              الصيغة: <span className={styles.inlineCode}>@#DHIJRI@</span> يوم رمز_الشهر سنة.
+            </p>
+            <div className={styles.codeBlock}>
+              <span className={styles.codeComment}>{"// تاريخ ميلادي وهجري معاً"}</span>{'\n'}
+              <span className={styles.codeTag}>1 BIRT</span>{'\n'}
+              <span className={styles.codeTag}>2 DATE</span> <span className={styles.codeVal}>1 JAN 1990</span>{'\n'}
+              <span className={styles.codeTag}>2 DATE</span> <span className={styles.codeVal}>@#DHIJRI@ 15 MUHAR 1410</span>{'\n'}
+              <span className={styles.codeTag}>2 PLAC</span> <span className={styles.codeVal}>مكة المكرمة</span>{'\n'}
+              {'\n'}
+              <span className={styles.codeComment}>{"// تاريخ هجري فقط (بدون ميلادي)"}</span>{'\n'}
+              <span className={styles.codeTag}>1 BIRT</span>{'\n'}
+              <span className={styles.codeTag}>2 DATE</span> <span className={styles.codeVal}>@#DHIJRI@ 3 RAMAD 1380</span>{'\n'}
+              <span className={styles.codeTag}>2 PLAC</span> <span className={styles.codeVal}>المدينة المنورة</span>
+            </div>
+            <div className={styles.note}>
+              رموز الأشهر الهجرية: MUHAR (محرم)، SAFAR (صفر)، RABIA (ربيع الأول)، RABIT (ربيع الثاني)،
+              JUMAA (جمادى الأولى)، JUMAT (جمادى الآخرة)، RAJAB (رجب)، SHAAB (شعبان)،
+              RAMAD (رمضان)، SHAWW (شوال)، DHUAQ (ذو القعدة)، DHUAH (ذو الحجة).
+              <br /><br />
+              <span className={styles.inlineCode}>_HIJR</span> مدعوم كبديل قديم للتوافق مع الملفات السابقة.
+            </div>
+          </div>
+        </section>
+
         {/* ─── Custom Tags ─── */}
         <section className={styles.section}>
           <h2 className={styles.sectionTitle}>الامتدادات المخصصة</h2>
@@ -81,28 +125,6 @@ export default function IslamicGedcomPage() {
             التوثيق الإسلامي. تبدأ بشرطة سفلية وفق اتفاقية GEDCOM للعلامات المخصصة.
             متوافقة مع GEDCOM 5.5.1 و 7.0.
           </p>
-
-          {/* _HIJR */}
-          <div className={styles.tagBlock}>
-            <div className={styles.tagHeader}>
-              <span className={`${styles.tagBadge} ${styles.tagBadgeCustom}`}>_HIJR</span>
-              <span className={styles.tagLabel}>امتداد</span>
-              <span className={styles.tagName}>التاريخ الهجري</span>
-            </div>
-            <p className={styles.tagDesc}>
-              يُستخدم لتسجيل التاريخ بالتقويم الهجري بجانب التاريخ الميلادي.
-              يوضع كعلامة فرعية تحت أي حدث (ولادة، وفاة، زواج، عقد، طلاق).
-            </p>
-            <div className={styles.codeBlock}>
-              <span className={styles.codeTag}>1 BIRT</span>{'\n'}
-              <span className={styles.codeTag}>2 DATE</span> <span className={styles.codeVal}>1 JAN 1990</span>{'\n'}
-              <span className={styles.codeCustomTag}>2 _HIJR</span> <span className={styles.codeVal}>15/05/1410</span>{'\n'}
-              <span className={styles.codeTag}>2 PLAC</span> <span className={styles.codeVal}>مكة المكرمة</span>
-            </div>
-            <div className={styles.note}>
-              الصيغة: يوم/شهر/سنة هجرية. مثال: 15/05/1410
-            </div>
-          </div>
 
           {/* _UMM_WALAD */}
           <div id="umm-walad" className={styles.tagBlock}>
@@ -191,7 +213,7 @@ export default function IslamicGedcomPage() {
               <span className={styles.codeId}>0 @F1@ FAM</span>{'\n'}
               <span className={styles.codeTag}>1 MARC</span>{'\n'}
               <span className={styles.codeTag}>2 DATE</span> <span className={styles.codeVal}>11 JUL 2022</span>{'\n'}
-              <span className={styles.codeCustomTag}>2 _HIJR</span> <span className={styles.codeVal}>12/12/1443</span>{'\n'}
+              <span className={styles.codeTag}>2 DATE</span> <span className={styles.codeVal}>@#DHIJRI@ 12 DHUAH 1443</span>{'\n'}
               <span className={styles.codeTag}>2 PLAC</span> <span className={styles.codeVal}>الرياض</span>{'\n'}
               <span className={styles.codeTag}>2 NOTE</span> <span className={styles.codeVal}>بحضور الشيخ أحمد</span>
             </div>
@@ -214,7 +236,7 @@ export default function IslamicGedcomPage() {
               <span className={styles.codeId}>0 @F1@ FAM</span>{'\n'}
               <span className={styles.codeTag}>1 MARR</span>{'\n'}
               <span className={styles.codeTag}>2 DATE</span> <span className={styles.codeVal}>27 APR 2023</span>{'\n'}
-              <span className={styles.codeCustomTag}>2 _HIJR</span> <span className={styles.codeVal}>07/10/1444</span>{'\n'}
+              <span className={styles.codeTag}>2 DATE</span> <span className={styles.codeVal}>@#DHIJRI@ 7 SHAWW 1444</span>{'\n'}
               <span className={styles.codeTag}>2 PLAC</span> <span className={styles.codeVal}>الرياض</span>
             </div>
           </div>
@@ -237,7 +259,7 @@ export default function IslamicGedcomPage() {
               <span className={styles.codeTag}>2 DATE</span> <span className={styles.codeVal}>15 MAR 2018</span>{'\n'}
               <span className={styles.codeTag}>1 DIV</span>{'\n'}
               <span className={styles.codeTag}>2 DATE</span> <span className={styles.codeVal}>20 NOV 2023</span>{'\n'}
-              <span className={styles.codeCustomTag}>2 _HIJR</span> <span className={styles.codeVal}>05/05/1445</span>{'\n'}
+              <span className={styles.codeTag}>2 DATE</span> <span className={styles.codeVal}>@#DHIJRI@ 5 JUMAA 1445</span>{'\n'}
               <span className={styles.codeTag}>1 HUSB</span> <span className={styles.codeId}>@I1@</span>{'\n'}
               <span className={styles.codeTag}>1 WIFE</span> <span className={styles.codeId}>@I2@</span>
             </div>
@@ -354,7 +376,7 @@ export default function IslamicGedcomPage() {
             <span className={styles.codeTag}>1 SEX</span> <span className={styles.codeVal}>M</span>{'\n'}
             <span className={styles.codeTag}>1 BIRT</span>{'\n'}
             <span className={styles.codeTag}>2 DATE</span> <span className={styles.codeVal}>15 MAR 1995</span>{'\n'}
-            <span className={styles.codeCustomTag}>2 _HIJR</span> <span className={styles.codeVal}>14/10/1415</span>{'\n'}
+            <span className={styles.codeTag}>2 DATE</span> <span className={styles.codeVal}>@#DHIJRI@ 14 SHAWW 1415</span>{'\n'}
             <span className={styles.codeTag}>2 PLAC</span> <span className={styles.codeVal}>الرياض</span>{'\n'}
             <span className={styles.codeTag}>1 FAMS</span> <span className={styles.codeId}>@F1@</span>{'\n'}
             {'\n'}
@@ -364,7 +386,7 @@ export default function IslamicGedcomPage() {
             <span className={styles.codeTag}>1 SEX</span> <span className={styles.codeVal}>F</span>{'\n'}
             <span className={styles.codeTag}>1 BIRT</span>{'\n'}
             <span className={styles.codeTag}>2 DATE</span> <span className={styles.codeVal}>22 SEP 1998</span>{'\n'}
-            <span className={styles.codeCustomTag}>2 _HIJR</span> <span className={styles.codeVal}>01/06/1419</span>{'\n'}
+            <span className={styles.codeTag}>2 DATE</span> <span className={styles.codeVal}>@#DHIJRI@ 1 JUMAT 1419</span>{'\n'}
             <span className={styles.codeTag}>1 FAMS</span> <span className={styles.codeId}>@F1@</span>{'\n'}
             {'\n'}
             <span className={styles.codeComment}>{"// ─── العائلة ───"}</span>{'\n'}
@@ -373,11 +395,11 @@ export default function IslamicGedcomPage() {
             <span className={styles.codeTag}>1 WIFE</span> <span className={styles.codeId}>@I2@</span>{'\n'}
             <span className={styles.codeTag}>1 MARC</span>{'\n'}
             <span className={styles.codeTag}>2 DATE</span> <span className={styles.codeVal}>11 JUL 2022</span>{'\n'}
-            <span className={styles.codeCustomTag}>2 _HIJR</span> <span className={styles.codeVal}>12/12/1443</span>{'\n'}
+            <span className={styles.codeTag}>2 DATE</span> <span className={styles.codeVal}>@#DHIJRI@ 12 DHUAH 1443</span>{'\n'}
             <span className={styles.codeTag}>2 PLAC</span> <span className={styles.codeVal}>الرياض</span>{'\n'}
             <span className={styles.codeTag}>1 MARR</span>{'\n'}
             <span className={styles.codeTag}>2 DATE</span> <span className={styles.codeVal}>27 APR 2023</span>{'\n'}
-            <span className={styles.codeCustomTag}>2 _HIJR</span> <span className={styles.codeVal}>07/10/1444</span>{'\n'}
+            <span className={styles.codeTag}>2 DATE</span> <span className={styles.codeVal}>@#DHIJRI@ 7 SHAWW 1444</span>{'\n'}
             <span className={styles.codeTag}>2 PLAC</span> <span className={styles.codeVal}>جدة</span>{'\n'}
             <span className={styles.codeTag}>1 CHIL</span> <span className={styles.codeId}>@I3@</span>
           </div>
@@ -393,8 +415,9 @@ export default function IslamicGedcomPage() {
                 العلامات القياسية (<span className={styles.inlineCode}>MARC</span>,{' '}
                 <span className={styles.inlineCode}>MARR</span>,{' '}
                 <span className={styles.inlineCode}>DIV</span>) مدعومة بالكامل.
-                العلامات المخصصة (<span className={styles.inlineCode}>_HIJR</span>,{' '}
-                <span className={styles.inlineCode}>_RADA_FAM</span>,{' '}
+                التاريخ الهجري يُسجّل عبر معرّف التقويم{' '}
+                <span className={styles.inlineCode}>@#DHIJRI@</span>.{' '}
+                العلامات المخصصة (<span className={styles.inlineCode}>_RADA_FAM</span>,{' '}
                 <span className={styles.inlineCode}>_RADA_FAMC</span>,{' '}
                 <span className={styles.inlineCode}>_RADA_HUSB</span>,{' '}
                 <span className={styles.inlineCode}>_RADA_WIFE</span>,{' '}
