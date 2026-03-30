@@ -79,8 +79,7 @@ export default function IslamicGedcomPage() {
           <h2 className={styles.sectionTitle}>التقويم الهجري</h2>
           <p className={styles.desc}>
             يُسجّل التاريخ الهجري باستخدام آلية معرّف التقويم (calendar escape)
-            القياسية في GEDCOM — نفس الآلية المستخدمة للتقويم العبري (<span className={styles.inlineCode}>@#DHEBREW@</span>)
-            واليولياني (<span className={styles.inlineCode}>@#DJULIAN@</span>).
+            القياسية في GEDCOM.
             يوضع <span className={styles.inlineCode}>@#DHIJRI@</span> كبادئة على سطر DATE تحت أي حدث
             (ولادة، وفاة، زواج، عقد، طلاق). يمكن وضع سطرين DATE تحت نفس الحدث:
             واحد ميلادي وواحد هجري.
