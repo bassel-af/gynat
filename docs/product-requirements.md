@@ -1,7 +1,7 @@
 # Product Requirements Document — Solalah Platform
 
-**Version**: 2.0
-**Date**: 2026-03-23
+**Version**: 2.1
+**Date**: 2026-03-31
 **Status**: Draft
 **Audience**: Human developers, AI coding assistants
 
@@ -753,8 +753,20 @@ Notification
   - Sidebar: men see "أمهات الأولاد" section listing umm walad families; women see "السيّد" label for spouse (no redundant marriage section)
   - FamilyEventForm also supports toggling isUmmWalad with MARC/MARR section visibility
   - After adding umm walad spouse, form closes directly (no empty marriage event form)
-- Implement rada'a data model: `_RADA_FAM` / `_RADA_WIFE` / `_RADA_HUSB` / `_RADA_CHIL` / `_RADA_FAMC` (database tables/fields + API + UI)
-- Visualize rada'a relationships in the tree or person detail sidebar
+- ✅ Rada'a (milk kinship) feature: `RadaFamily` + `RadaFamilyChild` Prisma models, workspace-level `enableRadaa` toggle, 6 API endpoints under `/tree/rada-families/`
+  - Data model: separate from lineage families — `fosterFatherId`, `fosterMotherId`, `notes`, children via join table; all fields optional on `GedcomData` and `Individual` (no breaking changes)
+  - API guards: `requireTreeEditor`, `treeMutateLimiter`, enableRadaa feature flag (400 when disabled), tree ownership, circular reference detection, duplicate children rejection, gender validation, `TreeEditLog` audit
+  - Zod schemas: `createRadaFamilySchema` with `.refine()` (at least one parent or notes required), `childrenIds` min(1)/max(50), `notes` max(5000)
+  - Sidebar: "الرضاعة" section in PersonDetail showing foster parents, siblings, and children per rada'a family with role tags (أم, أب, أخ/أخت); notes visible in read view; per-family edit button; numbered labels for multiple families
+  - `RadaaFamilyForm` modal: `IndividualPicker` combo-box (reusable, client-side search via `matchesSearch()`, nasab names, sex filtering) for foster parents + children multi-select; notes textarea; pre-fills current person as child
+  - `IndividualPicker` component: combo-box with `sexFilter` prop, `data: GedcomData` for nasab display, keyboard navigation, exclude set
+  - `getRadaRelationships()` — separate function (not mixed into `getPersonRelationships()`) returning foster parents, rada siblings (including bio children of wet nurse), rada children
+  - Graceful disable: data persists in DB and shows read-only in sidebar when `enableRadaa` is false; API mutations return 400
+  - Excluded from branch pointers: rada'a data not included in merge, extract, or deep copy (workspace-specific metadata)
+  - Workspace settings: `ToggleSwitch` component with loading spinner, feature cards with descriptions and "تعرف على المزيد" links
+  - Smoke test script (`pnpm smoke`): hits key endpoints on running dev server to catch runtime errors that mocked tests miss
+  - Islamic GEDCOM reference page: section anchors on all sections, umm walad elevated to its own section, rada'a justification for `_RADA_FAM` over `FAMC`+`PEDI`
+  - 1136 tests (71 new), 0 regressions
 - Validate that all Islamic GEDCOM reference tags are implementable and the data model is sound before building export/import
 
 **Phase 6b — Export:**
