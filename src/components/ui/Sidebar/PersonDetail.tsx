@@ -9,6 +9,7 @@ import type { Individual } from '@/lib/gedcom';
 import { IndividualForm, type IndividualFormData } from '@/components/tree/IndividualForm/IndividualForm';
 import { FamilyPickerModal } from '@/components/tree/FamilyPickerModal/FamilyPickerModal';
 import { FamilyEventForm } from '@/components/tree/FamilyEventForm/FamilyEventForm';
+import { RadaaFamilyForm } from '@/components/tree/RadaaFamilyForm/RadaaFamilyForm';
 import { getPreferredDate, getSecondaryDate, getDateSuffix } from '@/lib/calendar-helpers';
 import type { CalendarPreference } from '@/lib/calendar-helpers';
 import { useCalendarPreference } from '@/hooks/useCalendarPreference';
@@ -181,6 +182,69 @@ function RelationshipSection({ title, people, visiblePersonIds, onPersonClick, h
 }
 
 // ---------------------------------------------------------------------------
+// RadaPersonItem — renders a person in the rada'a section using the same
+// pattern as RelationshipSection (relPersonClickable/relPersonStatic) but
+// with a small role tag appended after the name.
+// ---------------------------------------------------------------------------
+
+function RadaPersonItem({
+  person,
+  roleTag,
+  visiblePersonIds,
+  onClick,
+}: {
+  person: Individual;
+  roleTag: string;
+  visiblePersonIds: Set<string>;
+  onClick: (id: string) => void;
+}) {
+  const name = getDisplayName(person);
+  const isVisible = visiblePersonIds.has(person.id);
+
+  if (isVisible) {
+    return (
+      <button
+        className={clsx(styles.relPersonClickable, {
+          [styles.male]: person.sex === 'M',
+          [styles.female]: person.sex === 'F',
+          [styles.deceased]: person.isDeceased,
+        })}
+        onClick={() => onClick(person.id)}
+      >
+        <div className={styles.relPersonInfo}>
+          <span className={styles.relPersonName}>
+            {name}
+            <span className={styles.radaRoleTag}>{roleTag}</span>
+          </span>
+          <DateInfo person={person} className={styles.relPersonDates} compact />
+        </div>
+        <svg className={styles.relChevron} width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
+    );
+  }
+
+  return (
+    <span
+      className={clsx(styles.relPersonStatic, {
+        [styles.male]: person.sex === 'M',
+        [styles.female]: person.sex === 'F',
+        [styles.deceased]: person.isDeceased,
+      })}
+    >
+      <div className={styles.relPersonInfo}>
+        <span className={styles.relPersonName}>
+          {name}
+          <span className={styles.radaRoleTag}>{roleTag}</span>
+        </span>
+        <DateInfo person={person} className={styles.relPersonDates} compact />
+      </div>
+    </span>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // MarriageEventDisplay sub-component
 // ---------------------------------------------------------------------------
 
@@ -232,6 +296,7 @@ export function PersonDetail({ personId }: PersonDetailProps) {
 
   const workspace = useOptionalWorkspaceTree();
   const canEdit = workspace?.canEdit ?? false;
+  const enableRadaa = workspace?.enableRadaa ?? false;
   const { preference: calendarPreference, setPreference: setCalendarPreference } = useCalendarPreference();
 
   const person = data?.individuals[personId];
@@ -247,6 +312,8 @@ export function PersonDetail({ personId }: PersonDetailProps) {
     handleAddParentSubmit,
     handleAddSiblingSubmit,
     handleFamilyEventSubmit,
+    handleRadaaSubmit,
+    handleRadaaDelete,
     handleDelete,
     moveChild,
   } = usePersonActions({
@@ -269,6 +336,8 @@ export function PersonDetail({ personId }: PersonDetailProps) {
     if (!data) return null;
     return getPersonRelationships(data, personId);
   }, [data, personId]);
+
+
 
   // Compute whether this person has an external family tree to navigate to
   const externalFamilyInfo = useMemo(() => {
@@ -438,6 +507,64 @@ export function PersonDetail({ personId }: PersonDetailProps) {
   // -------------------------------------------------------------------------
   // Derived: move child and family picker data
   // -------------------------------------------------------------------------
+
+  // Rada families where this person is a child or foster parent — enriched with per-family members
+  const personRadaFamilies = useMemo(() => {
+    if (!data?.radaFamilies || !person) return [];
+    const seenIds = new Set<string>();
+    const result: {
+      id: string;
+      role: 'child' | 'fosterParent';
+      fosterMother: Individual | null;
+      fosterFather: Individual | null;
+      siblings: Individual[];
+      children: Individual[];
+      notes: string;
+    }[] = [];
+
+    const addFamily = (rfId: string, role: 'child' | 'fosterParent') => {
+      if (seenIds.has(rfId)) return;
+      const rf = data.radaFamilies![rfId];
+      if (!rf) return;
+      seenIds.add(rfId);
+
+      const fosterMother = rf.fosterMother && data.individuals[rf.fosterMother] && !data.individuals[rf.fosterMother].isPrivate
+        ? data.individuals[rf.fosterMother] : null;
+      const fosterFather = rf.fosterFather && data.individuals[rf.fosterFather] && !data.individuals[rf.fosterFather].isPrivate
+        ? data.individuals[rf.fosterFather] : null;
+
+      // Other children in this rada family (siblings if person is a child, foster children if person is parent)
+      const otherChildren = rf.children
+        .filter((cId) => cId !== person.id && data.individuals[cId] && !data.individuals[cId].isPrivate)
+        .map((cId) => data.individuals[cId]);
+
+      result.push({
+        id: rf.id,
+        role,
+        fosterMother,
+        fosterFather,
+        siblings: role === 'child' ? otherChildren : [],
+        children: role === 'fosterParent' ? otherChildren : [],
+        notes: rf.notes,
+      });
+    };
+
+    // Families where person is a child
+    if (person.radaFamiliesAsChild) {
+      for (const rfId of person.radaFamiliesAsChild) addFamily(rfId, 'child');
+    }
+    // Families where person is a foster parent
+    for (const rf of Object.values(data.radaFamilies)) {
+      if (rf.fosterFather === person.id || rf.fosterMother === person.id) {
+        addFamily(rf.id, 'fosterParent');
+      }
+    }
+    return result;
+  }, [data, person]);
+
+  // Rada'a: show section if feature enabled or person has data
+  const hasRadaData = personRadaFamilies.length > 0;
+  const showRadaaSection = enableRadaa || hasRadaData;
 
   const showMoveChild = canEdit && person && data && canMoveChild(person, data);
   const alternativeFamilies = person && data ? getAlternativeFamilies(person, data) : [];
@@ -720,6 +847,18 @@ export function PersonDetail({ personId }: PersonDetailProps) {
               نقل إلى عائلة أخرى
             </button>
           )}
+          {enableRadaa && (
+            <button
+              className={styles.actionButtonRadaa}
+              onClick={() => { setFormMode({ kind: 'addRadaa' }); setFormError(''); }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2C8.5 2 5 5.5 5 9c0 2 .7 3.3 2 4.5V22h10v-8.5c1.3-1.2 2-2.5 2-4.5 0-3.5-3.5-7-7-7z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M9 14v4M15 14v4M9 18h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+              إضافة رضاعة
+            </button>
+          )}
         </div>
       )}
 
@@ -761,6 +900,69 @@ export function PersonDetail({ personId }: PersonDetailProps) {
           onPersonClick={handlePersonClick}
           hideNonVisible
         />
+
+        {showRadaaSection && (
+          <div>
+            <div className={styles.sectionTitleRow}>
+              <h3 className={styles.sectionTitle}>الرضاعة</h3>
+              {enableRadaa && canEdit && !person._pointed && (
+                <button
+                  className={styles.sectionEditButton}
+                  onClick={() => { setFormMode({ kind: 'addRadaa' }); setFormError(''); }}
+                  aria-label="إضافة رضاعة"
+                  title="إضافة رضاعة"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                </button>
+              )}
+            </div>
+            {personRadaFamilies.length > 0 ? personRadaFamilies.map((rf, rfIndex) => (
+                <div key={rf.id}>
+                  <div className={styles.radaBlockHeader}>
+                    <span className={styles.radaBlockLabel}>
+                      رضاعة {personRadaFamilies.length > 1 ? `(${rfIndex + 1})` : ''}
+                    </span>
+                    {canEdit && !person._pointed && enableRadaa && (
+                      <button
+                        className={styles.marriageEditButton}
+                        onClick={() => { setFormMode({ kind: 'editRadaa', radaFamilyId: rf.id }); setFormError(''); }}
+                        aria-label="تعديل الرضاعة"
+                        title="تعديل الرضاعة"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                          <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                  {rf.notes && (
+                    <div className={styles.radaNote}>{rf.notes}</div>
+                  )}
+                  {rf.role === 'child' && (
+                    <>
+                      {rf.fosterMother && (
+                        <RadaPersonItem person={rf.fosterMother} roleTag="أم" visiblePersonIds={visiblePersonIds} onClick={handlePersonClick} />
+                      )}
+                      {rf.fosterFather && (
+                        <RadaPersonItem person={rf.fosterFather} roleTag="أب" visiblePersonIds={visiblePersonIds} onClick={handlePersonClick} />
+                      )}
+                      {rf.siblings.map((sib) => (
+                        <RadaPersonItem key={sib.id} person={sib} roleTag={sib.sex === 'F' ? 'أخت' : 'أخ'} visiblePersonIds={visiblePersonIds} onClick={handlePersonClick} />
+                      ))}
+                    </>
+                  )}
+                  {rf.role === 'fosterParent' && rf.children.map((child) => (
+                    <RadaPersonItem key={child.id} person={child} roleTag={child.sex === 'F' ? 'ابنة' : 'ابن'} visiblePersonIds={visiblePersonIds} onClick={handlePersonClick} />
+                  ))}
+                </div>
+              )) : (
+              <div className={styles.radaEmpty}>لا توجد بيانات رضاعة</div>
+            )}
+          </div>
+        )}
 
         {person.familiesAsSpouse.length > 0 && (() => {
           const nikahFamilies: string[] = [];
@@ -958,6 +1160,34 @@ export function PersonDetail({ personId }: PersonDetailProps) {
           error={formError}
           workspaceId={workspace?.workspaceId}
           enableUmmWalad={workspace?.enableUmmWalad}
+        />
+      )}
+
+      {(formMode?.kind === 'addRadaa' || formMode?.kind === 'editRadaa') && (
+        <RadaaFamilyForm
+          mode={formMode.kind === 'addRadaa' ? 'create' : 'edit'}
+          initialData={
+            formMode.kind === 'editRadaa' && data.radaFamilies?.[formMode.radaFamilyId]
+              ? {
+                  radaFamilyId: formMode.radaFamilyId,
+                  fosterFatherId: data.radaFamilies[formMode.radaFamilyId].fosterFather,
+                  fosterMotherId: data.radaFamilies[formMode.radaFamilyId].fosterMother,
+                  childrenIds: data.radaFamilies[formMode.radaFamilyId].children,
+                  notes: data.radaFamilies[formMode.radaFamilyId].notes,
+                }
+              : undefined
+          }
+          preselectedChildId={formMode.kind === 'addRadaa' ? personId : undefined}
+          data={data}
+          onSubmit={handleRadaaSubmit}
+          onDelete={
+            formMode.kind === 'editRadaa'
+              ? () => handleRadaaDelete(formMode.radaFamilyId)
+              : undefined
+          }
+          onCancel={() => { setFormMode(null); setFormError(''); }}
+          isLoading={formLoading}
+          error={formError}
         />
       )}
     </div>

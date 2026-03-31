@@ -106,3 +106,25 @@ export const updateFamilySchema = familyEventFieldsSchema.extend({
   husbandId: z.string().uuid().nullable().optional(),
   wifeId: z.string().uuid().nullable().optional(),
 }).refine(ummWaladRefine, { message: UMM_WALAD_REFINE_MESSAGE });
+
+// ---------------------------------------------------------------------------
+// Rada'a (foster nursing) family
+// ---------------------------------------------------------------------------
+
+/** Create rada family — at least one foster parent or notes required, plus children */
+export const createRadaFamilySchema = z.object({
+  fosterFatherId: z.string().uuid().nullable().optional(),
+  fosterMotherId: z.string().uuid().nullable().optional(),
+  childrenIds: z.array(z.string().uuid()).min(1).max(50),
+  notes: z.string().max(5000).nullable().optional(),
+}).refine(
+  (data) => data.fosterFatherId || data.fosterMotherId || (data.notes && data.notes.trim().length > 0),
+  { message: 'يجب تحديد المرضعة أو زوجها أو إضافة ملاحظة' },
+);
+
+/** Update rada family — foster parents and notes, all optional */
+export const updateRadaFamilySchema = z.object({
+  fosterFatherId: z.string().uuid().nullable().optional(),
+  fosterMotherId: z.string().uuid().nullable().optional(),
+  notes: z.string().max(5000).nullable().optional(),
+});

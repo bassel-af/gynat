@@ -18,6 +18,7 @@ interface WorkspaceInfo {
   currentUserRole: string;
   currentUserPermissions: string[];
   enableUmmWalad?: boolean;
+  enableRadaa?: boolean;
 }
 
 interface WorkspaceTreeClientProps {
@@ -115,6 +116,7 @@ function TreeContent({
         refreshTree={refreshTree}
         pointers={pointers}
         enableUmmWalad={workspace.enableUmmWalad}
+        enableRadaa={workspace.enableRadaa}
       >
         <EmptyTreeWithForm canEdit={canEdit} />
       </WorkspaceTreeProvider>
@@ -129,6 +131,7 @@ function TreeContent({
       refreshTree={refreshTree}
       pointers={pointers}
       enableUmmWalad={workspace.enableUmmWalad}
+      enableRadaa={workspace.enableRadaa}
     >
       <div className="app-layout">
         <Sidebar />

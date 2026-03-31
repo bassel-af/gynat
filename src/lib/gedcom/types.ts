@@ -31,6 +31,7 @@ export interface Individual {
   isPrivate: boolean;
   familiesAsSpouse: string[];
   familyAsChild: string | null;
+  radaFamiliesAsChild?: string[];  // _RADA_FAM IDs (can be in multiple rada'a families)
   /** Set on individuals merged from a branch pointer (read-only in target tree) */
   _pointed?: boolean;
   /** Source workspace ID for pointed individuals */
@@ -60,9 +61,19 @@ export interface Family {
   _pointerId?: string;
 }
 
+export interface RadaFamily {
+  id: string;
+  type: '_RADA_FAM';
+  fosterFather: string | null;  // individual ID
+  fosterMother: string | null;  // individual ID
+  children: string[];           // individual IDs
+  notes: string;
+}
+
 export interface GedcomData {
   individuals: Record<string, Individual>;
   families: Record<string, Family>;
+  radaFamilies?: Record<string, RadaFamily>;
 }
 
 export interface RootAncestor {

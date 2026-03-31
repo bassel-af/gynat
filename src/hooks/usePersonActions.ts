@@ -15,7 +15,20 @@ export type FormMode =
   | { kind: 'addSpouse'; lockedSex?: 'M' | 'F' }
   | { kind: 'addParent'; lockedSex?: 'M' | 'F' }
   | { kind: 'addSibling'; targetFamilyId: string }
-  | { kind: 'editFamilyEvent'; familyId: string; isUmmWalad?: boolean };
+  | { kind: 'editFamilyEvent'; familyId: string; isUmmWalad?: boolean }
+  | { kind: 'addRadaa' }
+  | { kind: 'editRadaa'; radaFamilyId: string };
+
+// ---------------------------------------------------------------------------
+// Rada'a form data
+// ---------------------------------------------------------------------------
+
+export interface RadaaFormData {
+  fosterFatherId: string | null;
+  fosterMotherId: string | null;
+  childrenIds: string[];
+  notes: string;
+}
 
 // ---------------------------------------------------------------------------
 // Hook params and return type
@@ -51,6 +64,8 @@ export interface UsePersonActionsReturn {
   handleAddParentSubmit: (formData: IndividualFormData) => Promise<void>;
   handleAddSiblingSubmit: (formData: IndividualFormData) => Promise<void>;
   handleFamilyEventSubmit: (eventData: FamilyEventFormData) => Promise<void>;
+  handleRadaaSubmit: (data: RadaaFormData) => Promise<void>;
+  handleRadaaDelete: (radaFamilyId: string) => Promise<void>;
   handleDelete: () => Promise<void>;
   moveChild: (targetFamilyId: string) => Promise<void>;
 }
@@ -340,6 +355,59 @@ export function usePersonActions({
   }, [workspace, formMode, isPointed, withFormAction]);
 
   // -------------------------------------------------------------------------
+  // Rada'a (foster nursing) handlers
+  // -------------------------------------------------------------------------
+
+  const handleRadaaSubmit = useCallback(async (data: RadaaFormData) => {
+    if (!workspace || isPointed) return;
+    const isEdit = formMode?.kind === 'editRadaa';
+    const radaFamilyId = isEdit ? formMode.radaFamilyId : undefined;
+
+    await withFormAction(async () => {
+      const url = isEdit
+        ? `/api/workspaces/${workspace.workspaceId}/tree/rada-families/${radaFamilyId}`
+        : `/api/workspaces/${workspace.workspaceId}/tree/rada-families`;
+      const method = isEdit ? 'PATCH' : 'POST';
+
+      const body: Record<string, unknown> = {
+        fosterFatherId: data.fosterFatherId || null,
+        fosterMotherId: data.fosterMotherId || null,
+        notes: data.notes || null,
+      };
+      // Only send childrenIds for create (edit uses separate add/remove child endpoints)
+      if (!isEdit) {
+        body.childrenIds = data.childrenIds;
+      }
+
+      const res = await apiFetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.error ?? 'حدث خطأ');
+      }
+      setFormMode(null);
+    });
+  }, [workspace, isPointed, formMode, withFormAction]);
+
+  const handleRadaaDelete = useCallback(async (radaFamilyId: string) => {
+    if (!workspace || isPointed) return;
+    await withFormAction(async () => {
+      const res = await apiFetch(
+        `/api/workspaces/${workspace.workspaceId}/tree/rada-families/${radaFamilyId}`,
+        { method: 'DELETE' },
+      );
+      if (!res.ok && res.status !== 204) {
+        const json = await res.json();
+        throw new Error(json.error ?? 'حدث خطأ');
+      }
+      setFormMode(null);
+    });
+  }, [workspace, isPointed, withFormAction]);
+
+  // -------------------------------------------------------------------------
   // Move child
   // -------------------------------------------------------------------------
 
@@ -402,6 +470,8 @@ export function usePersonActions({
     handleAddParentSubmit,
     handleAddSiblingSubmit,
     handleFamilyEventSubmit,
+    handleRadaaSubmit,
+    handleRadaaDelete,
     handleDelete,
     moveChild,
   };

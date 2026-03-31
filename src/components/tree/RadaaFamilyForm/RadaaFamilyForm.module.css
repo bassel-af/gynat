@@ -1,0 +1,166 @@
+.modal {
+  max-width: 440px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.error {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: rgba(229, 62, 62, 0.1);
+  color: #fc8181;
+  font-size: var(--font-size-sm);
+}
+
+/* Children section */
+.childrenSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.childrenLabel {
+  font-size: var(--font-size-sm);
+  color: var(--alpha-white-50);
+  font-weight: var(--font-weight-medium);
+}
+
+.childRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.childPicker {
+  flex: 1;
+}
+
+.removeChildButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-top: var(--space-1);
+  background: transparent;
+  border: 1px solid rgba(229, 62, 62, 0.25);
+  border-radius: var(--radius-md);
+  color: rgba(229, 62, 62, 0.7);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.removeChildButton:hover {
+  background: rgba(229, 62, 62, 0.1);
+  border-color: rgba(229, 62, 62, 0.4);
+  color: var(--color-error);
+}
+
+.addChildButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: transparent;
+  border: 1px dashed var(--alpha-white-15);
+  border-radius: var(--radius-md);
+  color: var(--alpha-white-50);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  font-family: inherit;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  align-self: flex-start;
+}
+
+.addChildButton:hover {
+  background: var(--alpha-white-04);
+  border-color: var(--alpha-white-25);
+  color: var(--alpha-white-70);
+}
+
+/* Notes field */
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.fieldLabel {
+  font-size: var(--font-size-sm);
+  color: var(--alpha-white-50);
+  font-weight: var(--font-weight-medium);
+}
+
+.textarea {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--alpha-white-10);
+  background: var(--alpha-white-04);
+  color: var(--alpha-white-85);
+  font-size: var(--font-size-base);
+  font-family: inherit;
+  resize: vertical;
+  outline: none;
+  transition: border-color var(--transition-base);
+}
+
+.textarea::placeholder {
+  color: var(--alpha-white-25);
+}
+
+.textarea:focus {
+  border-color: var(--color-primary);
+}
+
+/* Delete section */
+.deleteSection {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--alpha-white-06);
+}
+
+.deleteButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: transparent;
+  border: 1px solid rgba(229, 62, 62, 0.25);
+  border-radius: var(--radius-md);
+  color: rgba(229, 62, 62, 0.7);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  font-family: inherit;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.deleteButton:hover {
+  background: rgba(229, 62, 62, 0.1);
+  border-color: rgba(229, 62, 62, 0.4);
+  color: var(--color-error);
+}
+
+.deleteConfirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.deleteConfirmText {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: rgba(229, 62, 62, 0.85);
+}
+
+.deleteConfirmActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}

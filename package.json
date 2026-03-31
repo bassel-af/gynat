@@ -19,7 +19,8 @@
     "reseed:places": "npx tsx scripts/reseed-places.ts",
     "reseed:all": "npx tsx scripts/reseed-all.ts",
     "start:fresh": "npx tsx scripts/start-fresh.ts",
-    "preprocess-geonames": "npx tsx scripts/preprocess-geonames.ts"
+    "preprocess-geonames": "npx tsx scripts/preprocess-geonames.ts",
+    "smoke": "npx tsx scripts/smoke-test.ts"
   },
   "dependencies": {
     "@dagrejs/dagre": "^1.1.8",

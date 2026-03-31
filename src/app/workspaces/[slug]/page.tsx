@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { apiFetch } from '@/lib/api/client';
 import { roleLabel } from '@/lib/workspace/labels';
 import { Spinner } from '@/components/ui/Spinner';
+import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { ShareBranchModal } from '@/components/workspace/ShareBranchModal/ShareBranchModal';
 import { ShareTokenList } from '@/components/workspace/ShareTokenList/ShareTokenList';
 import { IncomingPointerList } from '@/components/workspace/IncomingPointerList/IncomingPointerList';
@@ -21,6 +22,7 @@ interface Workspace {
   currentUserRole: string;
   currentUserId: string;
   enableUmmWalad?: boolean;
+  enableRadaa?: boolean;
 }
 
 interface Member {
@@ -62,6 +64,9 @@ export default function WorkspaceDetailPage() {
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [togglingRoleId, setTogglingRoleId] = useState<string | null>(null);
   const [memberActionError, setMemberActionError] = useState('');
+
+  // Feature toggle loading state
+  const [togglingFeature, setTogglingFeature] = useState<string | null>(null);
 
   // Branch sharing state
   const [showShareModal, setShowShareModal] = useState(false);
@@ -262,6 +267,30 @@ export default function WorkspaceDetailPage() {
     }
   }
 
+  async function handleToggleFeature(
+    featureKey: 'enableUmmWalad' | 'enableRadaa',
+    newVal: boolean,
+  ) {
+    if (!workspace) return;
+    setTogglingFeature(featureKey);
+    try {
+      const res = await apiFetch(`/api/workspaces/${workspace.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [featureKey]: newVal }),
+      });
+      if (res.ok) {
+        setWorkspace((prev) =>
+          prev ? { ...prev, [featureKey]: newVal } : prev,
+        );
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setTogglingFeature(null);
+    }
+  }
+
   if (loading) {
     return (
       <main className={styles.container}>
@@ -332,37 +361,74 @@ export default function WorkspaceDetailPage() {
           عرض شجرة العائلة
         </Link>
 
-        {/* Umm walad toggle (admin only) */}
-        {isAdmin && (
-          <div className={styles.infoCard}>
-            <label className={styles.toggleLabel}>
-              <input
-                type="checkbox"
-                checked={workspace.enableUmmWalad ?? false}
-                onChange={async (e) => {
-                  const newVal = e.target.checked;
-                  try {
-                    const res = await apiFetch(`/api/workspaces/${workspace.id}`, {
-                      method: 'PATCH',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ enableUmmWalad: newVal }),
-                    });
-                    if (res.ok) {
-                      setWorkspace((prev) => prev ? { ...prev, enableUmmWalad: newVal } : prev);
-                    }
-                  } catch {
-                    // silently fail
-                  }
-                }}
-                className={styles.toggleCheckbox}
-              />
-              تفعيل ميزة{' '}
-              <a href="/islamic-gedcom#umm-walad" target="_blank" rel="noopener noreferrer" className={styles.inlineLink}>
-                أم ولد
-              </a>
-            </label>
+        {/* Feature Toggles */}
+        <div className={styles.section}>
+          <div className={styles.sectionHeader}>
+            <h3 className={styles.sectionTitle}>الميزات</h3>
           </div>
-        )}
+
+          <div className={styles.featureList}>
+            {/* Umm Walad */}
+            <div className={styles.featureCard}>
+              <div className={styles.featureContent}>
+                <div className={styles.featureNameRow}>
+                  <span className={styles.featureName}>أم ولد</span>
+                  {(workspace.enableUmmWalad ?? false) && (
+                    <span className={styles.featureBadge}>مفعّل</span>
+                  )}
+                </div>
+                <p className={styles.featureDescription}>
+                  تسجيل علاقة أم الولد في سجلّات الأسرة — تصنيف شرعي يُميّز
+                  عن الزوجة الحرّة
+                </p>
+                <a
+                  href="/islamic-gedcom#umm-walad"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.featureLearnMore}
+                >
+                  تعرّف على المزيد
+                </a>
+              </div>
+              <ToggleSwitch
+                checked={workspace.enableUmmWalad ?? false}
+                onChange={(val) => handleToggleFeature('enableUmmWalad', val)}
+                disabled={!isAdmin}
+                loading={togglingFeature === 'enableUmmWalad'}
+              />
+            </div>
+
+            {/* Rada'a */}
+            <div className={styles.featureCard}>
+              <div className={styles.featureContent}>
+                <div className={styles.featureNameRow}>
+                  <span className={styles.featureName}>الرضاعة</span>
+                  {(workspace.enableRadaa ?? false) && (
+                    <span className={styles.featureBadge}>مفعّل</span>
+                  )}
+                </div>
+                <p className={styles.featureDescription}>
+                  توثيق علاقات الرضاعة بين الأفراد — الأمّ والأب والأخوة
+                  من الرضاعة
+                </p>
+                <a
+                  href="/islamic-gedcom#radaa"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.featureLearnMore}
+                >
+                  تعرّف على المزيد
+                </a>
+              </div>
+              <ToggleSwitch
+                checked={workspace.enableRadaa ?? false}
+                onChange={(val) => handleToggleFeature('enableRadaa', val)}
+                disabled={!isAdmin}
+                loading={togglingFeature === 'enableRadaa'}
+              />
+            </div>
+          </div>
+        </div>
 
         {/* Members section */}
         <div className={styles.section}>

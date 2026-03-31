@@ -1,0 +1,82 @@
+/* Track (the outer pill) */
+.track {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 24px;
+  padding: 2px;
+  border: none;
+  border-radius: 999px;
+  background: var(--alpha-white-12);
+  cursor: pointer;
+  transition:
+    background var(--transition-base),
+    box-shadow var(--transition-base);
+  outline: none;
+}
+
+.track:focus-visible {
+  box-shadow: var(--shadow-focus-primary);
+}
+
+.track:hover:not(:disabled) {
+  background: var(--alpha-white-15);
+}
+
+/* Active / ON state */
+.trackOn {
+  background: var(--color-primary);
+}
+
+.trackOn:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+}
+
+/* Disabled state */
+.trackDisabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Thumb (the sliding circle) */
+.thumb {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--alpha-white-60);
+  transition: transform var(--transition-medium);
+  /* RTL: default position is on the right; ON slides to the left */
+  transform: translateX(0);
+}
+
+.thumbOn {
+  background: #fff;
+  transform: translateX(-20px);
+}
+
+/* Spinner inside thumb while loading */
+.thumbSpinner {
+  display: block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid transparent;
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: toggleSpin 0.6s linear infinite;
+}
+
+.trackOn .thumbSpinner {
+  border-top-color: var(--color-primary-dark);
+}
+
+@keyframes toggleSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}

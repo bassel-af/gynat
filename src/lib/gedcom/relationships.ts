@@ -86,3 +86,84 @@ export function getPersonRelationships(
 
   return { parents, siblings, paternalUncles, spouses, children };
 }
+
+// ---------------------------------------------------------------------------
+// Rada'a (foster/milk) relationships
+// ---------------------------------------------------------------------------
+
+export interface RadaRelationships {
+  radaParents: Individual[];    // foster mother + father from _RADA_FAM where person is child
+  radaSiblings: Individual[];   // other children in same _RADA_FAM (+ bio children of wet nurse)
+  radaChildren: Individual[];   // children in _RADA_FAM where person is foster parent
+}
+
+export function getRadaRelationships(
+  data: GedcomData,
+  personId: string,
+): RadaRelationships {
+  const radaParents: Individual[] = [];
+  const radaSiblings: Individual[] = [];
+  const radaChildren: Individual[] = [];
+
+  if (!data.radaFamilies || !data.individuals[personId]) {
+    return { radaParents, radaSiblings, radaChildren };
+  }
+
+  const { individuals, families, radaFamilies } = data;
+  const person = individuals[personId];
+  const seenParentIds = new Set<string>();
+  const seenSiblingIds = new Set<string>();
+  const seenChildIds = new Set<string>();
+
+  // Rada families where person is a child
+  if (person.radaFamiliesAsChild) {
+    for (const rfId of person.radaFamiliesAsChild) {
+      const rf = radaFamilies[rfId];
+      if (!rf) continue;
+
+      // Foster parents
+      for (const parentId of [rf.fosterFather, rf.fosterMother]) {
+        if (parentId && individuals[parentId] && !individuals[parentId].isPrivate && !seenParentIds.has(parentId)) {
+          seenParentIds.add(parentId);
+          radaParents.push(individuals[parentId]);
+        }
+      }
+
+      // Rada siblings: other children in the same rada family
+      for (const childId of rf.children) {
+        if (childId !== personId && individuals[childId] && !individuals[childId].isPrivate && !seenSiblingIds.has(childId)) {
+          seenSiblingIds.add(childId);
+          radaSiblings.push(individuals[childId]);
+        }
+      }
+
+      // Also include biological children of the foster mother
+      if (rf.fosterMother) {
+        for (const fam of Object.values(families)) {
+          if (fam.wife === rf.fosterMother || fam.husband === rf.fosterMother) {
+            for (const bioChildId of fam.children) {
+              if (bioChildId !== personId && individuals[bioChildId] && !individuals[bioChildId].isPrivate && !seenSiblingIds.has(bioChildId)) {
+                seenSiblingIds.add(bioChildId);
+                radaSiblings.push(individuals[bioChildId]);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Rada families where person is a foster parent
+  for (const rf of Object.values(radaFamilies)) {
+    if (rf.fosterFather === personId || rf.fosterMother === personId) {
+      for (const childId of rf.children) {
+        if (individuals[childId] && !individuals[childId].isPrivate && !seenChildIds.has(childId)) {
+          seenChildIds.add(childId);
+          radaChildren.push(individuals[childId]);
+        }
+      }
+    }
+  }
+
+  return { radaParents, radaSiblings, radaChildren };
+}

@@ -1,0 +1,173 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  position: relative;
+}
+
+.label {
+  font-size: var(--font-size-sm);
+  color: var(--alpha-white-50);
+  font-weight: var(--font-weight-medium);
+}
+
+.inputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  padding-inline-end: var(--space-10);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--alpha-white-10);
+  background: var(--alpha-white-04);
+  color: var(--alpha-white-85);
+  font-size: var(--font-size-base);
+  font-family: inherit;
+  outline: none;
+  transition: border-color var(--transition-base);
+}
+
+.input::placeholder {
+  color: var(--alpha-white-25);
+}
+
+.input:focus {
+  border-color: var(--color-primary);
+}
+
+.searchIcon {
+  position: absolute;
+  inset-inline-end: var(--space-3);
+  width: 16px;
+  height: 16px;
+  color: var(--alpha-white-25);
+  pointer-events: none;
+}
+
+/* Selected chip */
+.selectedChip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--alpha-white-15);
+  background: var(--alpha-white-06);
+}
+
+.selectedName {
+  flex: 1;
+  font-size: var(--font-size-base);
+  color: var(--alpha-white-85);
+}
+
+.selectedYear {
+  font-size: var(--font-size-sm);
+  color: var(--alpha-white-35);
+}
+
+.clearButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: none;
+  color: var(--alpha-white-50);
+  cursor: pointer;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-base);
+}
+
+.clearButton:hover {
+  color: var(--alpha-white-85);
+}
+
+.clearIcon {
+  width: 12px;
+  height: 12px;
+}
+
+/* Sex indicator dot */
+.sexIndicatorMale,
+.sexIndicatorFemale,
+.sexIndicatorUnknown {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.sexIndicatorMale {
+  background: var(--color-primary);
+}
+
+.sexIndicatorFemale {
+  background: var(--color-secondary-dark);
+}
+
+.sexIndicatorUnknown {
+  background: var(--alpha-white-25);
+}
+
+/* Dropdown */
+.dropdown {
+  position: absolute;
+  top: 100%;
+  inset-inline-start: 0;
+  inset-inline-end: 0;
+  z-index: 50;
+  margin-top: var(--space-1);
+  padding: var(--space-1);
+  background: var(--color-dark-700);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  max-height: 240px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--alpha-white-10) transparent;
+}
+
+.dropdownList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.stateItem {
+  padding: var(--space-3) var(--space-4);
+  color: var(--alpha-white-50);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.option:hover,
+.optionHighlighted {
+  background: var(--alpha-white-06);
+}
+
+.optionName {
+  flex: 1;
+  font-size: var(--font-size-base);
+  color: var(--alpha-white-85);
+}
+
+.optionYear {
+  font-size: var(--font-size-sm);
+  color: var(--alpha-white-35);
+}

@@ -17,7 +17,9 @@ export function useWorkspaceTreeData(workspaceId: string) {
   const fetchTree = useCallback(async () => {
     const currentRefresh = ++refreshCounter.current;
     try {
-      const res = await apiFetch(`/api/workspaces/${workspaceId}/tree`);
+      const res = await apiFetch(`/api/workspaces/${workspaceId}/tree`, {
+        cache: 'no-cache',
+      });
       if (!res.ok) {
         const body = await res.json();
         throw new Error(body.error || 'فشل في تحميل شجرة العائلة');

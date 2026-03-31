@@ -504,26 +504,78 @@
   }
 }
 
-/* Umm walad toggle */
-.toggleLabel {
+/* Feature toggle cards */
+.featureList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.featureCard {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-5);
+  padding: var(--space-5) var(--space-6);
+  border-radius: 12px;
+  border: 1px solid var(--alpha-white-08);
+  background: var(--alpha-white-04);
+  transition:
+    border-color var(--transition-base),
+    background var(--transition-base);
+}
+
+.featureCard:hover {
+  border-color: var(--alpha-white-12);
+  background: var(--alpha-white-06);
+}
+
+.featureContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.featureNameRow {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  font-size: var(--font-size-base);
-  color: var(--alpha-white-70);
-  cursor: pointer;
-  user-select: none;
 }
 
-.toggleCheckbox {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--color-primary);
-  cursor: pointer;
+.featureName {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--alpha-white-85);
 }
 
-.inlineLink {
+.featureBadge {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-primary-light);
+  background: rgba(74, 144, 217, 0.12);
+  padding: 2px var(--space-2);
+  border-radius: 999px;
+  line-height: 1.4;
+}
+
+.featureDescription {
+  font-size: var(--font-size-md);
+  color: var(--alpha-white-40);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.featureLearnMore {
+  font-size: var(--font-size-sm);
   color: var(--color-primary);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+  width: fit-content;
+}
+
+.featureLearnMore:hover {
+  color: var(--color-primary-light);
   text-decoration: underline;
   text-underline-offset: 3px;
 }

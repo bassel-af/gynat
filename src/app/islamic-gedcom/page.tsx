@@ -62,7 +62,7 @@ export default function IslamicGedcomPage() {
         </header>
 
         {/* ─── Why ─── */}
-        <section className={styles.section}>
+        <section id="why" className={styles.section}>
           <h2 className={styles.sectionTitle}>لماذا هذا المرجع؟</h2>
           <p className={styles.desc}>
             صيغة GEDCOM هي المعيار العالمي لتبادل بيانات الأنساب، لكنها صُممت
@@ -75,7 +75,7 @@ export default function IslamicGedcomPage() {
         </section>
 
         {/* ─── Hijri Calendar ─── */}
-        <section className={styles.section}>
+        <section id="hijri" className={styles.section}>
           <h2 className={styles.sectionTitle}>التقويم الهجري</h2>
           <p className={styles.desc}>
             يُسجّل التاريخ الهجري باستخدام آلية معرّف التقويم (calendar escape)
@@ -116,27 +116,23 @@ export default function IslamicGedcomPage() {
           </div>
         </section>
 
-        {/* ─── Custom Tags ─── */}
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>الامتدادات المخصصة</h2>
+        {/* ─── Umm Walad ─── */}
+        <section id="umm-walad" className={styles.section}>
+          <h2 className={styles.sectionTitle}>أم ولد</h2>
           <p className={styles.desc}>
-            علامات غير موجودة في معيار GEDCOM الرسمي، أُنشئت لتغطية احتياجات
-            التوثيق الإسلامي. تبدأ بشرطة سفلية وفق اتفاقية GEDCOM للعلامات المخصصة.
-            متوافقة مع GEDCOM 5.5.1 و 7.0.
+            في التاريخ الإسلامي، كان يحق للرجل أن تكون له إماء (جوارٍ)،
+            وإذا أنجبت الأَمَة من سيدها سُمّيت &laquo;أم ولد&raquo; — وهو مصطلح فقهي
+            يمنحها مكانة خاصة.
+            هذه العلامة المخصصة غير موجودة في معيار GEDCOM الرسمي، وتبدأ بشرطة سفلية
+            وفق اتفاقية GEDCOM للعلامات المخصصة.
           </p>
 
-          {/* _UMM_WALAD */}
-          <div id="umm-walad" className={styles.tagBlock}>
+          <div className={styles.tagBlock}>
             <div className={styles.tagHeader}>
               <span className={`${styles.tagBadge} ${styles.tagBadgeCustom}`}>_UMM_WALAD</span>
               <span className={styles.tagLabel}>امتداد</span>
               <span className={styles.tagName}>أم ولد</span>
             </div>
-            <p className={styles.tagDesc}>
-              في التاريخ الإسلامي، كان يحق للرجل أن تكون له إماء (جوارٍ)،
-              وإذا أنجبت الأَمَة من سيدها سُمّيت &laquo;أم ولد&raquo; — وهو مصطلح فقهي
-              يمنحها مكانة خاصة.
-            </p>
             <p className={styles.tagDesc}>
               يوضع على سجل العائلة (<span className={styles.inlineCode}>FAM</span>) للإشارة
               إلى أن الأم هي أم ولد وليست زوجة بعقد نكاح.
@@ -166,7 +162,7 @@ export default function IslamicGedcomPage() {
         </section>
 
         {/* ─── Standard Tags for Islamic Events ─── */}
-        <section className={styles.section}>
+        <section id="marriage-events" className={styles.section}>
           <h2 className={styles.sectionTitle}>أحداث الزواج الإسلامي</h2>
           <p className={styles.desc}>
             في الثقافة الإسلامية، الزواج يمر بمراحل مختلفة قد تكون متباعدة زمنياً.
@@ -266,7 +262,7 @@ export default function IslamicGedcomPage() {
         </section>
 
         {/* ─── Rada'a ─── */}
-        <section className={styles.section}>
+        <section id="radaa" className={styles.section}>
           <h2 className={styles.sectionTitle}>الرضاعة</h2>
           <p className={styles.desc}>
             في الشريعة الإسلامية، الرضاعة تُنشئ علاقة تترتب عليها
@@ -368,7 +364,7 @@ export default function IslamicGedcomPage() {
         </section>
 
         {/* ─── Full Example ─── */}
-        <section className={styles.section}>
+        <section id="full-example" className={styles.section}>
           <h2 className={styles.sectionTitle}>مثال كامل</h2>
           <p className={styles.desc}>
             عائلة مع عقد قران وحفل زفاف بتواريخ مختلفة، كل منهما بتاريخ هجري وميلادي.
@@ -410,7 +406,7 @@ export default function IslamicGedcomPage() {
         </section>
 
         {/* ─── Compatibility ─── */}
-        <section className={styles.section}>
+        <section id="compatibility" className={styles.section}>
           <h2 className={styles.sectionTitle}>التوافق</h2>
           <div className={styles.compatGrid}>
             <div className={styles.compatItem}>

@@ -56,3 +56,29 @@ Make people close together. do not make them this much far away.
 Search is good but sort it so the result which
 has first word matches search first word appears first.
 or let us say first name matches first word appears first.
+
+
+
+
+وصف مساحة العائلة
+وصف العائلة
+التفكير باسم جديد للمنتج، ربما "نسلي"
+إعدادات الخصوصية:
+إخفاء النساء
+إخفاء تواريخ الميلاد للرجال
+إخفاء تواريخ الميلاد للنساء
+إخفاء الملاحطات
+الزوجات الأخريات هل هن أمهات في الرضاعة؟ والمطلقات؟
+
+
+
+التنسيق:
+تغيير ألوان النساء والرجال.
+توحيد الألوان
+
+
+all person serach picker shall contain person birth date.
+
+test with non admin role (edit etc)
+
+عدة آباء وعدة أمهات من الرضاعة (الأزواج المتوفين أو المطلقين والزوجات الأخريات)

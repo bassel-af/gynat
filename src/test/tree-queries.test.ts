@@ -8,6 +8,7 @@ const mockFamilyTreeFindUnique = vi.fn()
 const mockFamilyTreeCreate = vi.fn()
 const mockIndividualFindFirst = vi.fn()
 const mockFamilyFindFirst = vi.fn()
+const mockRadaFamilyFindFirst = vi.fn()
 
 vi.mock('@/lib/db', () => ({
   prisma: {
@@ -20,6 +21,9 @@ vi.mock('@/lib/db', () => ({
     },
     family: {
       findFirst: (...args: unknown[]) => mockFamilyFindFirst(...args),
+    },
+    radaFamily: {
+      findFirst: (...args: unknown[]) => mockRadaFamilyFindFirst(...args),
     },
   },
 }))
@@ -66,6 +70,11 @@ const TREE_INCLUDES = {
       marriageContractPlaceRef: PLACE_SELECT,
       marriagePlaceRef: PLACE_SELECT,
       divorcePlaceRef: PLACE_SELECT,
+    },
+  },
+  radaFamilies: {
+    include: {
+      children: true,
     },
   },
 }

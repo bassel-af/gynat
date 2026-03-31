@@ -1,4 +1,4 @@
-import type { Individual, Family, GedcomData } from '@/lib/gedcom/types'
+import type { Individual, Family, GedcomData, RadaFamily } from '@/lib/gedcom/types'
 
 // ---------------------------------------------------------------------------
 // DB record shapes (as returned by Prisma queries with includes)
@@ -96,11 +96,43 @@ export interface DbFamily {
   divorceNotes: string | null
 }
 
+export interface DbRadaFamilyChild {
+  radaFamilyId: string
+  individualId: string
+}
+
+export interface DbRadaFamily {
+  id: string
+  treeId: string
+  gedcomId: string | null
+  fosterFatherId: string | null
+  fosterMotherId: string | null
+  notes: string | null
+  createdAt: Date
+  children: DbRadaFamilyChild[]
+}
+
 export interface DbTree {
   id: string
   workspaceId: string
   individuals: DbIndividual[]
   families: DbFamily[]
+  radaFamilies?: DbRadaFamily[]
+}
+
+// ---------------------------------------------------------------------------
+// Rada family mapping
+// ---------------------------------------------------------------------------
+
+export function mapRadaFamily(dbRada: DbRadaFamily): RadaFamily {
+  return {
+    id: dbRada.id,
+    type: '_RADA_FAM',
+    fosterFather: dbRada.fosterFatherId ?? null,
+    fosterMother: dbRada.fosterMotherId ?? null,
+    children: dbRada.children.map((c) => c.individualId),
+    notes: dbRada.notes ?? '',
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -146,6 +178,31 @@ export function dbTreeToGedcomData(dbTree: DbTree): GedcomData {
   const families: Record<string, Family> = {}
   for (const dbFam of dbTree.families) {
     families[dbFam.id] = mapFamily(dbFam)
+  }
+
+  // Map rada families (optional)
+  if (dbTree.radaFamilies && dbTree.radaFamilies.length > 0) {
+    const radaFamilies: Record<string, RadaFamily> = {}
+    // Pre-compute lookup: individualId -> list of rada family IDs where they are a child
+    const radaChildOf = new Map<string, string[]>()
+
+    for (const dbRada of dbTree.radaFamilies) {
+      radaFamilies[dbRada.id] = mapRadaFamily(dbRada)
+      for (const rc of dbRada.children) {
+        const list = radaChildOf.get(rc.individualId) ?? []
+        list.push(dbRada.id)
+        radaChildOf.set(rc.individualId, list)
+      }
+    }
+
+    // Populate radaFamiliesAsChild on individuals
+    for (const [indId, radaFamIds] of radaChildOf) {
+      if (individuals[indId]) {
+        individuals[indId].radaFamiliesAsChild = radaFamIds
+      }
+    }
+
+    return { individuals, families, radaFamilies }
   }
 
   return { individuals, families }
@@ -260,7 +317,9 @@ export function redactPrivateIndividuals(data: GedcomData): GedcomData {
     }
   }
 
-  return { individuals: redacted, families: data.families }
+  const result: GedcomData = { individuals: redacted, families: data.families }
+  if (data.radaFamilies) result.radaFamilies = data.radaFamilies
+  return result
 }
 
 // ---------------------------------------------------------------------------

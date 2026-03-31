@@ -34,6 +34,11 @@ const TREE_INCLUDES = {
       divorcePlaceRef: PLACE_SELECT,
     },
   },
+  radaFamilies: {
+    include: {
+      children: true,
+    },
+  },
 } as const
 
 // ---------------------------------------------------------------------------
@@ -91,6 +96,16 @@ export async function getTreeIndividual(treeId: string, individualId: string) {
 export async function getTreeFamily(treeId: string, familyId: string) {
   return prisma.family.findFirst({
     where: { id: familyId, treeId },
+    include: { children: true },
+  })
+}
+
+/**
+ * Get a single rada family, verifying it belongs to the specified tree.
+ */
+export async function getTreeRadaFamily(treeId: string, radaFamilyId: string) {
+  return prisma.radaFamily.findFirst({
+    where: { id: radaFamilyId, treeId },
     include: { children: true },
   })
 }

@@ -580,7 +580,9 @@
   font-weight: var(--font-weight-medium);
   color: var(--color-text-inverse);
   line-height: var(--line-height-snug);
-  display: block;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
 }
 
 .relPersonDates {
@@ -636,6 +638,42 @@
 }
 
 .actionButtonMove svg {
+  flex-shrink: 0;
+}
+
+.actionButtonRadaa {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: transparent;
+  border: 1px solid rgba(129, 199, 132, 0.3);
+  border-radius: var(--radius-md);
+  color: rgba(129, 199, 132, 0.8);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.actionButtonRadaa:hover {
+  background: rgba(129, 199, 132, 0.1);
+  border-color: rgba(129, 199, 132, 0.5);
+  color: rgb(129, 199, 132);
+}
+
+.actionButtonRadaa:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(129, 199, 132, 0.15);
+  border-color: rgb(129, 199, 132);
+}
+
+.actionButtonRadaa:active {
+  transform: scale(0.97);
+}
+
+.actionButtonRadaa svg {
   flex-shrink: 0;
 }
 
@@ -747,6 +785,10 @@
   .pointerBanner {
     padding: var(--space-3) var(--space-7);
   }
+
+  .radaEmpty {
+    padding: var(--space-3) var(--space-7);
+  }
 }
 
 @media (max-width: 480px) {
@@ -799,6 +841,10 @@
 
   .marriageBlock {
     padding: var(--space-3) var(--space-7);
+  }
+
+  .radaEmpty {
+    padding: var(--space-3) var(--space-6);
   }
 }
 
@@ -946,4 +992,82 @@
   font-size: var(--font-size-xs);
   color: var(--alpha-white-35);
   margin-top: var(--space-1);
+}
+
+/* ============================================
+   RADA'A (FOSTER NURSING) SECTION
+   ============================================ */
+
+.sectionTitleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sectionTitleRow .sectionTitle {
+  flex: 1;
+}
+
+.sectionEditButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-inline-end: var(--space-3);
+  background: transparent;
+  border: 1px solid var(--alpha-white-12);
+  border-radius: var(--radius-full);
+  color: var(--alpha-white-50);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.sectionEditButton:hover {
+  background: var(--alpha-white-08);
+  border-color: var(--alpha-white-25);
+  color: var(--color-text-inverse);
+}
+
+/* Rada'a family block — mirrors .marriageBlock pattern */
+.radaBlockHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-9);
+}
+
+.radaBlockLabel {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--alpha-white-40);
+}
+
+.radaRoleTag {
+  font-size: var(--font-size-xs);
+  color: var(--alpha-white-45);
+  font-weight: var(--font-weight-normal);
+  margin-inline-start: var(--space-3);
+  white-space: nowrap;
+  background: var(--alpha-white-06);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  line-height: 1;
+}
+
+.radaNote {
+  margin-top: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--font-size-xs);
+  font-style: italic;
+  color: var(--alpha-white-40);
+  background: var(--alpha-white-04);
+  border-radius: var(--radius-md);
+  line-height: var(--line-height-normal);
+}
+
+.radaEmpty {
+  padding: var(--space-3) var(--space-9);
+  font-size: var(--font-size-sm);
+  color: var(--alpha-white-35);
 }
