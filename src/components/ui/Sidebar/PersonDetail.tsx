@@ -4,7 +4,7 @@ import clsx from 'clsx';
 import { useMemo, useState, useCallback } from 'react';
 import { useTree } from '@/context/TreeContext';
 import { useWorkspaceTree } from '@/context/WorkspaceTreeContext';
-import { getDisplayName, getPersonRelationships, getAllDescendants, findTopmostAncestor, hasExternalFamily } from '@/lib/gedcom';
+import { getDisplayName, getPersonRelationships, getRadaRelationships, getAllDescendants, findTopmostAncestor, hasExternalFamily } from '@/lib/gedcom';
 import type { Individual } from '@/lib/gedcom';
 import { IndividualForm, type IndividualFormData } from '@/components/tree/IndividualForm/IndividualForm';
 import { FamilyPickerModal } from '@/components/tree/FamilyPickerModal/FamilyPickerModal';
@@ -190,48 +190,25 @@ function RelationshipSection({ title, people, visiblePersonIds, onPersonClick, h
 function RadaPersonItem({
   person,
   roleTag,
-  visiblePersonIds,
   onClick,
 }: {
   person: Individual;
   roleTag: string;
-  visiblePersonIds: Set<string>;
   onClick: (id: string) => void;
 }) {
   const name = getDisplayName(person);
-  const isVisible = visiblePersonIds.has(person.id);
 
-  if (isVisible) {
-    return (
-      <button
-        className={clsx(styles.relPersonClickable, {
-          [styles.male]: person.sex === 'M',
-          [styles.female]: person.sex === 'F',
-          [styles.deceased]: person.isDeceased,
-        })}
-        onClick={() => onClick(person.id)}
-      >
-        <div className={styles.relPersonInfo}>
-          <span className={styles.relPersonName}>
-            {name}
-            <span className={styles.radaRoleTag}>{roleTag}</span>
-          </span>
-          <DateInfo person={person} className={styles.relPersonDates} compact />
-        </div>
-        <svg className={styles.relChevron} width="16" height="16" viewBox="0 0 24 24" fill="none">
-          <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      </button>
-    );
-  }
-
+  // Rada-related persons are always clickable — they exist in the data and
+  // their PersonDetail can be viewed even when they are not rendered on the
+  // tree canvas (e.g. foster father's children from another wife).
   return (
-    <span
-      className={clsx(styles.relPersonStatic, {
+    <button
+      className={clsx(styles.relPersonClickable, {
         [styles.male]: person.sex === 'M',
         [styles.female]: person.sex === 'F',
         [styles.deceased]: person.isDeceased,
       })}
+      onClick={() => onClick(person.id)}
     >
       <div className={styles.relPersonInfo}>
         <span className={styles.relPersonName}>
@@ -240,7 +217,10 @@ function RadaPersonItem({
         </span>
         <DateInfo person={person} className={styles.relPersonDates} compact />
       </div>
-    </span>
+      <svg className={styles.relChevron} width="16" height="16" viewBox="0 0 24 24" fill="none">
+        <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    </button>
   );
 }
 
@@ -509,6 +489,10 @@ export function PersonDetail({ personId }: PersonDetailProps) {
   // -------------------------------------------------------------------------
 
   // Rada families where this person is a child or foster parent — enriched with per-family members
+  // For the 'child' role, siblings are derived using getRadaRelationships() which applies all 3 rules:
+  // 1. All children of the foster father (bio from all wives + rada from other _RADA_FAM) are siblings
+  // 2. All children of the foster mother (bio from all husbands + rada from other _RADA_FAM) are siblings
+  // 3. Only the wet nurse is the rada mother, only the milk-father is the rada father
   const personRadaFamilies = useMemo(() => {
     if (!data?.radaFamilies || !person) return [];
     const seenIds = new Set<string>();
@@ -522,6 +506,11 @@ export function PersonDetail({ personId }: PersonDetailProps) {
       notes: string;
     }[] = [];
 
+    // Compute full derived siblings once (only needed if person is a child in any rada family)
+    const derivedRadaSiblings = person.radaFamiliesAsChild?.length
+      ? getRadaRelationships(data, person.id).radaSiblings
+      : [];
+
     const addFamily = (rfId: string, role: 'child' | 'fosterParent') => {
       if (seenIds.has(rfId)) return;
       const rf = data.radaFamilies![rfId];
@@ -533,7 +522,7 @@ export function PersonDetail({ personId }: PersonDetailProps) {
       const fosterFather = rf.fosterFather && data.individuals[rf.fosterFather] && !data.individuals[rf.fosterFather].isPrivate
         ? data.individuals[rf.fosterFather] : null;
 
-      // Other children in this rada family (siblings if person is a child, foster children if person is parent)
+      // Foster children for parent role
       const otherChildren = rf.children
         .filter((cId) => cId !== person.id && data.individuals[cId] && !data.individuals[cId].isPrivate)
         .map((cId) => data.individuals[cId]);
@@ -543,7 +532,7 @@ export function PersonDetail({ personId }: PersonDetailProps) {
         role,
         fosterMother,
         fosterFather,
-        siblings: role === 'child' ? otherChildren : [],
+        siblings: role === 'child' ? derivedRadaSiblings : [],
         children: role === 'fosterParent' ? otherChildren : [],
         notes: rf.notes,
       });
@@ -944,18 +933,18 @@ export function PersonDetail({ personId }: PersonDetailProps) {
                   {rf.role === 'child' && (
                     <>
                       {rf.fosterMother && (
-                        <RadaPersonItem person={rf.fosterMother} roleTag="أم" visiblePersonIds={visiblePersonIds} onClick={handlePersonClick} />
+                        <RadaPersonItem person={rf.fosterMother} roleTag="أم" onClick={handlePersonClick} />
                       )}
                       {rf.fosterFather && (
-                        <RadaPersonItem person={rf.fosterFather} roleTag="أب" visiblePersonIds={visiblePersonIds} onClick={handlePersonClick} />
+                        <RadaPersonItem person={rf.fosterFather} roleTag="أب" onClick={handlePersonClick} />
                       )}
                       {rf.siblings.map((sib) => (
-                        <RadaPersonItem key={sib.id} person={sib} roleTag={sib.sex === 'F' ? 'أخت' : 'أخ'} visiblePersonIds={visiblePersonIds} onClick={handlePersonClick} />
+                        <RadaPersonItem key={sib.id} person={sib} roleTag={sib.sex === 'F' ? 'أخت' : 'أخ'} onClick={handlePersonClick} />
                       ))}
                     </>
                   )}
                   {rf.role === 'fosterParent' && rf.children.map((child) => (
-                    <RadaPersonItem key={child.id} person={child} roleTag={child.sex === 'F' ? 'ابنة' : 'ابن'} visiblePersonIds={visiblePersonIds} onClick={handlePersonClick} />
+                    <RadaPersonItem key={child.id} person={child} roleTag={child.sex === 'F' ? 'ابنة' : 'ابن'} onClick={handlePersonClick} />
                   ))}
                 </div>
               )) : (

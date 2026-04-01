@@ -505,6 +505,67 @@ describe('getRadaRelationships', () => {
     expect(rel.radaParents.map(p => p.id)).toContain('mother-a')
   })
 
+  it('derives cross-rada-family siblings via shared foster mother', () => {
+    // Woman W is foster mother in two separate rada families:
+    //   RF-A: fosterMother = W, children = [X]
+    //   RF-B: fosterMother = W, children = [Y]
+    // X and Y should be rada siblings.
+    const W: GedcomData['individuals'][string] = {
+      id: 'woman-w', type: 'INDI', name: 'Woman W', givenName: 'Woman', surname: 'W',
+      sex: 'F', birth: '', birthPlace: '', birthDescription: '', birthNotes: '',
+      birthHijriDate: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '',
+      deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false,
+      familiesAsSpouse: [], familyAsChild: null,
+    }
+    const X: GedcomData['individuals'][string] = {
+      id: 'child-x', type: 'INDI', name: 'Child X', givenName: 'Child', surname: 'X',
+      sex: 'M', birth: '', birthPlace: '', birthDescription: '', birthNotes: '',
+      birthHijriDate: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '',
+      deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false,
+      familiesAsSpouse: [], familyAsChild: null,
+      radaFamiliesAsChild: ['rf-a'],
+    }
+    const Y: GedcomData['individuals'][string] = {
+      id: 'child-y', type: 'INDI', name: 'Child Y', givenName: 'Child', surname: 'Y',
+      sex: 'F', birth: '', birthPlace: '', birthDescription: '', birthNotes: '',
+      birthHijriDate: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '',
+      deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false,
+      familiesAsSpouse: [], familyAsChild: null,
+      radaFamiliesAsChild: ['rf-b'],
+    }
+
+    const data: GedcomData = {
+      individuals: {
+        'woman-w': W,
+        'child-x': X,
+        'child-y': Y,
+      },
+      families: {},
+      radaFamilies: {
+        'rf-a': {
+          id: 'rf-a', type: '_RADA_FAM',
+          fosterFather: null, fosterMother: 'woman-w',
+          children: ['child-x'],
+          notes: '',
+        },
+        'rf-b': {
+          id: 'rf-b', type: '_RADA_FAM',
+          fosterFather: null, fosterMother: 'woman-w',
+          children: ['child-y'],
+          notes: '',
+        },
+      },
+    }
+
+    const relX = getRadaRelationships(data, 'child-x')
+    const relY = getRadaRelationships(data, 'child-y')
+
+    // X should see Y as a rada sibling (via shared foster mother)
+    expect(relX.radaSiblings.map(p => p.id)).toContain('child-y')
+    // Y should see X as a rada sibling (via shared foster mother)
+    expect(relY.radaSiblings.map(p => p.id)).toContain('child-x')
+  })
+
   it('excludes private individuals from rada relationships', () => {
     const data = makeGedcomDataWithRada()
     // Make foster-child private

@@ -137,7 +137,7 @@ export function getRadaRelationships(
         }
       }
 
-      // Also include biological children of the foster mother
+      // Also include biological children of the foster mother (from all her husbands)
       if (rf.fosterMother) {
         for (const fam of Object.values(families)) {
           if (fam.wife === rf.fosterMother || fam.husband === rf.fosterMother) {
@@ -145,6 +145,46 @@ export function getRadaRelationships(
               if (bioChildId !== personId && individuals[bioChildId] && !individuals[bioChildId].isPrivate && !seenSiblingIds.has(bioChildId)) {
                 seenSiblingIds.add(bioChildId);
                 radaSiblings.push(individuals[bioChildId]);
+              }
+            }
+          }
+        }
+      }
+
+      // Also include biological children of the foster father (from all his wives)
+      if (rf.fosterFather) {
+        for (const fam of Object.values(families)) {
+          if (fam.husband === rf.fosterFather) {
+            for (const bioChildId of fam.children) {
+              if (bioChildId !== personId && individuals[bioChildId] && !individuals[bioChildId].isPrivate && !seenSiblingIds.has(bioChildId)) {
+                seenSiblingIds.add(bioChildId);
+                radaSiblings.push(individuals[bioChildId]);
+              }
+            }
+          }
+        }
+
+        // Also include rada children from other rada families of the same foster father
+        for (const [otherRfId, otherRf] of Object.entries(radaFamilies)) {
+          if (otherRfId !== rfId && otherRf.fosterFather === rf.fosterFather) {
+            for (const childId of otherRf.children) {
+              if (childId !== personId && individuals[childId] && !individuals[childId].isPrivate && !seenSiblingIds.has(childId)) {
+                seenSiblingIds.add(childId);
+                radaSiblings.push(individuals[childId]);
+              }
+            }
+          }
+        }
+      }
+
+      // Also include rada children from other rada families of the same foster mother
+      if (rf.fosterMother) {
+        for (const [otherRfId, otherRf] of Object.entries(radaFamilies)) {
+          if (otherRfId !== rfId && otherRf.fosterMother === rf.fosterMother) {
+            for (const childId of otherRf.children) {
+              if (childId !== personId && individuals[childId] && !individuals[childId].isPrivate && !seenSiblingIds.has(childId)) {
+                seenSiblingIds.add(childId);
+                radaSiblings.push(individuals[childId]);
               }
             }
           }

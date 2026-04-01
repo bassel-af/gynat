@@ -82,3 +82,15 @@ all person serach picker shall contain person birth date.
 test with non admin role (edit etc)
 
 عدة آباء وعدة أمهات من الرضاعة (الأزواج المتوفين أو المطلقين والزوجات الأخريات)
+
+
+
+i wanna the gedcom expoert check islamic gedcom page and tell me if we made a mistake or not. as you know, if the father from rada   
+  has multiple wives, all of them becomes mothers from rada, but also we need to indicate the main one that gave milk. i wanna know
+  if there are missing gabs, and perhaps if there is a gab also
+
+When adding a person, add the family automatically but make it editable.
+
+When adding person to عائلة الزوج/الزوجة, currently only father create navigation,
+but brother or another husband/wife won't create it. Needs some thinking because
+if there is no father created, this might cause issue because there is no proper root.

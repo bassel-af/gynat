@@ -296,6 +296,14 @@ export default function IslamicGedcomPage() {
               والأم فيه (<span className={styles.inlineCode}>_RADA_WIFE</span>) هي أمهم من الرضاعة،
               وزوجها (<span className={styles.inlineCode}>_RADA_HUSB</span>) أبوهم من الرضاعة.
             </p>
+            <div className={styles.note}>
+              <strong>قواعد اشتقاق العلاقات:</strong>
+              <ol style={{ margin: '0.5rem 0 0', paddingInlineStart: '1.2rem' }}>
+                <li>جميع أبناء صاحب اللبن (<span className={styles.inlineCode}>_RADA_HUSB</span>) إخوة من الرضاعة بغض النظر عن أمهاتهم — سواء أبناؤه البيولوجيون من جميع زوجاته أو أبناؤه من الرضاعة من سجلات{' '}<span className={styles.inlineCode}>_RADA_FAM</span> أخرى.</li>
+                <li>جميع أبناء المرضعة (<span className={styles.inlineCode}>_RADA_WIFE</span>) إخوة من الرضاعة بغض النظر عن آبائهم — سواء أبناؤها البيولوجيون من جميع أزواجها أو أبناؤها من الرضاعة.</li>
+                <li>المرضعة وحدها هي أم من الرضاعة، وصاحب اللبن وحده هو أب من الرضاعة.</li>
+              </ol>
+            </div>
             <p className={styles.tagDesc}>
               تُستخدم علامات مخصصة بالكامل (<span className={styles.inlineCode}>_RADA_WIFE</span> /{' '}
               <span className={styles.inlineCode}>_RADA_HUSB</span> /{' '}
@@ -358,7 +366,9 @@ export default function IslamicGedcomPage() {
             <div className={styles.note}>
               العلاقات تُشتق تلقائياً: كل من يشترك في نفس{' '}
               <span className={styles.inlineCode}>_RADA_FAM</span> هم إخوة من الرضاعة.
-              أطفال المرضعة البيولوجيون (إن كانت في الشجرة) يُعتبرون إخوة من الرضاعة أيضاً.
+              أبناء المرضعة البيولوجيون من جميع أزواجها (إن كانت في الشجرة) إخوة من الرضاعة أيضاً.
+              كذلك أبناء صاحب اللبن البيولوجيون من جميع زوجاته، وأبناؤه من الرضاعة
+              من سجلات <span className={styles.inlineCode}>_RADA_FAM</span> أخرى، جميعهم إخوة من الرضاعة.
             </div>
           </div>
         </section>
