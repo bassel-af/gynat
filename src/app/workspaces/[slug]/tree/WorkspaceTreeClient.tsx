@@ -7,6 +7,7 @@ import { useWorkspaceTreeData } from '@/hooks/useWorkspaceTreeData';
 import { useTreeColorOverrides } from '@/hooks/useTreeColorOverrides';
 import { FamilyTree, EmptyTreeState, IndividualForm } from '@/components/tree';
 import type { IndividualFormData } from '@/components/tree';
+import { CanvasToolbar } from '@/components/tree/CanvasToolbar';
 import { Sidebar } from '@/components/ui';
 import { Spinner } from '@/components/ui/Spinner';
 import { apiFetch } from '@/lib/api/client';
@@ -138,6 +139,7 @@ function TreeContent({
       <div className="app-layout">
         <Sidebar />
         <main className="main-content">
+          <CanvasToolbar workspaceSlug={workspace.slug} />
           <FamilyTree hideMiniMap />
         </main>
       </div>

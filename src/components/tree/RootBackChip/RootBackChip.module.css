@@ -4,10 +4,6 @@
    ============================================ */
 
 .chip {
-  position: absolute;
-  top: var(--space-7);
-  left: var(--space-7);
-  z-index: 10;
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -66,13 +62,6 @@
   to {
     opacity: 1;
     transform: translateX(0);
-  }
-}
-
-/* Mobile */
-@media (max-width: 768px) {
-  .chip {
-    left: var(--space-5);
   }
 }
 

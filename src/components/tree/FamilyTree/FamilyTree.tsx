@@ -20,7 +20,6 @@ import '@xyflow/react/dist/style.css';
 import type { GedcomData, Individual } from '@/lib/gedcom';
 import { getDisplayName, getAllAncestors, getAllDescendants, findTopmostAncestor, hasExternalFamily, computeGraftDescriptors } from '@/lib/gedcom';
 import { useTree } from '@/context/TreeContext';
-import { RootBackChip } from '@/components/tree/RootBackChip/RootBackChip';
 import { getLayoutedElements, NODE_WIDTH, NODE_HEIGHT, SPOUSE_WIDTH, type GraftNodeBuilder } from './layout';
 
 // Highlight state for lineage tracing
@@ -749,7 +748,6 @@ function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
     <div id="tree-container" ref={containerRef} style={{ opacity: isReady ? 1 : 0 }}>
       {/* DISABLED: multi-root mode disabled for now — may re-enable in future */}
       {/* {selectedRootId === initialRootId && <ViewModeToggle />} */}
-      <RootBackChip />
       <ReactFlow
         nodes={nodes}
         edges={edges}

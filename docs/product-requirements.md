@@ -386,6 +386,8 @@ Notification
 - Dashboard UI — `/dashboard` (workspace list with "عائلة" prefix), `/dashboard/create` (create workspace form)
 - Workspace detail page — `/workspaces/[slug]` (members list, invite modal, tree link if family config exists)
 - Login/signup/callback redirect to `/dashboard`; root `/` redirects authenticated users to `/dashboard`
+- Shared `UserNav` component (`src/components/ui/UserNav/`) — self-contained client component showing user avatar + display name (linked to profile) + logout button; fetches `/api/users/me` on mount; appears on `/dashboard`, `/dashboard/profile`, `/workspaces/[slug]` pages
+- `CanvasToolbar` floating pill (`src/components/tree/CanvasToolbar/`) — unified dark pill (gradient-toggle background) in top-left corner of tree canvas containing: back-to-workspace link ("مساحة العائلة"), separator, `UserNav`, and `RootBackChip`; uses `pointer-events: none` wrapper so it doesn't block canvas interaction
 - Seed script — `prisma/seed.ts` migrates existing family configs to workspace records (excludes `test`)
 - Storage quota tracked in schema (5 GB default) but not enforced
 - Tests — workspaces, workspace detail, workspace members, workspace invitations, workspace by-slug (38 tests)
@@ -585,7 +587,7 @@ Notification
 - `findTopmostAncestor()` walks up `familyAsChild` chains to find the root ancestor of any person
 - 22px badge with `lucide:git-branch` icon on married-in spouse cards (top-left corner in RTL); hover/active states
 - Clicking the badge updates `selectedRootId` to the spouse's topmost ancestor, re-rendering the tree from that root
-- `RootBackChip` floating chip at top-left of canvas for returning to the original root after re-root
+- `RootBackChip` floating chip for returning to the original root after re-root (rendered inside `CanvasToolbar` pill)
 - Viewport save/restore: saves pan/zoom position when navigating away from initial root, restores when returning
 - `initialRootId` tracked in TreeContext to distinguish the original root from re-rooted state
 
@@ -743,6 +745,17 @@ Notification
 - `pnpm reseed:places` — clean + re-seed places
 - `pnpm reseed:all` — clean + re-seed everything
 - `pnpm start:fresh` — clean all + re-seed all
+
+### User Profile Page ✅ COMPLETE
+
+**✅ Profile page** at `/dashboard/profile` with four sections:
+
+- `ProfileHeader` — large avatar (96px with fallback initial) + display name + email
+- `AccountSettings` — email change via Supabase `updateUser()` with confirmation flow: sends confirmation email, handles PKCE callback, syncs GoTrue→`public.users`, shows success toast via `?email_changed=true` query param
+- `SecuritySettings` — password change via Supabase `updateUser()` with current/new/confirm fields
+- `TreeDisplaySettings` — tree color theme selection (premium swatches with live preview cards), persisted per-user via `calendarPreference` API
+- Logout section in danger zone with explanation text (separate from `UserNav` logout — contextually appropriate for account management)
+- Branded confirmation page at `/auth/confirm` for email change verification
 
 ### Phase 6 — Islamic GEDCOM Tags, Export & Import
 

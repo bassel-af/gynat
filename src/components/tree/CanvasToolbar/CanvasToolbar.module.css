@@ -1,0 +1,110 @@
+/* ============================================
+   CANVAS TOOLBAR — floating nav row
+   in the top-left of the tree canvas.
+   ============================================ */
+
+.toolbar {
+  position: absolute;
+  top: var(--space-7);
+  left: var(--space-7);
+  z-index: 10;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-3);
+  pointer-events: none;
+}
+
+/* Each interactive child gets pointer-events back */
+.toolbar > * {
+  pointer-events: auto;
+}
+
+/* ---- Unified pill (back link + separator + UserNav) ---- */
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: 36px;
+  padding: 0 var(--space-4);
+  background: var(--gradient-toggle);
+  border: 1px solid var(--alpha-white-15);
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-xl);
+  animation: chipSlideIn 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ---- Back link inside the pill ---- */
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-inverse);
+  text-decoration: none;
+  white-space: nowrap;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
+  transition: background var(--transition-fast);
+}
+
+.backLink:hover {
+  background: var(--alpha-white-08);
+}
+
+.backLink:hover .backIcon {
+  transform: translateX(3px);
+}
+
+.backLink:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus-primary);
+}
+
+.backIcon {
+  flex-shrink: 0;
+  color: var(--color-primary-light);
+  transition: transform var(--transition-fast);
+}
+
+.backLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 140px;
+}
+
+/* ---- Separator ---- */
+
+.separator {
+  width: 1px;
+  height: 16px;
+  background: var(--alpha-white-12);
+  flex-shrink: 0;
+}
+
+@keyframes chipSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ---- Mobile ---- */
+
+@media (max-width: 768px) {
+  .toolbar {
+    left: var(--space-5);
+  }
+
+  .backLabel {
+    display: none;
+  }
+}
