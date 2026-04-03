@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { TreeProvider, useTree } from '@/context/TreeContext';
 import { WorkspaceTreeProvider, useWorkspaceTree } from '@/context/WorkspaceTreeContext';
 import { useWorkspaceTreeData } from '@/hooks/useWorkspaceTreeData';
+import { useTreeColorOverrides } from '@/hooks/useTreeColorOverrides';
 import { FamilyTree, EmptyTreeState, IndividualForm } from '@/components/tree';
 import type { IndividualFormData } from '@/components/tree';
 import { Sidebar } from '@/components/ui';
@@ -90,6 +91,7 @@ function TreeContent({
 }) {
   const { isLoading, error, data } = useTree();
   const { refreshTree, pointers } = useWorkspaceTreeData(workspace.id);
+  useTreeColorOverrides();
 
   if (error) {
     return <div className="error">خطأ في تحميل شجرة العائلة: {error}</div>;

@@ -54,6 +54,22 @@ export function saveTreeColorSettings(settings: TreeColorSettings): void {
   }
 }
 
+/**
+ * Blend a hex color toward white by the given amount (0 = original, 1 = white).
+ * Accepts 6-digit hex with leading '#'. Returns lowercase 6-digit hex.
+ */
+export function lightenHex(hex: string, amount: number = 0.5): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+
+  const lr = Math.round(r + (255 - r) * amount);
+  const lg = Math.round(g + (255 - g) * amount);
+  const lb = Math.round(b + (255 - b) * amount);
+
+  return `#${lr.toString(16).padStart(2, '0')}${lg.toString(16).padStart(2, '0')}${lb.toString(16).padStart(2, '0')}`;
+}
+
 export function resetTreeColorSettings(): void {
   if (typeof window === 'undefined') return;
 

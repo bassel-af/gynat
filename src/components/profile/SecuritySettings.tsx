@@ -68,6 +68,7 @@ export function SecuritySettings({ onChangePassword }: SecuritySettingsProps) {
             }}
             placeholder="6 أحرف على الأقل"
             minLength={6}
+            maxLength={256}
             disabled={loading}
             autoComplete="new-password"
           />
@@ -88,6 +89,7 @@ export function SecuritySettings({ onChangePassword }: SecuritySettingsProps) {
               setSuccess(false);
             }}
             placeholder="أعد إدخال كلمة المرور"
+            maxLength={256}
             disabled={loading}
             autoComplete="new-password"
           />

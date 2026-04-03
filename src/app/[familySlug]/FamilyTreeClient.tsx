@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { TreeProvider } from '@/context/TreeContext';
 import { useTree } from '@/context/TreeContext';
 import { useGedcomData } from '@/hooks/useGedcomData';
+import { useTreeColorOverrides } from '@/hooks/useTreeColorOverrides';
 import { FamilyTree } from '@/components/tree';
 import { Sidebar } from '@/components/ui';
 import { Playground } from '@/components/dev/Playground';
@@ -26,6 +27,7 @@ function MainApp({ gedcomFile, showSidebar, showMinimap, showControls }: MainApp
 
   // Load GEDCOM data
   useGedcomData(gedcomFile);
+  useTreeColorOverrides();
 
   if (error) {
     return (
