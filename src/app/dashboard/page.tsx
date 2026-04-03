@@ -20,10 +20,16 @@ interface WorkspaceMembership {
   workspace: Workspace;
 }
 
+interface UserProfile {
+  displayName: string;
+  avatarUrl: string | null;
+}
+
 export default function DashboardPage() {
   const [workspaces, setWorkspaces] = useState<WorkspaceMembership[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
   useEffect(() => {
     async function fetchWorkspaces() {
@@ -42,7 +48,22 @@ export default function DashboardPage() {
         setLoading(false);
       }
     }
+    async function fetchProfile() {
+      try {
+        const res = await apiFetch('/api/users/me');
+        if (res.ok) {
+          const body = await res.json();
+          setUserProfile({
+            displayName: body.data.displayName,
+            avatarUrl: body.data.avatarUrl,
+          });
+        }
+      } catch {
+        // Profile fetch is non-critical; the avatar just won't show
+      }
+    }
     fetchWorkspaces();
+    fetchProfile();
   }, []);
 
   async function handleLogout() {
@@ -55,9 +76,28 @@ export default function DashboardPage() {
     <main className={styles.container}>
       <header className={styles.header}>
         <h1 className={styles.headerTitle}>سلالة</h1>
-        <button onClick={handleLogout} className={styles.logoutButton}>
-          تسجيل الخروج
-        </button>
+        <div className={styles.headerActions}>
+          {userProfile && (
+            <Link href="/dashboard/profile" className={styles.profileLink} title="الملف الشخصي">
+              {userProfile.avatarUrl ? (
+                <img
+                  src={userProfile.avatarUrl}
+                  alt={userProfile.displayName}
+                  className={styles.profileAvatar}
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <span className={styles.profileAvatarFallback}>
+                  {(userProfile.displayName || '?').charAt(0).toUpperCase()}
+                </span>
+              )}
+              <span className={styles.profileName}>{userProfile.displayName}</span>
+            </Link>
+          )}
+          <button onClick={handleLogout} className={styles.logoutButton}>
+            تسجيل الخروج
+          </button>
+        </div>
       </header>
 
       <div className={styles.content}>

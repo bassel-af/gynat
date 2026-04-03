@@ -1,0 +1,249 @@
+/* ============================================
+   ACCOUNT SETTINGS — Name & Email forms
+   ============================================ */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.fieldRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.label {
+  font-size: var(--font-size-sm);
+  color: var(--alpha-white-50);
+  font-weight: var(--font-weight-medium);
+}
+
+.inputRow {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.inputRow > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.input {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--alpha-white-10);
+  background: var(--alpha-white-04);
+  color: var(--alpha-white-85);
+  font-size: var(--font-size-base);
+  font-family: inherit;
+  outline: none;
+  transition: border-color var(--transition-base);
+}
+
+.input::placeholder {
+  color: var(--alpha-white-25);
+}
+
+.input:focus {
+  border-color: var(--color-primary);
+}
+
+.input:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  border-color: var(--alpha-white-06);
+  background: transparent;
+}
+
+.emailDisplay {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--alpha-white-06);
+  background: transparent;
+  color: var(--alpha-white-50);
+  font-size: var(--font-size-base);
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.emailHint {
+  font-size: var(--font-size-xs);
+  color: var(--alpha-white-25);
+  line-height: 1.5;
+}
+
+.saveButton {
+  align-self: center;
+}
+
+.divider {
+  border: none;
+  border-top: 1px solid var(--alpha-white-06);
+  margin: var(--space-1) 0;
+}
+
+.fieldError {
+  color: #fc8181;
+  font-size: var(--font-size-xs);
+}
+
+.fieldSuccess {
+  color: #68d391;
+  font-size: var(--font-size-xs);
+}
+
+/* ============================================
+   EMAIL CHANGE — Dual confirmation card
+   ============================================ */
+
+.confirmationCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-11) var(--space-9);
+  border-radius: var(--radius-2xl);
+  border: 1px solid rgba(74, 144, 217, 0.2);
+  background: rgba(74, 144, 217, 0.04);
+  text-align: center;
+  animation: confirmSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes confirmSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.confirmationIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(74, 144, 217, 0.1);
+  color: var(--color-primary-light);
+  flex-shrink: 0;
+}
+
+.confirmationTitle {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--alpha-white-80);
+  line-height: var(--line-height-snug);
+}
+
+.confirmationDescription {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--alpha-white-40);
+  line-height: 1.7;
+}
+
+.confirmationDescription strong {
+  color: var(--alpha-white-60);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Email address list */
+.emailList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  max-width: 340px;
+}
+
+.emailListItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--alpha-white-04);
+  border: 1px solid var(--alpha-white-06);
+}
+
+.emailBadge {
+  flex-shrink: 0;
+  padding: 2px var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--alpha-white-08);
+  color: var(--alpha-white-40);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
+
+.emailBadgeNew {
+  background: rgba(74, 144, 217, 0.12);
+  color: var(--color-primary-light);
+}
+
+.emailAddress {
+  font-size: var(--font-size-sm);
+  color: var(--alpha-white-70);
+  direction: ltr;
+  unicode-bidi: isolate;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.confirmationHint {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--alpha-white-25);
+  line-height: 1.6;
+}
+
+.dismissLink {
+  margin-top: var(--space-1);
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--alpha-white-35);
+  font-size: var(--font-size-xs);
+  font-family: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--alpha-white-15);
+  text-underline-offset: 3px;
+  transition: color var(--transition-base);
+}
+
+.dismissLink:hover {
+  color: var(--alpha-white-60);
+  text-decoration-color: var(--alpha-white-35);
+}
+
+.dismissLink:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+@media (max-width: 480px) {
+  .inputRow {
+    flex-direction: column;
+  }
+
+  .confirmationCard {
+    padding: var(--space-9) var(--space-7);
+  }
+}

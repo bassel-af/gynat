@@ -1,0 +1,82 @@
+/* ============================================
+   PROFILE HEADER — Avatar + Name + Email
+   ============================================ */
+
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-11) var(--space-7) var(--space-9);
+  gap: var(--space-5);
+}
+
+/* Avatar */
+.avatarContainer {
+  position: relative;
+  cursor: default;
+}
+
+.avatar {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: var(--gradient-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-inverse);
+  user-select: none;
+  border: 3px solid var(--alpha-white-10);
+  transition: border-color var(--transition-base);
+}
+
+.avatarImage {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--alpha-white-10);
+}
+
+/* Info */
+.info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  text-align: center;
+}
+
+.name {
+  font-size: var(--font-size-4xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--alpha-white-85);
+  margin: 0;
+  line-height: var(--line-height-snug);
+}
+
+.email {
+  font-size: var(--font-size-base);
+  color: var(--alpha-white-40);
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+@media (max-width: 640px) {
+  .wrapper {
+    padding: var(--space-8) var(--space-5) var(--space-7);
+  }
+
+  .avatar,
+  .avatarImage {
+    width: 80px;
+    height: 80px;
+    font-size: 30px;
+  }
+
+  .name {
+    font-size: var(--font-size-3xl);
+  }
+}

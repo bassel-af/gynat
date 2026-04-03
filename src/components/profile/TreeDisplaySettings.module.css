@@ -1,0 +1,146 @@
+/* ============================================
+   TREE DISPLAY SETTINGS — Node color pickers
+   ============================================ */
+
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* Color picker row */
+.colorRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+}
+
+.colorInfo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 1;
+  min-width: 0;
+}
+
+.colorLabel {
+  font-size: var(--font-size-base);
+  color: var(--alpha-white-70);
+  font-weight: var(--font-weight-medium);
+}
+
+.colorHex {
+  font-size: var(--font-size-xs);
+  color: var(--alpha-white-30);
+  direction: ltr;
+  unicode-bidi: isolate;
+  font-family: monospace;
+}
+
+/* Swatch + native color input */
+.swatchButton {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-lg);
+  border: 2px solid var(--alpha-white-15);
+  cursor: pointer;
+  overflow: hidden;
+  flex-shrink: 0;
+  transition: border-color var(--transition-base), transform var(--transition-fast);
+}
+
+.swatchButton:hover {
+  border-color: var(--alpha-white-30);
+  transform: scale(1.05);
+}
+
+.swatchButton:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-focus-primary);
+}
+
+.colorInput {
+  position: absolute;
+  inset: -8px;
+  width: calc(100% + 16px);
+  height: calc(100% + 16px);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  background: transparent;
+}
+
+/* Hide the native color input's chrome so only the swatch is visible */
+.colorInput::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.colorInput::-webkit-color-swatch {
+  border: none;
+  border-radius: var(--radius-md);
+}
+
+.colorInput::-moz-color-swatch {
+  border: none;
+  border-radius: var(--radius-md);
+}
+
+/* Preview strip */
+.previewStrip {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--alpha-white-06);
+  background: var(--alpha-white-04);
+}
+
+.previewCard {
+  flex: 1;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: white;
+  text-align: center;
+  border-top-width: 4px;
+  border-top-style: solid;
+  box-shadow: var(--shadow-sm);
+}
+
+.previewCardLabel {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.previewCardSub {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+}
+
+/* Reset button row */
+.resetRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: var(--space-1);
+}
+
+.resetHint {
+  font-size: var(--font-size-xs);
+  color: var(--alpha-white-25);
+}
+
+/* Separator */
+.divider {
+  border: none;
+  border-top: 1px solid var(--alpha-white-06);
+  margin: 0;
+}
+
+@media (max-width: 480px) {
+  .previewStrip {
+    flex-direction: column;
+  }
+}

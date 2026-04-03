@@ -168,7 +168,6 @@ The project is at Phase 5 (Branch Pointers) with Phases 1-5 complete.
 - `PlaceComboBox/` - Place search combobox with autocomplete
 - `Sidebar/` - Sidebar with person detail panel (`PersonDetail.tsx`, `PersonDetail.module.css`)
 - `Spinner/` - Loading spinner
-- `SpouseFamilySidebar/` - Spouse family detail panel (no index.ts)
 - `Toast/` - Toast notification component
 - `RootSelector.tsx` - Dropdown to select root ancestor (standalone file, no directory)
 - `SearchBar.tsx` - Search functionality component (standalone file, no directory)

@@ -445,18 +445,6 @@ export function mergePointedSubtree(
 // Stitching helpers
 // ---------------------------------------------------------------------------
 
-function findPointedRoot(pointed: GedcomData): string | null {
-  // The root is an individual with no familyAsChild (within the pointed set)
-  for (const [id, ind] of Object.entries(pointed.individuals)) {
-    if (!ind.familyAsChild || !pointed.families[ind.familyAsChild]) {
-      return id;
-    }
-  }
-  // Fallback: first individual
-  const ids = Object.keys(pointed.individuals);
-  return ids.length > 0 ? ids[0] : null;
-}
-
 function makeSyntheticFamily(
   id: string,
   sourceWorkspaceId: string,

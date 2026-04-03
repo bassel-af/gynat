@@ -11,7 +11,7 @@ import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
 type RouteParams = { params: Promise<{ id: string; tokenId: string }> };
 
 const toggleTokenSchema = z.object({
-  isRevoked: z.boolean({ required_error: 'يجب تقديم isRevoked كقيمة منطقية' }),
+  isRevoked: z.boolean({ error: 'يجب تقديم isRevoked كقيمة منطقية' }),
 });
 
 // PATCH /api/workspaces/[id]/share-tokens/[tokenId] — Disable or re-enable a share token

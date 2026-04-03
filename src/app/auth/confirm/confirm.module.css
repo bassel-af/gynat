@@ -1,0 +1,207 @@
+/* ============================================
+   AUTH CONFIRMATION PAGE
+   Branded page for email/auth confirmations
+   ============================================ */
+
+.container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--color-dark-900);
+  overflow: hidden;
+  position: relative;
+  padding: var(--space-7);
+}
+
+/* Subtle ambient glow */
+.container::before {
+  content: '';
+  position: absolute;
+  top: -40%;
+  right: -20%;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(74, 144, 217, 0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* Card */
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-5);
+  max-width: 420px;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  animation: cardFadeIn 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes cardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Brand */
+.brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.brandIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--gradient-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-inverse);
+  user-select: none;
+}
+
+.brandName {
+  margin: 0;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--alpha-white-85);
+  letter-spacing: var(--letter-spacing-wide);
+}
+
+/* Status icon */
+.statusIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.statusIconSuccess {
+  background: rgba(72, 187, 120, 0.1);
+  color: #68d391;
+  animation: iconPop 0.4s 0.15s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.statusIconError {
+  background: rgba(229, 62, 62, 0.1);
+  color: #fc8181;
+  animation: iconPop 0.4s 0.15s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes iconPop {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Title */
+.title {
+  margin: 0;
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--alpha-white-85);
+  line-height: var(--line-height-snug);
+}
+
+/* Description text */
+.description {
+  margin: 0;
+  font-size: var(--font-size-base);
+  color: var(--alpha-white-40);
+  line-height: 1.7;
+  max-width: 340px;
+}
+
+/* Links */
+.link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding: var(--space-3) var(--space-7);
+  border-radius: var(--radius-lg);
+  background: var(--alpha-white-06);
+  border: 1px solid var(--alpha-white-10);
+  color: var(--alpha-white-60);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  font-family: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background var(--transition-base),
+    color var(--transition-base),
+    border-color var(--transition-base);
+}
+
+.link:hover {
+  background: var(--alpha-white-10);
+  color: var(--alpha-white-80);
+  border-color: var(--alpha-white-15);
+}
+
+.link:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Redirect countdown */
+.countdown {
+  margin: var(--space-1) 0 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--alpha-white-25);
+}
+
+/* Loading state */
+.loadingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-5);
+}
+
+.loadingText {
+  margin: 0;
+  font-size: var(--font-size-base);
+  color: var(--alpha-white-40);
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .container {
+    padding: var(--space-5);
+  }
+
+  .title {
+    font-size: var(--font-size-2xl);
+  }
+
+  .statusIcon {
+    width: 64px;
+    height: 64px;
+  }
+}

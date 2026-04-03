@@ -1,4 +1,5 @@
 - Test mobile.
+gedcom export and import.
 
 Phase 7
 - Profile
@@ -10,29 +11,25 @@ point the line to the right person, not the center.
 
 Next phases:
 - Assign existing relative (assign parent that already exists to person with no parent)
-الإخوة من الرضاعة من نفس الأقارب في شجرة العائلة وليس من خارجها
-وتعديل على الستاندارد الخاص بجيدكوم
 
 
 Check other inputs in MacFamilyTree
 
-Handle deleting a parent.
+Handle deleting a parent (can check mac family tree)
 
 Previous links redirects. e.g. /saeed, /sharbek, etc. Request access from admin
 
 title - الكنية, standard or not in gedcom. shall we create tag?
 
-المحارم
 
-Do pnpm build.
 
-Think about religion:
-- How does the platform handle religious context (e.g. Islamic family structure, naming conventions)
-- Religious events and their relation to family records
+Low priority now:
 
-Think about mirath (inheritance):
-- Mirath/inheritance calculations based on family tree
-- Islamic inheritance rules and how to represent them
+Version control
+إصدار نعوة
+UI latest touches.
+divorce/khol3, etc
+
 
 MCP (Model Context Protocol):
 - Consider exposing solalah as an MCP server so AI assistants can query/navigate the family tree
@@ -43,13 +40,6 @@ API / Platform integrations:
 - Expose an API so the platform can be integrated with external services
 - Think about what data to expose, auth, and use cases
 - Think about adding to the tree.
-
-Low priority now:
-
-Version control
-إصدار نعوة
-UI latest touches.
-divorce/khol3, etc
 
 Make people close together. do not make them this much far away.
 

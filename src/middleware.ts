@@ -42,11 +42,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // For API routes, run session refresh but do NOT redirect on auth failure.
-  // Individual API route handlers call getAuthenticatedUser() and return 401 themselves.
+  // For API routes, skip session refresh entirely.
+  // API route handlers verify auth themselves via getAuthenticatedUser() which calls
+  // GoTrue directly with the Bearer token. Running updateSession() here would double
+  // the GoTrue calls (one in middleware + one in handler), wasting Kong rate-limit budget.
+  // Client-side token refresh is handled by @supabase/ssr's createBrowserClient.
   if (isApiRoute(pathname)) {
-    const { supabaseResponse } = await updateSession(request);
-    return supabaseResponse;
+    return NextResponse.next();
   }
 
   // For protected page routes, verify/refresh the session and redirect if unauthenticated

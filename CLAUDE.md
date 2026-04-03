@@ -380,3 +380,5 @@ Run `pnpm test` after logic changes (skip for trivial changes like print stateme
 Check the browser when you have done work related to the frontend. It's better to use the default browser. Do not specify a browser.
 
 **IMPORTANT: For browser/Playwright testing, ALWAYS use the test route: `http://localhost:3000/test?only=canvas`. See `docs/testing.md` for all query parameters.**
+
+**IMPORTANT: After implementing a new feature, you MUST perform a complete end-to-end test using real infrastructure (GoTrue, Kong, PostgreSQL, SMTP).** Unit tests with mocks are not sufficient — they can pass while the actual flow is broken (e.g., misconfigured GoTrue URL paths, Kong routing issues, missing DB sync). For auth-related features, this means: create a real test user via the GoTrue admin API, exercise the full flow through Kong and the Next.js app, verify the result in the database, and clean up the test user afterward. For features involving email (email change, password reset, invitations), send a real email and verify the link works. Do not assume a feature is fixed without e2e verification against the running services.

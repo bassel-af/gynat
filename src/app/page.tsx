@@ -8,6 +8,15 @@ export default function Home() {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
+    // GoTrue redirects here with auth tokens in the URL fragment after email
+    // verification (e.g., email change, signup confirmation). Detect and
+    // forward to /auth/confirm which handles the fragment client-side.
+    const hash = window.location.hash;
+    if (hash && (hash.includes('access_token=') || hash.includes('message='))) {
+      window.location.href = '/auth/confirm' + hash;
+      return;
+    }
+
     const supabase = createClient();
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {

@@ -84,19 +84,20 @@ describe('middleware', () => {
   });
 
   describe('API routes', () => {
-    test('/api/auth/sync-user is NOT treated as a static asset — runs session refresh', async () => {
+    test('/api/auth/sync-user is NOT treated as a static asset — skips session refresh', async () => {
       const request = makeRequest('/api/auth/sync-user');
       await middleware(request);
 
-      // updateSession calls getUser, so if getUser was called, session refresh ran
-      expect(mockGetUser).toHaveBeenCalled();
+      // API routes skip session refresh to avoid doubling GoTrue calls
+      // (route handlers verify auth themselves via getAuthenticatedUser)
+      expect(mockGetUser).not.toHaveBeenCalled();
     });
 
-    test('/api/workspaces is NOT treated as a static asset — runs session refresh', async () => {
+    test('/api/workspaces is NOT treated as a static asset — skips session refresh', async () => {
       const request = makeRequest('/api/workspaces');
       await middleware(request);
 
-      expect(mockGetUser).toHaveBeenCalled();
+      expect(mockGetUser).not.toHaveBeenCalled();
     });
 
     test('does NOT redirect to /auth/login when unauthenticated', async () => {
@@ -109,12 +110,7 @@ describe('middleware', () => {
       expect(response.status).toBe(200);
     });
 
-    test('passes through with refreshed session when authenticated', async () => {
-      mockGetUser.mockResolvedValue({
-        data: { user: { id: 'user-1' } },
-        error: null,
-      });
-
+    test('passes through without session refresh when authenticated', async () => {
       const request = makeRequest('/api/workspaces', {
         'sb-access-token': 'valid-access-token',
         'sb-refresh-token': 'valid-refresh-token',
@@ -123,7 +119,8 @@ describe('middleware', () => {
 
       expect(response.headers.get('location')).toBeNull();
       expect(response.status).toBe(200);
-      expect(mockGetUser).toHaveBeenCalled();
+      // API routes skip middleware session refresh — auth is handled by route handlers
+      expect(mockGetUser).not.toHaveBeenCalled();
     });
   });
 

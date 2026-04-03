@@ -71,9 +71,13 @@ services:
       GOTRUE_SMTP_PASS: ${SMTP_PASS:-}
       GOTRUE_SMTP_ADMIN_EMAIL: ${SMTP_SENDER_EMAIL:-noreply@solalah.com}
       GOTRUE_SMTP_SENDER_NAME: ${SMTP_SENDER_NAME:-Solalah}
-      GOTRUE_MAILER_URLPATHS_INVITE: "/auth/confirm"
-      GOTRUE_MAILER_URLPATHS_CONFIRMATION: "/auth/confirm"
-      GOTRUE_MAILER_URLPATHS_RECOVERY: "/auth/confirm"
+      GOTRUE_MAILER_URLPATHS_INVITE: "/auth/v1/verify"
+      GOTRUE_MAILER_URLPATHS_CONFIRMATION: "/auth/v1/verify"
+      GOTRUE_MAILER_URLPATHS_RECOVERY: "/auth/v1/verify"
+      GOTRUE_MAILER_URLPATHS_EMAIL_CHANGE: "/auth/v1/verify"
+
+      # Custom email templates (GoTrue fetches via HTTP; host.docker.internal reaches the host)
+      GOTRUE_MAILER_TEMPLATES_EMAIL_CHANGE: "http://host.docker.internal:4000/templates/email-change.html"
     depends_on:
       db:
         condition: service_healthy

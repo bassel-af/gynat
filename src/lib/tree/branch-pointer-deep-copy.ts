@@ -44,7 +44,7 @@ export function prepareDeepCopy(
   pointed: GedcomData,
   config: DeepCopyConfig,
 ): DeepCopyResult {
-  const { anchorIndividualId, relationship, pointerId } = config;
+  const { anchorIndividualId, relationship } = config;
 
   // Step 1: Generate new UUIDs for all entities
   const idMap = new Map<string, string>();
