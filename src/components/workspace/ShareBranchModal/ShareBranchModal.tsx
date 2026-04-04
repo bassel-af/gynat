@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { apiFetch } from '@/lib/api/client';
 import type { GedcomData, Individual } from '@/lib/gedcom/types';
 import { getDisplayName, getDisplayNameWithNasab } from '@/lib/gedcom';
-import { matchesSearch } from '@/lib/utils/search';
+import { matchesSearch, searchRelevance } from '@/lib/utils/search';
 import styles from './ShareBranchModal.module.css';
 
 interface ShareBranchModalProps {
@@ -50,9 +50,12 @@ export function ShareBranchModal({
       if (matchesSearch(getDisplayName(person), searchQuery)) {
         results.push(person);
       }
-      if (results.length >= 20) break;
     }
-    return results;
+    results.sort((a, b) =>
+      searchRelevance(getDisplayName(a), searchQuery) -
+      searchRelevance(getDisplayName(b), searchQuery),
+    );
+    return results.slice(0, 20);
   }, [treeData, searchQuery]);
 
   const selectedPerson = selectedPersonId && treeData

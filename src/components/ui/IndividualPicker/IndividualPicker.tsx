@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useMemo, useId } from 'react';
 import type { GedcomData, Individual } from '@/lib/gedcom/types';
 import { getDisplayNameWithNasab, DEFAULT_NASAB_DEPTH } from '@/lib/gedcom/display';
-import { matchesSearch } from '@/lib/utils/search';
+import { matchesSearch, searchRelevance } from '@/lib/utils/search';
 import styles from './IndividualPicker.module.css';
 
 export interface IndividualPickerProps {
@@ -47,10 +47,19 @@ export function IndividualPicker({
       const name = getDisplayNameWithNasab(data, person, DEFAULT_NASAB_DEPTH);
       if (matchesSearch(name, query)) {
         matches.push(person);
-        if (matches.length >= MAX_RESULTS) break;
       }
     }
-    return matches;
+    matches.sort((a, b) =>
+      searchRelevance(
+        getDisplayNameWithNasab(data, a, DEFAULT_NASAB_DEPTH),
+        query,
+      ) -
+      searchRelevance(
+        getDisplayNameWithNasab(data, b, DEFAULT_NASAB_DEPTH),
+        query,
+      ),
+    );
+    return matches.slice(0, MAX_RESULTS);
   }, [query, data, exclude, sexFilter]);
 
   const selectPerson = useCallback(

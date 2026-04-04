@@ -1,13 +1,10 @@
-A way to navigate from canvas tree to the workspace page.
 - Test mobile.
 gedcom export and import.
 
 Create multiple test trees for each phase that run only for specific users.
-point the line to the right person, not the center.
 
 Next phases:
 - Assign existing relative (assign parent that already exists to person with no parent)
-
 
 Check other inputs in MacFamilyTree
 
@@ -38,10 +35,6 @@ API / Platform integrations:
 - Think about adding to the tree.
 
 Make people close together. do not make them this much far away.
-
-Search is good but sort it so the result which
-has first word matches search first word appears first.
-or let us say first name matches first word appears first.
 
 
 

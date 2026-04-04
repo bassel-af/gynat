@@ -3,7 +3,7 @@
 import { useMemo, useEffect, useRef, useState } from 'react';
 import { useTree } from '@/context/TreeContext';
 import { getDisplayName } from '@/lib/gedcom';
-import { matchesSearch } from '@/lib/utils/search';
+import { matchesSearch, searchRelevance } from '@/lib/utils/search';
 
 interface SearchMatch {
   id: string;
@@ -33,6 +33,7 @@ export function SearchBar() {
       }
     }
 
+    results.sort((a, b) => searchRelevance(a.name, searchQuery) - searchRelevance(b.name, searchQuery));
     return results;
   }, [data, searchQuery]);
 

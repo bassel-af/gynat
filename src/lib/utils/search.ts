@@ -22,3 +22,33 @@ export function matchesSearch(text: string, query: string): boolean {
 
   return tokens.every(token => normalizedText.includes(stripArabicDiacritics(token)));
 }
+
+/**
+ * Score search relevance for ranking (lower = better). Returns -1 if no match.
+ *
+ * Tier 0: First word of text starts with the first query token.
+ * Tier 1: First query token starts a word in text, but not the first word.
+ * Tier 2: First query token only appears as a substring within a word.
+ */
+export function searchRelevance(text: string, query: string): number {
+  const trimmed = query.trim();
+  if (!trimmed) return 0;
+
+  const normalizedText = stripArabicDiacritics(text);
+  const tokens = trimmed.split(/\s+/).map(t => stripArabicDiacritics(t));
+
+  // All tokens must be present
+  if (!tokens.every(token => normalizedText.includes(token))) return -1;
+
+  const firstToken = tokens[0];
+  const words = normalizedText.split(/\s+/);
+
+  // Tier 0: first word starts with first token
+  if (words[0]?.startsWith(firstToken)) return 0;
+
+  // Tier 1: some other word starts with first token
+  if (words.some(w => w.startsWith(firstToken))) return 1;
+
+  // Tier 2: substring match only
+  return 2;
+}

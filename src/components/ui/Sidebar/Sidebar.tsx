@@ -5,7 +5,7 @@ import clsx from 'clsx';
 import { useTree } from '@/context/TreeContext';
 import { getDisplayNameWithNasab, DEFAULT_NASAB_DEPTH, findTopmostAncestor } from '@/lib/gedcom';
 import { PersonDetail } from './PersonDetail';
-import { matchesSearch } from '@/lib/utils/search';
+import { matchesSearch, searchRelevance } from '@/lib/utils/search';
 import styles from './Sidebar.module.css';
 
 interface PersonItem {
@@ -95,9 +95,11 @@ export function Sidebar() {
       filtered = filtered.filter((p) => visiblePersonIds.has(p.id));
     }
 
-    // Apply search filter
+    // Apply search filter and sort by relevance
     if (searchFilter.trim()) {
-      filtered = filtered.filter((p) => matchesSearch(p.name, searchFilter));
+      filtered = filtered
+        .filter((p) => matchesSearch(p.name, searchFilter))
+        .sort((a, b) => searchRelevance(a.name, searchFilter) - searchRelevance(b.name, searchFilter));
     }
 
     return filtered;
