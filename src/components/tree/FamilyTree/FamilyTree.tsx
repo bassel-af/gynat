@@ -20,7 +20,7 @@ import '@xyflow/react/dist/style.css';
 import type { GedcomData, Individual } from '@/lib/gedcom';
 import { getDisplayName, getAllAncestors, getAllDescendants, findTopmostAncestor, hasExternalFamily, computeGraftDescriptors } from '@/lib/gedcom';
 import { useTree } from '@/context/TreeContext';
-import { getLayoutedElements, NODE_WIDTH, NODE_HEIGHT, SPOUSE_WIDTH, type GraftNodeBuilder } from './layout';
+import { getLayoutedElements, NODE_WIDTH, NODE_HEIGHT, SPOUSE_WIDTH, SPOUSE_GAP, type GraftNodeBuilder } from './layout';
 
 // Highlight state for lineage tracing
 interface HighlightState {
@@ -169,14 +169,14 @@ function PersonNode({ data }: { data: PersonNodeData }) {
           {renderPersonCard(person, true)}
           {/* Connector lines from husband to each wife */}
           {spouses.map(({ color }, index) => {
-            const lineWidth = 20 + index * 160;
+            const lineWidth = SPOUSE_GAP + index * SPOUSE_WIDTH;
             return (
               <div
                 key={`line-${index}`}
                 className="spouse-line"
                 style={{
                   position: 'absolute',
-                  left: 140,
+                  left: NODE_WIDTH,
                   top: `calc(50% + ${index * 4}px)`,
                   width: lineWidth,
                   height: 2,
@@ -187,7 +187,7 @@ function PersonNode({ data }: { data: PersonNodeData }) {
           })}
           {/* Wife cards */}
           {spouses.map(({ spouse, highlightClass, hasExternalFamily: hasExtFam, topAncestorId }, spouseIdx) => (
-            <div key={spouse.id} className="spouse-card-wrapper" style={{ marginLeft: 20, position: 'relative' }}>
+            <div key={spouse.id} className="spouse-card-wrapper" style={{ marginLeft: SPOUSE_GAP, position: 'relative' }}>
               {/* Target handle for graft parent edges */}
               <Handle
                 type="target"
@@ -236,7 +236,7 @@ function PersonNode({ data }: { data: PersonNodeData }) {
                 type="source"
                 position={Position.Bottom}
                 id="spouse-0"
-                style={{ opacity: 0 }}
+                style={{ opacity: 0, left: (NODE_WIDTH + SPOUSE_WIDTH) / 2 }}
               />
               <Handle
                 type="source"
@@ -255,8 +255,7 @@ function PersonNode({ data }: { data: PersonNodeData }) {
                   id={`spouse-${index}`}
                   style={{
                     opacity: 0,
-                    // Position under each wife: husband(140) + gap(20) + index*160 + halfCard(70)
-                    left: 140 + 20 + index * 160 + 70,
+                    left: NODE_WIDTH + SPOUSE_GAP + index * SPOUSE_WIDTH + NODE_WIDTH / 2,
                   }}
                 />
               ))}
@@ -264,7 +263,7 @@ function PersonNode({ data }: { data: PersonNodeData }) {
                 type="source"
                 position={Position.Bottom}
                 id="default"
-                style={{ opacity: 0, left: 70 }}
+                style={{ opacity: 0, left: NODE_WIDTH / 2 }}
               />
             </>
           )}

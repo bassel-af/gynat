@@ -7,6 +7,7 @@ export const NODE_HEIGHT = 75;
 export const SPOUSE_WIDTH = 160; // Additional width per spouse (card + gap)
 export const HORIZONTAL_GAP = 40; // Gap between siblings
 export const VERTICAL_GAP = 120; // Gap between generations
+export const SPOUSE_GAP = 20; // Gap between person card and first spouse card
 export const GRAFT_HORIZONTAL_PADDING = 20; // Extra padding around graft envelopes
 
 interface PersonNodeDataForLayout {
@@ -81,16 +82,33 @@ export function getLayoutedElements(
   // Build parent -> children map (preserving edge order for consistent sibling order)
   const childrenOf = new Map<string, string[]>();
   const hasParent = new Set<string>();
+  // Map: parentId -> childId -> sourceHandle
+  const childHandleMap = new Map<string, Map<string, string>>();
   edges.forEach((edge) => {
     const children = childrenOf.get(edge.source) || [];
     children.push(edge.target);
     childrenOf.set(edge.source, children);
     hasParent.add(edge.target);
+    // Track which source handle connects to each child
+    const parentMap = childHandleMap.get(edge.source) || new Map<string, string>();
+    parentMap.set(edge.target, edge.sourceHandle || 'default');
+    childHandleMap.set(edge.source, parentMap);
   });
 
   // Find root (node with no parent)
   const rootId = nodes.find((n) => !hasParent.has(n.id))?.id;
   if (!rootId) return { nodes, edges };
+
+  // Multi-wife layout info: groups of children positioned under each wife's handle
+  interface WifeGroup {
+    handleX: number; // handle X relative to node left edge
+    children: string[];
+    width: number; // total width of children subtrees with gaps
+  }
+  const multiWifeLayout = new Map<string, {
+    groups: WifeGroup[];
+    nodeOffset: number; // offset of node left edge from subtree start
+  }>();
 
   // Calculate subtree widths bottom-up (post-order traversal)
   const subtreeWidths = new Map<string, number>();
@@ -100,12 +118,73 @@ export function getLayoutedElements(
     const nodeWidth = nodeWidths.get(nodeId) || NODE_WIDTH;
 
     if (children.length === 0) {
-      // Leaf node - subtree width is just the node width
       subtreeWidths.set(nodeId, nodeWidth);
       return nodeWidth;
     }
 
-    // Sum of all children's subtree widths + gaps between them
+    // Multi-wife parents (>1 spouse) get per-wife child grouping.
+    // Single-spouse parents use standard centered layout — their spouse-0
+    // handle is at (NODE_WIDTH + SPOUSE_WIDTH) / 2 which aligns with centered children.
+    const node = nodeMap.get(nodeId);
+    const spouseCount = (node?.data as PersonNodeDataForLayout)?.spouses?.length || 0;
+    const handleMap = childHandleMap.get(nodeId);
+
+    if (spouseCount > 1 && handleMap) {
+      // Group children by source handle
+      const groupMap = new Map<string, string[]>();
+      for (const childId of children) {
+        const handle = handleMap.get(childId) || 'default';
+        const group = groupMap.get(handle) || [];
+        group.push(childId);
+        groupMap.set(handle, group);
+      }
+
+      // Build wife groups with handle X positions and widths
+      const groups: WifeGroup[] = [];
+      for (const [handle, groupChildren] of groupMap) {
+        let groupWidth = 0;
+        groupChildren.forEach((childId, i) => {
+          groupWidth += calculateSubtreeWidth(childId);
+          if (i < groupChildren.length - 1) groupWidth += HORIZONTAL_GAP;
+        });
+
+        const match = handle.match(/spouse-(\d+)/);
+        const handleX = match
+          ? NODE_WIDTH + SPOUSE_GAP + parseInt(match[1]) * SPOUSE_WIDTH + NODE_WIDTH / 2
+          : NODE_WIDTH / 2;
+
+        groups.push({ handleX, children: groupChildren, width: groupWidth });
+      }
+
+      // Sort by handle X
+      groups.sort((a, b) => a.handleX - b.handleX);
+
+      // Resolve overlaps: push groups right if they collide
+      for (let i = 1; i < groups.length; i++) {
+        const prevRight = groups[i - 1].handleX + groups[i - 1].width / 2;
+        const currLeft = groups[i].handleX - groups[i].width / 2;
+        if (currLeft < prevRight + HORIZONTAL_GAP) {
+          groups[i].handleX = prevRight + HORIZONTAL_GAP + groups[i].width / 2;
+        }
+      }
+
+      // Calculate subtree extent (relative to node left edge)
+      let leftmost = 0;
+      let rightmost = nodeWidth;
+      for (const g of groups) {
+        leftmost = Math.min(leftmost, g.handleX - g.width / 2);
+        rightmost = Math.max(rightmost, g.handleX + g.width / 2);
+      }
+
+      const subtreeWidth = rightmost - leftmost;
+      const nodeOffset = -leftmost;
+
+      multiWifeLayout.set(nodeId, { groups, nodeOffset });
+      subtreeWidths.set(nodeId, subtreeWidth);
+      return subtreeWidth;
+    }
+
+    // Standard: sum of all children's subtree widths + gaps between them
     let childrenTotalWidth = 0;
     children.forEach((childId, index) => {
       childrenTotalWidth += calculateSubtreeWidth(childId);
@@ -114,7 +193,6 @@ export function getLayoutedElements(
       }
     });
 
-    // Subtree width is the larger of: node width or children total width
     const subtreeWidth = Math.max(nodeWidth, childrenTotalWidth);
     subtreeWidths.set(nodeId, subtreeWidth);
     return subtreeWidth;
@@ -129,15 +207,35 @@ export function getLayoutedElements(
     const nodeWidth = nodeWidths.get(nodeId) || NODE_WIDTH;
     const subtreeWidth = subtreeWidths.get(nodeId) || nodeWidth;
 
-    // Center the node within its allocated subtree space
+    const multiWife = multiWifeLayout.get(nodeId);
+
+    if (multiWife) {
+      // Multi-wife: position node using stored offset
+      const nodeX = x + multiWife.nodeOffset;
+      positions.set(nodeId, { x: nodeX, y });
+
+      const childY = y + NODE_HEIGHT + VERTICAL_GAP;
+
+      // Position each group centered at its wife handle X
+      for (const group of multiWife.groups) {
+        let childX = nodeX + group.handleX - group.width / 2;
+
+        for (const childId of group.children) {
+          const childSubtreeWidth = subtreeWidths.get(childId) || NODE_WIDTH;
+          assignPositions(childId, childX, childY);
+          childX += childSubtreeWidth + HORIZONTAL_GAP;
+        }
+      }
+      return;
+    }
+
+    // Standard: center the node within its allocated subtree space
     const nodeX = x + (subtreeWidth - nodeWidth) / 2;
     positions.set(nodeId, { x: nodeX, y });
 
-    // Position children
     const children = childrenOf.get(nodeId) || [];
     if (children.length === 0) return;
 
-    // Calculate total children width
     let childrenTotalWidth = 0;
     children.forEach((childId, index) => {
       childrenTotalWidth += subtreeWidths.get(childId) || NODE_WIDTH;
@@ -146,7 +244,6 @@ export function getLayoutedElements(
       }
     });
 
-    // Start position for children (centered under this subtree's space)
     let childX = x + (subtreeWidth - childrenTotalWidth) / 2;
     const childY = y + NODE_HEIGHT + VERTICAL_GAP;
 
@@ -255,9 +352,7 @@ export function getLayoutedElements(
         ? siblingStartX + visibleSibCount * (NODE_WIDTH + HORIZONTAL_GAP) - HORIZONTAL_GAP
         : siblingStartX;
 
-      // The spouse card X is hubPos.x + NODE_WIDTH + spouseIndex * SPOUSE_WIDTH
-      // For simplicity, we use the entire span from the spouse card to the last sibling
-      const spouseX = hubPos.x + baseSpouseWidth - SPOUSE_WIDTH; // approximate spouse card position
+      const spouseX = hubPos.x + NODE_WIDTH + SPOUSE_GAP + (spouseIndex >= 0 ? spouseIndex : 0) * SPOUSE_WIDTH;
       const graftSpanLeft = Math.min(spouseX, siblingStartX);
       const graftSpanRight = Math.max(spouseX + NODE_WIDTH, siblingRowEndX);
       const graftSpanCenter = (graftSpanLeft + graftSpanRight) / 2;

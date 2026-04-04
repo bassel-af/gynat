@@ -16,7 +16,7 @@ describe('CanvasToolbar', () => {
   it('renders a back link pointing to the workspace page', () => {
     render(<CanvasToolbar workspaceSlug="al-saeed" />);
 
-    const backLink = screen.getByRole('link', { name: /مساحة العمل/i });
+    const backLink = screen.getByRole('link', { name: /مساحة العائلة/i });
     expect(backLink).toBeInTheDocument();
     expect(backLink).toHaveAttribute('href', '/workspaces/al-saeed');
   });
@@ -33,13 +33,13 @@ describe('CanvasToolbar', () => {
 
   it('generates correct back link for different slugs', () => {
     const { rerender } = render(<CanvasToolbar workspaceSlug="family-one" />);
-    expect(screen.getByRole('link', { name: /مساحة العمل/i })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /مساحة العائلة/i })).toHaveAttribute(
       'href',
       '/workspaces/family-one',
     );
 
     rerender(<CanvasToolbar workspaceSlug="family-two" />);
-    expect(screen.getByRole('link', { name: /مساحة العمل/i })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /مساحة العائلة/i })).toHaveAttribute(
       'href',
       '/workspaces/family-two',
     );
