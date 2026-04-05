@@ -37,6 +37,16 @@ export const passwordChangeSchema = z
     path: ['confirmPassword'],
   });
 
+export const passwordResetSchema = z
+  .object({
+    newPassword: passwordStrengthSchema,
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: 'كلمتا المرور غير متطابقتين',
+    path: ['confirmPassword'],
+  });
+
 export const emailChangeSchema = z
   .object({
     newEmail: z.string().email('البريد الإلكتروني غير صالح').min(1).max(320),

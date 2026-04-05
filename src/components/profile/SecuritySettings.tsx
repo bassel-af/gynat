@@ -1,122 +1,19 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect, type FormEvent } from 'react';
+import { useState, useCallback, type FormEvent } from 'react';
 import { passwordChangeSchema } from '@/lib/profile/validation';
 import {
   preloadZxcvbn,
   checkPasswordStrength,
-  isZxcvbnReady,
-  getLoadPromise,
 } from '@/lib/profile/password-strength';
+import { usePasswordStrength } from '@/hooks/usePasswordStrength';
+import { RequirementsList, StrengthMeter } from '@/components/ui/PasswordStrength';
 import { Button } from '@/components/ui/Button';
 import styles from './SecuritySettings.module.css';
 
 interface SecuritySettingsProps {
   email: string;
   onChangePassword: (currentPassword: string, newPassword: string) => Promise<void>;
-}
-
-interface PasswordRequirement {
-  label: string;
-  met: boolean;
-}
-
-interface PasswordStrengthState {
-  requirements: PasswordRequirement[];
-  score: number | null;
-  label: string;
-  feedback: string[];
-  isLoading: boolean;
-}
-
-function usePasswordStrength(password: string, email: string): PasswordStrengthState {
-  const [zxcvbnLoaded, setZxcvbnLoaded] = useState(isZxcvbnReady());
-
-  useEffect(() => {
-    if (zxcvbnLoaded) return;
-    const promise = getLoadPromise();
-    if (!promise) return;
-    let cancelled = false;
-    promise.then(() => {
-      if (!cancelled) setZxcvbnLoaded(true);
-    }).catch(() => {
-      if (!cancelled) setZxcvbnLoaded(true);
-    });
-    return () => { cancelled = true; };
-  }, [zxcvbnLoaded]);
-
-  const strength = useMemo(() => {
-    if (!password || !zxcvbnLoaded) return null;
-    return checkPasswordStrength(password, [email].filter(Boolean));
-  }, [password, email, zxcvbnLoaded]);
-
-  const requirements = useMemo<PasswordRequirement[]>(() => {
-    const reqs: PasswordRequirement[] = [
-      { label: '٨ أحرف على الأقل', met: password.length >= 8 },
-      { label: 'حرف صغير واحد على الأقل', met: /[a-z\u0600-\u06FF]/.test(password) },
-      { label: 'حرف كبير واحد على الأقل (A-Z)', met: /[A-Z]/.test(password) },
-      { label: 'رقم واحد على الأقل', met: /\d/.test(password) },
-    ];
-    // Show zxcvbn warning in the checklist if password is weak
-    if (strength && strength.score < 3) {
-      const warning = strength.feedback[0] || 'كلمة المرور ضعيفة، اختر كلمة مرور أقوى';
-      reqs.push({ label: warning, met: false });
-    } else if (strength && strength.score >= 3) {
-      reqs.push({ label: 'كلمة مرور قوية', met: true });
-    }
-    return reqs;
-  }, [password, strength]);
-
-  return {
-    requirements,
-    score: strength?.score ?? null,
-    label: strength?.label ?? '',
-    feedback: strength?.feedback ?? [],
-    isLoading: !zxcvbnLoaded && !!getLoadPromise(),
-  };
-}
-
-const SEGMENT_COUNT = 4;
-
-function StrengthMeter({ score, label, feedback }: {
-  score: number | null;
-  label: string;
-  feedback: string[];
-}) {
-  if (score === null) return null;
-
-  const colorClass =
-    score <= 1
-      ? styles.strengthWeak
-      : score === 2
-        ? styles.strengthFair
-        : score === 3
-          ? styles.strengthGood
-          : styles.strengthStrong;
-
-  return (
-    <div className={styles.strengthContainer}>
-      <div className={styles.strengthMeterRow}>
-        <div className={styles.strengthMeter} role="meter" aria-valuenow={score} aria-valuemin={0} aria-valuemax={4} aria-label="قوة كلمة المرور">
-          {Array.from({ length: SEGMENT_COUNT }, (_, i) => (
-            <div
-              key={i}
-              className={`${styles.strengthSegment} ${i < score ? colorClass : ''}`}
-              data-active={i < score ? '' : undefined}
-            />
-          ))}
-        </div>
-        <span className={`${styles.strengthLabel} ${colorClass}`}>{label}</span>
-      </div>
-      {score < 3 && feedback.length > 0 && (
-        <ul className={styles.strengthFeedback}>
-          {feedback.map((msg, i) => (
-            <li key={i}>{msg}</li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
 }
 
 export function SecuritySettings({ email, onChangePassword }: SecuritySettingsProps) {
@@ -282,19 +179,7 @@ export function SecuritySettings({ email, onChangePassword }: SecuritySettingsPr
         {/* Password strength requirements */}
         {newPassword.length > 0 && (
           <>
-            <ul className={styles.requirements}>
-              {requirements.map((req) => (
-                <li
-                  key={req.label}
-                  className={`${styles.requirement} ${req.met ? styles.requirementMet : styles.requirementUnmet}`}
-                >
-                  <span className={styles.requirementIcon}>
-                    {req.met ? '\u2713' : '\u2717'}
-                  </span>
-                  {req.label}
-                </li>
-              ))}
-            </ul>
+            <RequirementsList requirements={requirements} />
             <StrengthMeter
               score={score}
               label={label}

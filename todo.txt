@@ -1,6 +1,4 @@
 - Test mobile.
-- Stengthen password policy.
-- Enter current password when user wanna change.
 - Reset pass
 
 - Clean routes and organize. (dashboard, dashboard/profile, etc). 
@@ -17,7 +15,7 @@ Handle deleting a parent (can check mac family tree)
 
 
 title - الكنية, standard or not in gedcom. shall we create tag?
-
+Think about business model.
 
 
 Low priority now:
