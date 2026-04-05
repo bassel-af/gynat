@@ -139,7 +139,7 @@ function TreeContent({
       <div className="app-layout">
         <Sidebar />
         <main className="main-content">
-          <CanvasToolbar workspaceSlug={workspace.slug} />
+          <CanvasToolbar workspaceSlug={workspace.slug} workspaceId={workspace.id} />
           <FamilyTree hideMiniMap />
         </main>
       </div>

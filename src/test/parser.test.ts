@@ -572,25 +572,6 @@ describe('parseGedcom — family marriage events (MARC/MARR/DIV)', () => {
     expect(data.families['@F1@'].isDivorced).toBe(true)
   })
 
-  it('parses _HIJR under MARC/MARR/DIV', () => {
-    const gedcom = `
-0 @F1@ FAM
-1 HUSB @I1@
-1 WIFE @I2@
-1 MARC
-2 _HIJR 12/02/1443
-1 MARR
-2 _HIJR 07/10/1443
-1 DIV
-2 _HIJR 15/06/1444
-`.trim()
-
-    const data = parseGedcom(gedcom)
-    expect(data.families['@F1@'].marriageContract.hijriDate).toBe('12/02/1443')
-    expect(data.families['@F1@'].marriage.hijriDate).toBe('07/10/1443')
-    expect(data.families['@F1@'].divorce.hijriDate).toBe('15/06/1444')
-  })
-
   it('parses PLAC under MARR', () => {
     const gedcom = `
 0 @F1@ FAM
@@ -602,68 +583,6 @@ describe('parseGedcom — family marriage events (MARC/MARR/DIV)', () => {
 
     const data = parseGedcom(gedcom)
     expect(data.families['@F1@'].marriage.place).toBe('المدينة المنورة')
-  })
-})
-
-// ── _HIJR (Hijri dates) on individuals — backward compatibility ─────
-
-// These tests verify that the legacy _HIJR tag continues to work.
-
-describe('parseGedcom — _HIJR (Hijri dates)', () => {
-  it('parses _HIJR under BIRT as birthHijriDate', () => {
-    const gedcom = `
-0 @I1@ INDI
-1 NAME Ahmad
-1 BIRT
-2 DATE 1 JAN 1990
-2 _HIJR 15/05/1410
-`.trim()
-
-    const data = parseGedcom(gedcom)
-    expect(data.individuals['@I1@'].birthHijriDate).toBe('15/05/1410')
-  })
-
-  it('parses _HIJR under DEAT as deathHijriDate', () => {
-    const gedcom = `
-0 @I1@ INDI
-1 NAME Ahmad
-1 DEAT
-2 DATE 15 MAR 2020
-2 _HIJR 20/07/1441
-`.trim()
-
-    const data = parseGedcom(gedcom)
-    expect(data.individuals['@I1@'].deathHijriDate).toBe('20/07/1441')
-  })
-
-  it('defaults birthHijriDate and deathHijriDate to empty string', () => {
-    const gedcom = `
-0 @I1@ INDI
-1 NAME Ahmad
-`.trim()
-
-    const data = parseGedcom(gedcom)
-    expect(data.individuals['@I1@'].birthHijriDate).toBe('')
-    expect(data.individuals['@I1@'].deathHijriDate).toBe('')
-  })
-
-  it('parses _HIJR on same individual as regular dates', () => {
-    const gedcom = `
-0 @I1@ INDI
-1 NAME Ahmad
-1 BIRT
-2 DATE 1 JAN 1990
-2 _HIJR 15/05/1410
-1 DEAT
-2 DATE 15 MAR 2020
-2 _HIJR 20/07/1441
-`.trim()
-
-    const data = parseGedcom(gedcom)
-    expect(data.individuals['@I1@'].birth).toBe('01/01/1990')
-    expect(data.individuals['@I1@'].birthHijriDate).toBe('15/05/1410')
-    expect(data.individuals['@I1@'].death).toBe('15/03/2020')
-    expect(data.individuals['@I1@'].deathHijriDate).toBe('20/07/1441')
   })
 })
 

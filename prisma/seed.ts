@@ -15,7 +15,7 @@ import type { PlacesData } from '../src/lib/seed/seed-places';
 // because this script runs outside of Next.js/Vite.
 // Instead, we create a standalone Prisma client.
 
-const ADMIN_EMAIL = 'bassel@autoflowa.com';
+const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL || 'bassel@autoflowa.com';
 
 /**
  * Build a Map from Arabic place name -> Place UUID for all global places

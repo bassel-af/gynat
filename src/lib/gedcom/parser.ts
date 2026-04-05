@@ -253,12 +253,6 @@ export function parseGedcom(text: string): GedcomData {
             } else if (currentSubRecord === 'DEAT') {
               indi.deathDescription = value || '';
             }
-          } else if (tag === '_HIJR') {
-            if (currentSubRecord === 'BIRT') {
-              indi.birthHijriDate = value || '';
-            } else if (currentSubRecord === 'DEAT') {
-              indi.deathHijriDate = value || '';
-            }
           } else if (tag === 'NOTE' && (currentSubRecord === 'BIRT' || currentSubRecord === 'DEAT')) {
             if (currentSubRecord === 'BIRT') {
               indi.birthNotes = value || '';
@@ -295,8 +289,6 @@ export function parseGedcom(text: string): GedcomData {
               }
             } else if (tag === 'PLAC') {
               event.place = value || '';
-            } else if (tag === '_HIJR') {
-              event.hijriDate = value || '';
             } else if (tag === 'NOTE') {
               event.notes = value || '';
               currentLevel2Tag = 'NOTE';

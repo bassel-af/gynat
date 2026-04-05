@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     'GEDCOM 5.5.1',
     'GEDCOM 7',
     '@#DHIJRI@',
-    '_HIJR',
+    'Hijri calendar',
     'Arabic genealogy',
   ],
   openGraph: {
@@ -110,8 +110,6 @@ export default function IslamicGedcomPage() {
               رموز الأشهر الهجرية: MUHAR (محرم)، SAFAR (صفر)، RABIA (ربيع الأول)، RABIT (ربيع الثاني)،
               JUMAA (جمادى الأولى)، JUMAT (جمادى الآخرة)، RAJAB (رجب)، SHAAB (شعبان)،
               RAMAD (رمضان)، SHAWW (شوال)، DHUAQ (ذو القعدة)، DHUAH (ذو الحجة).
-              <br /><br />
-              <span className={styles.inlineCode}>_HIJR</span> مدعوم كبديل قديم للتوافق مع الملفات السابقة.
             </div>
           </div>
         </section>

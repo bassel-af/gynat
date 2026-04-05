@@ -7,7 +7,7 @@ import type { PointerMetadata } from '@/context/WorkspaceTreeContext';
 
 /**
  * Fetches tree data from the workspace API and feeds it into TreeContext.
- * Replaces useGedcomData for database-backed workspace trees.
+ * Fetches tree data from the workspace API and feeds it into TreeContext.
  */
 export function useWorkspaceTreeData(workspaceId: string) {
   const { setData, setError } = useTree();

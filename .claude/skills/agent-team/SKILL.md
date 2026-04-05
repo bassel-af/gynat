@@ -34,3 +34,4 @@ The user provides agent names as arguments (e.g., `tdd software-architect securi
 - Copy the `.md` content **verbatim** into each teammate's prompt. Do not paraphrase.
 - If the user didn't provide any agent names, list the available agents from `.claude/agents/` and ask which ones to include.
 - Available agents can be listed by globbing `.claude/agents/*.md` and showing filenames without extension.
+- Do not assume the work is done and shutdown the team. The user must be the one that mention explicitely to shutdown the agents. Do not shutthem down without permission.

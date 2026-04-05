@@ -516,7 +516,7 @@ Notification
 
 **✅ Marriage events (MARC/MARR/DIV) on families:**
 - 16 new DB columns on `Family` model: date, hijriDate, place, description, notes for each of MARC (عقد القران), MARR (الزفاف), DIV (الانفصال), plus `isDivorced` boolean
-- GEDCOM parser: `MARC`, `MARR`, `DIV` tags under FAM with sub-tags `DATE`, `PLAC`, `NOTE`; `@#DHIJRI@` calendar escape on DATE lines routes to hijriDate fields (legacy `_HIJR` also supported); inline values (e.g., `1 MARC 12/2/1443`) stored as description; NOTE references resolved
+- GEDCOM parser: `MARC`, `MARR`, `DIV` tags under FAM with sub-tags `DATE`, `PLAC`, `NOTE`; `@#DHIJRI@` calendar escape on DATE lines routes to hijriDate fields; inline values (e.g., `1 MARC 12/2/1443`) stored as description; NOTE references resolved
 - `FamilyEvent` type groups date/hijriDate/place/description/notes per event; `Family` type gains `marriageContract`, `marriage`, `divorce` objects + `isDivorced`
 - Mapper, seed helpers, and all family API routes (create/update) extended with event fields
 - `FamilyEventForm` modal with 3 collapsible sections (عقد القران / الزفاف / الانفصال), auto-expand when data exists, divorce fields behind `isDivorced` checkbox
@@ -525,7 +525,7 @@ Notification
 
 **✅ Hijri dates (`@#DHIJRI@` calendar escape):**
 - `birthHijriDate` and `deathHijriDate` columns on `Individual` model; Hijri date columns on each family event
-- GEDCOM parser: `@#DHIJRI@` calendar escape prefix on DATE lines under `BIRT`/`DEAT`/`MARC`/`MARR`/`DIV` routes to hijriDate fields; Hijri month codes (MUHAR, SAFAR, etc.) converted to numeric format; legacy `_HIJR` tag still supported for backward compatibility
+- GEDCOM parser: `@#DHIJRI@` calendar escape prefix on DATE lines under `BIRT`/`DEAT`/`MARC`/`MARR`/`DIV` routes to hijriDate fields; Hijri month codes (MUHAR, SAFAR, etc.) converted to numeric format
 - Hijri date text inputs in `IndividualForm` (birth/death) and `FamilyEventForm` with `.hijriFieldAccented` styling
 - Privacy redaction clears Hijri dates on private individuals
 
@@ -544,7 +544,7 @@ Notification
 
 **✅ Islamic GEDCOM reference page (مرجع GEDCOM الإسلامي):**
 - Public page at `/islamic-gedcom` — comprehensive reference for documenting Islamic genealogy in GEDCOM format
-- `@#DHIJRI@` calendar escape for Hijri dates on DATE lines (legacy `_HIJR` subtag also documented as backward-compatible alternative)
+- `@#DHIJRI@` calendar escape for Hijri dates on DATE lines
 - Standard GEDCOM tag mappings to Islamic marriage: `MARC` → عقد القران, `MARR` → الزفاف, `DIV` → الطلاق/الخلع
 - `_UMM_WALAD` flag on FAM records for historical أم ولد (bondwoman who bore children from her master) — children are legitimate nasab, absence implies nikah
 - Rada'a (milk kinship) extension: `_RADA_FAM` (milk family record), `_RADA_WIFE` / `_RADA_HUSB` / `_RADA_CHIL` (milk parents and nursed children), `_RADA_FAMC` (individual's milk family link) — all custom-namespaced to prevent mixing with nasab data

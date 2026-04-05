@@ -29,9 +29,6 @@ const ENDPOINTS: Endpoint[] = [
   { method: 'GET', path: '/auth/login', label: 'Login page' },
   { method: 'GET', path: '/auth/signup', label: 'Signup page' },
 
-  // Legacy GEDCOM route
-  { method: 'GET', path: '/saeed', label: 'Legacy family route' },
-
   // API endpoints (will return 401 without auth — that's OK, it means the route loaded)
   { method: 'GET', path: '/api/workspaces', label: 'Workspaces API', allowUnauth: true },
 ];

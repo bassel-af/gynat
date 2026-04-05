@@ -14,7 +14,7 @@ interface UserProfile {
 export function UserNav() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loaded, setLoaded] = useState(false);
-  const [fetchFailed, setFetchFailed] = useState(false);
+  const [, setFetchFailed] = useState(false);
 
   useEffect(() => {
     async function fetchProfile() {

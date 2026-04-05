@@ -178,7 +178,7 @@ The GEDCOM file (`public/saeed-family.ged`):
 - GEDCOM 5.5.1 format (UTF-8 encoding) with Islamic extensions
 - Individual records: `0 @ID@ INDI` with `NAME`, `SEX`, `BIRT`, `DEAT`, `FAMS`, `FAMC` tags
 - Family records: `0 @ID@ FAM` with `HUSB`, `WIFE`, `CHIL`, `MARC` (marriage contract), `MARR` (marriage), `DIV` (divorce) tags
-- Hijri dates via `@#DHIJRI@` calendar escape on DATE lines (legacy `_HIJR` subtag also supported)
+- Hijri dates via `@#DHIJRI@` calendar escape on DATE lines
 - Cross-references use `@ID@` format
 
 **IMPORTANT**: Do not read `.ged` files directly (per project instructions).
@@ -336,7 +336,7 @@ The GEDCOM file (`public/saeed-family.ged`):
 - `/workspaces/[slug]/tree` — database-backed tree view with edit controls (add/edit individual, add child/spouse/parent, move child, edit family events, delete)
 - `/invite/[id]` — invitation acceptance page
 - `/policy` — public policy page (Arabic + English)
-- `/islamic-gedcom` — public reference page (مرجع GEDCOM الإسلامي): `@#DHIJRI@` calendar escape for Hijri dates (legacy `_HIJR` also supported), MARC/MARR/DIV Islamic marriage mappings, `_UMM_WALAD` (أم ولد flag on FAM), rada'a extensions (`_RADA_FAM`, `_RADA_WIFE`, `_RADA_HUSB`, `_RADA_CHIL`, `_RADA_FAMC`)
+- `/islamic-gedcom` — public reference page (مرجع GEDCOM الإسلامي): `@#DHIJRI@` calendar escape for Hijri dates, MARC/MARR/DIV Islamic marriage mappings, `_UMM_WALAD` (أم ولد flag on FAM), rada'a extensions (`_RADA_FAM`, `_RADA_WIFE`, `_RADA_HUSB`, `_RADA_CHIL`, `_RADA_FAMC`)
 - `/auth/forgot-password` — password reset via Supabase Auth
 
 **Environment Variables** (see `.env.example`):

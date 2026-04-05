@@ -97,6 +97,135 @@
   }
 }
 
+/* ---- Export button + dropdown ---- */
+
+.exportWrapper {
+  position: relative;
+}
+
+.exportButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  font-family: inherit;
+  color: var(--color-text-inverse);
+  background: transparent;
+  border: none;
+  white-space: nowrap;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.exportButton:hover {
+  background: var(--alpha-white-08);
+}
+
+.exportButton:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus-primary);
+}
+
+.exportButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.exportButton:disabled:hover {
+  background: transparent;
+}
+
+.exportIcon {
+  flex-shrink: 0;
+  color: var(--color-primary-light);
+}
+
+.exportLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.exportSpinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--alpha-white-10);
+  border-top-color: var(--color-primary-light);
+  border-radius: 50%;
+  animation: spin 0.3s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Export dropdown menu */
+
+.exportMenu {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  left: 0;
+  min-width: 200px;
+  background: var(--color-dark-700);
+  border: 1px solid var(--alpha-white-15);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-1);
+  list-style: none;
+  margin: 0;
+  z-index: var(--z-dropdown);
+  animation: menuFadeIn 150ms ease;
+}
+
+@keyframes menuFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.exportMenuItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.exportMenuItem:hover {
+  background: rgba(99, 179, 237, 0.15);
+}
+
+.exportMenuItem:focus-visible {
+  outline: none;
+  background: rgba(99, 179, 237, 0.15);
+  box-shadow: var(--shadow-focus-primary);
+}
+
+.exportMenuItemLabel {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-inverse);
+}
+
+.exportMenuItemSub {
+  font-size: var(--font-size-xs);
+  color: var(--alpha-white-40);
+}
+
 /* ---- Mobile ---- */
 
 @media (max-width: 768px) {
@@ -105,6 +234,10 @@
   }
 
   .backLabel {
+    display: none;
+  }
+
+  .exportLabel {
     display: none;
   }
 }

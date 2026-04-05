@@ -1,6 +1,8 @@
 - Test mobile.
 gedcom export and import.
 
+clean backward compatibility.
+
 Create multiple test trees for each phase that run only for specific users.
 
 Next phases:
