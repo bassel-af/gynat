@@ -204,11 +204,14 @@ export default function IslamicGedcomPage() {
             </p>
             <div className={styles.codeBlock}>
               <span className={styles.codeId}>0 @F1@ FAM</span>{'\n'}
-              <span className={styles.codeTag}>1 MARC</span>{'\n'}
+              <span className={styles.codeTag}>1 MARC</span> <span className={styles.codeVal}>بحضور الشيخ أحمد</span>{'\n'}
               <span className={styles.codeTag}>2 DATE</span> <span className={styles.codeVal}>11 JUL 2022</span>{'\n'}
               <span className={styles.codeTag}>2 DATE</span> <span className={styles.codeVal}>@#DHIJRI@ 12 DHUAH 1443</span>{'\n'}
-              <span className={styles.codeTag}>2 PLAC</span> <span className={styles.codeVal}>الرياض</span>{'\n'}
-              <span className={styles.codeTag}>2 NOTE</span> <span className={styles.codeVal}>بحضور الشيخ أحمد</span>
+              <span className={styles.codeTag}>2 PLAC</span> <span className={styles.codeVal}>الرياض</span>
+            </div>
+            <div className={styles.note}>
+              يمكن وضع وصف مباشر على سطر الحدث نفسه (كما في المثال أعلاه)
+              أو كعلامة فرعية <span className={styles.inlineCode}>NOTE</span> تحته.
             </div>
           </div>
 

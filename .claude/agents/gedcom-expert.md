@@ -70,3 +70,16 @@ When you are unsure about a GEDCOM standard detail, tag behavior, or whether a p
 - **Standard section vs custom section**: Standard mechanisms (like calendar escapes) must NOT be documented as "custom extensions" — they use the standard's own mechanisms
 - **The reference page is a public spec**: Treat it with the rigor of a standards document. Incorrect examples will mislead implementers
 - **Separate encoding from storage**: GEDCOM format is an import/export concern. Internal database field names (like `hijriDate`) are encoding-agnostic and don't need to change when the GEDCOM format changes
+
+## Settled Design Decisions (do NOT flag these as issues)
+
+These decisions have been reviewed, tested against real software (Mac Family Tree, etc.), and confirmed by the project owner. Do not re-raise them in audits or reviews:
+
+1. **Dual DATE lines per event** — We use two `2 DATE` lines (Gregorian + `@#DHIJRI@` Hijri) under the same event. This is non-standard (spec says one DATE per event) but is the only practical way to preserve both calendars. Our parser handles it, and it aligns with FamilySearch/GEDCOM proposals #34/#35.
+2. **`CAUS` under `BIRT`** — We use `2 CAUS` for birth descriptions. The spec defines CAUS for DEAT/EVEN but real software (Mac Family Tree) supports it under BIRT too. Confirmed working.
+3. **No `SUBM` record** — 5.5.1 technically requires a submitter record. 7.0 made it optional. All software is lenient. We omit it.
+4. **`@` in notes not sanitized** — Notes use CONT continuation lines at level N+1, so `@ID@` patterns inside note values cannot be misinterpreted as cross-references. Stripping `@` would corrupt legitimate text (emails, etc.).
+6. **Inline descriptions on event tags** — `1 MARC بحضور الشيخ` is valid GEDCOM. Both inline and `2 NOTE` sub-tag approaches work. The reference page documents both.
+7. **Standalone NOTE records flattened** — The parser resolves `0 @N@ NOTE` references into inline notes. The exporter always writes inline. Content is preserved, structure changes. Acceptable.
+8. **No GEDCOM 7.0 PHRASE substructure** — Both 5.5.1 and 7.0 exports use `@#DHIJRI@` calendar escape. No `_HIJRI` custom tag, no PHRASE. Simpler, consistent.
+9. **UUIDs as GEDCOM cross-reference IDs** — `@{uuid}@` is valid GEDCOM. Simpler than sequential ID mapping, deterministic.

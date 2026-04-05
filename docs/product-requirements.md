@@ -782,15 +782,19 @@ Notification
   - 1136 tests (71 new), 0 regressions
 - ✅ Validate that all Islamic GEDCOM reference tags are implementable and the data model is sound before building export/import
 
-**Phase 6b — Export:**
-- Any workspace member can export the full tree as a `.ged` file at any time
-- Database → generate `.ged` file → download
-- Includes all Islamic GEDCOM extensions (`@#DHIJRI@` calendar escape, `_UMM_WALAD`, `_RADA_FAM`, etc.)
+✅ **Phase 6b — Export:**
+- Any workspace member can export the full tree as a `.ged` file (GEDCOM 5.5.1 + 7.0)
+- Database → `gedcomDataToGedcom()` → download via export dropdown in CanvasToolbar
+- `@#DHIJRI@` calendar escape (both versions), `_UMM_WALAD`, `_RADA_FAM`, GIVN/SURN sub-tags
+- Privacy redaction, pointed data exclusion, GEDCOM injection sanitization, rate limiting
+- 1425 tests, 0 regressions
 
-**Phase 6c — Import:**
-- Workspace admin or `tree_editor` can upload a `.ged` file to populate the tree
-- Reuses the existing GEDCOM parser (`src/lib/gedcom/parser.ts`) as the import engine
-- Parses and stores custom Islamic tags
+✅ **Phase 6c — Import:**
+- Tree editor can upload a `.ged` file to populate an empty workspace tree
+- Parser extended for `_UMM_WALAD`, `_RADA_FAM`/`_RADA_HUSB`/`_RADA_WIFE`/`_RADA_CHIL`, `_RADA_FAMC`, BOM stripping
+- Seed helper extended for RadaFamily/RadaFamilyChild creation
+- Import button in EmptyTreeState, 7 MB file limit, 10K record cap, 409 on non-empty tree
+- 1425 tests, 0 regressions
 
 ### Phase 7 — Content
 
