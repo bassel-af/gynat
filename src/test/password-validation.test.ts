@@ -12,8 +12,18 @@ describe('passwordStrengthSchema', () => {
     expect(result.success).toBe(false);
   });
 
+  it('rejects passwords with no uppercase letter', () => {
+    const result = passwordStrengthSchema.safeParse('mypass12');
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects passwords with no lowercase letter', () => {
+    const result = passwordStrengthSchema.safeParse('MYPASS12');
+    expect(result.success).toBe(false);
+  });
+
   it('rejects passwords with no digits', () => {
-    const result = passwordStrengthSchema.safeParse('abcdefgh');
+    const result = passwordStrengthSchema.safeParse('Abcdefgh');
     expect(result.success).toBe(false);
   });
 
@@ -22,8 +32,8 @@ describe('passwordStrengthSchema', () => {
     expect(result.success).toBe(true);
   });
 
-  it('accepts passwords with Arabic letters', () => {
-    const result = passwordStrengthSchema.safeParse('كلمة1234');
+  it('accepts passwords with Arabic letters as lowercase', () => {
+    const result = passwordStrengthSchema.safeParse('كلمةA1234');
     expect(result.success).toBe(true);
   });
 

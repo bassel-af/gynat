@@ -18,12 +18,14 @@ interface PasswordRequirement {
 function usePasswordStrength(password: string): PasswordRequirement[] {
   return useMemo(() => [
     { label: '٨ أحرف على الأقل', met: password.length >= 8 },
-    { label: 'حرف واحد على الأقل', met: /[a-zA-Z\u0600-\u06FF]/.test(password) },
+    { label: 'حرف صغير واحد على الأقل', met: /[a-z\u0600-\u06FF]/.test(password) },
+    { label: 'حرف كبير واحد على الأقل (A-Z)', met: /[A-Z]/.test(password) },
     { label: 'رقم واحد على الأقل', met: /\d/.test(password) },
   ], [password]);
 }
 
 export function SecuritySettings({ email: _email, onChangePassword }: SecuritySettingsProps) {
+  const [open, setOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -40,6 +42,14 @@ export function SecuritySettings({ email: _email, onChangePassword }: SecuritySe
     setFieldErrors({});
     setSuccess(false);
   }, []);
+
+  const handleCancel = useCallback(() => {
+    setOpen(false);
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    clearMessages();
+  }, [clearMessages]);
 
   const handleSubmit = useCallback(
     async (e: FormEvent) => {
@@ -71,7 +81,10 @@ export function SecuritySettings({ email: _email, onChangePassword }: SecuritySe
         setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');
-        setTimeout(() => setSuccess(false), 3000);
+        setTimeout(() => {
+          setSuccess(false);
+          setOpen(false);
+        }, 2000);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'فشل في تغيير كلمة المرور';
         if (message === 'كلمة المرور الحالية غير صحيحة') {
@@ -91,6 +104,16 @@ export function SecuritySettings({ email: _email, onChangePassword }: SecuritySe
     allRequirementsMet &&
     confirmPassword.length > 0 &&
     newPassword === confirmPassword;
+
+  if (!open) {
+    return (
+      <div className={styles.collapsed}>
+        <Button variant="secondary" size="md" onClick={() => setOpen(true)}>
+          تغيير كلمة المرور
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <form className={styles.form} onSubmit={handleSubmit}>
@@ -112,6 +135,7 @@ export function SecuritySettings({ email: _email, onChangePassword }: SecuritySe
           maxLength={256}
           disabled={loading}
           autoComplete="current-password"
+          autoFocus
         />
         {fieldErrors.currentPassword && (
           <span className={styles.fieldError}>{fieldErrors.currentPassword}</span>
@@ -196,7 +220,16 @@ export function SecuritySettings({ email: _email, onChangePassword }: SecuritySe
           loading={loading}
           disabled={!canSubmit || loading}
         >
-          تغيير كلمة المرور
+          حفظ كلمة المرور
+        </Button>
+        <Button
+          variant="ghost"
+          size="md"
+          type="button"
+          onClick={handleCancel}
+          disabled={loading}
+        >
+          إلغاء
         </Button>
       </div>
     </form>
