@@ -128,7 +128,7 @@ function LoginForm() {
 
       <p className={styles.switchLink}>
         ليس لديك حساب؟{' '}
-        <a href={`/auth/signup${next !== '/dashboard' ? `?next=${encodeURIComponent(next)}` : ''}`}>إنشاء حساب</a>
+        <a href={`/auth/signup${next !== '/workspaces' ? `?next=${encodeURIComponent(next)}` : ''}`}>إنشاء حساب</a>
       </p>
     </CenteredCardLayout>
   );

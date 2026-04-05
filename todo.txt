@@ -1,5 +1,4 @@
 - Test mobile.
-- Reset pass
 
 - Clean routes and organize. (dashboard, dashboard/profile, etc). 
 Previous links redirects. e.g. /saeed, /sharbek, etc. Request access from admin.

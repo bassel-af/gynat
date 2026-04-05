@@ -49,7 +49,7 @@ export function UserNav() {
   return (
     <div className={styles.userNav}>
       {profile && (
-        <Link href="/dashboard/profile" className={styles.profileLink} title="الملف الشخصي">
+        <Link href="/profile" className={styles.profileLink} title="الملف الشخصي">
           {profile.avatarUrl ? (
             <img
               src={profile.avatarUrl}

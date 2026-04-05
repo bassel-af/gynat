@@ -383,10 +383,10 @@ Notification
 - Content roles: admin can grant `tree_editor`, `news_editor`, `album_editor`, `event_editor` via membership update
 - Workspace auth guards — `src/lib/api/workspace-auth.ts` (`requireWorkspaceMember`, `requireWorkspaceAdmin`)
 - Request validation via `zod`; BigInt serialization via `src/lib/api/serialize.ts`
-- Dashboard UI — `/dashboard` (workspace list with "عائلة" prefix), `/dashboard/create` (create workspace form)
+- Workspace list UI — `/workspaces` (workspace list with "عائلة" prefix), `/workspaces/create` (create workspace form)
 - Workspace detail page — `/workspaces/[slug]` (members list, invite modal, tree link if family config exists)
-- Login/signup/callback redirect to `/dashboard`; root `/` redirects authenticated users to `/dashboard`
-- Shared `UserNav` component (`src/components/ui/UserNav/`) — self-contained client component showing user avatar + display name (linked to profile) + logout button; fetches `/api/users/me` on mount; appears on `/dashboard`, `/dashboard/profile`, `/workspaces/[slug]` pages
+- Login/signup/callback redirect to `/workspaces`; root `/` redirects authenticated users to `/workspaces`
+- Shared `UserNav` component (`src/components/ui/UserNav/`) — self-contained client component showing user avatar + display name (linked to profile) + logout button; fetches `/api/users/me` on mount; appears on `/workspaces`, `/profile`, `/workspaces/[slug]` pages
 - `CanvasToolbar` floating pill (`src/components/tree/CanvasToolbar/`) — unified dark pill (gradient-toggle background) in top-left corner of tree canvas containing: back-to-workspace link ("مساحة العائلة"), separator, `UserNav`, and `RootBackChip`; uses `pointer-events: none` wrapper so it doesn't block canvas interaction
 - Seed script — `prisma/seed.ts` migrates existing family configs to workspace records (excludes `test`)
 - Storage quota tracked in schema (5 GB default) but not enforced
@@ -748,7 +748,7 @@ Notification
 
 ### User Profile Page ✅ COMPLETE
 
-**✅ Profile page** at `/dashboard/profile` with four sections:
+**✅ Profile page** at `/profile` with four sections:
 
 - `ProfileHeader` — large avatar (96px with fallback initial) + display name + email
 - `AccountSettings` — email change via Supabase `updateUser()` with confirmation flow: sends confirmation email, handles PKCE callback, syncs GoTrue→`public.users`, shows success toast via `?email_changed=true` query param

@@ -64,7 +64,7 @@ export function WorkspaceTreeClient({ slug }: WorkspaceTreeClientProps) {
   if (error || !workspace) {
     return (
       <div className="error">
-        <Link href="/dashboard">&rarr; العودة للوحة التحكم</Link>
+        <Link href="/workspaces">&rarr; العودة للمساحات</Link>
         <p>{error || 'لم يتم العثور على المساحة'}</p>
       </div>
     );

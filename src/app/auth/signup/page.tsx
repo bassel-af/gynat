@@ -167,7 +167,7 @@ function SignupForm() {
 
       <p className={styles.switchLink}>
         لديك حساب بالفعل؟{' '}
-        <a href={`/auth/login${next !== '/dashboard' ? `?next=${encodeURIComponent(next)}` : ''}`}>تسجيل الدخول</a>
+        <a href={`/auth/login${next !== '/workspaces' ? `?next=${encodeURIComponent(next)}` : ''}`}>تسجيل الدخول</a>
       </p>
     </CenteredCardLayout>
   );

@@ -39,7 +39,7 @@ export default function Home() {
     const supabase = createClient();
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        window.location.href = '/dashboard';
+        window.location.href = '/workspaces';
       } else {
         setChecking(false);
       }

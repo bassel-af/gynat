@@ -306,8 +306,8 @@ export default function WorkspaceDetailPage() {
     return (
       <main className={styles.container}>
         <header className={styles.header}>
-          <Link href="/dashboard" className={styles.backLink}>
-            &rarr; العودة للوحة التحكم
+          <Link href="/workspaces" className={styles.backLink}>
+            &rarr; العودة للمساحات
           </Link>
         </header>
         <div className={styles.content}>
@@ -325,8 +325,8 @@ export default function WorkspaceDetailPage() {
         <h1 className={styles.headerTitle}>{workspace.nameAr}</h1>
         <div className={styles.headerRight}>
           <UserNav />
-          <Link href="/dashboard" className={styles.backLink}>
-            &rarr; لوحة التحكم
+          <Link href="/workspaces" className={styles.backLink}>
+            &rarr; المساحات
           </Link>
         </div>
       </header>

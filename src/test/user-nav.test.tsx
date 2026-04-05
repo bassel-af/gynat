@@ -55,7 +55,7 @@ describe('UserNav', () => {
 
     // Should have a link to profile
     const profileLink = screen.getByTitle('الملف الشخصي');
-    expect(profileLink).toHaveAttribute('href', '/dashboard/profile');
+    expect(profileLink).toHaveAttribute('href', '/profile');
   });
 
   it('renders avatar image when avatarUrl is provided', async () => {

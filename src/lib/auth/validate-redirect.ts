@@ -1,4 +1,4 @@
-const DEFAULT_REDIRECT = '/dashboard';
+const DEFAULT_REDIRECT = '/workspaces';
 
 /**
  * Validates a redirect path to prevent open redirect attacks.

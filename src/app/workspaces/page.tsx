@@ -6,7 +6,7 @@ import { apiFetch } from '@/lib/api/client';
 import { roleLabel } from '@/lib/workspace/labels';
 import { Spinner } from '@/components/ui/Spinner';
 import { UserNav } from '@/components/ui/UserNav';
-import styles from './dashboard.module.css';
+import styles from './workspaces.module.css';
 
 interface Workspace {
   id: string;
@@ -20,7 +20,7 @@ interface WorkspaceMembership {
   workspace: Workspace;
 }
 
-export default function DashboardPage() {
+export default function WorkspacesPage() {
   const [workspaces, setWorkspaces] = useState<WorkspaceMembership[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -70,7 +70,7 @@ export default function DashboardPage() {
             <p className={styles.emptyText}>
               أنشئ مساحة عائلية جديدة لبدء التعاون مع عائلتك
             </p>
-            <Link href="/dashboard/create" className={styles.emptyCreateButton}>
+            <Link href="/workspaces/create" className={styles.emptyCreateButton}>
               إنشاء مساحة عائلية جديدة
             </Link>
           </div>
@@ -78,7 +78,7 @@ export default function DashboardPage() {
           <>
             <div className={styles.sectionHeader}>
               <h2 className={styles.sectionTitle}>مساحات العائلة</h2>
-              <Link href="/dashboard/create" className={styles.createButton}>
+              <Link href="/workspaces/create" className={styles.createButton}>
                 + إنشاء مساحة عائلية جديدة
               </Link>
             </div>

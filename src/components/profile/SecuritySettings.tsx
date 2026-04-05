@@ -26,7 +26,7 @@ export function SecuritySettings({ email, onChangePassword }: SecuritySettingsPr
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [success, setSuccess] = useState(false);
 
-  const { requirements, score, label, feedback, isLoading } = usePasswordStrength(newPassword, email);
+  const { requirements, score, label, feedback } = usePasswordStrength(newPassword, email);
   const allStructuralRequirementsMet = requirements.every((r) => r.met);
 
   const clearMessages = useCallback(() => {

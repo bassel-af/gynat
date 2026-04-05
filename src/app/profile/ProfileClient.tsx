@@ -39,7 +39,7 @@ export default function ProfileClient() {
       toastShownRef.current = true;
       showToast('تم تغيير بريدك الإلكتروني بنجاح', 'success');
       // Clean up the URL param without a full page reload
-      window.history.replaceState({}, '', '/dashboard/profile');
+      window.history.replaceState({}, '', '/profile');
     }
   }, [searchParams, showToast]);
 
@@ -144,8 +144,8 @@ export default function ProfileClient() {
     return (
       <main className={styles.container}>
         <header className={styles.header}>
-          <Link href="/dashboard" className={styles.backLink}>
-            &rarr; لوحة التحكم
+          <Link href="/workspaces" className={styles.backLink}>
+            &rarr; المساحات
           </Link>
         </header>
         <div className={styles.content}>
@@ -161,8 +161,8 @@ export default function ProfileClient() {
         <h1 className={styles.headerTitle}>الملف الشخصي</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
           <UserNav />
-          <Link href="/dashboard" className={styles.backLink}>
-            &rarr; لوحة التحكم
+          <Link href="/workspaces" className={styles.backLink}>
+            &rarr; المساحات
           </Link>
         </div>
       </header>

@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This repository ("solalah") is a **private family collaboration platform** evolving from a read-only genealogy viewer. Built with Next.js 15 (App Router) + React 19 + TypeScript, backed by PostgreSQL (Prisma ORM) and Supabase Auth (self-hosted via Docker Compose). The app is RTL (right-to-left) with Arabic as the primary language. See `docs/product-requirements.md` for the full PRD and `docs/auth-provider-decisions.md` for auth architecture decisions.
 
-**Current state**: Phases 1–6c are complete, Phase 7 next. Phase 1 (Auth & Workspace Foundation): email/password + Google OAuth, workspace CRUD, membership/invitations, dashboard UI, policy page. Phase 2 (Editable Family Tree): database-backed tree with full CRUD. Phase 3 (Family-Aware Relationship Editing): add child/spouse/parent, move child between families, marriage events (MARC/MARR/DIV), Hijri date support, calendar preference. Phase 4 (In-Law Visibility & Multi-Root View): re-root on spouse's ancestor, view mode toggle (single/multi), multi-root side-by-side layout, inline spouse family graft expansion. Phase 5 (Branch Pointers): cross-workspace branch linking with live sync, deep copy, stitching rules, pointer management in canvas sidebar. Phase 6a (Islamic Tags): `_UMM_WALAD` flag on families, rada'a (milk kinship) with `RadaFamily`/`RadaFamilyChild` models, 6 API endpoints, sidebar integration, `IndividualPicker` component, workspace feature toggles. Phase 6b (Export): GEDCOM export (5.5.1 + 7.0) with all Islamic extensions, export dropdown in CanvasToolbar, `@#DHIJRI@` calendar escape, GIVN/SURN sub-tags, GEDCOM injection sanitization. Phase 6c (Import): GEDCOM import for empty workspace trees, parser extended for `_UMM_WALAD`/`_RADA_*` tags, seed helper extended for rada'a, import button in EmptyTreeState. The tree visualization reads from the database via `GET /api/workspaces/[id]/tree`; static GEDCOM files in `/public/` are preserved for seeding.
+**Current state**: Phases 1–6c are complete, Phase 7 next. Phase 1 (Auth & Workspace Foundation): email/password + Google OAuth, workspace CRUD, membership/invitations, workspace list UI, policy page. Phase 2 (Editable Family Tree): database-backed tree with full CRUD. Phase 3 (Family-Aware Relationship Editing): add child/spouse/parent, move child between families, marriage events (MARC/MARR/DIV), Hijri date support, calendar preference. Phase 4 (In-Law Visibility & Multi-Root View): re-root on spouse's ancestor, view mode toggle (single/multi), multi-root side-by-side layout, inline spouse family graft expansion. Phase 5 (Branch Pointers): cross-workspace branch linking with live sync, deep copy, stitching rules, pointer management in canvas sidebar. Phase 6a (Islamic Tags): `_UMM_WALAD` flag on families, rada'a (milk kinship) with `RadaFamily`/`RadaFamilyChild` models, 6 API endpoints, sidebar integration, `IndividualPicker` component, workspace feature toggles. Phase 6b (Export): GEDCOM export (5.5.1 + 7.0) with all Islamic extensions, export dropdown in CanvasToolbar, `@#DHIJRI@` calendar escape, GIVN/SURN sub-tags, GEDCOM injection sanitization. Phase 6c (Import): GEDCOM import for empty workspace trees, parser extended for `_UMM_WALAD`/`_RADA_*` tags, seed helper extended for rada'a, import button in EmptyTreeState. The tree visualization reads from the database via `GET /api/workspaces/[id]/tree`; static GEDCOM files in `/public/` are preserved for seeding.
 
 ## Package Management
 
@@ -135,7 +135,7 @@ The app wraps the entire application in `<TreeProvider>` via `src/app/providers.
 The app uses dynamic routing (`src/app/[familySlug]/page.tsx`) with a family configuration system:
 - **Config** (`src/config/families.ts`): Defines `FamilyConfig` entries (slug, rootId, displayName, gedcomFile) in a `FAMILIES` record
 - The `test` family config uses `test-family.ged` (small fixture) — used by the `/test` browser test route
-- **Root URL** (`/`) redirects authenticated users to `/dashboard`, shows landing page otherwise
+- **Root URL** (`/`) redirects authenticated users to `/workspaces`, shows landing page otherwise
 - Each family route is statically generated via `generateStaticParams()`
 - `FamilyTreeClient` wraps the tree in `<TreeProvider>` with a `forcedRootId` from the family config
 
@@ -244,7 +244,7 @@ The GEDCOM file (`public/saeed-family.ged`):
 - Password reset: `src/app/auth/forgot-password/page.tsx` → Supabase `resetPasswordForEmail()`
 - Redirect validation: `src/lib/auth/validate-redirect.ts` — validates `?next` parameter to prevent open redirects
 - Middleware: `src/middleware.ts` — three code paths: static assets (skip), API routes (session refresh only, no login redirect), page routes (session refresh + login redirect)
-- After login/signup, users are redirected to `/dashboard`
+- After login/signup, users are redirected to `/workspaces`
 
 **API Utilities**:
 - Auth guard: `src/lib/api/auth.ts` — `getAuthenticatedUser(request)` parses Bearer token, verifies via Supabase
@@ -349,9 +349,10 @@ The GEDCOM file (`public/saeed-family.ged`):
 **Places** (`src/lib/places/`):
 - `schemas.ts` — Zod schemas for place search and creation API
 
-**Dashboard & Workspace UI**:
-- `/dashboard` — workspace list (مساحات العائلة), create button, logout
-- `/dashboard/create` — create workspace form (اسم العائلة, slug, description)
+**Workspace & Profile UI**:
+- `/workspaces` — workspace list (مساحات العائلة), create button, logout
+- `/workspaces/create` — create workspace form (اسم العائلة, slug, description)
+- `/profile` — user profile page (display name, email, password, calendar preference)
 - `/workspaces/[slug]` — workspace detail with members, invite modal, tree link
 - `/workspaces/[slug]/tree` — database-backed tree view with edit controls (add/edit individual, add child/spouse/parent, move child, edit family events, delete)
 - `/invite/[id]` — invitation acceptance page

@@ -64,7 +64,7 @@ export default function CreateWorkspacePage() {
       }
 
       showToast('تم إنشاء مساحة العائلة بنجاح', 'success');
-      router.push('/dashboard');
+      router.push('/workspaces');
     } catch {
       setError('فشل في إنشاء مساحة العائلة');
       setLoading(false);
@@ -73,8 +73,8 @@ export default function CreateWorkspacePage() {
 
   return (
     <CenteredCardLayout className={styles.cardWide}>
-      <Link href="/dashboard" className={styles.backLink}>
-        &rarr; العودة للوحة التحكم
+      <Link href="/workspaces" className={styles.backLink}>
+        &rarr; العودة للمساحات
       </Link>
       <div className={styles.icon}>
         <iconify-icon icon="material-symbols:add-home-work" width="48" height="48" />

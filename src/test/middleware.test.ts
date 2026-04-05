@@ -126,13 +126,13 @@ describe('middleware', () => {
 
   describe('protected routes', () => {
     test('redirects to /auth/login when no session cookies exist', async () => {
-      const request = makeRequest('/dashboard');
+      const request = makeRequest('/workspaces');
       const response = await middleware(request);
 
       expect(response.status).toBe(307);
       const location = new URL(response.headers.get('location')!);
       expect(location.pathname).toBe('/auth/login');
-      expect(location.searchParams.get('next')).toBe('/dashboard');
+      expect(location.searchParams.get('next')).toBe('/workspaces');
     });
 
     test('redirects to /auth/login with next param preserving the original path', async () => {
@@ -151,7 +151,7 @@ describe('middleware', () => {
         error: null,
       });
 
-      const request = makeRequest('/dashboard', {
+      const request = makeRequest('/workspaces', {
         'sb-access-token': 'valid-access-token',
         'sb-refresh-token': 'valid-refresh-token',
       });
@@ -167,7 +167,7 @@ describe('middleware', () => {
         error: { message: 'Invalid token' },
       });
 
-      const request = makeRequest('/dashboard', {
+      const request = makeRequest('/workspaces', {
         'sb-access-token': 'expired-token',
         'sb-refresh-token': 'some-refresh-token',
       });

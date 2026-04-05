@@ -198,10 +198,10 @@ export default function AuthConfirmPage() {
     if (state !== 'email-changed' && state !== 'general-success' && state !== 'first-confirm') return;
 
     const target = state === 'first-confirm'
-      ? '/dashboard/profile'
+      ? '/profile'
       : state === 'email-changed'
-        ? '/dashboard/profile?email_changed=true'
-        : '/dashboard';
+        ? '/profile?email_changed=true'
+        : '/workspaces';
 
     if (countdown <= 0) {
       window.location.href = target;
@@ -239,7 +239,7 @@ export default function AuthConfirmPage() {
             <p className={styles.description}>
               تحقق من صندوق الوارد للبريد الآخر واضغط على رابط التأكيد لإتمام تغيير البريد الإلكتروني
             </p>
-            <Link href="/dashboard/profile" className={styles.link}>
+            <Link href="/profile" className={styles.link}>
               العودة إلى الملف الشخصي
             </Link>
           </>
@@ -258,7 +258,7 @@ export default function AuthConfirmPage() {
             <p className={styles.countdown}>
               {countdown > 0 ? `التوجيه خلال ${countdown} ثوانٍ...` : 'جاري التوجيه...'}
             </p>
-            <Link href="/dashboard/profile?email_changed=true" className={styles.link}>
+            <Link href="/profile?email_changed=true" className={styles.link}>
               الذهاب الآن
             </Link>
           </>
@@ -272,12 +272,12 @@ export default function AuthConfirmPage() {
             </div>
             <h1 className={styles.title}>تم التأكيد بنجاح</h1>
             <p className={styles.description}>
-              سيتم توجيهك إلى لوحة التحكم
+              سيتم توجيهك إلى المساحات
             </p>
             <p className={styles.countdown}>
               {countdown > 0 ? `التوجيه خلال ${countdown} ثوانٍ...` : 'جاري التوجيه...'}
             </p>
-            <Link href="/dashboard" className={styles.link}>
+            <Link href="/workspaces" className={styles.link}>
               الذهاب الآن
             </Link>
           </>

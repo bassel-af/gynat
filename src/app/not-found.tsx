@@ -9,8 +9,8 @@ export default function NotFound() {
       <p className={styles.description}>
         الصفحة التي تبحث عنها غير موجودة أو تم نقلها.
       </p>
-      <a href="/dashboard" className={styles.link}>
-        &rarr; العودة للوحة التحكم
+      <a href="/workspaces" className={styles.link}>
+        &rarr; العودة للمساحات
       </a>
     </CenteredCardLayout>
   );

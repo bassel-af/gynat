@@ -50,7 +50,7 @@ describe('GET /auth/callback', () => {
     expect(new URL(response.headers.get('location')!).pathname).toBe('/auth/login');
   });
 
-  test('calls syncUserToDb and redirects to /dashboard after successful code exchange', async () => {
+  test('calls syncUserToDb and redirects to /workspaces after successful code exchange', async () => {
     const fakeUser = {
       id: 'user-123',
       email: 'test@example.com',
@@ -68,7 +68,7 @@ describe('GET /auth/callback', () => {
 
     expect(mockSyncUserToDb).toHaveBeenCalledWith(fakeUser);
     expect(response.status).toBe(307);
-    expect(new URL(response.headers.get('location')!).pathname).toBe('/dashboard');
+    expect(new URL(response.headers.get('location')!).pathname).toBe('/workspaces');
   });
 
   test('redirects to next param after successful exchange', async () => {
@@ -81,10 +81,10 @@ describe('GET /auth/callback', () => {
     });
     mockSyncUserToDb.mockResolvedValue({ id: 'u1' });
 
-    const request = makeRequest('http://localhost:3000/auth/callback?code=valid&next=/dashboard');
+    const request = makeRequest('http://localhost:3000/auth/callback?code=valid&next=/workspaces');
     const response = await GET(request);
 
-    expect(new URL(response.headers.get('location')!).pathname).toBe('/dashboard');
+    expect(new URL(response.headers.get('location')!).pathname).toBe('/workspaces');
   });
 
   test('still redirects even if syncUserToDb throws', async () => {
@@ -104,7 +104,7 @@ describe('GET /auth/callback', () => {
 
     // Should still redirect despite sync failure
     expect(response.status).toBe(307);
-    expect(new URL(response.headers.get('location')!).pathname).toBe('/dashboard');
+    expect(new URL(response.headers.get('location')!).pathname).toBe('/workspaces');
     expect(consoleErrorSpy).toHaveBeenCalled();
 
     consoleErrorSpy.mockRestore();

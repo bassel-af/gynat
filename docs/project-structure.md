@@ -1,6 +1,6 @@
 # Project Structure
 
-Last updated: 2026-03-30
+Last updated: 2026-04-05
 
 ## Overview
 
@@ -109,7 +109,7 @@ The project is at Phase 5 (Branch Pointers) with Phases 1-5 complete.
 
 **Contents:**
 - `layout.tsx` - Root layout with HTML structure, fonts, RTL direction, metadata
-- `page.tsx` - Home/landing page (redirects authenticated users to `/dashboard`)
+- `page.tsx` - Home/landing page (redirects authenticated users to `/workspaces`)
 - `page.module.css` - Landing page styles
 - `not-found.tsx` / `not-found.module.css` - 404 page
 - `globals.css` - Global CSS imports (tokens, base, tree-global)
@@ -122,9 +122,12 @@ The project is at Phase 5 (Branch Pointers) with Phases 1-5 complete.
 - `[familySlug]/` - Legacy family routes (`page.tsx`, `FamilyTreeClient.tsx`)
 - `auth/` - Authentication pages (login, signup, forgot-password, callback)
   - `auth.module.css` - Shared auth page styles
-- `dashboard/` - Dashboard and workspace creation pages
-- `workspaces/[slug]/` - Workspace detail and tree view
-  - `tree/` - Database-backed tree view (`WorkspaceTreeClient.tsx`)
+- `workspaces/` - Workspace list, creation, detail, and tree view
+  - `page.tsx` + `workspaces.module.css` - Workspace list page
+  - `create/` - Workspace creation page
+  - `[slug]/` - Workspace detail (`page.tsx`, `workspace.module.css`)
+    - `tree/` - Database-backed tree view (`WorkspaceTreeClient.tsx`)
+- `profile/` - User profile page (`page.tsx`, `ProfileClient.tsx`)
 - `invite/[id]/` - Invitation acceptance page (`InviteAcceptClient.tsx`)
 - `policy/` - Public policy page
 - `islamic-gedcom/` - Public GEDCOM standard documentation page
