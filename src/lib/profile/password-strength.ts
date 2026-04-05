@@ -3,7 +3,7 @@ import type { ZxcvbnResult } from '@zxcvbn-ts/core';
 const SCORE_LABELS: Record<number, string> = {
   0: 'ضعيفة جداً',
   1: 'ضعيفة',
-  2: 'مقبولة',
+  2: 'تحتاج لتحسين',
   3: 'قوية',
   4: 'قوية جداً',
 };
