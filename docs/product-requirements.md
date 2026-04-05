@@ -796,23 +796,37 @@ Notification
 - Import button in EmptyTreeState, 7 MB file limit, 10K record cap, 409 on non-empty tree
 - 1425 tests, 0 regressions
 
-### Phase 7 — Advanced Tree Editing
+### Phase 7 — Advanced Tree Editing ✅ COMPLETE
 
-**Phase 7a — Move Subtree:**
-- Replace the existing "نقل إلى عائلة أخرى" button (limited to sibling families of polygamous parents) with a general-purpose "نقل الفرع" (move subtree) operation
-- Moves a person and all their descendants from one family to another
-- Target family selection via searchable dropdown showing parent pairs (e.g., "أحمد + فاطمة")
-- If the target parent exists but has no family record, auto-create the family
-- Confirmation dialog showing the number of descendants that will be moved
-- Cycle detection: reject if the target family's parents are inside the subtree being moved
-- Old family record preserved after move (parents are still a family even with no children)
-- Existing "move child between families" endpoint evolves into a subtree-aware operation
+**✅ Phase 7a — Move Subtree:**
+- Replaced "نقل إلى عائلة أخرى" (limited to sibling families of polygamous parents) with general-purpose "نقل الفرع" (move subtree) operation
+- Moves a person and all their descendants by updating their `FamilyChild` record (descendants follow through their own family chains — no recursive DB mutations needed)
+- New `MoveSubtreeModal` component: searchable family picker showing parent pairs, filtered to exclude current family and cycle-creating families
+- Confirmation dialog showing descendant count computed client-side via `getAllDescendants()`
+- Cycle detection via bounded BFS (`getDescendantIdsFromDb`) inside transaction — rejects if target family's parents are in the subtree
+- `canMoveSubtree()` replaces `canMoveChild()` — simpler check: `familyAsChild !== null`
+- `getTargetFamiliesForMove()` replaces `getAlternativeFamilies()` — returns all families excluding current and cycle-unsafe ones
+- Audit log action changed from `MOVE_CHILD` to `MOVE_SUBTREE`
 
-**Phase 7b — Link Existing Person as Spouse:**
-- Currently "add spouse" always creates a new individual — this phase adds the ability to link two existing tree members as spouses
-- Searchable individual picker (reuse `IndividualPicker` component) to select an existing person from the tree
-- Creates a new family record linking the two individuals
-- Gender validation (same as existing add-spouse flow)
+**✅ Phase 7b — Link Existing Person as Spouse:**
+- New "ربط زوجة/زوج موجود" button in sidebar action bar alongside existing "إضافة زوجة/زوج جديد"
+- `IndividualPicker` with `sexFilter` (opposite sex) and `exclude` set (self + existing spouses + pointed individuals)
+- Creates new Family record linking two existing individuals; auto-opens `FamilyEventForm` after linking
+- `getSpouseExcludeIds()` and `getSexFilterForSpouse()` helpers in `person-detail-helpers.ts`
+
+**✅ Unlink Spouse:**
+- Unlink button (broken-link icon, red-tinted) next to edit marriage button in sidebar spouse section
+- Two behaviors based on family children: no children → DELETE family (removes record entirely); has children → PATCH family with null spouse slot (preserves children connections)
+- Inline confirmation dialog with context-appropriate message
+
+**✅ Security fixes (bundled):**
+- Pointed individual guards on move endpoint and family create endpoint
+- Synthetic family guards on move endpoint (both source and target)
+- Self-marriage prevention on family create (`husbandId === wifeId` → 400)
+- Duplicate family prevention on family create (checks both `(h,w)` and `(w,h)` orderings → 409)
+
+**✅ UI fix:**
+- Modal `contentClassName` prop for overflow control; fixes IndividualPicker dropdown clipping in link-spouse modal
 
 ### Phase 8 — Content
 
