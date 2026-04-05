@@ -796,29 +796,47 @@ Notification
 - Import button in EmptyTreeState, 7 MB file limit, 10K record cap, 409 on non-empty tree
 - 1425 tests, 0 regressions
 
-### Phase 7 — Content
+### Phase 7 — Advanced Tree Editing
+
+**Phase 7a — Move Subtree:**
+- Replace the existing "نقل إلى عائلة أخرى" button (limited to sibling families of polygamous parents) with a general-purpose "نقل الفرع" (move subtree) operation
+- Moves a person and all their descendants from one family to another
+- Target family selection via searchable dropdown showing parent pairs (e.g., "أحمد + فاطمة")
+- If the target parent exists but has no family record, auto-create the family
+- Confirmation dialog showing the number of descendants that will be moved
+- Cycle detection: reject if the target family's parents are inside the subtree being moved
+- Old family record preserved after move (parents are still a family even with no children)
+- Existing "move child between families" endpoint evolves into a subtree-aware operation
+
+**Phase 7b — Link Existing Person as Spouse:**
+- Currently "add spouse" always creates a new individual — this phase adds the ability to link two existing tree members as spouses
+- Searchable individual picker (reuse `IndividualPicker` component) to select an existing person from the tree
+- Creates a new family record linking the two individuals
+- Gender validation (same as existing add-spouse flow)
+
+### Phase 8 — Content
 
 - News posts (workspace-scoped): rich text, media attachments, reactions, comments, pinning
 - Events (workspace-scoped): calendar entries with RSVP, auto-generated birthdays/anniversaries from tree data
 
-### Phase 8 — Polish & Growth
+### Phase 9 — Polish & Growth
 
 - Magic link sign-in (passwordless email login)
 - Mobile app (Expo / React Native) — tracked separately
 - Phone OTP sign-in activated (SMS gateway configured)
 - Public sharing links for specific content (opt-in)
 
-### Phase 9 — Audit & Content
+### Phase 10 — Audit & Content
 
 - Audit log for all tree edits (TreeEditLog)
 
-### Phase 10 — Albums & Notifications
+### Phase 11 — Albums & Notifications
 
 - Albums (workspace-scoped): photo/video collections, tagging to individuals in the tree
 - Storage tracking and quota enforcement
 - Notifications (in-app + email)
 
-### Phase 11 — User-Tree Linking & Cross-Workspace Identity
+### Phase 12 — User-Tree Linking & Cross-Workspace Identity
 
 - User-tree linking: Flow A (invite-with-link), Flow B (member requests link with admin approval), link status on member profiles
 - Cross-workspace identity linking: a lightweight link recognizing the same real person across workspaces — each workspace retains its own copy of the individual (no shared data, no sync). The link is informational only.
@@ -827,7 +845,7 @@ Notification
 
 ## 8. Out of Scope (for now)
 
-- **User-tree linking + cross-workspace identity**: deferred to Phase 11. The `UserTreeLink` table exists in the schema but is not active. Full linking UI is deferred. The data model must not prevent it.
+- **User-tree linking + cross-workspace identity**: deferred to Phase 12. The `UserTreeLink` table exists in the schema but is not active. Full linking UI is deferred. The data model must not prevent it.
 - **Public workspace discovery**: workspaces are private and not discoverable
 - **Real-time collaboration** (e.g., live cursors in tree editing)
 - **Native mobile app**: tracked in a separate document
