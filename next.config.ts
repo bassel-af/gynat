@@ -4,6 +4,15 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ["@xyflow/react"],
   },
+  async redirects() {
+    return [
+      // Legacy GEDCOM-based family routes → workspace tree views
+      { source: '/saeed', destination: '/workspaces/saeed/tree', permanent: true },
+      { source: '/sharbek', destination: '/workspaces/sharbek/tree', permanent: true },
+      { source: '/al-dalati', destination: '/workspaces/al-dalati/tree', permanent: true },
+      { source: '/al-dabbagh', destination: '/workspaces/al-dabbagh/tree', permanent: true },
+    ];
+  },
   async headers() {
     return [
       {

@@ -130,23 +130,20 @@ The app wraps the entire application in `<TreeProvider>` via `src/app/providers.
 - `useGedcomData` — fetches GEDCOM file from `/public/` for legacy routes
 - `useTreeLines` — SVG line drawing for playground mode
 
-### Multi-Family Routing
+### Routing
 
-The app uses dynamic routing (`src/app/[familySlug]/page.tsx`) with a family configuration system:
-- **Config** (`src/config/families.ts`): Defines `FamilyConfig` entries (slug, rootId, displayName, gedcomFile) in a `FAMILIES` record
-- The `test` family config uses `test-family.ged` (small fixture) — used by the `/test` browser test route
 - **Root URL** (`/`) redirects authenticated users to `/workspaces`, shows landing page otherwise
-- Each family route is statically generated via `generateStaticParams()`
-- `FamilyTreeClient` wraps the tree in `<TreeProvider>` with a `forcedRootId` from the family config
+- **Legacy redirects** (`next.config.ts`): `/saeed`, `/sharbek`, `/al-dalati`, `/al-dabbagh` permanently redirect to `/workspaces/{slug}/tree` — these were old static GEDCOM-based family routes
+- **Family config** (`src/config/families.ts`): `FamilyConfig` entries (slug, rootId, displayName, gedcomFile) used for seeding workspaces and the `/test` browser test route
+- The `test` family config uses `test-family.ged` (small fixture) — used by the `/test` browser test route
 
 ### Data Flow
 
-1. User navigates to `/{familySlug}` (e.g., `/saeed`)
-2. `[familySlug]/page.tsx` resolves the `FamilyConfig` via `getFamilyBySlug()`
-3. `FamilyTreeClient` renders `<TreeProvider>` with the family's `forcedRootId`
-4. `useGedcomData` hook fetches the GEDCOM file from `/public/` and calls `parseGedcom()`
-5. Parsed data is stored in TreeContext via `setData()`
-6. UI components (`FamilyTree`, `Sidebar`, `SearchBar`, `Stats`) consume data via `useTree()`
+1. User navigates to `/workspaces/{slug}/tree`
+2. `WorkspaceTreeClient` fetches tree data from `GET /api/workspaces/[id]/tree`
+3. API returns `GedcomData` from database (private individuals redacted server-side)
+4. Data is stored in TreeContext via `setData()`
+5. UI components (`FamilyTree`, `Sidebar`, `SearchBar`) consume data via `useTree()`
 
 ### Tree Visualization
 
@@ -352,7 +349,7 @@ The GEDCOM file (`public/saeed-family.ged`):
 **Workspace & Profile UI**:
 - `/workspaces` — workspace list (مساحات العائلة), create button, logout
 - `/workspaces/create` — create workspace form (اسم العائلة, slug, description)
-- `/profile` — user profile page (display name, email, password, calendar preference)
+- `/profile` — user profile page with sectioned settings: `ProfileHeader` (display name, avatar), `AccountSettings` (email change), `SecuritySettings` (password change), `TreeDisplaySettings` (calendar preference). Components in `src/components/profile/`
 - `/workspaces/[slug]` — workspace detail with members, invite modal, tree link
 - `/workspaces/[slug]/tree` — database-backed tree view with edit controls (add/edit individual, add child/spouse/parent, move child, edit family events, delete)
 - `/invite/[id]` — invitation acceptance page

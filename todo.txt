@@ -1,14 +1,12 @@
 - Test mobile.
+- Thanks message to Raghad and mother, khaled and father and my family and the rest. Good to be in the
+landing page and login page.
 
-- Clean routes and organize. (dashboard, dashboard/profile, etc). 
-Previous links redirects. e.g. /saeed, /sharbek, etc. Request access from admin.
-
-Create multiple test trees for each phase that run only for specific users.
-
+Think of app name
 Next phases:
 - Assign existing relative (assign parent that already exists to person with no parent)
 
-Check other inputs in MacFamilyTree
+Check other inputs in MacFamilyTree.
 
 Handle deleting a parent (can check mac family tree)
 
@@ -39,6 +37,7 @@ Make people close together. do not make them this much far away.
 وصف مساحة العائلة
 وصف العائلة
 التفكير باسم جديد للمنتج، ربما "نسلي"
+- Create multiple test trees for each phase that run only for specific users.
 إعدادات الخصوصية:
 إخفاء النساء
 إخفاء تواريخ الميلاد للرجال
