@@ -860,21 +860,21 @@ Notification
 - Data flow: workspace by-slug API → `WorkspaceTreeContext` → Sidebar
 - Label renamed from "وصف مختصر للمساحة" to "وصف العائلة" on create/edit forms
 
-### Phase 9 — Content
+### Phase 9 — Audit & Content
+
+- Audit log for all tree edits (TreeEditLog)
+
+### Phase 10 — Content
 
 - News posts (workspace-scoped): rich text, media attachments, reactions, comments, pinning
 - Events (workspace-scoped): calendar entries with RSVP, auto-generated birthdays/anniversaries from tree data
 
-### Phase 10 — Polish & Growth
+### Phase 11 — Polish & Growth
 
 - Magic link sign-in (passwordless email login)
 - Mobile app (Expo / React Native) — tracked separately
 - Phone OTP sign-in activated (SMS gateway configured)
 - Public sharing links for specific content (opt-in)
-
-### Phase 11 — Audit & Content
-
-- Audit log for all tree edits (TreeEditLog)
 
 ### Phase 12 — Albums & Notifications
 
@@ -882,7 +882,7 @@ Notification
 - Storage tracking and quota enforcement
 - Notifications (in-app + email)
 
-### Phase 12 — User-Tree Linking & Cross-Workspace Identity
+### Phase 13 — User-Tree Linking & Cross-Workspace Identity
 
 - User-tree linking: Flow A (invite-with-link), Flow B (member requests link with admin approval), link status on member profiles
 - Cross-workspace identity linking: a lightweight link recognizing the same real person across workspaces — each workspace retains its own copy of the individual (no shared data, no sync). The link is informational only.
