@@ -854,6 +854,12 @@ Notification
 - 31 unit tests for reachability algorithm: sole parent, married-in spouse, polygamy, root deletion, cross-branch marriages, upward traversal guard, chain reactions
 - Integration tests for API endpoints and hook state management
 
+**✅ Family description display:**
+- Workspace `description` field displayed in tree sidebar via collapsible "عن العائلة" section below the "شجرة العائلة" heading
+- Click to expand/collapse; hidden when no description is set
+- Data flow: workspace by-slug API → `WorkspaceTreeContext` → Sidebar
+- Label renamed from "وصف مختصر للمساحة" to "وصف العائلة" on create/edit forms
+
 ### Phase 9 — Content
 
 - News posts (workspace-scoped): rich text, media attachments, reactions, comments, pinning
