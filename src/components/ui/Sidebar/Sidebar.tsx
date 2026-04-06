@@ -71,7 +71,7 @@ export function Sidebar() {
       const name = getDisplayNameWithNasab(data, person, DEFAULT_NASAB_DEPTH);
       let dates = '';
       if (person.birth || person.death) {
-        dates = `${person.birth || '?'} - ${person.death || ''}`;
+        dates = person.death ? `${person.birth || '?'} - ${person.death}` : (person.birth || '');
       }
       individuals.push({
         id: person.id,

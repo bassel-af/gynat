@@ -7,8 +7,6 @@ Next phases:
 
 
 
-
-title - الكنية, standard or not in gedcom. shall we create tag?
 Think about business model.
 
 
