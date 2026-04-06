@@ -7,7 +7,6 @@ Next phases:
 
 Check other inputs in MacFamilyTree.
 
-Handle deleting a parent (can check mac family tree)
 المساحات shall be مساحات العمل (it appears in profile and workspaces sub pages)
 
 

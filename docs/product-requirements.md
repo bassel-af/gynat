@@ -828,23 +828,49 @@ Notification
 **✅ UI fix:**
 - Modal `contentClassName` prop for overflow control; fixes IndividualPicker dropdown clipping in link-spouse modal
 
-### Phase 8 — Content
+### Phase 8 — Cascade Delete Warning ✅ COMPLETE
+
+**✅ Cascade delete reachability analysis:**
+- `computeDeleteImpact()` in `src/lib/tree/cascade-delete.ts` — BFS from lineage roots, married-in spouse exclusion, upward traversal guard
+- Married-in spouse detection: root candidates whose every spouse has `familyAsChild` are excluded from BFS seeds (target-dependent: only when deleting mid-tree lineage members)
+- Upward traversal guard: BFS does not traverse up through families where the target is a parent (prevents cross-married children from rescuing affected branches)
+- `computeVersionHash()` for stale data protection between preview and confirmation
+
+**✅ API endpoints:**
+- `GET /api/workspaces/[id]/tree/individuals/[individualId]/delete-impact` — cascade preview with affected count, names (capped at 20), pointer/token counts, version hash, name confirmation gate
+- Enhanced `DELETE /api/workspaces/[id]/tree/individuals/[individualId]` — optional `{ cascade, versionHash, confirmationName }` body; 409 on stale data with fresh impact; server-side name confirmation when 5+ affected
+- Dedicated `cascadePreviewLimiter` (10 req/min)
+
+**✅ Cascade delete transaction (`executeCascadeDelete`):**
+- Atomic Prisma transaction: delete FamilyChild/RadaFamilyChild records, null spouse refs, break active branch pointers, revoke share tokens, delete UserTreeLinks, clear WorkspaceInvitation refs, delete individuals, clean up empty families/RadaFamilies
+- Audit log with `cascade_delete` action, confirmation method, full affected ID list
+
+**✅ Frontend:**
+- `CascadeDeleteModal` component with danger styling, affected names as chips, scrollable list, name-typing confirmation gate (5+ people)
+- `usePersonActions` hook updated with cascade delete flow: fetch impact → show warning → confirm with version hash → handle 409 stale refresh
+- Stale data auto-refresh on 409 response
+
+**✅ Tests:**
+- 31 unit tests for reachability algorithm: sole parent, married-in spouse, polygamy, root deletion, cross-branch marriages, upward traversal guard, chain reactions
+- Integration tests for API endpoints and hook state management
+
+### Phase 9 — Content
 
 - News posts (workspace-scoped): rich text, media attachments, reactions, comments, pinning
 - Events (workspace-scoped): calendar entries with RSVP, auto-generated birthdays/anniversaries from tree data
 
-### Phase 9 — Polish & Growth
+### Phase 10 — Polish & Growth
 
 - Magic link sign-in (passwordless email login)
 - Mobile app (Expo / React Native) — tracked separately
 - Phone OTP sign-in activated (SMS gateway configured)
 - Public sharing links for specific content (opt-in)
 
-### Phase 10 — Audit & Content
+### Phase 11 — Audit & Content
 
 - Audit log for all tree edits (TreeEditLog)
 
-### Phase 11 — Albums & Notifications
+### Phase 12 — Albums & Notifications
 
 - Albums (workspace-scoped): photo/video collections, tagging to individuals in the tree
 - Storage tracking and quota enforcement
