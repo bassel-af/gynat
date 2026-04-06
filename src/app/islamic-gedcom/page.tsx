@@ -4,7 +4,7 @@ import styles from './islamic-gedcom.module.css';
 export const metadata: Metadata = {
   title: 'مرجع GEDCOM الإسلامي | Islamic GEDCOM Reference',
   description:
-    'مرجع شامل لتوثيق الأنساب الإسلامية في صيغة GEDCOM — التاريخ الهجري، عقد القران، الزفاف، الطلاق، والرضاعة. A comprehensive reference for documenting Islamic genealogy in GEDCOM format — Hijri dates, Nikah, marriage events, divorce, and Rada\'a (milk kinship).',
+    'مرجع شامل لتوثيق الأنساب الإسلامية في صيغة GEDCOM — التاريخ الهجري، عقد القران، الزفاف، الطلاق، الرضاعة، والكنية. A comprehensive reference for documenting Islamic genealogy in GEDCOM format — Hijri dates, Nikah, marriage events, divorce, Rada\'a (milk kinship), and Kunya.',
   keywords: [
     'Islamic GEDCOM',
     'GEDCOM الإسلامي',
@@ -29,11 +29,15 @@ export const metadata: Metadata = {
     '@#DHIJRI@',
     'Hijri calendar',
     'Arabic genealogy',
+    'الكنية',
+    'Kunya GEDCOM',
+    '_KUNYA',
+    'Abu Umm',
   ],
   openGraph: {
     title: 'مرجع GEDCOM الإسلامي | Islamic GEDCOM Reference',
     description:
-      'مرجع شامل لتوثيق الأنساب الإسلامية في صيغة GEDCOM — التاريخ الهجري، عقد القران، الزفاف، الطلاق، والرضاعة.',
+      'مرجع شامل لتوثيق الأنساب الإسلامية في صيغة GEDCOM — التاريخ الهجري، عقد القران، الزفاف، الطلاق، الرضاعة، والكنية.',
     type: 'article',
     locale: 'ar_SA',
     alternateLocale: 'en_US',
@@ -42,7 +46,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'مرجع GEDCOM الإسلامي | Islamic GEDCOM Reference',
     description:
-      'A comprehensive reference for documenting Islamic genealogy in GEDCOM — Hijri dates, Nikah, marriage, divorce, and Rada\'a (milk kinship).',
+      'A comprehensive reference for documenting Islamic genealogy in GEDCOM — Hijri dates, Nikah, marriage, divorce, Rada\'a (milk kinship), and Kunya.',
   },
   alternates: {
     canonical: '/islamic-gedcom',
@@ -57,7 +61,8 @@ export default function IslamicGedcomPage() {
           <h1 className={styles.pageTitle}>مرجع GEDCOM الإسلامي</h1>
           <p className={styles.pageSubtitle}>
             مرجع شامل لتوثيق الأنساب وفق المفاهيم الشرعية الإسلامية،
-            باستخدام علامات GEDCOM القياسية (5.5.1 و 7.0) وامتدادات مخصصة.
+            باستخدام علامات GEDCOM القياسية (5.5.1 و 7.0) وامتدادات مخصصة
+            تشمل التقويم الهجري، أحداث الزواج، الرضاعة، والكنية.
           </p>
         </header>
 
@@ -374,6 +379,67 @@ export default function IslamicGedcomPage() {
           </div>
         </section>
 
+        {/* ─── Kunya ─── */}
+        <section id="kunya" className={styles.section}>
+          <h2 className={styles.sectionTitle}>الكنية</h2>
+          <p className={styles.desc}>
+            الكنية هي أن يُنادى الشخص بـ &laquo;أبو فلان&raquo; أو &laquo;أم فلان&raquo;
+            نسبةً إلى أحد أبنائه. وهي أسلوب مخاطبة متوارث في الثقافة العربية،
+          </p>
+          <p className={styles.desc}>
+            لا يوجد في معيار GEDCOM علامة مخصصة للكنية.
+            علامة <span className={styles.inlineCode}>NICK</span> (الاسم المستعار) غير مناسبة
+            لأن الكنية ليست لقباً عامياً.
+            وعلامة <span className={styles.inlineCode}>TITL</span> (اللقب) غير مناسبة
+            لأن الكنية اسم مشتق من الابن وليست رتبة أو منصباً.
+            لذلك نستخدم علامة مخصصة <span className={styles.inlineCode}>_KUNYA</span>.
+          </p>
+
+          <div className={styles.tagBlock}>
+            <div className={styles.tagHeader}>
+              <span className={`${styles.tagBadge} ${styles.tagBadgeCustom}`}>_KUNYA</span>
+              <span className={styles.tagLabel}>امتداد</span>
+              <span className={styles.tagName}>الكنية</span>
+            </div>
+            <p className={styles.tagDesc}>
+              توضع كعلامة فرعية تحت سجل اسم إضافي من نوع{' '}
+              <span className={styles.inlineCode}>aka</span> على سجل الفرد
+              (<span className={styles.inlineCode}>INDI</span>).
+              الاسم الإضافي يحتوي على نص الكنية (مثل &laquo;أبو أحمد&raquo;)،
+              والعلامة <span className={styles.inlineCode}>_KUNYA Y</span> تُميّزه ككنية.
+            </p>
+            <p className={styles.tagDesc}>
+              <strong>GEDCOM 5.5.1:</strong> نوع الاسم يُحدد
+              بـ <span className={styles.inlineCode}>2 TYPE aka</span>.
+            </p>
+            <div className={styles.codeBlock}>
+              <span className={styles.codeComment}>{"// GEDCOM 5.5.1"}</span>{'\n'}
+              <span className={styles.codeId}>0 @I1@ INDI</span>{'\n'}
+              <span className={styles.codeTag}>1 NAME</span> <span className={styles.codeVal}>محمد /بن عبدالله/</span>{'\n'}
+              <span className={styles.codeTag}>1 NAME</span> <span className={styles.codeVal}>أبو أحمد //</span>{'\n'}
+              <span className={styles.codeTag}>2 TYPE</span> <span className={styles.codeVal}>aka</span>{'\n'}
+              <span className={styles.codeCustomTag}>2 _KUNYA</span> <span className={styles.codeVal}>Y</span>
+            </div>
+            <p className={styles.tagDesc}>
+              <strong>GEDCOM 7.0:</strong> نوع الاسم يُحدد
+              بـ <span className={styles.inlineCode}>2 TYPE OTHER</span> مع علامة
+              فرعية <span className={styles.inlineCode}>3 PHRASE Kunya</span>.
+            </p>
+            <div className={styles.codeBlock}>
+              <span className={styles.codeComment}>{"// GEDCOM 7.0"}</span>{'\n'}
+              <span className={styles.codeId}>0 @I1@ INDI</span>{'\n'}
+              <span className={styles.codeTag}>1 NAME</span> <span className={styles.codeVal}>محمد /بن عبدالله/</span>{'\n'}
+              <span className={styles.codeTag}>1 NAME</span> <span className={styles.codeVal}>أبو أحمد //</span>{'\n'}
+              <span className={styles.codeTag}>2 TYPE</span> <span className={styles.codeVal}>OTHER</span>{'\n'}
+              <span className={styles.codeTag}>3 PHRASE</span> <span className={styles.codeVal}>Kunya</span>{'\n'}
+              <span className={styles.codeCustomTag}>2 _KUNYA</span> <span className={styles.codeVal}>Y</span>
+            </div>
+            <div className={styles.note}>
+              الكنية قد تكون للأم أيضاً: &laquo;أم أحمد&raquo; — بنفس البنية تماماً.
+            </div>
+          </div>
+        </section>
+
         {/* ─── Full Example ─── */}
         <section id="full-example" className={styles.section}>
           <h2 className={styles.sectionTitle}>مثال كامل</h2>
@@ -433,7 +499,8 @@ export default function IslamicGedcomPage() {
                 <span className={styles.inlineCode}>_RADA_HUSB</span>,{' '}
                 <span className={styles.inlineCode}>_RADA_WIFE</span>,{' '}
                 <span className={styles.inlineCode}>_RADA_CHIL</span>,{' '}
-                <span className={styles.inlineCode}>_UMM_WALAD</span>) تتبع
+                <span className={styles.inlineCode}>_UMM_WALAD</span>,{' '}
+                <span className={styles.inlineCode}>_KUNYA</span>) تتبع
                 اتفاقية الشرطة السفلية المعتمدة.
               </p>
             </div>
@@ -450,7 +517,7 @@ export default function IslamicGedcomPage() {
 
         <footer className={styles.footer}>
           <p className={styles.lastUpdated}>
-            آخر تحديث: مارس ٢٠٢٦ &middot; الإصدار ٠.١
+            آخر تحديث: أبريل ٢٠٢٦ &middot; الإصدار ٠.٢
           </p>
           <p className={styles.footerNote}>
             هذا المرجع مفتوح للمجتمع. إذا كنت مهتماً بتوحيد توثيق الأنساب الإسلامية،
