@@ -886,7 +886,7 @@ Notification
 
 ### Phase 11 — Polish & Growth
 
-- Magic link sign-in (passwordless email login)
+- ✅ Magic link sign-in (passwordless email login): two-mode login page (password/magic link) with text link toggle, shared email field, 30s resend cooldown, Arabic RTL email template, GoTrue OTP rate limiting (60/hr), 1-hour token expiry, auto-account creation for unknown emails (prevents enumeration), PKCE flow via Supabase SDK
 - Mobile app (Expo / React Native) — tracked separately
 - Phone OTP sign-in activated (SMS gateway configured)
 - Public sharing links for specific content (opt-in)

@@ -60,7 +60,14 @@ export default function Home() {
         </div>
         <h1 className={styles.title}>شجرة العائلة</h1>
         <p className={styles.subtitle}>
-          يمكنك الوصول إلى شجرة عائلتك من خلال الرابط المخصص لها
+          أنشئ شجرة عائلتك وشاركها مع أفراد عائلتك
+        </p>
+        <a href="/auth/signup" className={styles.signupButton}>
+          إنشاء حساب جديد
+        </a>
+        <p className={styles.switchLink}>
+          لديك حساب؟{' '}
+          <a href="/auth/login">تسجيل الدخول</a>
         </p>
         <div className={styles.divider}>
           <span className={styles.dividerDot} />
@@ -68,9 +75,6 @@ export default function Home() {
         <p className={styles.contact}>
           <span className={styles.contactLabel}>تواصل معنا</span>
           <a href="mailto:contact@autoflowa.com">contact@autoflowa.com</a>
-        </p>
-        <p className={styles.switchLink}>
-          <a href="/auth/login">تسجيل الدخول</a>
         </p>
       </div>
     </main>

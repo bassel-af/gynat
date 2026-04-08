@@ -46,8 +46,32 @@
 .subtitle {
   font-size: var(--font-size-xl);
   color: var(--alpha-white-40);
-  margin: 0 0 32px;
+  margin: 0 0 var(--space-13);
   line-height: 1.6;
+}
+
+/* Sign-up CTA button */
+.signupButton {
+  display: inline-block;
+  padding: var(--space-5) var(--space-13);
+  background: var(--gradient-primary);
+  color: var(--color-text-inverse);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  border-radius: var(--radius-lg);
+  text-decoration: none;
+  transition: transform var(--transition-base), box-shadow var(--transition-base);
+  box-shadow: var(--shadow-button);
+  margin-bottom: var(--space-7);
+}
+
+.signupButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(74, 144, 217, 0.45);
+}
+
+.signupButton:active {
+  transform: translateY(0);
 }
 
 /* Divider — decorative accent line */
