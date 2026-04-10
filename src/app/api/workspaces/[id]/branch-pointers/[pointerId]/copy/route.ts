@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireWorkspaceAdmin, isErrorResponse } from '@/lib/api/workspace-auth';
-import { getTreeByWorkspaceId, getOrCreateTree } from '@/lib/tree/queries';
+import { getTreeByWorkspaceId, getOrCreateTree, touchTreeTimestamp } from '@/lib/tree/queries';
 import { dbTreeToGedcomData } from '@/lib/tree/mapper';
-import { getWorkspaceKey } from '@/lib/tree/encryption';
+import { getWorkspaceKey, encryptSnapshot } from '@/lib/tree/encryption';
 import { extractPointedSubtree } from '@/lib/tree/branch-pointer-merge';
 import { prepareDeepCopy, persistDeepCopy } from '@/lib/tree/branch-pointer-deep-copy';
 import { snapshotBranchPointer, encryptAuditDescription } from '@/lib/tree/audit';
@@ -21,7 +21,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     where: { id: pointerId },
   });
 
+  console.log('[branch-copy] pointerId:', pointerId, 'found:', !!pointer, 'status:', pointer?.status, 'targetWorkspaceId:', pointer?.targetWorkspaceId, 'requestWorkspaceId:', workspaceId);
+
   if (!pointer || pointer.targetWorkspaceId !== workspaceId) {
+    console.log('[branch-copy] 404 — pointer not found or workspace mismatch');
     return NextResponse.json(
       { error: 'الرابط غير موجود' },
       { status: 404 },
@@ -29,6 +32,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   }
 
   if (pointer.status !== 'active') {
+    console.log('[branch-copy] 400 — pointer status is', pointer.status, '(not active)');
     return NextResponse.json(
       { error: 'الرابط غير نشط' },
       { status: 400 },
@@ -76,9 +80,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       data: { status: 'broken' },
     });
 
-    // Log the action. Cast via unknown — Prisma Bytes column type is
-    // Uint8Array<ArrayBuffer> while Node Buffer has ArrayBufferLike; the
-    // runtime shape is correct for Bytes columns.
     await txPrisma.treeEditLog.create({
       data: {
         treeId: targetTree.id,
@@ -86,12 +87,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         action: 'deep_copy',
         entityType: 'branch_pointer',
         entityId: pointerId,
-        snapshotBefore: snapshotBranchPointer(pointer),
-        snapshotAfter: snapshotBranchPointer({ ...pointer, status: 'broken' }),
+        snapshotBefore: encryptSnapshot(snapshotBranchPointer(pointer), targetKey),
+        snapshotAfter: encryptSnapshot(snapshotBranchPointer({ ...pointer, status: 'broken' }), targetKey),
         description: encryptAuditDescription('deep_copy', 'branch_pointer', null, targetKey),
       } as unknown as Parameters<typeof txPrisma.treeEditLog.create>[0]['data'],
     });
+
   });
+
+  await touchTreeTimestamp(targetTree.id);
 
   return NextResponse.json({
     data: {

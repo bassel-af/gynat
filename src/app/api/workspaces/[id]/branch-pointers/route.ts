@@ -6,7 +6,7 @@ import { hashToken } from '@/lib/tree/branch-share-token';
 import { validateSpouseGender } from '@/lib/tree/family-validators';
 import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
 import { snapshotBranchPointer, encryptAuditDescription, JSON_NULL } from '@/lib/tree/audit';
-import { getWorkspaceKey } from '@/lib/tree/encryption';
+import { getWorkspaceKey, decryptIndividualRow } from '@/lib/tree/encryption';
 import { touchTreeTimestamp } from '@/lib/tree/queries';
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -37,16 +37,31 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     },
   });
 
-  const data = pointers.map((p) => ({
-    id: p.id,
-    sourceWorkspaceNameAr: p.sourceWorkspace.nameAr,
-    sourceRootName: [p.rootIndividual.givenName, p.rootIndividual.surname]
-      .filter(Boolean)
-      .join(' ') || 'غير معروف',
-    anchorIndividualId: p.anchorIndividualId,
-    relationship: p.relationship,
-    status: p.status,
-  }));
+  // Decrypt root individual names — each pointer may reference a different
+  // source workspace, so collect unique workspace IDs and fetch keys once.
+  const sourceWsIds = [...new Set(pointers.map((p) => p.sourceWorkspaceId))];
+  const keyEntries = await Promise.all(
+    sourceWsIds.map(async (wsId) => [wsId, await getWorkspaceKey(wsId)] as const),
+  );
+  const keyMap = new Map(keyEntries);
+
+  const data = pointers.map((p) => {
+    const key = keyMap.get(p.sourceWorkspaceId)!;
+    const decrypted = decryptIndividualRow(
+      { givenName: p.rootIndividual.givenName, surname: p.rootIndividual.surname },
+      key,
+    );
+    return {
+      id: p.id,
+      sourceWorkspaceNameAr: p.sourceWorkspace.nameAr,
+      sourceRootName: [decrypted.givenName, decrypted.surname]
+        .filter(Boolean)
+        .join(' ') || 'غير معروف',
+      anchorIndividualId: p.anchorIndividualId,
+      relationship: p.relationship,
+      status: p.status,
+    };
+  });
 
   return NextResponse.json({ data });
 }
