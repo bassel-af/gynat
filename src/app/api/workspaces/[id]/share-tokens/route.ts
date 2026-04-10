@@ -4,6 +4,7 @@ import { requireWorkspaceAdmin, isErrorResponse } from '@/lib/api/workspace-auth
 import { createShareTokenSchema } from '@/lib/tree/branch-pointer-schemas';
 import { generateShareToken, hashToken } from '@/lib/tree/branch-share-token';
 import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
+import { getWorkspaceKey, decryptIndividualRow } from '@/lib/tree/encryption';
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -107,6 +108,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   const result = await requireWorkspaceAdmin(request, workspaceId);
   if (isErrorResponse(result)) return result;
 
+  const workspaceKey = await getWorkspaceKey(workspaceId);
+
   const tokens = await prisma.branchShareToken.findMany({
     where: { sourceWorkspaceId: workspaceId },
     orderBy: { createdAt: 'desc' },
@@ -134,19 +137,22 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     : [];
   const countMap = new Map(activeCounts.map((r) => [r.shareTokenId, r._count.id]));
 
-  const shaped = tokens.map((t) => ({
-    id: t.id,
-    rootPersonName: [t.rootIndividual.givenName, t.rootIndividual.surname]
-      .filter(Boolean)
-      .join(' '),
-    depthLimit: t.depthLimit,
-    activePointerCount: countMap.get(t.id) ?? 0,
-    isPublic: t.isPublic,
-    targetWorkspaceName: t.targetWorkspace?.nameAr ?? null,
-    isRevoked: t.isRevoked,
-    expiresAt: t.expiresAt,
-    createdAt: t.createdAt,
-  }));
+  const shaped = tokens.map((t) => {
+    const decrypted = decryptIndividualRow(t.rootIndividual, workspaceKey);
+    return {
+      id: t.id,
+      rootPersonName: [decrypted.givenName, decrypted.surname]
+        .filter(Boolean)
+        .join(' '),
+      depthLimit: t.depthLimit,
+      activePointerCount: countMap.get(t.id) ?? 0,
+      isPublic: t.isPublic,
+      targetWorkspaceName: t.targetWorkspace?.nameAr ?? null,
+      isRevoked: t.isRevoked,
+      expiresAt: t.expiresAt,
+      createdAt: t.createdAt,
+    };
+  });
 
   return NextResponse.json({ data: shaped });
 }
