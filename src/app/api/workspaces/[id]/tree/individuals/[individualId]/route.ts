@@ -10,6 +10,7 @@ import {
 import { updateIndividualSchema } from '@/lib/tree/schemas';
 import { isPointedIndividualInWorkspace } from '@/lib/tree/branch-pointer-queries';
 import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
+import { isUndoRequest } from '@/lib/api/undo-header';
 import { dbTreeToGedcomData } from '@/lib/tree/mapper';
 import { getWorkspaceKey, encryptIndividualInput, encryptSnapshot } from '@/lib/tree/encryption';
 import { computeDeleteImpact, computeVersionHash } from '@/lib/tree/cascade-delete';
@@ -93,7 +94,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         // Phase 10b: wrap plaintext snapshots in encrypted envelopes.
         snapshotBefore: encryptSnapshot(snapshotIndividual(existing), workspaceKey),
         snapshotAfter: encryptSnapshot(snapshotIndividual(afterPlaintext), workspaceKey),
-        description: encryptAuditDescription('update', 'individual', existing.givenName, workspaceKey),
+        description: encryptAuditDescription('update', 'individual', existing.givenName, workspaceKey, { isUndo: isUndoRequest(request) }),
       } as unknown as Parameters<typeof prisma.treeEditLog.create>[0]['data'],
     }),
     touchTreeTimestamp(tree.id),
@@ -282,7 +283,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         // Phase 10b: encrypt the plaintext snapshot envelope.
         snapshotBefore: encryptSnapshot(snapshotIndividual(existing), workspaceKey),
         snapshotAfter: JSON_NULL,
-        description: encryptAuditDescription(deleteAction, 'individual', existing.givenName, workspaceKey),
+        description: encryptAuditDescription(deleteAction, 'individual', existing.givenName, workspaceKey, { isUndo: isUndoRequest(request) }),
       } as unknown as Parameters<typeof tx.treeEditLog.create>[0]['data'],
     });
 

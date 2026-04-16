@@ -6,6 +6,7 @@ import { getOrCreateTree, getTreeFamily, getTreeIndividualDecrypted, touchTreeTi
 import { getWorkspaceKey } from '@/lib/tree/encryption';
 import { z } from 'zod';
 import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
+import { isUndoRequest } from '@/lib/api/undo-header';
 import { encryptAuditDescription, JSON_NULL } from '@/lib/tree/audit';
 
 type RouteParams = { params: Promise<{ id: string; familyId: string }> };
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         entityId: familyId,
         snapshotBefore: JSON_NULL,
         snapshotAfter: { familyId, individualId: parsed.data.individualId },
-        description: encryptAuditDescription('create', 'family_child', individual.givenName, workspaceKey),
+        description: encryptAuditDescription('create', 'family_child', individual.givenName, workspaceKey, { isUndo: isUndoRequest(request) }),
       } as unknown as Parameters<typeof prisma.treeEditLog.create>[0]['data'],
     }),
     touchTreeTimestamp(tree.id),

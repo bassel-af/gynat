@@ -1,0 +1,73 @@
+.group {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--color-text-inverse);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  font-family: inherit;
+}
+
+.button:hover:not(:disabled) {
+  background: var(--alpha-white-08);
+}
+
+.button:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus-primary);
+}
+
+.button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  color: var(--alpha-white-40);
+}
+
+.button:disabled:hover {
+  background: transparent;
+}
+
+.icon {
+  flex-shrink: 0;
+  color: var(--color-primary-light);
+}
+
+.button:disabled .icon {
+  color: var(--alpha-white-40);
+}
+
+.spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--alpha-white-10);
+  border-top-color: var(--color-primary-light);
+  border-radius: 50%;
+  animation: spin 0.3s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 768px) {
+  .button {
+    width: 26px;
+    height: 26px;
+  }
+}

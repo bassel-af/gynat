@@ -3,11 +3,14 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { TreeProvider, useTree } from '@/context/TreeContext';
 import { WorkspaceTreeProvider, useWorkspaceTree } from '@/context/WorkspaceTreeContext';
+import { UndoStackProvider, useUndoStack } from '@/context/UndoStackContext';
 import { useWorkspaceTreeData } from '@/hooks/useWorkspaceTreeData';
 import { useTreeColorOverrides } from '@/hooks/useTreeColorOverrides';
+import { useKeyboardUndoRedo } from '@/hooks/useKeyboardUndoRedo';
 import { FamilyTree, EmptyTreeState, IndividualForm } from '@/components/tree';
 import type { IndividualFormData } from '@/components/tree';
 import { CanvasToolbar } from '@/components/tree/CanvasToolbar';
+import { ConflictDialog } from '@/components/tree/ConflictDialog';
 import { Sidebar } from '@/components/ui';
 import { Spinner } from '@/components/ui/Spinner';
 import { apiFetch } from '@/lib/api/client';
@@ -152,14 +155,69 @@ function TreeContent({
       hideBirthDateForMale={workspace.hideBirthDateForMale}
       description={workspace.description}
     >
-      <div className="app-layout">
-        <Sidebar />
-        <main className="main-content">
-          <CanvasToolbar workspaceSlug={workspace.slug} workspaceId={workspace.id} />
-          <FamilyTree hideMiniMap />
-        </main>
-      </div>
+      <UndoStackProvider workspaceId={workspace.id} refreshTree={refreshTree} key={workspace.id}>
+        <TreeShell workspaceSlug={workspace.slug} workspaceId={workspace.id} />
+      </UndoStackProvider>
     </WorkspaceTreeProvider>
+  );
+}
+
+function TreeShell({ workspaceSlug, workspaceId }: { workspaceSlug: string; workspaceId: string }) {
+  const { canEdit } = useWorkspaceTree();
+  const undoStack = useUndoStack();
+  const { showToast } = useToast();
+
+  const handleUndo = useCallback(async () => {
+    const label = undoStack.topUndoLabel;
+    await undoStack.undo();
+    if (label && !undoStack.conflict) {
+      showToast(`تم التراجع عن: ${label}`, 'success');
+    }
+  }, [undoStack, showToast]);
+
+  const handleRedo = useCallback(async () => {
+    const label = undoStack.topRedoLabel;
+    await undoStack.redo();
+    if (label && !undoStack.conflict) {
+      showToast(`تمت إعادة: ${label}`, 'success');
+    }
+  }, [undoStack, showToast]);
+
+  useKeyboardUndoRedo({
+    onUndo: handleUndo,
+    onRedo: handleRedo,
+    enabled: canEdit,
+  });
+
+  const undoRedoProps = canEdit
+    ? {
+        canUndo: undoStack.canUndo,
+        canRedo: undoStack.canRedo,
+        isInFlight: undoStack.isInFlight,
+        onUndo: handleUndo,
+        onRedo: handleRedo,
+      }
+    : undefined;
+
+  return (
+    <div className="app-layout">
+      <Sidebar />
+      <main className="main-content">
+        <CanvasToolbar
+          workspaceSlug={workspaceSlug}
+          workspaceId={workspaceId}
+          undoRedo={undoRedoProps}
+        />
+        <FamilyTree hideMiniMap />
+      </main>
+      <ConflictDialog
+        isOpen={undoStack.conflict !== null}
+        variant={undoStack.conflict?.kind ?? 'stale'}
+        onRefresh={() => {
+          if (typeof window !== 'undefined') window.location.reload();
+        }}
+      />
+    </div>
   );
 }
 

@@ -1,14 +1,8 @@
 - Test mobile.
-- Thanks message to Raghad and mother, khaled and father and my family and the rest. Good to be in the
-landing page and login page.
 - Data backup.
 - .env file.
 
-Think of app name ربما "نسلي
 Test with non admin role (edit etc)
-add in policy that user agree to use
-the product as is even if it contains 
-issues or features he desires are missing.
 
 
 Think about business model.
@@ -35,25 +29,9 @@ Make people close together. Do not make them this much far away.
 
 
 - Create multiple test trees for each phase that run only for specific users.
-إعدادات الخصوصية:
-إخفاء تواريخ الميلاد للرجال
-إخفاء تواريخ الميلاد للنساء
+
+
 إخفاء الملاحظات
-
-
 افتراح تعديلات
-
-
-
-
-
-
-
 وصف للشخص
-
-
 all person search picker shall contain person birth date.
-
-
-In policy, indicate legally that we are not responsible for the content,
-though we deal with reports

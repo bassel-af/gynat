@@ -5,6 +5,7 @@ import { treeMutateLimiter, rateLimitResponse } from '@/lib/api/rate-limit';
 import { getOrCreateTree, getTreeFamily, touchTreeTimestamp } from '@/lib/tree/queries';
 import { z } from 'zod';
 import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
+import { isUndoRequest } from '@/lib/api/undo-header';
 import { isSyntheticFamilyId } from '@/lib/tree/branch-pointer-guards';
 import { isPointedIndividualInWorkspace } from '@/lib/tree/branch-pointer-queries';
 import { encryptAuditDescription, encryptAuditPayload } from '@/lib/tree/audit';
@@ -227,7 +228,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           ),
           snapshotBefore: { familyId, individualId },
           snapshotAfter: { familyId: targetFamilyId, individualId },
-          description: encryptAuditDescription('MOVE_SUBTREE', 'family_child', null, workspaceKey),
+          description: encryptAuditDescription('MOVE_SUBTREE', 'family_child', null, workspaceKey, { isUndo: isUndoRequest(request) }),
         } as unknown as Parameters<typeof prisma.treeEditLog.create>[0]['data'],
       });
     });

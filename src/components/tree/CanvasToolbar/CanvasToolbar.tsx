@@ -4,17 +4,27 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { UserNav } from '@/components/ui/UserNav/UserNav';
 import { RootBackChip } from '@/components/tree/RootBackChip/RootBackChip';
+import { UndoRedoButtons } from '@/components/tree/UndoRedoButtons';
 import { useWorkspaceTree } from '@/context/WorkspaceTreeContext';
 import { useToast } from '@/context/ToastContext';
 import { apiFetch } from '@/lib/api/client';
 import styles from './CanvasToolbar.module.css';
 
+interface UndoRedoProps {
+  canUndo: boolean;
+  canRedo: boolean;
+  isInFlight: boolean;
+  onUndo: () => void;
+  onRedo: () => void;
+}
+
 interface CanvasToolbarProps {
   workspaceSlug: string;
   workspaceId: string;
+  undoRedo?: UndoRedoProps;
 }
 
-export function CanvasToolbar({ workspaceSlug, workspaceId }: CanvasToolbarProps) {
+export function CanvasToolbar({ workspaceSlug, workspaceId, undoRedo }: CanvasToolbarProps) {
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
@@ -98,6 +108,18 @@ export function CanvasToolbar({ workspaceSlug, workspaceId }: CanvasToolbarProps
         </Link>
         <span className={styles.separator} />
         <UserNav />
+        {undoRedo && (
+          <>
+            <span className={styles.separator} />
+            <UndoRedoButtons
+              canUndo={undoRedo.canUndo}
+              canRedo={undoRedo.canRedo}
+              isInFlight={undoRedo.isInFlight}
+              onUndo={undoRedo.onUndo}
+              onRedo={undoRedo.onRedo}
+            />
+          </>
+        )}
         <span className={styles.separator} />
         <div className={styles.exportWrapper} ref={exportRef}>
           <button

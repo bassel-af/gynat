@@ -4,6 +4,7 @@ import { requireTreeEditor, isErrorResponse } from '@/lib/api/workspace-auth';
 import { treeMutateLimiter, rateLimitResponse } from '@/lib/api/rate-limit';
 import { getOrCreateTree, getTreeRadaFamily, touchTreeTimestamp } from '@/lib/tree/queries';
 import { getWorkspaceKey } from '@/lib/tree/encryption';
+import { isUndoRequest } from '@/lib/api/undo-header';
 import { encryptAuditDescription, JSON_NULL } from '@/lib/tree/audit';
 
 type RouteParams = { params: Promise<{ id: string; radaFamilyId: string; individualId: string }> };
@@ -86,7 +87,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         entityId: radaFamilyId,
         snapshotBefore: { radaFamilyId, individualId },
         snapshotAfter: JSON_NULL,
-        description: encryptAuditDescription('delete', 'rada_family_child', null, workspaceKey),
+        description: encryptAuditDescription('delete', 'rada_family_child', null, workspaceKey, { isUndo: isUndoRequest(request) }),
       } as unknown as Parameters<typeof prisma.treeEditLog.create>[0]['data'],
     }),
     touchTreeTimestamp(tree.id),

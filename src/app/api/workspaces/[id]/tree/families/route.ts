@@ -6,6 +6,7 @@ import { getOrCreateTree, getTreeIndividual, touchTreeTimestamp } from '@/lib/tr
 import { createFamilySchema } from '@/lib/tree/schemas';
 import { validateFamilyGender } from '@/lib/tree/family-validators';
 import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
+import { isUndoRequest } from '@/lib/api/undo-header';
 import { isPointedIndividualInWorkspace } from '@/lib/tree/branch-pointer-queries';
 import { snapshotFamily, encryptAuditDescription, JSON_NULL } from '@/lib/tree/audit';
 import { getWorkspaceKey, encryptFamilyInput, encryptSnapshot } from '@/lib/tree/encryption';
@@ -168,7 +169,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           }),
           workspaceKey,
         ),
-        description: encryptAuditDescription('create', 'family', null, workspaceKey),
+        description: encryptAuditDescription('create', 'family', null, workspaceKey, { isUndo: isUndoRequest(request) }),
       } as unknown as Parameters<typeof prisma.treeEditLog.create>[0]['data'],
     }),
     touchTreeTimestamp(tree.id),

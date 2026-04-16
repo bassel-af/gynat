@@ -94,4 +94,47 @@ describe('apiFetch', () => {
       body,
     }));
   });
+
+  test('adds X-Solalah-Undo header when isUndo option is true', async () => {
+    mockGetSession.mockResolvedValue({
+      data: { session: { access_token: 'tok' } },
+      error: null,
+    });
+    mockFetch.mockResolvedValue(new Response('{}', { status: 200 }));
+
+    await apiFetch('/api/do', { method: 'PATCH', isUndo: true });
+
+    expect(mockFetch).toHaveBeenCalledWith('/api/do', expect.objectContaining({
+      headers: expect.objectContaining({
+        Authorization: 'Bearer tok',
+        'X-Solalah-Undo': 'true',
+      }),
+    }));
+  });
+
+  test('does not add X-Solalah-Undo header when isUndo is falsy', async () => {
+    mockGetSession.mockResolvedValue({
+      data: { session: { access_token: 'tok' } },
+      error: null,
+    });
+    mockFetch.mockResolvedValue(new Response('{}', { status: 200 }));
+
+    await apiFetch('/api/do', { method: 'PATCH' });
+
+    const callArgs = mockFetch.mock.calls[0][1];
+    expect(callArgs.headers).not.toHaveProperty('X-Solalah-Undo');
+  });
+
+  test('does not forward isUndo as a fetch init option', async () => {
+    mockGetSession.mockResolvedValue({
+      data: { session: { access_token: 'tok' } },
+      error: null,
+    });
+    mockFetch.mockResolvedValue(new Response('{}', { status: 200 }));
+
+    await apiFetch('/api/do', { method: 'PATCH', isUndo: true });
+
+    const callArgs = mockFetch.mock.calls[0][1];
+    expect(callArgs).not.toHaveProperty('isUndo');
+  });
 });

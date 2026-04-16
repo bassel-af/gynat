@@ -6,6 +6,7 @@ import { getOrCreateTree, getTreeIndividual, touchTreeTimestamp } from '@/lib/tr
 import { createRadaFamilySchema } from '@/lib/tree/schemas';
 import { detectCircularRadaRef, detectDuplicateChildren } from '@/lib/tree/rada-validators';
 import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
+import { isUndoRequest } from '@/lib/api/undo-header';
 import { snapshotRadaFamily, encryptAuditDescription, JSON_NULL } from '@/lib/tree/audit';
 import { getWorkspaceKey, encryptRadaFamilyInput, encryptSnapshot } from '@/lib/tree/encryption';
 
@@ -142,7 +143,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           }),
           workspaceKey,
         ),
-        description: encryptAuditDescription('create', 'rada_family', null, workspaceKey),
+        description: encryptAuditDescription('create', 'rada_family', null, workspaceKey, { isUndo: isUndoRequest(request) }),
       } as unknown as Parameters<typeof prisma.treeEditLog.create>[0]['data'],
     }),
     touchTreeTimestamp(tree.id),

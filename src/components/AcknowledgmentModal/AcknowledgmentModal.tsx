@@ -3,17 +3,32 @@
 import { useState, useEffect, useCallback } from 'react';
 import styles from './AcknowledgmentModal.module.css';
 
+const STORAGE_KEY = 'acknowledgment_modal_dismissed';
+
 export function AcknowledgmentModal() {
   const [isVisible, setIsVisible] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
 
   useEffect(() => {
+    const isDev = process.env.NODE_ENV === 'development';
+    if (!isDev) {
+      try {
+        if (localStorage.getItem(STORAGE_KEY) === 'true') return;
+      } catch {
+        // localStorage unavailable — show the modal
+      }
+    }
     const timer = setTimeout(() => setIsVisible(true), 600);
     return () => clearTimeout(timer);
   }, []);
 
   const handleDismiss = useCallback(() => {
     setIsClosing(true);
+    try {
+      localStorage.setItem(STORAGE_KEY, 'true');
+    } catch {
+      // localStorage unavailable
+    }
     setTimeout(() => {
       setIsVisible(false);
     }, 350);

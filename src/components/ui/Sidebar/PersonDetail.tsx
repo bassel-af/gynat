@@ -4,6 +4,7 @@ import clsx from 'clsx';
 import { useMemo, useState, useCallback, useEffect } from 'react';
 import { useTree } from '@/context/TreeContext';
 import { useOptionalWorkspaceTree } from '@/context/WorkspaceTreeContext';
+import { useOptionalUndoStack } from '@/context/UndoStackContext';
 import { getDisplayName, getPersonRelationships, getRadaRelationships, getAllDescendants, findTopmostAncestor, hasExternalFamily } from '@/lib/gedcom';
 import type { Individual } from '@/lib/gedcom';
 import { IndividualForm, type IndividualFormData } from '@/components/tree/IndividualForm/IndividualForm';
@@ -414,6 +415,7 @@ export function PersonDetail({ personId }: PersonDetailProps) {
   } = useTree();
 
   const workspace = useOptionalWorkspaceTree();
+  const undoStack = useOptionalUndoStack();
   const canEdit = workspace?.canEdit ?? false;
   const enableRadaa = workspace?.enableRadaa ?? false;
   const { preference: calendarPreference, setPreference: setCalendarPreference } = useCalendarPreference();
@@ -448,6 +450,7 @@ export function PersonDetail({ personId }: PersonDetailProps) {
     person,
     data,
     setSelectedPersonId,
+    onPushUndo: undoStack?.push,
   });
 
   // Family picker state (stays local — it controls which modal is open)

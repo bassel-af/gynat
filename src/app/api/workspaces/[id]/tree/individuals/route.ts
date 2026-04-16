@@ -5,6 +5,7 @@ import { treeMutateLimiter, rateLimitResponse } from '@/lib/api/rate-limit';
 import { getOrCreateTree, touchTreeTimestamp } from '@/lib/tree/queries';
 import { createIndividualSchema } from '@/lib/tree/schemas';
 import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
+import { isUndoRequest } from '@/lib/api/undo-header';
 import { snapshotIndividual, encryptAuditDescription, JSON_NULL } from '@/lib/tree/audit';
 import { getWorkspaceKey, encryptIndividualInput, encryptSnapshot } from '@/lib/tree/encryption';
 
@@ -78,7 +79,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           }),
           workspaceKey,
         ),
-        description: encryptAuditDescription('create', 'individual', fields.givenName ?? null, workspaceKey),
+        description: encryptAuditDescription('create', 'individual', fields.givenName ?? null, workspaceKey, { isUndo: isUndoRequest(request) }),
       } as unknown as Parameters<typeof prisma.treeEditLog.create>[0]['data'],
     }),
     touchTreeTimestamp(tree.id),

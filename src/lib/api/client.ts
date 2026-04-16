@@ -1,6 +1,17 @@
 import { createClient } from '@/lib/supabase/client';
 
 /**
+ * Extension to fetch's RequestInit.
+ *
+ * `isUndo` — Phase 15a. When true, adds the `X-Solalah-Undo: true` header so
+ * mutation routes can tag the audit-log description as an undo action. The
+ * option itself is NOT forwarded to `fetch()`.
+ */
+export interface ApiFetchInit extends RequestInit {
+  isUndo?: boolean;
+}
+
+/**
  * Client-side fetch wrapper that automatically attaches the Bearer token
  * from the current Supabase session to API requests.
  *
@@ -12,7 +23,7 @@ import { createClient } from '@/lib/supabase/client';
  */
 export async function apiFetch(
   path: string,
-  options: RequestInit = {},
+  options: ApiFetchInit = {},
 ): Promise<Response> {
   const supabase = createClient();
   const { data: { session } } = await supabase.auth.getSession();
@@ -21,13 +32,19 @@ export async function apiFetch(
     throw new Error('No active session');
   }
 
+  const { isUndo, headers: userHeaders, ...rest } = options;
+
   const headers: Record<string, string> = {
-    ...(options.headers as Record<string, string>),
+    ...(userHeaders as Record<string, string>),
     Authorization: `Bearer ${session.access_token}`,
   };
 
+  if (isUndo) {
+    headers['X-Solalah-Undo'] = 'true';
+  }
+
   return fetch(path, {
-    ...options,
+    ...rest,
     headers,
   });
 }

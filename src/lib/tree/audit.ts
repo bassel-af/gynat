@@ -269,30 +269,45 @@ const ENTITY_LABELS: Record<AuditEntityType, string> = {
   tree: 'شجرة',
 };
 
+export interface AuditDescriptionOptions {
+  /** Phase 15a: when true, prefixes the description with "تراجع عن: ". */
+  isUndo?: boolean;
+}
+
 export function buildAuditDescription(
   action: string,
   entityType: string,
   entityName?: string,
+  options: AuditDescriptionOptions = {},
 ): string {
   const label = ENTITY_LABELS[entityType as AuditEntityType] ?? entityType;
   const name = entityName ? ` "${entityName}"` : '';
 
+  let base: string;
   switch (action) {
     case 'create':
-      return `إضافة ${label}${name}`;
+      base = `إضافة ${label}${name}`;
+      break;
     case 'update':
-      return `تعديل ${label}${name}`;
+      base = `تعديل ${label}${name}`;
+      break;
     case 'delete':
-      return `حذف ${label}${name}`;
+      base = `حذف ${label}${name}`;
+      break;
     case 'cascade_delete':
-      return `حذف متسلسل من ${label}${name}`;
+      base = `حذف متسلسل من ${label}${name}`;
+      break;
     case 'MOVE_SUBTREE':
-      return `نقل فرع${name}`;
+      base = `نقل فرع${name}`;
+      break;
     case 'import':
-      return `استيراد بيانات GEDCOM`;
+      base = `استيراد بيانات GEDCOM`;
+      break;
     default:
-      return `${action} ${label}${name}`;
+      base = `${action} ${label}${name}`;
   }
+
+  return options.isUndo ? `تراجع عن: ${base}` : base;
 }
 
 // ---------------------------------------------------------------------------
@@ -321,11 +336,13 @@ export function encryptAuditDescription(
   entityType: string,
   entityName: string | null | undefined,
   workspaceKey: Buffer,
+  options: AuditDescriptionOptions = {},
 ): Buffer | null {
   const plaintext = buildAuditDescription(
     action,
     entityType,
     entityName ?? undefined,
+    options,
   );
   return encryptFieldNullable(plaintext, workspaceKey);
 }

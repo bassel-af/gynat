@@ -1006,6 +1006,36 @@ Does NOT protect against: anyone with live SSH or running-application access (ke
 - User-tree linking: Flow A (invite-with-link), Flow B (member requests link with admin approval), link status on member profiles
 - Cross-workspace identity linking: a lightweight link recognizing the same real person across workspaces — each workspace retains its own copy of the individual (no shared data, no sync). The link is informational only.
 
+### Phase 15 — Version Control & Undo
+
+**Goal**: Protect users from accidental edits at two levels. Layer 1 delivers classic in-session Ctrl+Z (the 95% case, no persistence). Layer 2 delivers admin-driven restore from the persisted `TreeEditLog` snapshots (cross-session, cross-user recovery). Layer 1 ships first because it is safer and covers the common case; Layer 2 is built on top once Layer 1 is mature.
+
+**Layer 1 — Session Undo (Ctrl+Z)**
+
+*Sub-phase 15a — Core undo/redo for simple mutations* ✅ COMPLETE
+- Client-side `UndoStack` React context holding inverse commands in memory; per-tab, cleared on page reload or workspace switch
+- Keyboard shortcuts: `Ctrl/Cmd+Z` (undo), `Ctrl/Cmd+Shift+Z` (redo); suppressed when a text input/textarea inside a modal has focus (browser default applies)
+- Every tree mutation in `WorkspaceTreeClient` pushes an entry `{ label, undo(), redo() }` onto the stack; any new mutation clears the redo stack
+- Toast feedback: "تم التراجع عن: {label}" / "تمت إعادة: {label}"; error toast on failure
+- Re-entrancy guard: shortcuts/buttons disabled while an undo/redo call is in flight
+- Stale-state detection: if the inverse API call returns 404/409, show a conflict dialog — "تغيّرت الشجرة منذ ذلك التعديل. الرجاء تحديث الصفحة لمتابعة التعديل." — and drop the stack
+- Mutations covered (non-cascade): individual create/update/simple-delete; family create/update/simple-delete; family children add/remove/move; family events MARC/MARR/DIV; rada'a family create/update/delete; rada'a children add/remove
+
+*Sub-phase 15b — Cascade delete undo*
+- `DELETE /individuals/[id]?cascade=true` response extended with a `restoreSnapshot` payload (all deleted individuals, families, family-child links) — snapshot-sourced from the cascade impact data already computed server-side
+- New endpoint `POST /api/workspaces/[id]/tree/restore-cascade` — admin/tree-editor only, atomic transaction that re-creates individuals, families, family-child links, and writes a single `restore_cascade` audit entry
+- Undo stack inverse for cascade delete calls this endpoint; toast warns that broken branch pointers and revoked share tokens are **not** re-created (explicit, documented limitation)
+- Conflict detection: if any entity in the restore snapshot now collides with a post-delete create/import, server returns 409 and the client shows a conflict dialog; stack is dropped
+
+*Sub-phase 15c — Branch pointer operations*
+- Pointer redeem → undo: delete the pointer
+- Pointer break (disconnect) → undo: recreate pointer via original share token (only possible if token is still active; otherwise undo entry is disabled with an explanatory tooltip)
+- Deep copy and GEDCOM import: **not** Ctrl+Z-undoable (too much data, too many side effects); users are directed to Layer 2 / manual cleanup
+
+**Layer 2 — Persistent Version Control (future phase)**
+
+Admin-driven single-entity restore from `TreeEditLog` snapshots, gated by the existing `enableVersionControl` workspace toggle. Handles the "closed my laptop yesterday" and "other admin made a mistake" cases that Layer 1 cannot. Detailed design deferred until Layer 1 is in production and patterns are validated.
+
 ---
 
 ## 8. Out of Scope (for now)

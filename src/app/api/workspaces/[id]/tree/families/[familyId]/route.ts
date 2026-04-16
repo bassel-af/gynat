@@ -12,6 +12,7 @@ import { updateFamilySchema } from '@/lib/tree/schemas';
 import { validateFamilyGender } from '@/lib/tree/family-validators';
 import { isSyntheticFamilyId } from '@/lib/tree/branch-pointer-guards';
 import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
+import { isUndoRequest } from '@/lib/api/undo-header';
 import {
   snapshotFamily,
   encryptAuditDescription,
@@ -180,7 +181,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         // Phase 10b: encrypted envelopes.
         snapshotBefore: encryptSnapshot(snapshotFamily(existing), workspaceKey),
         snapshotAfter: encryptSnapshot(snapshotFamily(afterPlaintext), workspaceKey),
-        description: encryptAuditDescription('update', 'family', null, workspaceKey),
+        description: encryptAuditDescription('update', 'family', null, workspaceKey, { isUndo: isUndoRequest(request) }),
       } as unknown as Parameters<typeof prisma.treeEditLog.create>[0]['data'],
     }),
     touchTreeTimestamp(tree.id),
@@ -236,7 +237,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         entityId: familyId,
         snapshotBefore: encryptSnapshot(snapshotFamily(existing), workspaceKey),
         snapshotAfter: JSON_NULL,
-        description: encryptAuditDescription('delete', 'family', null, workspaceKey),
+        description: encryptAuditDescription('delete', 'family', null, workspaceKey, { isUndo: isUndoRequest(request) }),
       } as unknown as Parameters<typeof tx.treeEditLog.create>[0]['data'],
     });
   });

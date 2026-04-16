@@ -10,6 +10,7 @@ import {
 } from '@/lib/tree/queries';
 import { updateRadaFamilySchema } from '@/lib/tree/schemas';
 import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
+import { isUndoRequest } from '@/lib/api/undo-header';
 import {
   snapshotRadaFamily,
   encryptAuditDescription,
@@ -118,7 +119,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         // Phase 10b: encrypted envelopes.
         snapshotBefore: encryptSnapshot(snapshotRadaFamily(existing), workspaceKey),
         snapshotAfter: encryptSnapshot(snapshotRadaFamily(afterPlaintext), workspaceKey),
-        description: encryptAuditDescription('update', 'rada_family', null, workspaceKey),
+        description: encryptAuditDescription('update', 'rada_family', null, workspaceKey, { isUndo: isUndoRequest(request) }),
       } as unknown as Parameters<typeof prisma.treeEditLog.create>[0]['data'],
     }),
     touchTreeTimestamp(tree.id),
@@ -175,7 +176,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         entityId: radaFamilyId,
         snapshotBefore: encryptSnapshot(snapshotRadaFamily(existing), workspaceKey),
         snapshotAfter: JSON_NULL,
-        description: encryptAuditDescription('delete', 'rada_family', null, workspaceKey),
+        description: encryptAuditDescription('delete', 'rada_family', null, workspaceKey, { isUndo: isUndoRequest(request) }),
       } as unknown as Parameters<typeof prisma.treeEditLog.create>[0]['data'],
     }),
     touchTreeTimestamp(tree.id),
