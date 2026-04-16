@@ -46,7 +46,8 @@ The project is at Phase 5 (Branch Pointers) with Phases 1-5 complete.
 
 **Contents:**
 - `project-structure.md` - This file
-- `product-requirements.md` - Full PRD (Phases 1-5+)
+- `prd.md` - Product requirements (vision, concepts, features, data model, roadmap)
+- `implementation.md` - Present-tense reference for how each subsystem currently works
 - `auth-provider-decisions.md` - Auth architecture decision record
 - `setup.md` - Development setup guide
 - `testing.md` - Testing guide and test mode query parameters
