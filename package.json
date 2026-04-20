@@ -12,6 +12,7 @@
     "lint": "next lint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts",
     "seed": "npx tsx prisma/seed.ts",
     "seed:places": "npx tsx src/lib/seed/run-seed-places.ts",
     "clean:links": "npx tsx scripts/clean-links.ts",

@@ -137,6 +137,28 @@ services:
       - kong
       - pg-meta
 
+  # Mailpit — local SMTP mail trap for email template testing (dev/test only).
+  # Captures all outgoing mail so tests can inspect messages via the HTTP API.
+  # SECURITY: bound to 127.0.0.1 only — never expose to the network.
+  # Host ports namespaced as 1125/8125 to avoid conflicts with other Mailpit
+  # containers on the same machine. Internal container ports remain 1025/8025.
+  mailpit:
+    image: axllent/mailpit:v1.21
+    container_name: solalah-mailpit
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:1125:1025"
+      - "127.0.0.1:8125:8025"
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "true"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
+      MP_MAX_MESSAGES: "500"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8025/readyz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
   pg-meta:
     image: supabase/postgres-meta:v0.95.2
     restart: unless-stopped

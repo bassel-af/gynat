@@ -17,6 +17,7 @@ export default defineConfig({
     globals: true,
     setupFiles: [path.resolve(__dirname, './src/test/setup.ts')],
     include: ['src/**/*.test.{ts,tsx}'],
+    exclude: ['src/test/e2e/**', 'node_modules/**'],
     root: __dirname,
   },
 });

@@ -1,16 +1,24 @@
 import nodemailer from 'nodemailer';
+import { assertProductionSafe } from './transport-guard';
 
 const globalForTransport = globalThis as unknown as { emailTransport: nodemailer.Transporter };
 
 function createTransport() {
+  assertProductionSafe();
+  const host = (process.env.SMTP_HOST || '').trim();
+  const isMailpit = host === 'localhost' || host === '127.0.0.1' || host === 'mailpit';
   return nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
+    host,
     port: Number(process.env.SMTP_PORT || 587),
     secure: false,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
+    // Mailpit and other loopback mail traps don't require auth; omit credentials
+    // so nodemailer doesn't try AUTH against a server that doesn't advertise it.
+    auth: isMailpit && !process.env.SMTP_USER
+      ? undefined
+      : {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
   });
 }
 
@@ -28,6 +36,10 @@ interface SendEmailParams {
 }
 
 export async function sendEmail({ to, subject, html, text }: SendEmailParams) {
+  // Runtime guard: refuse to deliver if prod env is paired with a mail-trap host.
+  // Checked per-send (not just at transport creation) so env drift can't slip past.
+  assertProductionSafe();
+
   const senderEmail = process.env.SMTP_SENDER_EMAIL || 'noreply@solalah.com';
   const senderName = process.env.SMTP_SENDER_NAME || 'سلالة';
 
