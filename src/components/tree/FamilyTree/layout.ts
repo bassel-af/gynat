@@ -2,12 +2,12 @@ import type { Node, Edge } from '@xyflow/react';
 import type { GraftDescriptor } from '@/lib/gedcom/graph';
 
 // Layout configuration
-export const NODE_WIDTH = 140;
-export const NODE_HEIGHT = 75;
-export const SPOUSE_WIDTH = 160; // Additional width per spouse (card + gap)
-export const HORIZONTAL_GAP = 40; // Gap between siblings
-export const VERTICAL_GAP = 120; // Gap between generations
-export const SPOUSE_GAP = 20; // Gap between person card and first spouse card
+export const NODE_WIDTH = 170;
+export const NODE_HEIGHT = 140;
+export const SPOUSE_WIDTH = 190; // Additional width per spouse (card + gap)
+export const HORIZONTAL_GAP = 48; // Gap between siblings
+export const VERTICAL_GAP = 150; // Gap between generations
+export const SPOUSE_GAP = 24; // Gap between person card and first spouse card
 export const GRAFT_HORIZONTAL_PADDING = 20; // Extra padding around graft envelopes
 
 interface PersonNodeDataForLayout {

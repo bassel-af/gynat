@@ -1,5 +1,5 @@
 /* ============================================
-   TREE GLOBAL STYLES
+   TREE GLOBAL STYLES — Jeweled Heritage
 
    These styles target React Flow's internal classes
    and FamilyTree's PersonNode component which uses
@@ -20,123 +20,334 @@
   border-radius: 0;
 }
 
-/* React Flow edge styling */
+/* React Flow panel/viewport backgrounds — transparent so heritage surface shows */
+.react-flow,
+.react-flow__pane,
+.react-flow__viewport {
+  background: transparent;
+}
+
+/* Subtle grid overlay on the canvas */
+.react-flow__background {
+  background-color: transparent;
+}
+
+.react-flow__background path,
+.react-flow__background line {
+  stroke: rgba(200, 168, 101, 0.055) !important;
+}
+
+/* React Flow edge styling — default gold path */
 .react-flow__edge-path {
-  stroke: var(--color-light-600);
-  stroke-width: 2;
+  stroke: url(#treeEdgeGold);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  opacity: 0.65;
+  transition: opacity 240ms ease, stroke-width 240ms ease;
+}
+
+.react-flow__edge:hover .react-flow__edge-path {
+  opacity: 0.9;
 }
 
 /* React Flow controls position */
 .react-flow__controls {
   bottom: var(--space-4);
   left: var(--space-4);
+  gap: 4px;
+  box-shadow: none;
+  border: none;
+  background: transparent;
 }
 
-/* React Flow minimap position */
+.react-flow__controls button {
+  background: rgba(10, 14, 26, 0.65);
+  border: 1px solid var(--heritage-glass-border);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  color: var(--heritage-cream);
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  transition: border-color 200ms, background 200ms, color 200ms;
+}
+
+.react-flow__controls button:hover {
+  border-color: var(--heritage-gold);
+  background: rgba(200, 168, 101, 0.1);
+  color: var(--heritage-gold-bright);
+}
+
+.react-flow__controls button svg {
+  fill: currentColor;
+  max-width: 14px;
+  max-height: 14px;
+}
+
+/* React Flow minimap */
 .react-flow__minimap {
   bottom: var(--space-4);
   right: var(--space-4);
+  background: rgba(10, 14, 26, 0.7) !important;
+  border: 1px solid var(--heritage-glass-border);
+  border-radius: 14px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  overflow: hidden;
+}
+
+.react-flow__minimap-mask {
+  fill: rgba(200, 168, 101, 0.08);
+  stroke: var(--heritage-gold);
+  stroke-width: 1;
+}
+
+.react-flow__minimap-node {
+  fill: var(--heritage-gold);
+  stroke: none;
+}
+
+.react-flow__attribution {
+  background: transparent !important;
+  color: rgba(200, 168, 101, 0.35);
+}
+
+.react-flow__attribution a {
+  color: rgba(200, 168, 101, 0.5);
 }
 
 /* ============================================
-   PERSON CARD STYLES (used in PersonNode)
+   PERSON CARD — heritage glass
    ============================================ */
 
 .person {
-  background: white;
-  border: 1px solid var(--color-light-500);
-  border-radius: var(--radius-lg);
-  padding: var(--space-4) var(--space-6);
-  min-width: 140px;
-  max-width: 180px;
-  text-align: center;
-  box-shadow: var(--shadow-sm);
   position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: rgba(15, 21, 40, 0.75);
+  border: 1px solid var(--heritage-glass-border);
+  border-radius: 22px;
+  padding: 14px 16px 14px;
+  width: 170px;
+  min-height: 140px;
+  text-align: center;
+  backdrop-filter: blur(20px) saturate(1.3);
+  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+    0 2px 0 rgba(255, 255, 255, 0.04) inset,
+    0 14px 32px rgba(0, 0, 0, 0.45);
+  transition: transform 360ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 360ms, border-color 360ms;
+  overflow: visible;
 }
 
-.person.male {
-  border-top: 4px solid var(--color-male);
+.person::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, var(--heritage-gold) 50%, transparent 100%);
+  opacity: 0.35;
+  border-radius: 1px;
 }
 
-.person.female {
-  border-top: 4px solid var(--color-female);
+.person-avatar {
+  width: 48px;
+  height: 48px;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.45));
+}
+
+.person-avatar svg {
+  width: 100%;
+  height: 100%;
 }
 
 .person-name {
-  font-weight: var(--font-weight-bold);
-  font-size: var(--font-size-base);
-  margin-bottom: var(--space-1);
+  font-family: var(--heritage-font-display);
+  font-size: 14px;
+  font-weight: 500;
+  margin: 4px 0 2px;
+  line-height: 1.2;
+  letter-spacing: 0.005em;
+  background: linear-gradient(180deg, var(--heritage-parchment) 0%, var(--heritage-gold-bright) 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
   word-wrap: break-word;
+  max-width: 100%;
 }
 
 .person-dates {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-1);
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
+  gap: 4px;
+  color: var(--heritage-text-muted);
+  font-size: 11px;
+  font-family: var(--heritage-font-body);
+  letter-spacing: 0.04em;
 }
 
-/* Dates container - vertical stack for birth and death */
 .person-dates-container {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
-  margin-top: var(--space-1);
+  gap: 2px;
+  margin-top: 2px;
+  width: 100%;
 }
 
-/* Individual date row (birth or death) */
 .person-date-row {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-1);
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
+  gap: 4px;
+  color: var(--heritage-text-muted);
+  font-size: 11px;
+  font-family: var(--heritage-font-body);
+  letter-spacing: 0.04em;
 }
 
-/* Death date row - slightly muted */
+.person-date-row iconify-icon {
+  color: rgba(200, 168, 101, 0.55);
+}
+
 .person-date-row.death {
-  color: var(--color-text-muted);
+  color: rgba(232, 223, 200, 0.35);
 }
 
-/* Root selector highlight */
+/* ---- Gender accents (subtle bottom tint) ---- */
+
+.person.male {
+  border-color: rgba(46, 152, 118, 0.22);
+}
+
+.person.female {
+  border-color: rgba(237, 100, 166, 0.22);
+}
+
+/* ---- Root / patriarch card — emerald + gold halo ---- */
+
 .person.root {
-  box-shadow: 0 0 0 3px var(--color-primary);
+  background: rgba(12, 28, 22, 0.9);
+  border-color: rgba(200, 168, 101, 0.4);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset,
+    0 2px 0 rgba(255, 255, 255, 0.06) inset,
+    0 20px 44px rgba(0, 0, 0, 0.55),
+    0 0 60px rgba(46, 152, 118, 0.22);
 }
 
-/* Search highlight */
-.person.search-match {
-  box-shadow: 0 0 0 3px var(--color-accent-dark);
-  background: var(--color-accent-light);
-}
-
-/* Deceased person styling */
-.person.deceased {
-  background: var(--color-light-300);
+.person.root::before {
   opacity: 0.75;
 }
 
+/* ---- Search match ---- */
+
+.person.search-match {
+  border-color: var(--heritage-gold);
+  background: rgba(200, 168, 101, 0.12);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset,
+    0 20px 44px rgba(0, 0, 0, 0.55),
+    0 0 40px rgba(200, 168, 101, 0.35);
+}
+
+/* ---- Deceased ---- */
+
+.person.deceased {
+  opacity: 0.75;
+  filter: saturate(0.6);
+}
+
 .person.deceased .person-name {
-  color: var(--color-text-muted);
+  background: linear-gradient(180deg, rgba(232, 223, 200, 0.7) 0%, rgba(140, 116, 65, 0.6) 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
 }
 
-.person.deceased .person-dates,
 .person.deceased .person-date-row {
-  color: var(--color-text-disabled);
+  color: rgba(232, 223, 200, 0.28);
 }
 
-.person.deceased.male {
-  border-top-color: var(--color-male-light);
+.person.deceased.male { border-color: rgba(46, 152, 118, 0.12); }
+.person.deceased.female { border-color: rgba(237, 100, 166, 0.12); }
+
+/* ---- Interactive ---- */
+
+.person-clickable {
+  cursor: pointer;
 }
 
-.person.deceased.female {
-  border-top-color: var(--color-female-light);
+.person-clickable:hover {
+  transform: translateY(-3px);
+  border-color: var(--heritage-glass-border-strong);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.06) inset,
+    0 20px 44px rgba(0, 0, 0, 0.55),
+    0 0 50px rgba(200, 168, 101, 0.18);
+}
+
+.person-clickable:hover .person-name {
+  background: linear-gradient(180deg, var(--heritage-parchment) 0%, var(--heritage-gold) 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+}
+
+/* ---- Lineage highlight states ---- */
+
+.person.lineage-selected {
+  border-color: var(--heritage-gold-bright);
+  background: rgba(200, 168, 101, 0.18);
+  box-shadow:
+    0 0 0 3px rgba(230, 207, 158, 0.45),
+    0 20px 44px rgba(0, 0, 0, 0.55),
+    0 0 60px rgba(230, 207, 158, 0.45);
+}
+
+.person.lineage-ancestor,
+.person.lineage-descendant {
+  border-color: var(--heritage-gold);
+  background: rgba(200, 168, 101, 0.08);
+  box-shadow:
+    0 0 0 1px var(--heritage-gold),
+    0 14px 32px rgba(0, 0, 0, 0.45),
+    0 0 30px rgba(200, 168, 101, 0.2);
+}
+
+.person.lineage-dimmed {
+  opacity: 0.35;
+  filter: grayscale(40%);
+  transition: opacity 320ms, filter 320ms;
+}
+
+/* Dimmed edges */
+.react-flow__edge.lineage-dimmed .react-flow__edge-path {
+  opacity: 0.15 !important;
+  transition: opacity 320ms;
+}
+
+/* Highlighted lineage edges */
+.react-flow__edge.lineage-ancestor-edge .react-flow__edge-path,
+.react-flow__edge.lineage-descendant-edge .react-flow__edge-path {
+  stroke: var(--heritage-gold-bright) !important;
+  stroke-width: 2.4 !important;
+  opacity: 1 !important;
+  filter: drop-shadow(0 0 6px rgba(230, 207, 158, 0.5));
+  transition: stroke 240ms, stroke-width 240ms;
 }
 
 /* ============================================
-   COUPLE LAYOUT STYLES (used in PersonNode)
+   COUPLE LAYOUT
    ============================================ */
 
 .couple {
@@ -153,60 +364,15 @@
 .spouse-connector {
   width: 20px;
   height: 2px;
-  background: var(--color-female);
+  background: var(--heritage-gold);
 }
 
-/* ============================================
-   LINEAGE HIGHLIGHT STYLES
-   ============================================ */
-
-/* Clickable person cards */
-.person-clickable {
-  cursor: pointer;
-  transition: transform var(--transition-fast), box-shadow var(--transition-base);
-}
-
-.person-clickable:hover {
-  transform: translateY(-1px);
-}
-
-/* Selected person (the clicked one) - stronger gold ring */
-.person.lineage-selected {
-  box-shadow: 0 0 0 4px var(--color-lineage-selected), var(--shadow-md);
-  background: var(--color-lineage-selected-bg);
-}
-
-/* Ancestor styling - lighter gold */
-.person.lineage-ancestor {
-  box-shadow: 0 0 0 2px var(--color-lineage-path), var(--shadow-md);
-  background: var(--color-lineage-path-bg);
-}
-
-/* Descendant styling - lighter gold (same as ancestor) */
-.person.lineage-descendant {
-  box-shadow: 0 0 0 2px var(--color-lineage-path), var(--shadow-md);
-  background: var(--color-lineage-path-bg);
-}
-
-/* Dimmed state for non-lineage nodes when highlighting is active */
-.person.lineage-dimmed {
-  opacity: var(--opacity-dimmed-node);
-  filter: grayscale(30%);
-  transition: opacity var(--transition-base), filter var(--transition-base);
-}
-
-/* Dimmed edges */
-.react-flow__edge.lineage-dimmed .react-flow__edge-path {
-  opacity: var(--opacity-dimmed-edge);
-  transition: opacity var(--transition-base);
-}
-
-/* Highlighted lineage edges (both ancestor and descendant) */
-.react-flow__edge.lineage-ancestor-edge .react-flow__edge-path,
-.react-flow__edge.lineage-descendant-edge .react-flow__edge-path {
-  stroke: var(--color-lineage-path) !important;
-  stroke-width: 3 !important;
-  transition: stroke var(--transition-base), stroke-width var(--transition-base);
+/* Spouse connector line (inline) — retuned to gold gradient regardless of inline color */
+.spouse-line {
+  background: linear-gradient(90deg, rgba(46, 152, 118, 0.5), var(--heritage-gold), rgba(237, 100, 166, 0.45)) !important;
+  height: 1.5px !important;
+  opacity: 0.7;
+  box-shadow: 0 0 6px rgba(200, 168, 101, 0.25);
 }
 
 /* ============================================
@@ -224,22 +390,24 @@
 .person-detail-fab {
   display: none;
   position: absolute;
-  bottom: -32px;
+  bottom: -34px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 10;
   align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-5);
-  background: var(--gradient-toggle);
-  border: 1px solid var(--alpha-white-15);
-  border-radius: var(--radius-full, 9999px);
-  color: var(--color-text-inverse);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
+  gap: 6px;
+  padding: 8px 18px;
+  background: rgba(10, 14, 26, 0.85);
+  border: 1px solid var(--heritage-glass-border-strong);
+  backdrop-filter: blur(16px);
+  border-radius: 999px;
+  color: var(--heritage-gold-bright);
+  font-size: 12px;
+  font-family: var(--heritage-font-body);
+  font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
-  box-shadow: var(--shadow-xl);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5), 0 0 20px rgba(200, 168, 101, 0.2);
   animation: nodeFabPop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -248,14 +416,8 @@
 }
 
 @keyframes nodeFabPop {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) scale(0.7);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(-50%) scale(1);
-  }
+  from { opacity: 0; transform: translateX(-50%) scale(0.7); }
+  to { opacity: 1; transform: translateX(-50%) scale(1); }
 }
 
 @media (max-width: 768px) {
@@ -280,44 +442,41 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  background: #e8f4fd;
-  border: 1.5px solid #63b3ed;
-  color: #2b6cb0;
+  background: rgba(10, 14, 26, 0.85);
+  border: 1px solid var(--heritage-gold);
+  color: var(--heritage-gold-bright);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  transition: all 200ms;
 }
 
 .spouse-family-badge svg {
   opacity: 1;
-  transition: opacity var(--transition-fast);
+  transition: opacity 200ms;
 }
 
 .spouse-family-badge:hover {
-  background: #d0eafb;
+  background: rgba(200, 168, 101, 0.15);
   transform: scale(1.1);
-}
-
-.spouse-family-badge:hover svg {
-  opacity: 1;
 }
 
 .spouse-family-badge:active {
   transform: scale(0.95);
-  background: rgba(99, 179, 237, 0.3);
 }
 
 .spouse-family-badge:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(99, 179, 237, 0.25);
+  box-shadow: 0 0 0 3px rgba(200, 168, 101, 0.35);
 }
 
 @media (max-width: 768px) {
   .spouse-family-badge {
-    width: 28px;
-    height: 28px;
+    width: 30px;
+    height: 30px;
   }
 
   .spouse-family-badge svg {
@@ -327,45 +486,48 @@
 }
 
 /* ============================================
-   IN-LAW EXPANSION STYLES (graft nodes)
+   IN-LAW EXPANSION (graft nodes)
    ============================================ */
 
-/* In-law expansion card: reduced opacity only. All other styles inherited. */
 .person.in-law-expansion {
-  opacity: 0.72;
+  opacity: 0.68;
+  filter: saturate(0.75);
 }
 
-/* In-law edge: dashed stroke */
+/* In-law edge: dashed gold stroke */
 .react-flow__edge.in-law-edge .react-flow__edge-path {
   stroke-dasharray: 6 4;
+  opacity: 0.45 !important;
 }
 
 /* Graft floating label pill */
 .graft-label {
   display: inline-flex;
   align-items: center;
-  padding: var(--space-1) var(--space-4);
-  background: rgba(100, 116, 139, 0.12);
-  border: 1px solid rgba(100, 116, 139, 0.3);
-  border-radius: var(--radius-full, 9999px);
-  color: #475569;
-  font-size: var(--font-size-xs, 11px);
-  font-weight: var(--font-weight-medium);
+  padding: 4px 14px;
+  background: rgba(10, 14, 26, 0.7);
+  border: 1px solid var(--heritage-glass-border);
+  backdrop-filter: blur(10px);
+  border-radius: 999px;
+  color: var(--heritage-gold);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
   white-space: nowrap;
-  opacity: 0.8;
+  opacity: 0.85;
   pointer-events: none;
 }
 
 /* ============================================
-   BRANCH POINTER STYLES (pointed individuals)
+   BRANCH POINTER (pointed individuals)
    ============================================ */
 
-/* Pointed person card: teal dashed border + subtle teal bg */
 .person.pointed {
-  border-right: 2px dashed var(--color-pointer-border);
-  border-bottom: 2px dashed var(--color-pointer-border);
-  border-left: 2px dashed var(--color-pointer-border);
-  background: var(--color-pointer-bg);
+  border-right: 2px dashed var(--color-pointer);
+  border-bottom: 2px dashed var(--color-pointer);
+  border-left: 2px dashed var(--color-pointer);
+  background: rgba(56, 178, 172, 0.08);
   cursor: default;
 }
 
@@ -373,7 +535,7 @@
   transform: none;
 }
 
-/* Small teal circle badge at top-right with link icon */
+/* Pointed badge */
 .pointed-badge {
   position: absolute;
   top: -8px;
@@ -382,13 +544,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  background: var(--color-pointer-badge-bg);
+  background: rgba(10, 14, 26, 0.85);
   border: 1.5px solid var(--color-pointer);
-  color: var(--color-pointer-dark);
+  color: var(--color-pointer-light);
   pointer-events: none;
+  backdrop-filter: blur(8px);
 }
 
 .pointed-badge svg {
@@ -396,7 +559,7 @@
   height: 12px;
 }
 
-/* Shared root badge (source tree) at top-left */
+/* Shared root badge */
 .shared-root-badge {
   position: absolute;
   top: -8px;
@@ -405,13 +568,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  background: var(--color-pointer-badge-bg);
+  background: rgba(10, 14, 26, 0.85);
   border: 1.5px solid var(--color-pointer);
-  color: var(--color-pointer-dark);
+  color: var(--color-pointer-light);
   cursor: help;
+  backdrop-filter: blur(8px);
 }
 
 .shared-root-badge svg {
@@ -419,11 +583,12 @@
   height: 13px;
 }
 
-/* Pointed edge: dashed teal stroke */
+/* Pointed edge: dashed teal */
 .react-flow__edge.pointed-edge .react-flow__edge-path {
   stroke: var(--color-pointer) !important;
   stroke-dasharray: 6 4;
   stroke-width: 2 !important;
+  opacity: 0.85 !important;
 }
 
 /* Graft overflow card "+N" */
@@ -431,8 +596,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text-muted);
+  font-family: var(--heritage-font-display);
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--heritage-gold);
 }
-

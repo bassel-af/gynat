@@ -14,6 +14,8 @@ import {
   Position,
   Controls,
   MiniMap,
+  Background,
+  BackgroundVariant,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -22,6 +24,7 @@ import { getDisplayName, getAllAncestors, getAllDescendants, findTopmostAncestor
 import { useTree } from '@/context/TreeContext';
 import { useOptionalWorkspaceTree } from '@/context/WorkspaceTreeContext';
 import { shouldHideBirthDate } from '@/lib/tree/birth-date-privacy';
+import { NodeSilhouette } from '@/components/heritage/NodeSilhouette';
 import { getLayoutedElements, NODE_WIDTH, NODE_HEIGHT, SPOUSE_WIDTH, SPOUSE_GAP, type GraftNodeBuilder } from './layout';
 
 // Highlight state for lineage tracing
@@ -108,6 +111,9 @@ function PersonNode({ data }: { data: PersonNodeData }) {
           className={`person person-clickable ${sexClass} ${rootClass} ${deceasedClass} ${matchClass} ${highlightClass} ${inLawClass} ${pointedClass}`.trim()}
           onClick={handleClick}
         >
+          <div className="person-avatar">
+            <NodeSilhouette sex={p.sex} size={48} />
+          </div>
           <div className="person-name">{displayName}</div>
           {((!hideBirth && p.birth) || p.death || p.isDeceased) && (
             <div className="person-dates-container">
@@ -303,14 +309,15 @@ const nodeTypes = {
   graftOverflow: GraftOverflowNode,
 };
 
-// Colors for different spouse edges (to distinguish children by mother)
+// Heritage-palette colors for distinguishing children of different mothers
+// in polygamous families. Warm, readable against the obsidian canvas.
 const SPOUSE_EDGE_COLORS = [
-  '#6366f1', // indigo
-  '#ec4899', // pink
-  '#14b8a6', // teal
-  '#f59e0b', // amber
-  '#8b5cf6', // violet
-  '#10b981', // emerald
+  '#c8a865', // gold (primary)
+  '#2e9876', // emerald
+  '#d28b8b', // dusty rose
+  '#e6cf9e', // gold bright
+  '#7fa891', // sage
+  '#b59b73', // bronze
 ];
 
 // Convert GEDCOM tree data to React Flow nodes and edges
@@ -518,8 +525,8 @@ function buildTreeData(
         source: personId,
         sourceHandle,
         target: childId,
-        type: 'smoothstep',
-        style: { stroke: edgeColor, strokeWidth: 2 },
+        type: 'bezier',
+        style: { stroke: edgeColor, strokeWidth: 1.6, opacity: 0.78 },
         className: edgeClassName,
         pathOptions: { offset: edgeOffset, borderRadius: 8 },
       } as Edge);
@@ -753,6 +760,15 @@ function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
     <div id="tree-container" ref={containerRef} style={{ opacity: isReady ? 1 : 0 }}>
       {/* DISABLED: multi-root mode disabled for now — may re-enable in future */}
       {/* {selectedRootId === initialRootId && <ViewModeToggle />} */}
+      <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden>
+        <defs>
+          <linearGradient id="treeEdgeGold" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#e6cf9e" stopOpacity="0.25" />
+            <stop offset="50%" stopColor="#c8a865" stopOpacity="0.9" />
+            <stop offset="100%" stopColor="#8c7441" stopOpacity="0.35" />
+          </linearGradient>
+        </defs>
+      </svg>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -766,7 +782,7 @@ function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
         }}
         onPaneClick={() => { setHighlightedPersonId(null); setSelectedPersonId(null); }}
         nodeTypes={nodeTypes}
-        connectionLineType={ConnectionLineType.SmoothStep}
+        connectionLineType={ConnectionLineType.Bezier}
         minZoom={0.1}
         maxZoom={2}
         nodesDraggable={false}
@@ -777,6 +793,12 @@ function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
         zoomOnScroll={false}
         zoomOnPinch
       >
+        <Background
+          variant={BackgroundVariant.Lines}
+          gap={48}
+          lineWidth={1}
+          color="rgba(200, 168, 101, 0.08)"
+        />
         {!hideControls && <Controls />}
         {!hideMiniMap && <MiniMap nodeStrokeWidth={3} zoomable pannable />}
       </ReactFlow>

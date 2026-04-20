@@ -7,6 +7,36 @@
   height: 100vh;
   overflow: hidden;
   flex-direction: row-reverse;
+  position: relative;
+  background: var(--heritage-gradient-bg);
+  color: var(--heritage-text);
+  font-family: var(--heritage-font-body);
+  isolation: isolate;
+}
+
+.app-layout::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.95  0 0 0 0 0.9  0 0 0 0 0.8  0 0 0 0.35 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  opacity: 0.22;
+  mix-blend-mode: overlay;
+  z-index: 0;
+}
+
+.app-layout::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 70% 70% at 50% 50%, transparent 40%, rgba(3, 5, 10, 0.55) 100%);
+  z-index: 0;
+}
+
+.app-layout > * {
+  position: relative;
+  z-index: 1;
 }
 
 .main-content {
@@ -21,8 +51,10 @@
   align-items: center;
   justify-content: center;
   height: 100vh;
-  color: var(--color-text-secondary);
+  color: var(--heritage-text-soft);
+  font-family: var(--heritage-font-body);
   font-size: var(--font-size-2xl);
+  background: var(--heritage-gradient-bg);
 }
 
 .error {
@@ -31,5 +63,7 @@
   justify-content: center;
   height: 100vh;
   color: var(--color-error);
+  font-family: var(--heritage-font-body);
   font-size: var(--font-size-2xl);
+  background: var(--heritage-gradient-bg);
 }
