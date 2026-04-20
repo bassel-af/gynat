@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { AcknowledgmentModal } from '@/components/AcknowledgmentModal/AcknowledgmentModal';
+import { FigureCluster } from '@/components/heritage/FigureCluster';
 import styles from './page.module.css';
 
 // Capture the hash IMMEDIATELY at module load, before Supabase's
@@ -18,18 +19,12 @@ export default function Home() {
     console.log('[root] Hash:', initialHash ? initialHash.substring(0, 80) + '...' : '(empty)');
     console.log('[root] Search:', initialSearch || '(empty)');
 
-    // GoTrue redirects here with auth tokens in the URL fragment after email
-    // verification (e.g., email change, signup confirmation). Detect and
-    // forward to /auth/confirm which handles the fragment client-side.
-
-    // Case 1: Implicit grant — tokens or auth messages in hash fragment
     if (initialHash && (initialHash.includes('access_token=') || initialHash.includes('message=') || initialHash.includes('error'))) {
       console.log('[root] Forwarding hash fragment to /auth/confirm');
       window.location.href = '/auth/confirm' + initialHash;
       return;
     }
 
-    // Case 2: PKCE — authorization code in query string
     const rootSearchParams = new URLSearchParams(initialSearch);
     if (rootSearchParams.has('code')) {
       console.log('[root] Forwarding PKCE code to /auth/confirm');
@@ -52,30 +47,61 @@ export default function Home() {
   }
 
   return (
-    <main className={styles.container}>
+    <main className={styles.root}>
       <AcknowledgmentModal />
-      <div className={styles.card}>
-        <div className={styles.icon}>
-          <iconify-icon icon="material-symbols:family-restroom" width="48" height="48" />
-        </div>
-        <h1 className={styles.title}>شجرة العائلة</h1>
-        <p className={styles.subtitle}>
-          أنشئ شجرة عائلتك وشاركها مع أفراد عائلتك
-        </p>
-        <a href="/auth/signup" className={styles.signupButton}>
-          إنشاء حساب جديد
-        </a>
-        <p className={styles.switchLink}>
-          لديك حساب؟{' '}
-          <a href="/auth/login">تسجيل الدخول</a>
-        </p>
-        <div className={styles.divider}>
-          <span className={styles.dividerDot} />
-        </div>
-        <p className={styles.contact}>
-          <span className={styles.contactLabel}>تواصل معنا</span>
-          <a href="mailto:contact@autoflowa.com">contact@autoflowa.com</a>
-        </p>
+
+      <div className={styles.page}>
+        <nav className={styles.nav}>
+          <div className={styles.wordmark}>صُلالَة</div>
+          <div className={styles.navLinks}>
+            <a href="/islamic-gedcom" className={styles.navLink}>مرجع GEDCOM الإسلامي</a>
+            <a href="/policy" className={styles.navLink}>السياسة</a>
+            <a href="/auth/login" className={styles.navLoginBtn}>تسجيل الدخول</a>
+          </div>
+        </nav>
+
+        <section className={styles.hero}>
+          <div className={styles.heroContent}>
+            <span className={styles.eyebrow}>نَسَبٌ موثَّق · ذاكرةٌ مصونة</span>
+            <h1 className={styles.title}>
+              شَجَرةُ عائلتك
+              <span className={styles.titleAccent}>محفوظةٌ كما تستحق</span>
+            </h1>
+            <p className={styles.lead}>
+              منصّةٌ راقية لتوثيق الأنساب، تحفظ أسماء الأجداد وحكاياتهم،
+              وتصِل أبناء الأسرة عبر الأجيال في تصميمٍ يليق بتراثهم.
+            </p>
+            <div className={styles.actions}>
+              <a href="/auth/signup" className={styles.btnPrimary}>إنشاء حساب جديد</a>
+              <a href="/auth/login" className={styles.btnGhost}>لديّ حسابٌ بالفعل</a>
+            </div>
+          </div>
+
+          <div className={styles.showcase}>
+            <div className={styles.ring} />
+            <div className={styles.medallion}>
+              <div className={styles.figures}>
+                <FigureCluster variant="medallion" />
+              </div>
+              <div className={styles.medallionLabel}>ثلاثة أجيال · بيتٌ واحد</div>
+            </div>
+            <div className={`${styles.chip} ${styles.chipTop}`}>
+              <div className={styles.chipLabel}>حفظٌ آمن</div>
+              <div className={styles.chipValue}>مُشفَّر · طبقتان</div>
+            </div>
+            <div className={`${styles.chip} ${styles.chipBottom}`}>
+              <div className={styles.chipLabel}>تقويم هجري</div>
+              <div className={styles.chipValue}>مُدمَج</div>
+            </div>
+          </div>
+        </section>
+
+        <footer className={styles.footer}>
+          <div>
+            <a href="mailto:contact@autoflowa.com">contact@autoflowa.com</a>
+          </div>
+          <div className={styles.footerAyah}>﴾ وَمِنْ آيَاتِهِ أَنْ خَلَقَ لَكُم مِّنْ أَنفُسِكُمْ أَزْوَاجًا ﴿</div>
+        </footer>
       </div>
     </main>
   );

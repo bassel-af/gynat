@@ -12,6 +12,7 @@ const PUBLIC_PATHS = [
   '/policy',
   '/islamic-gedcom',
   '/test', // test route for browser testing
+  '/design-preview', // design direction prototype (no-auth preview)
 ];
 
 function isPublicPath(pathname: string): boolean {

@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api/client';
 import { useToast } from '@/context/ToastContext';
-import { CenteredCardLayout } from '@/components/ui/CenteredCardLayout';
 import styles from './create.module.css';
 
 const SLUG_PATTERN = /^[a-z0-9-]+$/;
@@ -72,69 +71,76 @@ export default function CreateWorkspacePage() {
   }
 
   return (
-    <CenteredCardLayout className={styles.cardWide}>
-      <Link href="/workspaces" className={styles.backLink}>
-        &rarr; العودة للمساحات
-      </Link>
-      <div className={styles.icon}>
-        <iconify-icon icon="material-symbols:add-home-work" width="48" height="48" />
+    <main className={styles.root}>
+      <div className={styles.content}>
+        <div className={styles.card}>
+          <Link href="/workspaces" className={styles.backLink}>
+            <span aria-hidden>→</span>
+            العودة إلى المساحات
+          </Link>
+
+          <span className={styles.kicker}>مساحة جديدة</span>
+          <h1 className={styles.title}>ابدأ بيتاً جديداً لعائلتك</h1>
+          <p className={styles.subtitle}>
+            اختَر اسماً يعكس هُويّة العائلة ومعرّفاً سهلاً للمشاركة.
+          </p>
+
+          <form onSubmit={handleSubmit} className={styles.form} noValidate>
+            {error && <div className={styles.error}>{error}</div>}
+
+            <div className={styles.field}>
+              <label htmlFor="nameAr" className={styles.label}>اسم العائلة</label>
+              <input
+                id="nameAr"
+                type="text"
+                value={nameAr}
+                onChange={(e) => setNameAr(e.target.value)}
+                className={styles.input}
+                placeholder="مثال: الدَبّاغ"
+                required
+              />
+              {fieldErrors.nameAr && (
+                <span className={styles.fieldError}>{fieldErrors.nameAr}</span>
+              )}
+            </div>
+
+            <div className={styles.field}>
+              <label htmlFor="slug" className={styles.label}>المُعرِّف</label>
+              <input
+                id="slug"
+                type="text"
+                value={slug}
+                onChange={(e) => setSlug(e.target.value.toLowerCase())}
+                className={styles.input}
+                placeholder="al-dabbagh"
+                required
+                dir="ltr"
+              />
+              <span className={styles.hint}>
+                أحرفٌ إنجليزيّة صغيرة وأرقام وشرطات فقط — يظهر في الرابط.
+              </span>
+              {fieldErrors.slug && (
+                <span className={styles.fieldError}>{fieldErrors.slug}</span>
+              )}
+            </div>
+
+            <div className={styles.field}>
+              <label htmlFor="description" className={styles.label}>وصفٌ موجز</label>
+              <textarea
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className={styles.textarea}
+                placeholder="نبذةٌ قصيرةٌ عن العائلة أو فرعها (اختياري)"
+              />
+            </div>
+
+            <button type="submit" className={styles.button} disabled={loading}>
+              {loading ? 'جاري الإنشاء…' : 'إنشاء المساحة'}
+            </button>
+          </form>
+        </div>
       </div>
-      <h1 className={styles.title}>إنشاء مساحة عائلية</h1>
-      <p className={styles.subtitle}>أنشئ مساحة عائلية جديدة لعائلتك</p>
-
-      <form onSubmit={handleSubmit} className={styles.form}>
-        {error && <div className={styles.error}>{error}</div>}
-
-        <div className={styles.field}>
-          <label htmlFor="nameAr" className={styles.label}>اسم العائلة *</label>
-          <input
-            id="nameAr"
-            type="text"
-            value={nameAr}
-            onChange={(e) => setNameAr(e.target.value)}
-            className={styles.input}
-            placeholder="مثال: السعيد"
-            required
-          />
-          {fieldErrors.nameAr && (
-            <span className={styles.fieldError}>{fieldErrors.nameAr}</span>
-          )}
-        </div>
-
-        <div className={styles.field}>
-          <label htmlFor="slug" className={styles.label}>المعرف (slug) *</label>
-          <input
-            id="slug"
-            type="text"
-            value={slug}
-            onChange={(e) => setSlug(e.target.value.toLowerCase())}
-            className={styles.input}
-            placeholder="السعيد"
-            required
-          />
-          <span className={styles.hint}>
-            أحرف إنجليزية صغيرة وأرقام وشرطات فقط
-          </span>
-          {fieldErrors.slug && (
-            <span className={styles.fieldError}>{fieldErrors.slug}</span>
-          )}
-        </div>
-
-        <div className={styles.field}>
-          <label htmlFor="description" className={styles.label}>وصف العائلة</label>
-          <textarea
-            id="description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className={styles.textarea}
-            placeholder="وصف العائلة"
-          />
-        </div>
-
-        <button type="submit" className={styles.button} disabled={loading}>
-          {loading ? 'جاري الإنشاء...' : 'إنشاء مساحة العائلة'}
-        </button>
-      </form>
-    </CenteredCardLayout>
+    </main>
   );
 }

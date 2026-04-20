@@ -6,6 +6,7 @@ import { apiFetch } from '@/lib/api/client';
 import { roleLabel } from '@/lib/workspace/labels';
 import { Spinner } from '@/components/ui/Spinner';
 import { UserNav } from '@/components/ui/UserNav';
+import { FigureCluster } from '@/components/heritage/FigureCluster';
 import styles from './workspaces.module.css';
 
 interface Workspace {
@@ -46,9 +47,9 @@ export default function WorkspacesPage() {
   }, []);
 
   return (
-    <main className={styles.container}>
+    <main className={styles.root}>
       <header className={styles.header}>
-        <h1 className={styles.headerTitle}>سلالة</h1>
+        <Link href="/workspaces" className={styles.wordmark}>صُلالَة</Link>
         <div className={styles.headerActions}>
           <UserNav />
         </div>
@@ -62,37 +63,55 @@ export default function WorkspacesPage() {
             <Spinner size="lg" label="جاري التحميل..." />
           </div>
         ) : workspaces.length === 0 ? (
-          <div className={styles.emptyState}>
-            <div className={styles.emptyIcon}>
-              <iconify-icon icon="material-symbols:home-work" width="64" height="64" />
+          <div className={styles.empty}>
+            <div className={styles.emptyMedallion}>
+              <FigureCluster variant="medallion" />
             </div>
-            <h2 className={styles.emptyTitle}>لا توجد مساحات عائلية</h2>
+            <h2 className={styles.emptyTitle}>ابدأ أوّل مساحةٍ لعائلتك</h2>
             <p className={styles.emptyText}>
-              أنشئ مساحة عائلية جديدة لبدء التعاون مع عائلتك
+              أنشئ بيتاً رقميّاً يجمع أفراد عائلتك ويحفظ أسماء الأجداد وحكاياتهم عبر الأجيال.
             </p>
-            <Link href="/workspaces/create" className={styles.emptyCreateButton}>
-              إنشاء مساحة عائلية جديدة
+            <Link href="/workspaces/create" className={styles.createButton}>
+              <span className={styles.createPlusIcon}>+</span>
+              إنشاء مساحة عائلية
             </Link>
           </div>
         ) : (
           <>
-            <div className={styles.sectionHeader}>
-              <h2 className={styles.sectionTitle}>مساحات العائلة</h2>
+            <div className={styles.sectionHead}>
+              <div className={styles.sectionHeadText}>
+                <span className={styles.kicker}>مساحات العائلة</span>
+                <h2 className={styles.sectionTitle}>بيوتٌ يجتمع فيها الأحبّة</h2>
+                <p className={styles.sectionHint}>
+                  اختَر مساحةً للدخول إليها، أو أنشِئ مساحةً جديدة لفرعٍ آخر.
+                </p>
+              </div>
               <Link href="/workspaces/create" className={styles.createButton}>
-                + إنشاء مساحة عائلية جديدة
+                <span className={styles.createPlusIcon}>+</span>
+                مساحة جديدة
               </Link>
             </div>
-            <div className={styles.workspaceGrid}>
+
+            <div className={styles.grid}>
               {workspaces.map((m) => (
                 <Link
                   key={m.workspace.id}
                   href={`/workspaces/${m.workspace.slug}`}
-                  className={styles.workspaceCard}
+                  className={styles.card}
                 >
-                  <h3 className={styles.workspaceName}>عائلة {m.workspace.nameAr}</h3>
-                  <div className={styles.workspaceMeta}>
-                    <span className={styles.workspaceSlug}>/{m.workspace.slug}</span>
-                    <span className={styles.workspaceRole}>{roleLabel(m.role)}</span>
+                  <h3 className={styles.cardName}>عائلة {m.workspace.nameAr}</h3>
+                  <div className={styles.cardSlug}>/{m.workspace.slug}</div>
+
+                  <div className={styles.cardFooter}>
+                    <span className={styles.cardRole}>{roleLabel(m.role)}</span>
+                    <span className={styles.cardEnter}>
+                      ادخُل
+                      <span aria-hidden>←</span>
+                    </span>
+                  </div>
+
+                  <div className={styles.cardFigures}>
+                    <FigureCluster variant="corner" />
                   </div>
                 </Link>
               ))}

@@ -1,0 +1,109 @@
+/* ============================================
+   JEWELED HERITAGE TOKENS
+   Premium design direction — obsidian + emerald + aged gold
+   Added alongside existing tokens; do not delete classic tokens
+   while legacy screens still reference them.
+   ============================================ */
+
+:root {
+  /* Heritage palette */
+  --heritage-midnight: #070b18;
+  --heritage-midnight-deep: #03050c;
+  --heritage-midnight-soft: #0f1528;
+  --heritage-emerald: #1a5d4a;
+  --heritage-emerald-glow: #2e9876;
+  --heritage-emerald-deep: #0f3a2d;
+  --heritage-gold: #c8a865;
+  --heritage-gold-bright: #e6cf9e;
+  --heritage-gold-deep: #8c7441;
+  --heritage-parchment: #f4ead4;
+  --heritage-cream: #e8dfc8;
+
+  /* Glass surfaces */
+  --heritage-glass-bg: rgba(255, 255, 255, 0.035);
+  --heritage-glass-bg-strong: rgba(255, 255, 255, 0.06);
+  --heritage-glass-border: rgba(200, 168, 101, 0.18);
+  --heritage-glass-border-strong: rgba(200, 168, 101, 0.32);
+
+  /* Text on dark */
+  --heritage-text: var(--heritage-parchment);
+  --heritage-text-soft: rgba(232, 223, 200, 0.72);
+  --heritage-text-muted: rgba(232, 223, 200, 0.5);
+  --heritage-text-faint: rgba(232, 223, 200, 0.28);
+
+  /* Gradients */
+  --heritage-gradient-gold: linear-gradient(135deg, #e6cf9e 0%, #c8a865 100%);
+  --heritage-gradient-title: linear-gradient(135deg, #f4ead4 0%, #e6cf9e 40%, #c8a865 70%, #8c7441 100%);
+  --heritage-gradient-bg:
+    radial-gradient(ellipse 80% 60% at 85% 10%, rgba(46, 152, 118, 0.18) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 50% at 10% 90%, rgba(200, 168, 101, 0.10) 0%, transparent 60%),
+    radial-gradient(ellipse 100% 80% at 50% 50%, #0b1222 0%, #05070f 60%, #03050a 100%);
+
+  /* Shadows */
+  --heritage-shadow-card:
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+    0 2px 0 rgba(255, 255, 255, 0.04) inset,
+    0 20px 50px rgba(0, 0, 0, 0.4);
+  --heritage-shadow-card-hover:
+    0 0 0 1px rgba(255, 255, 255, 0.06) inset,
+    0 2px 0 rgba(255, 255, 255, 0.06) inset,
+    0 30px 80px rgba(0, 0, 0, 0.55),
+    0 0 60px rgba(200, 168, 101, 0.08);
+  --heritage-shadow-button:
+    0 0 0 1px rgba(255, 255, 255, 0.3) inset,
+    0 8px 24px rgba(200, 168, 101, 0.25),
+    0 2px 0 rgba(255, 255, 255, 0.35) inset;
+  --heritage-shadow-button-hover:
+    0 0 0 1px rgba(255, 255, 255, 0.35) inset,
+    0 14px 32px rgba(200, 168, 101, 0.45),
+    0 2px 0 rgba(255, 255, 255, 0.4) inset;
+
+  /* Typography */
+  --heritage-font-display: var(--font-reem-kufi), 'Reem Kufi', system-ui, serif;
+  --heritage-font-body: var(--font-plex-arabic), 'IBM Plex Sans Arabic', var(--font-noto-sans-arabic), sans-serif;
+  --heritage-font-script: var(--font-aref-ruqaa), 'Aref Ruqaa', serif;
+
+  /* Radii */
+  --heritage-radius-sm: 12px;
+  --heritage-radius-md: 16px;
+  --heritage-radius-lg: 20px;
+  --heritage-radius-xl: 24px;
+  --heritage-radius-pill: 999px;
+}
+
+/* Shared heritage background helper — apply to <main> of heritage-styled routes */
+.heritage-surface {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--heritage-gradient-bg);
+  color: var(--heritage-text);
+  font-family: var(--heritage-font-body);
+  overflow-x: hidden;
+  isolation: isolate;
+}
+
+.heritage-surface::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.95  0 0 0 0 0.9  0 0 0 0 0.8  0 0 0 0.35 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  opacity: 0.28;
+  mix-blend-mode: overlay;
+  z-index: 0;
+}
+
+.heritage-surface::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 70% 70% at 50% 50%, transparent 40%, rgba(3, 5, 10, 0.55) 100%);
+  z-index: 0;
+}
+
+.heritage-surface > * {
+  position: relative;
+  z-index: 1;
+}

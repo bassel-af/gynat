@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Noto_Sans_Arabic } from 'next/font/google';
+import { Noto_Sans_Arabic, Reem_Kufi, IBM_Plex_Sans_Arabic, Aref_Ruqaa } from 'next/font/google';
 import Script from 'next/script';
 import { GlobalProviders } from './global-providers';
 import './globals.css';
@@ -11,8 +11,29 @@ const notoSansArabic = Noto_Sans_Arabic({
   variable: '--font-noto-sans-arabic',
 });
 
+const reemKufi = Reem_Kufi({
+  subsets: ['arabic', 'latin'],
+  weight: ['400', '500', '600', '700'],
+  display: 'swap',
+  variable: '--font-reem-kufi',
+});
+
+const plexArabic = IBM_Plex_Sans_Arabic({
+  subsets: ['arabic', 'latin'],
+  weight: ['300', '400', '500', '600', '700'],
+  display: 'swap',
+  variable: '--font-plex-arabic',
+});
+
+const arefRuqaa = Aref_Ruqaa({
+  subsets: ['arabic', 'latin'],
+  weight: ['400', '700'],
+  display: 'swap',
+  variable: '--font-aref-ruqaa',
+});
+
 export const metadata: Metadata = {
-  title: 'شجرة العائلة',
+  title: 'صُلالَة',
   description: 'Family genealogy web application',
 };
 
@@ -21,8 +42,15 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const fontClasses = [
+    notoSansArabic.variable,
+    reemKufi.variable,
+    plexArabic.variable,
+    arefRuqaa.variable,
+  ].join(' ');
+
   return (
-    <html lang="ar" dir="rtl" className={notoSansArabic.variable}>
+    <html lang="ar" dir="rtl" className={fontClasses}>
       <body>
         <GlobalProviders>
           {children}
