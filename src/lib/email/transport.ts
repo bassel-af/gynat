@@ -40,8 +40,8 @@ export async function sendEmail({ to, subject, html, text }: SendEmailParams) {
   // Checked per-send (not just at transport creation) so env drift can't slip past.
   assertProductionSafe();
 
-  const senderEmail = process.env.SMTP_SENDER_EMAIL || 'noreply@solalah.com';
-  const senderName = process.env.SMTP_SENDER_NAME || 'سلالة';
+  const senderEmail = process.env.SMTP_SENDER_EMAIL || 'noreply@gynat.com';
+  const senderName = process.env.SMTP_SENDER_NAME || 'جينات';
 
   return emailTransport.sendMail({
     from: `"${senderName}" <${senderEmail}>`,

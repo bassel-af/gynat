@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach } from 'vitest';
 
-const STORAGE_KEY = 'solalah:tree-display-settings';
+const STORAGE_KEY = 'gynat:tree-display-settings';
 
 // ============================================================================
 // Default colors

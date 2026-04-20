@@ -8,7 +8,7 @@ interface InviteEmailParams {
 
 export function buildInviteEmail({ workspaceName, inviterName, inviteUrl }: InviteEmailParams) {
   // Strip newlines and carriage returns from subject to prevent header injection
-  const subject = `دعوة للانضمام إلى ${workspaceName} على سُلالة`.replace(/[\r\n]/g, '');
+  const subject = `دعوة للانضمام إلى ${workspaceName} على جينات`.replace(/[\r\n]/g, '');
 
   // Validate URL scheme — only allow http/https, escape double quotes for safe HTML embedding
   const safeUrl = /^https?:\/\//.test(inviteUrl) ? inviteUrl.replace(/"/g, '&quot;') : '';
@@ -52,7 +52,7 @@ export function buildInviteEmail({ workspaceName, inviterName, inviteUrl }: Invi
 <body style="margin: 0; padding: 0; background-color: #070b18; font-family: 'IBM Plex Sans Arabic', 'Noto Sans Arabic', 'Segoe UI', Tahoma, sans-serif;">
   <!-- Preheader (hidden in body, visible in inbox preview) -->
   <div style="display: none; max-height: 0; overflow: hidden; mso-hide: all; font-size: 1px; line-height: 1px; color: #070b18;">
-    ${safeInviterName} يدعوك للانضمام إلى عائلة ${safeWorkspaceName} — سُلالة، ذاكرةٌ مصونة.
+    ${safeInviterName} يدعوك للانضمام إلى عائلة ${safeWorkspaceName} — جينات، ذاكرةٌ مصونة.
   </div>
 
   <!-- Outer obsidian wrapper -->
@@ -73,12 +73,12 @@ export function buildInviteEmail({ workspaceName, inviterName, inviteUrl }: Invi
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: auto;">
                 <tr>
                   <td class="medallion-mobile" style="width: 64px; height: 64px; background-color: #c8a865; background-image: linear-gradient(135deg, #e6cf9e 0%, #c8a865 45%, #8c7441 100%); border-radius: 50%; text-align: center; vertical-align: middle; border: 1px solid rgba(255, 255, 255, 0.25); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);">
-                    <span style="font-family: 'Reem Kufi', 'Amiri', 'Noto Kufi Arabic', 'Segoe UI', Tahoma, sans-serif; font-size: 30px; color: #070b18; font-weight: 600; line-height: 64px; mso-line-height-rule: exactly;">&#1587;</span>
+                    <span style="font-family: 'Reem Kufi', 'Amiri', 'Noto Kufi Arabic', 'Segoe UI', Tahoma, sans-serif; font-size: 30px; color: #070b18; font-weight: 600; line-height: 64px; mso-line-height-rule: exactly;">&#1580;</span>
                   </td>
                 </tr>
               </table>
               <p style="margin: 18px 0 0 0; font-family: 'Reem Kufi', 'Amiri', 'Noto Kufi Arabic', 'Segoe UI', Tahoma, sans-serif; font-size: 20px; font-weight: 500; color: #f4ead4; letter-spacing: 0.04em;">
-                سُلالة
+                جينات
               </p>
               <p style="margin: 4px 0 0 0; font-size: 10px; font-weight: 500; color: #c8a865; letter-spacing: 0.28em; text-transform: uppercase;">
                 نَسَبٌ موثَّق
@@ -109,7 +109,7 @@ export function buildInviteEmail({ workspaceName, inviterName, inviteUrl }: Invi
                 انضمّ إلى شجرة <span style="color: #e6cf9e;">${safeWorkspaceName}</span>
               </h1>
               <p style="margin: 0 0 12px 0; font-size: 14.5px; font-weight: 300; color: rgba(244, 234, 212, 0.72); line-height: 1.95; text-align: right;">
-                قام <span style="color: #e6cf9e; font-weight: 500;">${safeInviterName}</span> بدعوتك للانضمام إلى مساحة <span style="color: #e6cf9e; font-weight: 500;">${safeWorkspaceName}</span> على سُلالة — حيث تُحفظ أسماء الأجداد وتُروى حكاياتهم عبر الأجيال.
+                قام <span style="color: #e6cf9e; font-weight: 500;">${safeInviterName}</span> بدعوتك للانضمام إلى مساحة <span style="color: #e6cf9e; font-weight: 500;">${safeWorkspaceName}</span> على جينات — حيث تُحفظ أسماء الأجداد وتُروى حكاياتهم عبر الأجيال.
               </p>
             </td>
           </tr>
@@ -188,7 +188,7 @@ export function buildInviteEmail({ workspaceName, inviterName, inviteUrl }: Invi
           <tr>
             <td style="text-align: center; padding: 12px 0;">
               <p style="margin: 0; font-family: 'Reem Kufi', 'Amiri', 'Noto Kufi Arabic', 'Segoe UI', Tahoma, sans-serif; font-size: 11px; color: rgba(200, 168, 101, 0.45); letter-spacing: 0.32em; text-transform: uppercase;">
-                solalah &nbsp;&middot;&nbsp; ذاكرة مصونة
+                gynat &nbsp;&middot;&nbsp; ذاكرة مصونة
               </p>
             </td>
           </tr>
@@ -199,9 +199,9 @@ export function buildInviteEmail({ workspaceName, inviterName, inviteUrl }: Invi
 </body>
 </html>`;
 
-  const text = `سُلالة — دعوة عائليّة
+  const text = `جينات — دعوة عائليّة
 
-قام ${inviterName} بدعوتك للانضمام إلى مساحة ${workspaceName} على سُلالة — حيث تُحفظ أسماء الأجداد وتُروى حكاياتهم عبر الأجيال.
+قام ${inviterName} بدعوتك للانضمام إلى مساحة ${workspaceName} على جينات — حيث تُحفظ أسماء الأجداد وتُروى حكاياتهم عبر الأجيال.
 ${safeUrl ? `
 لقبول الدعوة، افتح الرابط التالي:
 ${safeUrl}

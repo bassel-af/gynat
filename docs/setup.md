@@ -1,6 +1,6 @@
-# Solalah — Setup Guide (Clean Machine)
+# Gynat — Setup Guide (Clean Machine)
 
-This guide walks through setting up Solalah from scratch on a new machine or server.
+This guide walks through setting up Gynat from scratch on a new machine or server.
 
 ## Prerequisites
 
@@ -14,7 +14,7 @@ This guide walks through setting up Solalah from scratch on a new machine or ser
 
 ```bash
 git clone <repo-url>
-cd solalah
+cd gynat
 pnpm install
 ```
 
@@ -41,8 +41,8 @@ SMTP_HOST=
 SMTP_PORT=587
 SMTP_USER=
 SMTP_PASS=
-SMTP_SENDER_NAME=Solalah
-SMTP_SENDER_EMAIL=noreply@solalah.com
+SMTP_SENDER_NAME=Gynat
+SMTP_SENDER_EMAIL=noreply@gynat.com
 ```
 
 The `ANON_KEY` and `SERVICE_ROLE_KEY` are JWTs signed with `JWT_SECRET`. They can be generated via the Supabase CLI or any JWT tool using the HS256 algorithm with the appropriate role claim.
@@ -56,7 +56,7 @@ cp .env.example .env.local
 Fill in the values — they must match `docker/.env`:
 
 ```env
-DATABASE_URL="postgresql://postgres:<POSTGRES_PASSWORD>@localhost:5432/solalah?schema=public"
+DATABASE_URL="postgresql://postgres:<POSTGRES_PASSWORD>@localhost:5432/gynat?schema=public"
 NEXT_PUBLIC_SUPABASE_URL="http://localhost:8000"
 NEXT_PUBLIC_SUPABASE_ANON_KEY="<ANON_KEY>"
 SUPABASE_SERVICE_ROLE_KEY="<SERVICE_ROLE_KEY>"
@@ -67,7 +67,7 @@ NEXT_PUBLIC_SITE_URL="http://localhost:3000"
 Also create a root `.env` for Prisma CLI (only needs `DATABASE_URL`):
 
 ```bash
-echo 'DATABASE_URL="postgresql://postgres:<POSTGRES_PASSWORD>@localhost:5432/solalah?schema=public"' > .env
+echo 'DATABASE_URL="postgresql://postgres:<POSTGRES_PASSWORD>@localhost:5432/gynat?schema=public"' > .env
 ```
 
 ---

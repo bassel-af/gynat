@@ -8,5 +8,5 @@ description: Copy the local saeed-family.ged file to the production server witho
 Run this command to copy the file:
 
 ```bash
-scp public/saeed-family.ged hz:solalah/public/saeed-family.ged
+scp public/saeed-family.ged hz:gynat/public/saeed-family.ged
 ```

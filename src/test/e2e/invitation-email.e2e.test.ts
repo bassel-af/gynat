@@ -35,8 +35,8 @@ describe('Invitation email — full flow through Mailpit', () => {
     vi.stubEnv('SMTP_PORT', String(process.env.MAILPIT_SMTP_PORT || 1125));
     vi.stubEnv('SMTP_USER', '');
     vi.stubEnv('SMTP_PASS', '');
-    vi.stubEnv('SMTP_SENDER_EMAIL', 'invites@test.solalah.local');
-    vi.stubEnv('SMTP_SENDER_NAME', 'سُلالة (test)');
+    vi.stubEnv('SMTP_SENDER_EMAIL', 'invites@test.gynat.local');
+    vi.stubEnv('SMTP_SENDER_NAME', 'جينات (test)');
     vi.stubEnv('NODE_ENV', 'test');
   });
 
@@ -55,7 +55,7 @@ describe('Invitation email — full flow through Mailpit', () => {
     const { buildInviteEmail } = await import('@/lib/email/templates/invite');
     const { sendEmail } = await import('@/lib/email/transport');
 
-    const recipient = `invite-${randomUUID()}@test.solalah.local`;
+    const recipient = `invite-${randomUUID()}@test.gynat.local`;
     const invitationId = randomUUID();
     const inviteUrl = `http://localhost:4000/invite/${invitationId}`;
 
@@ -87,7 +87,7 @@ describe('Invitation email — full flow through Mailpit', () => {
     try {
       await expect(
         sendEmail({
-          to: `blocked-${randomUUID()}@test.solalah.local`,
+          to: `blocked-${randomUUID()}@test.gynat.local`,
           subject: 'should not send',
           html: '<p>nope</p>',
           text: 'nope',

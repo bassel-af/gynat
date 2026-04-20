@@ -24,7 +24,7 @@ export function useTreeColorOverrides(): void {
     applyColors();
 
     function handleStorage(e: StorageEvent) {
-      if (e.key === 'solalah:tree-display-settings' || e.key === null) {
+      if (e.key === 'gynat:tree-display-settings' || e.key === null) {
         applyColors();
       }
     }

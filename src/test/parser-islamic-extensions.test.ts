@@ -289,9 +289,9 @@ describe('parseGedcom — GEDCOM 7.0 header tolerance', () => {
     const gedcom = `0 HEAD
 1 GEDC
 2 VERS 7.0
-1 SOUR Solalah
+1 SOUR Gynat
 2 VERS 1.0
-2 NAME Solalah
+2 NAME Gynat
 0 @I1@ INDI
 1 NAME Ahmad
 1 SEX M
@@ -306,8 +306,8 @@ describe('parseGedcom — GEDCOM 7.0 header tolerance', () => {
 1 GEDC
 2 VERS 7.0
 1 SCHMA
-2 TAG _UMM_WALAD https://solalah.com/gedcom/ext/_UMM_WALAD
-2 TAG _RADA_FAM https://solalah.com/gedcom/ext/_RADA_FAM
+2 TAG _UMM_WALAD https://gynat.com/gedcom/ext/_UMM_WALAD
+2 TAG _RADA_FAM https://gynat.com/gedcom/ext/_RADA_FAM
 0 @I1@ INDI
 1 NAME Ahmad
 0 TRLR`

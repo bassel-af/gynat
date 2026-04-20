@@ -5,7 +5,7 @@
  * No backend persistence; settings are per-browser.
  */
 
-const STORAGE_KEY = 'solalah:tree-display-settings';
+const STORAGE_KEY = 'gynat:tree-display-settings';
 
 export const DEFAULT_MALE_COLOR = '#4a90d9';
 export const DEFAULT_FEMALE_COLOR = '#e91e8c';

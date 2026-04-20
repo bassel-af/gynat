@@ -1,4 +1,4 @@
-# Encryption Operator Runbook — Solalah
+# Encryption Operator Runbook — Gynat
 
 **Audience**: you (the operator), three years from now, at 2 AM during an incident. NOT user-facing. Read top-to-bottom once when calm; jump to section 9 when on fire.
 
@@ -10,7 +10,7 @@
 
 ## 1. Overview
 
-Solalah encrypts family data at rest with **two complementary layers**:
+Gynat encrypts family data at rest with **two complementary layers**:
 
 | Layer | What | Phase | Status |
 |---|---|---|---|
@@ -81,7 +81,7 @@ If it prints anything other than `32`, regenerate. The app will refuse to start 
 
 The master key is the single piece of state that, if lost, makes the data permanently unrecoverable. Treat it accordingly.
 
-**Primary backup**: a password manager (Bitwarden / 1Password / self-hosted Vaultwarden) under a clearly-named entry such as `solalah-prod WORKSPACE_MASTER_KEY (DO NOT LOSE)`. Include the date generated and the environment.
+**Primary backup**: a password manager (Bitwarden / 1Password / self-hosted Vaultwarden) under a clearly-named entry such as `gynat-prod WORKSPACE_MASTER_KEY (DO NOT LOSE)`. Include the date generated and the environment.
 
 **Secondary backup**: an encrypted printed copy in a fireproof safe. Yes, paper. Paper survives ransomware, account lockouts, and password manager outages.
 
@@ -144,7 +144,7 @@ Rotation re-wraps each workspace's data key with a new master key. The data keys
 
 3. **Take a database backup.** If the rotation script fails halfway through, you want a clean snapshot to roll back to.
    ```bash
-   pg_dump -Fc solalah > /tmp/solalah-pre-rotation.dump
+   pg_dump -Fc gynat > /tmp/gynat-pre-rotation.dump
    ```
 
 4. Set both keys in the env so the rotation script can read both. **Do NOT type `export FOO="..."` directly** — those commands land in `~/.zsh_history` / `~/.bash_history` in plaintext, putting both the old and new master keys on disk for the lifetime of the history file. The "found old AND new key in shell history" pattern is a common forensic finding after server compromise. Write the keys to a mode-600 temp file and `source` it instead:

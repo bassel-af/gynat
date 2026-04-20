@@ -1,4 +1,4 @@
-# Product Requirements Document — Solalah Platform
+# Product Requirements Document — Gynat Platform
 
 **Status**: Living document (updated as requirements evolve)
 **Audience**: Human developers, AI coding assistants
@@ -9,7 +9,7 @@ For present-tense descriptions of how each subsystem currently works, see `docs/
 
 ## 1. Vision
 
-Solalah is a **family collaboration platform**. Anyone can sign up, create a family workspace, and invite their relatives. Each family gets a shared digital space (workspace) with a family tree, news, albums, and events. A single user account works across multiple family workspaces simultaneously.
+Gynat is a **family collaboration platform**. Anyone can sign up, create a family workspace, and invite their relatives. Each family gets a shared digital space (workspace) with a family tree, news, albums, and events. A single user account works across multiple family workspaces simultaneously.
 
 Sub-families that want their own private content (news, albums, events, meetings) simply create their own independent workspace. Workspaces are never nested or dependent on each other. The only cross-workspace connection is at the **tree level**: a workspace can display a read-only pointer to a branch (subtree) from another workspace's family tree.
 

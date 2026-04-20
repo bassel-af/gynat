@@ -81,10 +81,10 @@ The constructor refuses any non-loopback URL as a safety guard.
 ### Conventions
 
 - **Use unique recipient addresses per test** so parallel/retry runs don't see
-  each other's mail. Pattern: `` `${label}-${crypto.randomUUID()}@test.solalah.local` ``.
+  each other's mail. Pattern: `` `${label}-${crypto.randomUUID()}@test.gynat.local` ``.
 - Call `client.clearMailbox()` in a `beforeEach` for deterministic state.
 - Never send to a real user address from tests — Mailpit accepts anything, but
-  tests should use `*.test.solalah.local` so the fake domain is obvious.
+  tests should use `*.test.gynat.local` so the fake domain is obvious.
 
 ### Production safety
 

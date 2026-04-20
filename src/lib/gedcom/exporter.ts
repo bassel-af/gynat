@@ -17,13 +17,13 @@ const HIJRI_MONTHS: Record<string, string> = {
 
 // Extension tag URIs for GEDCOM 7.0 SCHMA declarations
 const EXT_URIS: Record<string, string> = {
-  '_UMM_WALAD': 'https://solalah.com/gedcom/ext/_UMM_WALAD',
-  '_KUNYA': 'https://solalah.com/gedcom/ext/_KUNYA',
-  '_RADA_FAM': 'https://solalah.com/gedcom/ext/_RADA_FAM',
-  '_RADA_HUSB': 'https://solalah.com/gedcom/ext/_RADA_HUSB',
-  '_RADA_WIFE': 'https://solalah.com/gedcom/ext/_RADA_WIFE',
-  '_RADA_CHIL': 'https://solalah.com/gedcom/ext/_RADA_CHIL',
-  '_RADA_FAMC': 'https://solalah.com/gedcom/ext/_RADA_FAMC',
+  '_UMM_WALAD': 'https://gynat.com/gedcom/ext/_UMM_WALAD',
+  '_KUNYA': 'https://gynat.com/gedcom/ext/_KUNYA',
+  '_RADA_FAM': 'https://gynat.com/gedcom/ext/_RADA_FAM',
+  '_RADA_HUSB': 'https://gynat.com/gedcom/ext/_RADA_HUSB',
+  '_RADA_WIFE': 'https://gynat.com/gedcom/ext/_RADA_WIFE',
+  '_RADA_CHIL': 'https://gynat.com/gedcom/ext/_RADA_CHIL',
+  '_RADA_FAMC': 'https://gynat.com/gedcom/ext/_RADA_FAMC',
 }
 
 // ---------------------------------------------------------------------------
@@ -419,14 +419,14 @@ export function gedcomDataToGedcom(
     // GEDCOM 7.0: GEDC must come first in header
     lines.push('1 GEDC')
     lines.push(`2 VERS ${version}`)
-    lines.push('1 SOUR Solalah')
+    lines.push('1 SOUR Gynat')
     lines.push('2 VERS 1.0')
-    lines.push('2 NAME Solalah')
+    lines.push('2 NAME Gynat')
     lines.push(`1 DATE ${exportDate}`)
   } else {
-    lines.push('1 SOUR Solalah')
+    lines.push('1 SOUR Gynat')
     lines.push('2 VERS 1.0')
-    lines.push('2 NAME Solalah')
+    lines.push('2 NAME Gynat')
     lines.push(`1 DATE ${exportDate}`)
     lines.push('1 GEDC')
     lines.push(`2 VERS ${version}`)
@@ -440,7 +440,7 @@ export function gedcomDataToGedcom(
     if (customTags.size > 0) {
       lines.push('1 SCHMA')
       for (const tag of customTags) {
-        const uri = EXT_URIS[tag] || `https://solalah.com/gedcom/ext/${tag}`
+        const uri = EXT_URIS[tag] || `https://gynat.com/gedcom/ext/${tag}`
         lines.push(`2 TAG ${tag} ${uri}`)
       }
     }

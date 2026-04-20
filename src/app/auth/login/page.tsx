@@ -109,8 +109,8 @@ function LoginForm() {
       <h1 className={styles.title}>تسجيل الدخول</h1>
       <p className={styles.subtitle}>
         {loginMode === 'password'
-          ? 'أدخل بياناتك للوصول إلى منصة سلالة'
-          : 'أدخل بريدك الإلكتروني للوصول إلى منصة سلالة'}
+          ? 'أدخل بياناتك للوصول إلى منصة جينات'
+          : 'أدخل بريدك الإلكتروني للوصول إلى منصة جينات'}
       </p>
 
       {loginMode === 'password' ? (

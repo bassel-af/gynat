@@ -1,6 +1,6 @@
-# Solalah Design System
+# Gynat Design System
 
-This document defines the design tokens and visual language for the Solalah family tree application.
+This document defines the design tokens and visual language for the Gynat family tree application.
 
 ## Color Palette
 

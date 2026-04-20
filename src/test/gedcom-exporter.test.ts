@@ -134,10 +134,10 @@ describe('gedcomDataToGedcom — 5.5.1 header', () => {
     expect(getLines(text)[0]).toBe('0 HEAD')
   })
 
-  it('contains SOUR Solalah with sub-tags', () => {
-    expect(hasLine(text, '1 SOUR Solalah')).toBe(true)
+  it('contains SOUR Gynat with sub-tags', () => {
+    expect(hasLine(text, '1 SOUR Gynat')).toBe(true)
     expect(hasLine(text, '2 VERS 1.0')).toBe(true)
-    expect(hasLine(text, '2 NAME Solalah')).toBe(true)
+    expect(hasLine(text, '2 NAME Gynat')).toBe(true)
   })
 
   it('contains DATE with current export date', () => {
@@ -151,7 +151,7 @@ describe('gedcomDataToGedcom — 5.5.1 header', () => {
 
   it('has SOUR before GEDC in 5.5.1', () => {
     const lines = getLines(text)
-    const sourIdx = lines.findIndex((l) => l === '1 SOUR Solalah')
+    const sourIdx = lines.findIndex((l) => l === '1 SOUR Gynat')
     const gedcIdx = lines.findIndex((l) => l === '1 GEDC')
     expect(sourIdx).toBeLessThan(gedcIdx)
   })
@@ -194,14 +194,14 @@ describe('gedcomDataToGedcom — 7.0 header', () => {
   it('has GEDC before SOUR in 7.0', () => {
     const lines = getLines(text)
     const gedcIdx = lines.findIndex((l) => l === '1 GEDC')
-    const sourIdx = lines.findIndex((l) => l === '1 SOUR Solalah')
+    const sourIdx = lines.findIndex((l) => l === '1 SOUR Gynat')
     expect(gedcIdx).toBeLessThan(sourIdx)
   })
 
-  it('contains SOUR Solalah with sub-tags', () => {
-    expect(hasLine(text, '1 SOUR Solalah')).toBe(true)
+  it('contains SOUR Gynat with sub-tags', () => {
+    expect(hasLine(text, '1 SOUR Gynat')).toBe(true)
     expect(hasLine(text, '2 VERS 1.0')).toBe(true)
-    expect(hasLine(text, '2 NAME Solalah')).toBe(true)
+    expect(hasLine(text, '2 NAME Gynat')).toBe(true)
   })
 
   it('contains DATE with current export date', () => {

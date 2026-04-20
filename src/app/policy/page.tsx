@@ -3,7 +3,7 @@ import styles from './policy.module.css';
 
 export const metadata: Metadata = {
   title: 'السياسات والشروط | Policies',
-  description: 'سياسة الاستخدام والخصوصية لمنصة سلالة',
+  description: 'سياسة الاستخدام والخصوصية لمنصة جينات',
 };
 
 export default function PolicyPage() {
@@ -19,7 +19,7 @@ export default function PolicyPage() {
 
           <div className={styles.arabicBlock}>
             <p>
-              منصة سلالة هي منصة للعائلات لتوثيق الأنساب والتواصل بين أفراد
+              منصة جينات هي منصة للعائلات لتوثيق الأنساب والتواصل بين أفراد
               العائلة. التسجيل مفتوح للجميع، ويمكن لأي مستخدم إنشاء مساحة
               عائلية ودعوة أقاربه إليها. باستخدامك للمنصة، فإنك توافق على
               الشروط التالية:
@@ -46,7 +46,7 @@ export default function PolicyPage() {
           <div className={styles.englishBlock}>
             <p className={styles.englishLabel}>English</p>
             <p>
-              Solalah is a family collaboration platform for documenting
+              Gynat is a family collaboration platform for documenting
               genealogy and connecting family members. Sign-up is open to
               anyone, and any registered user can create a family workspace and
               invite their relatives. By using the platform, you agree to the

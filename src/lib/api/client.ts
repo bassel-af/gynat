@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/client';
 /**
  * Extension to fetch's RequestInit.
  *
- * `isUndo` — Phase 15a. When true, adds the `X-Solalah-Undo: true` header so
+ * `isUndo` — Phase 15a. When true, adds the `X-Gynat-Undo: true` header so
  * mutation routes can tag the audit-log description as an undo action. The
  * option itself is NOT forwarded to `fetch()`.
  */
@@ -40,7 +40,7 @@ export async function apiFetch(
   };
 
   if (isUndo) {
-    headers['X-Solalah-Undo'] = 'true';
+    headers['X-Gynat-Undo'] = 'true';
   }
 
   return fetch(path, {

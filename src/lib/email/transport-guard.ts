@@ -8,7 +8,7 @@
 
 const MAIL_TRAP_HOSTS = new Set([
   'mailpit',
-  'solalah-mailpit',
+  'gynat-mailpit',
   'localhost',
   '127.0.0.1',
   '::1',

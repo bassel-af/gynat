@@ -13,7 +13,7 @@ Deploy the app to the production server `hz`.
 
 1. SSH into `hz` and run git pull + build in one command:
    ```
-   ssh hz "export NVM_DIR=\$HOME/.nvm && [ -s \"\$NVM_DIR/nvm.sh\" ] && . \"\$NVM_DIR/nvm.sh\" && cd solalah && git pull && pnpm build && pm2 restart solalah"
+   ssh hz "export NVM_DIR=\$HOME/.nvm && [ -s \"\$NVM_DIR/nvm.sh\" ] && . \"\$NVM_DIR/nvm.sh\" && cd gynat && git pull && pnpm build && pm2 restart gynat"
    ```
 2. Use a 1-minute timeout.
 3. Report success or failure concisely.

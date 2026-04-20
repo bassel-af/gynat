@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
       disallow: ['/', '/auth/login?'],
       allow: ['/', '/policy', '/islamic-gedcom', '/features', '/auth/login', '/auth/signup', '/auth/forgot-password'],
     },
-    sitemap: 'https://solalah.com/sitemap.xml',
+    sitemap: 'https://gynat.com/sitemap.xml',
   };
 }

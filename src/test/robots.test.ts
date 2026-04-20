@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest';
 import robots from '@/app/robots';
 
 describe('robots.ts', () => {
-  it('returns a sitemap URL pointing to solalah.com', () => {
+  it('returns a sitemap URL pointing to gynat.com', () => {
     const result = robots();
-    expect(result.sitemap).toBe('https://solalah.com/sitemap.xml');
+    expect(result.sitemap).toBe('https://gynat.com/sitemap.xml');
   });
 
   it('disallows everything by default with "/"', () => {

@@ -16,7 +16,7 @@ UI latest touches.
 
 
 MCP (Model Context Protocol):
-- Consider exposing solalah as an MCP server so AI assistants can query/navigate the family tree
+- Consider exposing gynat as an MCP server so AI assistants can query/navigate the family tree
 - Use cases: answer questions about relatives, generate summaries, assist with mirath calculations,
 Read tree of a person in book or website and populate it.
 

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This repository ("solalah") is a **family collaboration platform** evolving from a read-only genealogy viewer. Built with Next.js 15 (App Router) + React 19 + TypeScript, backed by PostgreSQL (Prisma ORM) and Supabase Auth (self-hosted via Docker Compose). The app is RTL (right-to-left) with Arabic as the primary language.
+This repository ("gynat") is a **family collaboration platform** evolving from a read-only genealogy viewer. Built with Next.js 15 (App Router) + React 19 + TypeScript, backed by PostgreSQL (Prisma ORM) and Supabase Auth (self-hosted via Docker Compose). The app is RTL (right-to-left) with Arabic as the primary language.
 
 The tree reads from the database via `GET /api/workspaces/[id]/tree`; static GEDCOM files in `/public/` are preserved for seeding only. Workspace data at rest is double-encrypted: LUKS2 disk volume underneath per-workspace AES-256-GCM application encryption gated by `WORKSPACE_MASTER_KEY`. Tree edits are Ctrl+Z-undoable in-session via a per-tab stack; cascade delete, branch pointer ops, and GEDCOM import are intentionally NOT undoable.
 

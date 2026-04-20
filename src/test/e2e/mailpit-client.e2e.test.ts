@@ -15,7 +15,7 @@ const SMTP_HOST = '127.0.0.1';
 const SMTP_PORT = Number(process.env.MAILPIT_SMTP_PORT || 1125);
 
 function uniqueAddress(label: string): string {
-  return `${label}-${randomUUID()}@test.solalah.local`;
+  return `${label}-${randomUUID()}@test.gynat.local`;
 }
 
 async function sendTestMail(to: string, subject: string, html: string, text?: string) {
@@ -25,7 +25,7 @@ async function sendTestMail(to: string, subject: string, html: string, text?: st
     secure: false,
   });
   await transport.sendMail({
-    from: '"Solalah Tests" <tests@test.solalah.local>',
+    from: '"Gynat Tests" <tests@test.gynat.local>',
     to,
     subject,
     html,
@@ -97,13 +97,13 @@ describe('MailpitClient — live Mailpit API', () => {
 
   test('getMessage returns the full message body (HTML + text)', async () => {
     const addr = uniqueAddress('body');
-    const html = '<p>subject body <a href="https://solalah.test/x">link</a></p>';
+    const html = '<p>subject body <a href="https://gynat.test/x">link</a></p>';
     await sendTestMail(addr, 'with body', html, 'plain body text');
 
     const summary = await client.waitForEmail(addr);
     const full = await client.getMessage(summary.id);
 
-    expect(full.html).toContain('https://solalah.test/x');
+    expect(full.html).toContain('https://gynat.test/x');
     expect(full.text).toContain('plain body text');
     expect(full.to).toContain(addr);
   });
@@ -113,8 +113,8 @@ describe('MailpitClient — live Mailpit API', () => {
     const html = `
       <html><body>
         <p>Click below:</p>
-        <a href="https://solalah.test/invite/abc-123?tok=xyz">Accept</a>
-        <a href="https://solalah.test/unsubscribe">Unsubscribe</a>
+        <a href="https://gynat.test/invite/abc-123?tok=xyz">Accept</a>
+        <a href="https://gynat.test/unsubscribe">Unsubscribe</a>
       </body></html>
     `;
     await sendTestMail(addr, 'link test', html);
@@ -122,22 +122,22 @@ describe('MailpitClient — live Mailpit API', () => {
     const full = await client.getMessage(summary.id);
 
     const accept = client.extractLink(full.html, { hrefContains: '/invite/' });
-    expect(accept).toBe('https://solalah.test/invite/abc-123?tok=xyz');
+    expect(accept).toBe('https://gynat.test/invite/abc-123?tok=xyz');
 
     const unsub = client.extractLink(full.html, { hrefContains: '/unsubscribe' });
-    expect(unsub).toBe('https://solalah.test/unsubscribe');
+    expect(unsub).toBe('https://gynat.test/unsubscribe');
   });
 
   test('extractLink does not get fooled by angle brackets inside attributes', async () => {
     // This is the "regex over HTML" trap — a real parser handles it correctly.
     const html =
-      '<a href="https://solalah.test/safe?a=%3Cscript%3E">safe link</a>';
+      '<a href="https://gynat.test/safe?a=%3Cscript%3E">safe link</a>';
     const link = client.extractLink(html, { hrefContains: '/safe' });
-    expect(link).toBe('https://solalah.test/safe?a=%3Cscript%3E');
+    expect(link).toBe('https://gynat.test/safe?a=%3Cscript%3E');
   });
 
   test('extractLink returns null when no matching link is found', () => {
-    const html = '<a href="https://solalah.test/a">a</a>';
+    const html = '<a href="https://gynat.test/a">a</a>';
     const link = client.extractLink(html, { hrefContains: '/nope' });
     expect(link).toBeNull();
   });

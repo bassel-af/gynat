@@ -9,7 +9,7 @@ Run these two commands sequentially:
 
 1. Truncate tree tables:
 ```bash
-docker exec docker-db-1 psql -U postgres -d solalah -c "TRUNCATE family_children, tree_edit_logs, families, individuals, family_trees CASCADE;"
+docker exec docker-db-1 psql -U postgres -d gynat -c "TRUNCATE family_children, tree_edit_logs, families, individuals, family_trees CASCADE;"
 ```
 
 2. Run seed script:

@@ -95,7 +95,7 @@ describe('apiFetch', () => {
     }));
   });
 
-  test('adds X-Solalah-Undo header when isUndo option is true', async () => {
+  test('adds X-Gynat-Undo header when isUndo option is true', async () => {
     mockGetSession.mockResolvedValue({
       data: { session: { access_token: 'tok' } },
       error: null,
@@ -107,12 +107,12 @@ describe('apiFetch', () => {
     expect(mockFetch).toHaveBeenCalledWith('/api/do', expect.objectContaining({
       headers: expect.objectContaining({
         Authorization: 'Bearer tok',
-        'X-Solalah-Undo': 'true',
+        'X-Gynat-Undo': 'true',
       }),
     }));
   });
 
-  test('does not add X-Solalah-Undo header when isUndo is falsy', async () => {
+  test('does not add X-Gynat-Undo header when isUndo is falsy', async () => {
     mockGetSession.mockResolvedValue({
       data: { session: { access_token: 'tok' } },
       error: null,
@@ -122,7 +122,7 @@ describe('apiFetch', () => {
     await apiFetch('/api/do', { method: 'PATCH' });
 
     const callArgs = mockFetch.mock.calls[0][1];
-    expect(callArgs.headers).not.toHaveProperty('X-Solalah-Undo');
+    expect(callArgs.headers).not.toHaveProperty('X-Gynat-Undo');
   });
 
   test('does not forward isUndo as a fetch init option', async () => {

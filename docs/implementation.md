@@ -1,4 +1,4 @@
-# Implementation Reference — Solalah
+# Implementation Reference — Gynat
 
 Present-tense description of how each subsystem works today. For the product definition (vision, features, data model, roadmap), see `docs/prd.md`. For the codebase map (file paths, routes, commands), see `CLAUDE.md`.
 
@@ -266,7 +266,7 @@ Legacy plaintext rows coexist via a sentinel pass-through on `decryptSnapshot` �
 
 **Inverse builders** (`src/lib/tree/undo-builders.ts`) cover 12 operations: individual create/update/delete, family create/update/delete, family children add/remove/move, rada'a family create/update/delete. Labels come from `buildUndoLabel()` (gendered variants, 40-char truncation).
 
-**Server side**: `apiFetch({ isUndo: true })` sends `X-Solalah-Undo: true`. `isUndoRequest()` is read in 11 mutation routes and passed to `buildAuditDescription(..., { isUndo })`, which prefixes audit entries with "تراجع عن: ". No new action enum values, no schema changes — `restoreSnapshot` and `undoOfLogId` are deferred to Phase 15b.
+**Server side**: `apiFetch({ isUndo: true })` sends `X-Gynat-Undo: true`. `isUndoRequest()` is read in 11 mutation routes and passed to `buildAuditDescription(..., { isUndo })`, which prefixes audit entries with "تراجع عن: ". No new action enum values, no schema changes — `restoreSnapshot` and `undoOfLogId` are deferred to Phase 15b.
 
 **Deliberately NOT undoable** (scoped to Phase 15b/15c or never): cascade delete, branch pointer ops, deep copy, GEDCOM import.
 

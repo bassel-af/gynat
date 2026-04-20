@@ -217,8 +217,8 @@ export default function AuthConfirmPage() {
       <div className={styles.card}>
         {/* Brand */}
         <div className={styles.brand}>
-          <div className={styles.brandIcon} aria-hidden="true">س</div>
-          <h2 className={styles.brandName}>سلالة</h2>
+          <div className={styles.brandIcon} aria-hidden="true">ج</div>
+          <h2 className={styles.brandName}>جينات</h2>
         </div>
 
         {/* Loading */}

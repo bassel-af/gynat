@@ -1,4 +1,4 @@
-# Solalah — Self-hosted Supabase stack
+# Gynat — Self-hosted Supabase stack
 # Usage: cd docker && docker compose up -d
 #
 # Services:
@@ -14,7 +14,7 @@ services:
     ports:
       - "127.0.0.1:5432:5432"
     environment:
-      POSTGRES_DB: solalah
+      POSTGRES_DB: gynat
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
     volumes:
@@ -39,7 +39,7 @@ services:
       API_EXTERNAL_URL: ${API_EXTERNAL_URL:-http://localhost:8000}
 
       GOTRUE_DB_DRIVER: postgres
-      GOTRUE_DB_DATABASE_URL: "postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/solalah?search_path=auth"
+      GOTRUE_DB_DATABASE_URL: "postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/gynat?search_path=auth"
 
       GOTRUE_SITE_URL: ${GOTRUE_SITE_URL:-http://localhost:4000}
       GOTRUE_URI_ALLOW_LIST: ${GOTRUE_URI_ALLOW_LIST:-http://localhost:4000/**}
@@ -71,8 +71,8 @@ services:
       GOTRUE_SMTP_PORT: ${SMTP_PORT:-587}
       GOTRUE_SMTP_USER: ${SMTP_USER:-}
       GOTRUE_SMTP_PASS: ${SMTP_PASS:-}
-      GOTRUE_SMTP_ADMIN_EMAIL: ${SMTP_SENDER_EMAIL:-noreply@solalah.com}
-      GOTRUE_SMTP_SENDER_NAME: ${SMTP_SENDER_NAME:-Solalah}
+      GOTRUE_SMTP_ADMIN_EMAIL: ${SMTP_SENDER_EMAIL:-noreply@gynat.com}
+      GOTRUE_SMTP_SENDER_NAME: ${SMTP_SENDER_NAME:-Gynat}
       GOTRUE_MAILER_URLPATHS_INVITE: "/auth/v1/verify"
       GOTRUE_MAILER_URLPATHS_CONFIRMATION: "/auth/v1/verify"
       GOTRUE_MAILER_URLPATHS_RECOVERY: "/auth/v1/verify"
@@ -124,10 +124,10 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       POSTGRES_HOST: db
       POSTGRES_PORT: "5432"
-      POSTGRES_DB: solalah
+      POSTGRES_DB: gynat
       PG_META_CRYPTO_KEY: ${PG_META_CRYPTO_KEY:?PG_META_CRYPTO_KEY is required}
-      DEFAULT_ORGANIZATION_NAME: "Solalah"
-      DEFAULT_PROJECT_NAME: "Solalah"
+      DEFAULT_ORGANIZATION_NAME: "Gynat"
+      DEFAULT_PROJECT_NAME: "Gynat"
       SUPABASE_URL: "http://kong:8000"
       SUPABASE_PUBLIC_URL: ${API_EXTERNAL_URL:-http://localhost:8000}
       SUPABASE_ANON_KEY: ${ANON_KEY:?ANON_KEY is required}
@@ -144,7 +144,7 @@ services:
   # containers on the same machine. Internal container ports remain 1025/8025.
   mailpit:
     image: axllent/mailpit:v1.21
-    container_name: solalah-mailpit
+    container_name: gynat-mailpit
     restart: unless-stopped
     ports:
       - "127.0.0.1:1125:1025"
@@ -166,7 +166,7 @@ services:
       PG_META_PORT: "8080"
       PG_META_DB_HOST: db
       PG_META_DB_PORT: "5432"
-      PG_META_DB_NAME: solalah
+      PG_META_DB_NAME: gynat
       PG_META_DB_USER: supabase_admin
       PG_META_DB_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       CRYPTO_KEY: ${PG_META_CRYPTO_KEY:?PG_META_CRYPTO_KEY is required}

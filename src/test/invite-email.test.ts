@@ -15,7 +15,7 @@ describe('buildInviteEmail', () => {
 
   test('subject contains the app name', () => {
     const { subject } = buildInviteEmail(params);
-    expect(subject).toContain('سلالة');
+    expect(subject).toContain('جينات');
   });
 
   test('html contains the invite URL', () => {
@@ -57,9 +57,9 @@ describe('buildInviteEmail', () => {
   test('includes valid https URL as a link in the email', () => {
     const { html } = buildInviteEmail({
       ...params,
-      inviteUrl: 'https://solalah.com/invite/abc-123',
+      inviteUrl: 'https://gynat.com/invite/abc-123',
     });
-    expect(html).toContain('href="https://solalah.com/invite/abc-123"');
+    expect(html).toContain('href="https://gynat.com/invite/abc-123"');
   });
 
   test('does not include javascript: URI as a link', () => {

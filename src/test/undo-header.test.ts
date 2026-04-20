@@ -3,8 +3,8 @@ import { isUndoRequest } from '@/lib/api/undo-header';
 import { buildAuditDescription } from '@/lib/tree/audit';
 
 describe('isUndoRequest', () => {
-  it('returns true when X-Solalah-Undo header is "true"', () => {
-    const req = new Request('http://x/', { headers: { 'X-Solalah-Undo': 'true' } });
+  it('returns true when X-Gynat-Undo header is "true"', () => {
+    const req = new Request('http://x/', { headers: { 'X-Gynat-Undo': 'true' } });
     expect(isUndoRequest(req)).toBe(true);
   });
 
@@ -14,9 +14,9 @@ describe('isUndoRequest', () => {
   });
 
   it('returns false when header is set to other values', () => {
-    const req = new Request('http://x/', { headers: { 'X-Solalah-Undo': 'false' } });
+    const req = new Request('http://x/', { headers: { 'X-Gynat-Undo': 'false' } });
     expect(isUndoRequest(req)).toBe(false);
-    const req2 = new Request('http://x/', { headers: { 'X-Solalah-Undo': '1' } });
+    const req2 = new Request('http://x/', { headers: { 'X-Gynat-Undo': '1' } });
     expect(isUndoRequest(req2)).toBe(false);
   });
 });
