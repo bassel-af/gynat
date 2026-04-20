@@ -1,11 +1,12 @@
 /* ============================================
-   TREE DISPLAY SETTINGS — Node color pickers
+   TREE DISPLAY SETTINGS — Jeweled Heritage
    ============================================ */
 
 .wrapper {
   display: flex;
   flex-direction: column;
-  gap: var(--space-7);
+  gap: var(--space-9);
+  font-family: var(--heritage-font-body);
 }
 
 /* ---- Color picker tiles ---- */
@@ -21,38 +22,37 @@
   flex-direction: column;
   align-items: center;
   gap: var(--space-4);
-  padding: var(--space-7) var(--space-5) var(--space-5);
-  border-radius: var(--radius-2xl);
-  border: 1px solid var(--alpha-white-08);
-  background: var(--alpha-white-04);
+  padding: var(--space-9) var(--space-6) var(--space-6);
+  border-radius: var(--heritage-radius-lg);
+  border: 1px solid var(--heritage-glass-border);
+  background: rgba(10, 14, 26, 0.4);
   cursor: pointer;
-  transition:
-    border-color var(--transition-base),
-    background var(--transition-base),
-    box-shadow var(--transition-base);
+  transition: border-color 220ms, background 220ms, box-shadow 220ms, transform 220ms;
 }
 
 .colorTile:hover {
-  border-color: var(--alpha-white-15);
-  background: var(--alpha-white-06);
+  border-color: rgba(200, 168, 101, 0.35);
+  background: rgba(200, 168, 101, 0.04);
+  transform: translateY(-2px);
 }
 
 .colorTile:focus-within {
-  border-color: var(--color-primary);
-  box-shadow: var(--shadow-focus-primary);
+  border-color: var(--heritage-gold);
+  box-shadow: 0 0 0 3px rgba(200, 168, 101, 0.18);
 }
 
-/* The swatch (rounded rectangle, large, premium feel) */
+/* Swatch */
 .swatch {
   position: relative;
-  width: 56px;
-  height: 56px;
-  border-radius: var(--radius-xl);
+  width: 64px;
+  height: 64px;
+  border-radius: var(--heritage-radius-md);
   overflow: hidden;
   flex-shrink: 0;
   box-shadow:
     inset 0 1px 2px rgba(255, 255, 255, 0.25),
-    0 2px 6px rgba(0, 0, 0, 0.2);
+    0 4px 12px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(200, 168, 101, 0.18);
   transition:
     background-color var(--transition-slow),
     transform var(--transition-fast),
@@ -62,11 +62,11 @@
 .colorTile:hover .swatch {
   transform: scale(1.06);
   box-shadow:
-    inset 0 1px 2px rgba(255, 255, 255, 0.25),
-    0 4px 12px rgba(0, 0, 0, 0.25);
+    inset 0 1px 2px rgba(255, 255, 255, 0.3),
+    0 8px 24px rgba(0, 0, 0, 0.5),
+    0 0 0 1px var(--heritage-gold);
 }
 
-/* Subtle glass highlight overlay */
 .swatch::after {
   content: '';
   position: absolute;
@@ -81,7 +81,6 @@
   pointer-events: none;
 }
 
-/* Hidden native color input stretched over the swatch */
 .colorInput {
   position: absolute;
   inset: -8px;
@@ -100,48 +99,60 @@
 
 .colorInput::-webkit-color-swatch {
   border: none;
-  border-radius: var(--radius-xl);
+  border-radius: var(--heritage-radius-md);
 }
 
 .colorInput::-moz-color-swatch {
   border: none;
-  border-radius: var(--radius-xl);
+  border-radius: var(--heritage-radius-md);
 }
 
-/* Label beneath the swatch */
 .colorLabel {
-  font-size: var(--font-size-sm);
-  color: var(--alpha-white-50);
-  font-weight: var(--font-weight-medium);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--heritage-gold);
   text-align: center;
-  line-height: var(--line-height-snug);
+  line-height: 1.3;
 }
 
 /* ---- Preview stage ---- */
 .previewStage {
   position: relative;
-  padding: var(--space-11) var(--space-9);
-  border-radius: var(--radius-2xl);
-  border: 1px solid var(--alpha-white-06);
-  background: var(--alpha-white-04);
+  padding: var(--space-12) var(--space-9);
+  border-radius: var(--heritage-radius-lg);
+  border: 1px solid var(--heritage-glass-border);
+  background:
+    radial-gradient(ellipse 60% 40% at 50% 40%, rgba(46, 152, 118, 0.12) 0%, transparent 70%),
+    rgba(10, 14, 26, 0.5);
   overflow: hidden;
 }
 
-/* Subtle dot grid to evoke a canvas / graph paper feel */
 .previewStage::before {
   content: '';
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(circle, var(--alpha-white-06) 1px, transparent 1px);
-  background-size: 16px 16px;
+  background-image:
+    linear-gradient(rgba(200, 168, 101, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(200, 168, 101, 0.04) 1px, transparent 1px);
+  background-size: 32px 32px;
+  background-position: center;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 50%, black 0%, transparent 80%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 50%, black 0%, transparent 80%);
   pointer-events: none;
 }
 
 .previewLabel {
-  font-size: var(--font-size-xs);
-  color: var(--alpha-white-25);
+  font-family: var(--heritage-font-body);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--heritage-gold);
   text-align: center;
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--space-6);
   position: relative;
 }
 
@@ -152,7 +163,7 @@
   position: relative;
 }
 
-/* Preview cards mirroring the real PersonCard component */
+/* Preview cards mirroring PersonCard */
 .previewCard {
   width: 140px;
   background: white;
@@ -162,25 +173,24 @@
   text-align: center;
   border-top-width: 4px;
   border-top-style: solid;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.3);
   transition:
     border-top-color var(--transition-slow),
     box-shadow var(--transition-base);
 }
 
 .previewCardName {
-  font-weight: var(--font-weight-bold);
-  font-size: var(--font-size-base);
+  font-weight: 700;
+  font-size: 14px;
   color: var(--color-text-primary);
   margin-bottom: var(--space-1);
 }
 
 .previewCardDates {
-  font-size: var(--font-size-sm);
+  font-size: 12px;
   color: var(--color-text-secondary);
 }
 
-/* Connector line between preview cards (spouse connector) */
 .previewConnector {
   display: flex;
   align-items: center;
@@ -189,8 +199,9 @@
 .previewConnectorLine {
   width: 20px;
   height: 2px;
-  background: var(--color-light-600);
+  background: var(--heritage-gold);
   border-radius: 1px;
+  box-shadow: 0 0 6px rgba(200, 168, 101, 0.4);
 }
 
 /* ---- Reset footer ---- */
@@ -199,25 +210,28 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
-  padding: var(--space-5) var(--space-6);
+  padding: var(--space-5) var(--space-7);
   border-radius: var(--radius-lg);
-  border: 1px solid var(--alpha-white-06);
-  background: var(--alpha-white-04);
-  transition: background var(--transition-base);
+  border: 1px dashed rgba(200, 168, 101, 0.14);
+  background: rgba(10, 14, 26, 0.35);
+  transition: background 180ms, border-color 180ms;
 }
 
 .resetFooter:has(button:not(:disabled):hover) {
-  background: var(--alpha-white-06);
+  background: rgba(200, 168, 101, 0.04);
+  border-color: rgba(200, 168, 101, 0.28);
 }
 
 .resetHint {
-  font-size: var(--font-size-xs);
-  color: var(--alpha-white-25);
-  line-height: 1.5;
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  color: rgba(232, 223, 200, 0.45);
+  line-height: 1.6;
+  letter-spacing: 0.02em;
 }
 
 .resetHintSuccess {
-  color: #68d391;
+  color: var(--heritage-emerald-glow);
   animation: fadeInReset 0.2s ease;
 }
 
@@ -226,7 +240,7 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ---- Responsive ---- */
+/* Responsive */
 @media (max-width: 480px) {
   .colorTiles {
     grid-template-columns: 1fr 1fr;
@@ -234,12 +248,12 @@
   }
 
   .swatch {
-    width: 48px;
-    height: 48px;
+    width: 52px;
+    height: 52px;
   }
 
   .previewStage {
-    padding: var(--space-9) var(--space-5);
+    padding: var(--space-9) var(--space-6);
   }
 
   .previewCards {
@@ -252,21 +266,21 @@
   }
 
   .previewCardName {
-    font-size: var(--font-size-sm);
+    font-size: 13px;
   }
 
   .previewCardDates {
-    font-size: var(--font-size-xs);
+    font-size: 11px;
   }
 
   .previewConnectorLine {
-    width: 12px;
+    width: 14px;
   }
 
   .resetFooter {
     flex-direction: column;
     text-align: center;
     gap: var(--space-3);
-    padding: var(--space-4) var(--space-5);
+    padding: var(--space-4) var(--space-6);
   }
 }

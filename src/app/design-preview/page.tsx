@@ -209,7 +209,7 @@ export default function DesignPreviewPage() {
       <div className={styles.page}>
         {/* ============ NAV ============ */}
         <nav className={styles.navStrip}>
-          <div className={styles.wordmark}>صُلالَة</div>
+          <div className={styles.wordmark}>سُلالَة</div>
           <div className={styles.navPill}>
             <span className={styles.navDot} />
             معاينة التصميم · الإصدار التمهيدي

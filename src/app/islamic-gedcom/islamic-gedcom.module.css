@@ -1,63 +1,123 @@
+/* ============================================
+   ISLAMIC GEDCOM REFERENCE — Jeweled Heritage
+   ============================================ */
+
 .container {
   min-height: 100vh;
   min-height: 100dvh;
-  background: var(--color-dark-900);
-  color: var(--alpha-white-85);
+  background:
+    radial-gradient(ellipse 80% 60% at 85% 10%, rgba(46, 152, 118, 0.18) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 50% at 10% 90%, rgba(200, 168, 101, 0.10) 0%, transparent 60%),
+    radial-gradient(ellipse 100% 80% at 50% 50%, #0b1222 0%, #05070f 60%, #03050a 100%);
+  font-family: var(--heritage-font-body);
+  color: var(--heritage-parchment);
   direction: rtl;
-  padding: var(--space-8) var(--space-6);
+  padding: var(--space-11) var(--space-7);
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.container::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.95  0 0 0 0 0.9  0 0 0 0 0.8  0 0 0 0.35 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  opacity: 0.22;
+  mix-blend-mode: overlay;
+  z-index: 0;
 }
 
 .content {
-  max-width: 800px;
+  position: relative;
+  z-index: 1;
+  max-width: 880px;
   margin: 0 auto;
 }
 
+.header {
+  margin-bottom: var(--space-12);
+}
+
 .pageTitle {
-  font-size: var(--font-size-4xl);
-  font-weight: var(--font-weight-bold);
-  color: var(--alpha-white-85);
+  font-family: var(--heritage-font-display);
+  font-size: 40px;
+  font-weight: 500;
   text-align: center;
-  margin: 0 0 var(--space-4);
+  margin: 0 0 var(--space-5);
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  background: linear-gradient(135deg, var(--heritage-parchment) 0%, var(--heritage-gold-bright) 50%, var(--heritage-gold) 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
 }
 
 .pageSubtitle {
-  font-size: var(--font-size-base);
-  color: var(--alpha-white-40);
+  font-family: var(--heritage-font-body);
+  font-size: 15px;
+  color: rgba(232, 223, 200, 0.65);
   text-align: center;
-  margin: 0 0 var(--space-10);
-  line-height: 1.8;
-  max-width: 600px;
-  margin-left: auto;
-  margin-right: auto;
+  margin: 0 auto var(--space-11);
+  line-height: 1.9;
+  max-width: 640px;
+  font-weight: 300;
 }
 
+/* Section */
 .section {
-  margin-bottom: var(--space-10);
-  padding: var(--space-8);
-  border-radius: 12px;
-  border: 1px solid var(--alpha-white-10);
-  background: var(--alpha-white-04);
+  position: relative;
+  margin-bottom: var(--space-11);
+  padding: var(--space-11);
+  border-radius: var(--heritage-radius-xl);
+  border: 1px solid var(--heritage-glass-border);
+  background: var(--heritage-glass-bg-strong);
+  backdrop-filter: blur(30px) saturate(1.2);
+  -webkit-backdrop-filter: blur(30px) saturate(1.2);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+    0 2px 0 rgba(255, 255, 255, 0.04) inset,
+    0 20px 50px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+}
+
+.section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 8%;
+  right: 8%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--heritage-gold), transparent);
+  opacity: 0.5;
+  pointer-events: none;
 }
 
 .sectionTitle {
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-semibold);
-  color: var(--alpha-white-85);
-  margin: 0 0 var(--space-6);
-  padding-bottom: var(--space-4);
-  border-bottom: 1px solid var(--alpha-white-10);
+  font-family: var(--heritage-font-display);
+  font-size: 24px;
+  font-weight: 500;
+  color: var(--heritage-parchment);
+  margin: 0 0 var(--space-7);
+  padding-bottom: var(--space-5);
+  border-bottom: 1px dashed rgba(200, 168, 101, 0.18);
+  letter-spacing: -0.005em;
 }
 
 .desc {
-  font-size: var(--font-size-base);
-  color: var(--alpha-white-70);
-  line-height: 1.8;
-  margin: 0 0 var(--space-6);
+  font-family: var(--heritage-font-body);
+  font-size: 14px;
+  color: var(--heritage-text-soft);
+  line-height: 1.85;
+  margin: 0 0 var(--space-7);
+  font-weight: 300;
 }
 
 /* Tag definition block */
 .tagBlock {
-  margin-bottom: var(--space-8);
+  margin-bottom: var(--space-9);
 }
 
 .tagBlock:last-child {
@@ -68,7 +128,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  margin-bottom: var(--space-3);
+  margin-bottom: var(--space-4);
   flex-wrap: wrap;
 }
 
@@ -76,72 +136,77 @@
   direction: ltr;
   text-align: left;
   font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
-  font-size: var(--font-size-sm);
+  font-size: 12px;
   font-weight: 600;
-  padding: var(--space-1) var(--space-3);
+  padding: 4px 12px;
   border-radius: 6px;
   white-space: nowrap;
+  letter-spacing: 0.04em;
 }
 
 .tagBadgeCustom {
-  background: rgba(52, 211, 153, 0.15);
-  color: #34d399;
-  border: 1px solid rgba(52, 211, 153, 0.25);
+  background: rgba(46, 152, 118, 0.15);
+  color: var(--heritage-emerald-glow);
+  border: 1px solid rgba(46, 152, 118, 0.3);
 }
 
 .tagBadgeStandard {
-  background: rgba(96, 165, 250, 0.15);
-  color: #60a5fa;
-  border: 1px solid rgba(96, 165, 250, 0.25);
+  background: rgba(200, 168, 101, 0.12);
+  color: var(--heritage-gold-bright);
+  border: 1px solid rgba(200, 168, 101, 0.3);
 }
 
 .tagBadgeDivorce {
-  background: rgba(251, 113, 133, 0.15);
-  color: #fb7185;
-  border: 1px solid rgba(251, 113, 133, 0.25);
+  background: rgba(232, 92, 51, 0.1);
+  color: #f0b98b;
+  border: 1px solid rgba(232, 161, 92, 0.3);
 }
 
 .tagName {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  color: var(--alpha-white-85);
+  font-family: var(--heritage-font-display);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--heritage-parchment);
+  letter-spacing: -0.005em;
 }
 
 .tagDesc {
-  font-size: var(--font-size-sm);
-  color: var(--alpha-white-60);
-  line-height: 1.8;
-  margin: 0 0 var(--space-4);
+  font-family: var(--heritage-font-body);
+  font-size: 13px;
+  color: var(--heritage-text-soft);
+  line-height: 1.85;
+  margin: 0 0 var(--space-5);
+  font-weight: 300;
 }
 
-/* GEDCOM code examples */
+/* GEDCOM code example */
 .codeBlock {
   direction: ltr;
   text-align: left;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid var(--alpha-white-08);
-  border-radius: 8px;
-  padding: var(--space-4) var(--space-5);
+  background: rgba(3, 5, 10, 0.6);
+  border: 1px solid rgba(200, 168, 101, 0.14);
+  border-radius: var(--heritage-radius-sm);
+  padding: var(--space-5) var(--space-6);
   font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
-  font-size: var(--font-size-sm);
-  line-height: 1.8;
+  font-size: 12.5px;
+  line-height: 1.85;
   overflow-x: auto;
   white-space: pre;
-  color: var(--alpha-white-60);
+  color: var(--heritage-cream);
 }
 
 .codeTag {
-  color: #60a5fa;
+  color: var(--heritage-gold-bright);
   font-weight: 600;
 }
 
 .codeCustomTag {
-  color: #34d399;
+  color: var(--heritage-emerald-glow);
   font-weight: 600;
 }
 
 .codeId {
-  color: #fbbf24;
+  color: #f0b98b;
 }
 
 .codeVal {
@@ -149,32 +214,31 @@
 }
 
 .codeComment {
-  color: var(--alpha-white-25);
+  color: rgba(232, 223, 200, 0.35);
   font-style: italic;
 }
 
 .note {
-  font-size: var(--font-size-sm);
-  color: var(--alpha-white-50);
-  line-height: 1.7;
-  padding: var(--space-4);
-  border-radius: 8px;
-  border-right: 3px solid #fbbf24;
-  background: rgba(251, 191, 36, 0.06);
-  margin-top: var(--space-4);
+  font-family: var(--heritage-font-body);
+  font-size: 13px;
+  color: var(--heritage-text-soft);
+  line-height: 1.75;
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  border-right: 3px solid var(--heritage-gold);
+  background: rgba(200, 168, 101, 0.06);
+  margin-top: var(--space-5);
 }
 
-.header {
-  margin-bottom: var(--space-10);
-}
-
-/* Tag type label (قياسي / امتداد) */
+/* Tag type label */
 .tagLabel {
-  font-size: var(--font-size-xs);
-  color: var(--alpha-white-40);
-  padding: 2px var(--space-2);
-  border: 1px solid var(--alpha-white-15);
+  font-family: var(--heritage-font-body);
+  font-size: 10px;
+  color: rgba(232, 223, 200, 0.55);
+  padding: 2px 8px;
+  border: 1px solid var(--heritage-glass-border);
   border-radius: 4px;
+  letter-spacing: 0.08em;
 }
 
 .inlineCode {
@@ -182,114 +246,128 @@
   unicode-bidi: isolate;
   font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
   font-size: 0.9em;
-  background: rgba(255, 255, 255, 0.08);
-  padding: 1px 6px;
+  background: rgba(200, 168, 101, 0.08);
+  padding: 1px 7px;
   border-radius: 4px;
-  color: #60a5fa;
+  color: var(--heritage-gold-bright);
 }
 
-/* Mapping table (MARC ← عقد القران) */
+/* Mapping table */
 .mappingTable {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  margin-bottom: var(--space-8);
-  padding: var(--space-5);
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 8px;
-  border: 1px solid var(--alpha-white-08);
+  margin-bottom: var(--space-9);
+  padding: var(--space-6);
+  background: rgba(3, 5, 10, 0.4);
+  border-radius: var(--radius-lg);
+  border: 1px dashed rgba(200, 168, 101, 0.18);
 }
 
 .mappingRow {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
+  gap: var(--space-5);
 }
 
 .mappingTag {
   direction: ltr;
   font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
-  font-size: var(--font-size-sm);
+  font-size: 13px;
   font-weight: 600;
-  color: #60a5fa;
-  min-width: 60px;
+  color: var(--heritage-gold-bright);
+  min-width: 64px;
   text-align: center;
+  letter-spacing: 0.04em;
 }
 
 .mappingArrow {
-  color: var(--alpha-white-25);
-  font-size: var(--font-size-lg);
+  color: var(--heritage-gold);
+  font-size: 16px;
+  opacity: 0.7;
 }
 
 .mappingConcept {
-  font-size: var(--font-size-base);
-  color: var(--alpha-white-70);
+  font-family: var(--heritage-font-body);
+  font-size: 14px;
+  color: var(--heritage-text-soft);
 }
 
 /* Compatibility grid */
 .compatGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--space-4);
+  gap: var(--space-5);
 }
 
 .compatItem {
-  padding: var(--space-5);
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 8px;
-  border: 1px solid var(--alpha-white-08);
+  padding: var(--space-6);
+  background: rgba(3, 5, 10, 0.4);
+  border-radius: var(--radius-lg);
+  border: 1px dashed rgba(200, 168, 101, 0.18);
 }
 
 .compatVersion {
   direction: ltr;
   unicode-bidi: isolate;
   font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
-  font-size: var(--font-size-sm);
+  font-size: 13px;
   font-weight: 600;
-  color: #34d399;
+  color: var(--heritage-emerald-glow);
   display: block;
   margin-bottom: var(--space-3);
+  letter-spacing: 0.04em;
 }
 
 .compatDesc {
-  font-size: var(--font-size-sm);
-  color: var(--alpha-white-60);
-  line-height: 1.8;
+  font-family: var(--heritage-font-body);
+  font-size: 13px;
+  color: var(--heritage-text-soft);
+  line-height: 1.85;
   margin: 0;
+  font-weight: 300;
 }
 
 /* Footer */
 .footer {
-  margin-top: var(--space-10);
-  padding-top: var(--space-6);
-  border-top: 1px solid var(--alpha-white-08);
+  margin-top: var(--space-11);
+  padding-top: var(--space-7);
+  border-top: 1px dashed rgba(200, 168, 101, 0.12);
   text-align: center;
 }
 
 .lastUpdated {
-  font-size: var(--font-size-sm);
-  color: var(--alpha-white-25);
+  font-family: var(--heritage-font-body);
+  font-size: 12px;
+  color: rgba(232, 223, 200, 0.4);
   margin: 0 0 var(--space-3);
+  letter-spacing: 0.04em;
 }
 
 .footerNote {
-  font-size: var(--font-size-sm);
-  color: var(--alpha-white-30);
+  font-family: var(--heritage-font-body);
+  font-size: 12px;
+  color: rgba(232, 223, 200, 0.4);
   margin: 0;
-  line-height: 1.7;
+  line-height: 1.75;
+  font-style: italic;
 }
 
 @media (max-width: 640px) {
   .container {
-    padding: var(--space-6) var(--space-4);
+    padding: var(--space-8) var(--space-5);
   }
 
   .section {
-    padding: var(--space-6) var(--space-5);
+    padding: var(--space-8) var(--space-6);
   }
 
   .pageTitle {
-    font-size: var(--font-size-2xl);
+    font-size: 28px;
+  }
+
+  .sectionTitle {
+    font-size: 20px;
   }
 
   .tagHeader {

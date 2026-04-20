@@ -113,7 +113,7 @@ export default function AuditLogPage() {
             <p className={styles.emptyText}>سجل التعديلات غير مفعّل</p>
             <p className={styles.emptyHint}>
               يمكنك تفعيله من{' '}
-              <Link href={`/workspaces/${slug}`} style={{ color: 'var(--color-primary-light)', textDecoration: 'none' }}>
+              <Link href={`/workspaces/${slug}`} style={{ color: 'var(--heritage-gold-bright)', textDecoration: 'none' }}>
                 إعدادات المساحة
               </Link>
             </p>

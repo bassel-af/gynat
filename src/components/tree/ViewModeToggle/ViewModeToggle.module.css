@@ -1,7 +1,5 @@
 /* ============================================
-   VIEW MODE TOGGLE — floating segmented pill
-   at top-center of the canvas for switching
-   between single and multi-root modes.
+   VIEW MODE TOGGLE — Jeweled Heritage
    ============================================ */
 
 .pill {
@@ -12,60 +10,61 @@
   z-index: 10;
   display: flex;
   align-items: center;
-  gap: 0;
+  gap: 2px;
   padding: 3px;
-  background: var(--gradient-toggle);
-  border: 1px solid var(--alpha-white-15);
-  border-radius: var(--radius-full);
-  box-shadow: var(--shadow-xl);
+  background: rgba(10, 14, 26, 0.7);
+  border: 1px solid var(--heritage-glass-border);
+  border-radius: var(--heritage-radius-pill);
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+    0 16px 40px rgba(0, 0, 0, 0.5);
 }
 
 .segment {
   position: relative;
   padding: var(--space-2) var(--space-5);
   border: none;
-  border-radius: 16px;
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  font-family: inherit;
-  color: var(--alpha-white-50);
+  border-radius: var(--heritage-radius-pill);
+  font-family: var(--heritage-font-body);
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(232, 223, 200, 0.55);
   background: transparent;
   cursor: pointer;
-  transition: color var(--transition-fast), background-color 200ms ease;
+  letter-spacing: 0.04em;
+  transition: color 180ms, background 220ms;
   white-space: nowrap;
   line-height: 1.4;
 }
 
 .segment:hover {
-  color: var(--alpha-white-75);
+  color: var(--heritage-parchment);
 }
 
 .segmentActive {
-  background: var(--alpha-white-15);
-  color: var(--color-text-inverse);
+  background: linear-gradient(180deg, var(--heritage-gold-bright), var(--heritage-gold));
+  color: var(--heritage-midnight-deep);
+  font-weight: 600;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 4px 10px rgba(200, 168, 101, 0.25);
+}
+
+.segmentActive:hover {
+  color: var(--heritage-midnight-deep);
 }
 
 .segment:focus-visible {
   outline: none;
-  box-shadow: var(--shadow-focus-primary);
+  box-shadow: 0 0 0 3px rgba(200, 168, 101, 0.3);
 }
 
-/* Mobile — shorter labels */
 @media (max-width: 480px) {
-  .fullLabel {
-    display: none;
-  }
-
-  .shortLabel {
-    display: inline;
-  }
+  .fullLabel { display: none; }
+  .shortLabel { display: inline; }
 }
 
-/* Default: show full label, hide short label */
-.shortLabel {
-  display: none;
-}
-
-.fullLabel {
-  display: inline;
-}
+.shortLabel { display: none; }
+.fullLabel { display: inline; }

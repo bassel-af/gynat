@@ -421,7 +421,7 @@
 
 .aboutChip:focus-visible {
   outline: none;
-  box-shadow: var(--shadow-focus-primary);
+  box-shadow: 0 0 0 3px rgba(200, 168, 101, 0.3);
 }
 
 .aboutPanel {

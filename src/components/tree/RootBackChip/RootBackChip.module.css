@@ -1,36 +1,46 @@
 /* ============================================
-   ROOT BACK CHIP — floating pill to return
-   to the original root after re-rooting.
+   ROOT BACK CHIP — Jeweled Heritage
    ============================================ */
 
 .chip {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-2) var(--space-7);
-  background: var(--gradient-toggle);
-  border: 1px solid var(--alpha-white-15);
-  border-radius: var(--radius-full);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  font-family: inherit;
-  color: var(--color-text-inverse);
+  padding: var(--space-3) var(--space-7);
+  background: rgba(10, 14, 26, 0.7);
+  border: 1px solid var(--heritage-glass-border);
+  border-radius: var(--heritage-radius-pill);
+  font-family: var(--heritage-font-display);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--heritage-cream);
+  letter-spacing: 0.02em;
   cursor: pointer;
-  box-shadow: var(--shadow-xl);
-  max-width: 260px;
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+    0 16px 40px rgba(0, 0, 0, 0.5);
+  max-width: 280px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  animation: chipSlideIn 300ms cubic-bezier(0.4, 0, 0.2, 1);
-  transition: filter var(--transition-fast), transform var(--transition-fast);
+  animation: chipSlideIn 320ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: border-color 200ms, color 200ms, box-shadow 200ms, transform 200ms;
 }
 
 .chip:hover {
-  filter: brightness(1.15);
+  border-color: var(--heritage-gold);
+  color: var(--heritage-gold-bright);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+    0 16px 40px rgba(0, 0, 0, 0.55),
+    0 0 28px rgba(200, 168, 101, 0.18);
 }
 
 .chip:hover .icon {
   transform: translateX(3px);
+  color: var(--heritage-gold-bright);
 }
 
 .chip:active {
@@ -39,13 +49,16 @@
 
 .chip:focus-visible {
   outline: none;
-  box-shadow: var(--shadow-focus-primary);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+    0 16px 40px rgba(0, 0, 0, 0.5),
+    0 0 0 3px rgba(200, 168, 101, 0.3);
 }
 
 .icon {
   flex-shrink: 0;
-  color: var(--color-primary-light);
-  transition: transform var(--transition-fast);
+  color: var(--heritage-gold);
+  transition: transform var(--transition-fast), color 180ms;
 }
 
 .label {
@@ -55,32 +68,14 @@
 }
 
 @keyframes chipSlideIn {
-  from {
-    opacity: 0;
-    transform: translateX(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+  from { opacity: 0; transform: translateX(-16px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
-/* Very small screens — shorten label */
 @media (max-width: 480px) {
-  .fullLabel {
-    display: none;
-  }
-
-  .shortLabel {
-    display: inline;
-  }
+  .fullLabel { display: none; }
+  .shortLabel { display: inline; }
 }
 
-/* Default: show full label, hide short label */
-.shortLabel {
-  display: none;
-}
-
-.fullLabel {
-  display: inline;
-}
+.shortLabel { display: none; }
+.fullLabel { display: inline; }

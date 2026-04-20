@@ -49,7 +49,7 @@ export default function WorkspacesPage() {
   return (
     <main className={styles.root}>
       <header className={styles.header}>
-        <Link href="/workspaces" className={styles.wordmark}>صُلالَة</Link>
+        <Link href="/workspaces" className={styles.wordmark}>سُلالَة</Link>
         <div className={styles.headerActions}>
           <UserNav />
         </div>

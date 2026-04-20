@@ -524,9 +524,9 @@
    ============================================ */
 
 .person.pointed {
-  border-right: 2px dashed var(--color-pointer);
-  border-bottom: 2px dashed var(--color-pointer);
-  border-left: 2px dashed var(--color-pointer);
+  border-right: 2px dashed var(--heritage-emerald-glow);
+  border-bottom: 2px dashed var(--heritage-emerald-glow);
+  border-left: 2px dashed var(--heritage-emerald-glow);
   background: rgba(56, 178, 172, 0.08);
   cursor: default;
 }
@@ -548,8 +548,8 @@
   height: 22px;
   border-radius: 50%;
   background: rgba(10, 14, 26, 0.85);
-  border: 1.5px solid var(--color-pointer);
-  color: var(--color-pointer-light);
+  border: 1.5px solid var(--heritage-emerald-glow);
+  color: var(--heritage-emerald-glow);
   pointer-events: none;
   backdrop-filter: blur(8px);
 }
@@ -572,8 +572,8 @@
   height: 24px;
   border-radius: 50%;
   background: rgba(10, 14, 26, 0.85);
-  border: 1.5px solid var(--color-pointer);
-  color: var(--color-pointer-light);
+  border: 1.5px solid var(--heritage-emerald-glow);
+  color: var(--heritage-emerald-glow);
   cursor: help;
   backdrop-filter: blur(8px);
 }
@@ -585,7 +585,7 @@
 
 /* Pointed edge: dashed teal */
 .react-flow__edge.pointed-edge .react-flow__edge-path {
-  stroke: var(--color-pointer) !important;
+  stroke: var(--heritage-emerald-glow) !important;
   stroke-dasharray: 6 4;
   stroke-width: 2 !important;
   opacity: 0.85 !important;

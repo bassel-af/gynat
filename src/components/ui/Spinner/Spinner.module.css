@@ -1,3 +1,7 @@
+/* ============================================
+   SPINNER — Jeweled Heritage
+   ============================================ */
+
 .wrapper {
   display: flex;
   align-items: center;
@@ -8,10 +12,11 @@
 
 .spinner {
   display: inline-block;
-  border: 3px solid var(--alpha-white-10);
-  border-top-color: var(--color-primary);
+  border: 3px solid rgba(200, 168, 101, 0.12);
+  border-top-color: var(--heritage-gold);
   border-radius: 50%;
-  animation: spin var(--transition-slow) linear infinite;
+  animation: spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  box-shadow: 0 0 12px rgba(200, 168, 101, 0.18);
 }
 
 .sm {
@@ -32,12 +37,12 @@
 }
 
 .label {
-  font-size: var(--font-size-base);
-  color: var(--alpha-white-40);
+  font-family: var(--heritage-font-body);
+  font-size: 13px;
+  color: rgba(232, 223, 200, 0.55);
+  letter-spacing: 0.02em;
 }
 
 @keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+  to { transform: rotate(360deg); }
 }

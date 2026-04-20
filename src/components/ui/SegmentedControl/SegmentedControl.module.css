@@ -1,11 +1,15 @@
+/* ============================================
+   SEGMENTED CONTROL — Jeweled Heritage
+   ============================================ */
+
 .pill {
   display: inline-flex;
   align-items: center;
-  gap: 0;
+  gap: 2px;
   padding: 3px;
-  background: var(--alpha-white-06);
-  border: 1px solid var(--alpha-white-10);
-  border-radius: var(--radius-full);
+  background: rgba(10, 14, 26, 0.5);
+  border: 1px solid rgba(200, 168, 101, 0.1);
+  border-radius: var(--heritage-radius-pill);
   transition:
     opacity var(--transition-medium),
     background var(--transition-base),
@@ -18,33 +22,36 @@
 
 .segment {
   position: relative;
-  padding: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-6);
   border: none;
-  border-radius: 999px;
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  font-family: inherit;
-  color: var(--alpha-white-50);
+  border-radius: var(--heritage-radius-pill);
+  font-family: var(--heritage-font-body);
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(232, 223, 200, 0.6);
   background: transparent;
   cursor: pointer;
-  transition:
-    color var(--transition-fast),
-    background-color 200ms ease;
+  letter-spacing: 0.02em;
+  transition: color 180ms, background 220ms;
   white-space: nowrap;
   line-height: 1.4;
 }
 
 .segment:not(:disabled):hover {
-  color: var(--alpha-white-75);
+  color: var(--heritage-parchment);
 }
 
 .segmentActive {
-  background: var(--alpha-white-15);
-  color: var(--color-text-inverse);
+  background: linear-gradient(180deg, var(--heritage-gold-bright), var(--heritage-gold));
+  color: var(--heritage-midnight-deep);
+  font-weight: 600;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 4px 10px rgba(200, 168, 101, 0.25);
 }
 
 .segmentActive:hover {
-  color: var(--color-text-inverse);
+  color: var(--heritage-midnight-deep);
 }
 
 .segment:disabled {
@@ -53,5 +60,5 @@
 
 .segment:focus-visible {
   outline: none;
-  box-shadow: var(--shadow-focus-primary);
+  box-shadow: 0 0 0 3px rgba(200, 168, 101, 0.25);
 }

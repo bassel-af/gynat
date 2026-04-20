@@ -1,33 +1,38 @@
-/* ShareTokenList styles */
+/* ============================================
+   SHARE TOKEN LIST — Jeweled Heritage
+   ============================================ */
 
 .container {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  font-family: var(--heritage-font-body);
 }
 
 .tokenCard {
   display: flex;
-  padding: var(--space-4);
-  border-radius: 8px;
-  border: 1px solid var(--alpha-white-06);
-  background: var(--alpha-white-04);
+  padding: var(--space-5) var(--space-6);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--heritage-glass-border);
+  background: var(--heritage-glass-bg-strong);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 .tokenDisabled {
-  opacity: 0.75;
-  border-color: rgba(221, 173, 46, 0.2);
+  opacity: 0.72;
+  border-color: rgba(200, 168, 101, 0.2);
 }
 
 .tokenRevoked {
-  opacity: 0.75;
-  border-color: rgba(229, 62, 62, 0.15);
+  opacity: 0.72;
+  border-color: rgba(232, 161, 92, 0.2);
 }
 
 .tokenInfo {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
   min-width: 0;
   flex: 1;
 }
@@ -36,7 +41,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-3);
+  gap: var(--space-4);
 }
 
 .tokenRow1End {
@@ -47,47 +52,57 @@
 }
 
 .tokenRootName {
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-semibold);
-  color: var(--alpha-white-70);
+  font-family: var(--heritage-font-display);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--heritage-parchment);
+  letter-spacing: 0.005em;
 }
 
 .tokenMeta {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  font-size: var(--font-size-sm);
-  color: var(--alpha-white-50);
+  font-family: var(--heritage-font-body);
+  font-size: 12px;
+  color: rgba(232, 223, 200, 0.55);
 }
 
 .tokenDates {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  font-size: var(--font-size-sm);
-  color: var(--alpha-white-40);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  color: rgba(232, 223, 200, 0.4);
+  letter-spacing: 0.04em;
 }
 
 .tokenActions {
   display: flex;
   gap: var(--space-2);
-  margin-top: var(--space-1);
+  margin-top: var(--space-2);
 }
 
-/* Ghost button — disable action (safe, reversible) */
+/* Disable action (safe, reversible) */
 .disableButton {
-  padding: var(--space-1) var(--space-3);
-  border-radius: 6px;
-  border: 1px solid var(--alpha-white-15);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--heritage-radius-pill);
+  border: 1px solid var(--heritage-glass-border);
   background: transparent;
-  color: var(--alpha-white-50);
-  font-size: var(--font-size-sm);
+  color: var(--heritage-cream);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   cursor: pointer;
-  transition: background var(--transition-base);
+  transition: background 180ms, border-color 180ms, color 180ms;
 }
 
 .disableButton:hover:not(:disabled) {
-  background: var(--alpha-white-06);
+  background: rgba(200, 168, 101, 0.06);
+  border-color: var(--heritage-gold);
+  color: var(--heritage-gold-bright);
 }
 
 .disableButton:disabled {
@@ -95,20 +110,23 @@
   cursor: not-allowed;
 }
 
-/* Re-enable button */
+/* Re-enable */
 .reEnableButton {
-  padding: var(--space-1) var(--space-3);
-  border-radius: 6px;
-  border: 1px solid rgba(221, 173, 46, 0.25);
-  background: transparent;
-  color: rgba(221, 173, 46, 0.8);
-  font-size: var(--font-size-sm);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--heritage-radius-pill);
+  border: 1px solid rgba(200, 168, 101, 0.3);
+  background: rgba(200, 168, 101, 0.08);
+  color: var(--heritage-gold-bright);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   cursor: pointer;
-  transition: background var(--transition-base);
+  transition: background 180ms;
 }
 
 .reEnableButton:hover:not(:disabled) {
-  background: rgba(221, 173, 46, 0.08);
+  background: rgba(200, 168, 101, 0.18);
 }
 
 .reEnableButton:disabled {
@@ -116,20 +134,24 @@
   cursor: not-allowed;
 }
 
-/* Text-only red button — revoke action (destructive) */
+/* Revoke (destructive) */
 .revokeButtonText {
-  padding: var(--space-1) var(--space-3);
-  border-radius: 6px;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--heritage-radius-pill);
   border: none;
   background: transparent;
-  color: #fc8181;
-  font-size: var(--font-size-sm);
+  color: #e8a15c;
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   cursor: pointer;
-  transition: background var(--transition-base);
+  transition: background 180ms, color 180ms;
 }
 
 .revokeButtonText:hover:not(:disabled) {
-  background: rgba(229, 62, 62, 0.08);
+  background: rgba(232, 92, 51, 0.1);
+  color: #f0b98b;
 }
 
 .revokeButtonText:disabled {
@@ -138,72 +160,85 @@
 }
 
 .empty {
-  font-size: var(--font-size-sm);
-  color: var(--alpha-white-35);
+  font-family: var(--heritage-font-body);
+  font-size: 13px;
+  color: rgba(232, 223, 200, 0.4);
   text-align: center;
-  padding: var(--space-4);
+  padding: var(--space-5);
+  font-style: italic;
 }
 
 .error {
-  padding: var(--space-3) var(--space-4);
-  border-radius: 8px;
-  background: rgba(229, 62, 62, 0.1);
-  border: 1px solid rgba(229, 62, 62, 0.25);
-  color: #fc8181;
-  font-size: var(--font-size-sm);
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-lg);
+  background: rgba(232, 92, 51, 0.1);
+  border: 1px dashed rgba(232, 161, 92, 0.3);
+  color: #f0b98b;
+  font-family: var(--heritage-font-body);
+  font-size: 13px;
 }
 
 .revokedBadge {
   display: inline-flex;
   align-items: center;
-  padding: var(--space-1) var(--space-3);
-  border-radius: 999px;
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  background: rgba(229, 62, 62, 0.1);
-  color: rgba(229, 62, 62, 0.7);
-  border: 1px solid rgba(229, 62, 62, 0.15);
+  padding: 3px 10px;
+  border-radius: var(--heritage-radius-pill);
+  font-family: var(--heritage-font-body);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: rgba(232, 92, 51, 0.1);
+  color: #e8a15c;
+  border: 1px solid rgba(232, 161, 92, 0.25);
 }
 
 .disabledBadge {
   display: inline-flex;
   align-items: center;
-  padding: var(--space-1) var(--space-3);
-  border-radius: 999px;
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  background: rgba(221, 173, 46, 0.1);
-  color: rgba(221, 173, 46, 0.8);
-  border: 1px solid rgba(221, 173, 46, 0.2);
+  padding: 3px 10px;
+  border-radius: var(--heritage-radius-pill);
+  font-family: var(--heritage-font-body);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: rgba(200, 168, 101, 0.1);
+  color: var(--heritage-gold-bright);
+  border: 1px solid rgba(200, 168, 101, 0.25);
 }
 
 .expiredBadge {
   display: inline-flex;
   align-items: center;
-  padding: var(--space-1) var(--space-3);
-  border-radius: 999px;
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  background: rgba(221, 173, 46, 0.1);
-  color: rgba(221, 173, 46, 0.8);
-  border: 1px solid rgba(221, 173, 46, 0.2);
+  padding: 3px 10px;
+  border-radius: var(--heritage-radius-pill);
+  font-family: var(--heritage-font-body);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: rgba(200, 168, 101, 0.1);
+  color: var(--heritage-gold-bright);
+  border: 1px solid rgba(200, 168, 101, 0.25);
 }
 
-/* Revoke confirmation box */
+/* Revoke confirmation */
 .revokeConfirm {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  padding-top: var(--space-3);
-  margin-top: var(--space-1);
-  border-top: 1px solid rgba(229, 62, 62, 0.15);
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  margin-top: var(--space-2);
+  border-top: 1px dashed rgba(232, 161, 92, 0.22);
 }
 
 .confirmText {
-  font-size: var(--font-size-sm);
-  color: rgba(229, 62, 62, 0.85);
-  font-weight: var(--font-weight-medium);
-  line-height: 1.5;
+  font-family: var(--heritage-font-body);
+  font-size: 12px;
+  color: #f0b98b;
+  font-weight: 500;
+  line-height: 1.55;
 }
 
 .confirmButtons {
@@ -212,14 +247,18 @@
 }
 
 .confirmYes {
-  padding: var(--space-1) var(--space-3);
-  border-radius: 6px;
-  border: 1px solid rgba(229, 62, 62, 0.35);
-  background: rgba(229, 62, 62, 0.15);
-  color: #fc8181;
-  font-size: var(--font-size-sm);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--heritage-radius-pill);
+  border: 1px solid rgba(232, 161, 92, 0.4);
+  background: linear-gradient(180deg, #b84a2c 0%, #7a2a15 100%);
+  color: var(--heritage-parchment);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   cursor: pointer;
   white-space: nowrap;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
 
 .confirmYes:disabled {
@@ -228,12 +267,15 @@
 }
 
 .confirmNo {
-  padding: var(--space-1) var(--space-3);
-  border-radius: 6px;
-  border: 1px solid var(--alpha-white-15);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--heritage-radius-pill);
+  border: 1px solid var(--heritage-glass-border);
   background: transparent;
-  color: var(--alpha-white-50);
-  font-size: var(--font-size-sm);
+  color: var(--heritage-cream);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   cursor: pointer;
   white-space: nowrap;
 }
@@ -242,29 +284,37 @@
 .disableConfirm {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  padding-top: var(--space-3);
-  margin-top: var(--space-1);
-  border-top: 1px solid rgba(221, 173, 46, 0.15);
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  margin-top: var(--space-2);
+  border-top: 1px dashed rgba(200, 168, 101, 0.2);
 }
 
 .disableConfirmText {
-  font-size: var(--font-size-sm);
-  color: rgba(221, 173, 46, 0.85);
-  font-weight: var(--font-weight-medium);
-  line-height: 1.5;
+  font-family: var(--heritage-font-body);
+  font-size: 12px;
+  color: var(--heritage-gold-bright);
+  font-weight: 500;
+  line-height: 1.55;
 }
 
 .disableConfirmButton {
-  padding: var(--space-1) var(--space-3);
-  border-radius: 6px;
-  border: 1px solid rgba(221, 173, 46, 0.35);
-  background: rgba(221, 173, 46, 0.15);
-  color: rgba(221, 173, 46, 0.9);
-  font-size: var(--font-size-sm);
-  font-family: inherit;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--heritage-radius-pill);
+  border: 1px solid rgba(200, 168, 101, 0.4);
+  background: rgba(200, 168, 101, 0.12);
+  color: var(--heritage-gold-bright);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   cursor: pointer;
   white-space: nowrap;
+  transition: background 180ms;
+}
+
+.disableConfirmButton:hover:not(:disabled) {
+  background: rgba(200, 168, 101, 0.22);
 }
 
 .disableConfirmButton:disabled {
@@ -273,13 +323,15 @@
 }
 
 .cancelButton {
-  padding: var(--space-1) var(--space-3);
-  border-radius: 6px;
-  border: 1px solid var(--alpha-white-15);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--heritage-radius-pill);
+  border: 1px solid var(--heritage-glass-border);
   background: transparent;
-  color: var(--alpha-white-50);
-  font-size: var(--font-size-sm);
-  font-family: inherit;
+  color: var(--heritage-cream);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   cursor: pointer;
   white-space: nowrap;
 }

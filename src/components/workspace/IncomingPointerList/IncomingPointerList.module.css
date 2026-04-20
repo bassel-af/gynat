@@ -1,45 +1,52 @@
-/* IncomingPointerList styles */
+/* ============================================
+   INCOMING POINTER LIST — Jeweled Heritage
+   ============================================ */
 
 .container {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  font-family: var(--heritage-font-body);
 }
 
 .pointerCard {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-3) var(--space-4);
-  border-radius: 8px;
-  border: 1px solid var(--color-pointer-border);
-  background: var(--color-pointer-bg);
-  gap: var(--space-3);
+  padding: var(--space-5) var(--space-6);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(46, 152, 118, 0.28);
+  background: rgba(46, 152, 118, 0.08);
+  gap: var(--space-4);
 }
 
 .pointerInfo {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-2);
   min-width: 0;
 }
 
 .pointerRootName {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--alpha-white-70);
+  font-family: var(--heritage-font-display);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--heritage-parchment);
+  letter-spacing: 0.005em;
 }
 
 .pointerMeta {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  font-size: var(--font-size-xs);
-  color: var(--alpha-white-35);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  color: rgba(232, 223, 200, 0.5);
+  letter-spacing: 0.02em;
 }
 
 .pointerSourceName {
-  color: var(--color-pointer-light);
+  color: var(--heritage-emerald-glow);
 }
 
 .pointerActions {
@@ -49,18 +56,23 @@
 }
 
 .breakButton {
-  padding: var(--space-1) var(--space-3);
-  border-radius: 6px;
-  border: 1px solid rgba(229, 62, 62, 0.3);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--heritage-radius-pill);
+  border: 1px solid rgba(232, 92, 51, 0.3);
   background: transparent;
-  color: #fc8181;
-  font-size: var(--font-size-xs);
+  color: #e8a15c;
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   cursor: pointer;
-  transition: background var(--transition-base);
+  transition: background 180ms, border-color 180ms, color 180ms;
 }
 
 .breakButton:hover:not(:disabled) {
-  background: rgba(229, 62, 62, 0.1);
+  background: rgba(232, 92, 51, 0.12);
+  border-color: #e8a15c;
+  color: #f0b98b;
 }
 
 .breakButton:disabled {
@@ -69,19 +81,23 @@
 }
 
 .copyButton {
-  padding: var(--space-1) var(--space-3);
-  border-radius: 6px;
-  border: 1px solid var(--alpha-white-15);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--heritage-radius-pill);
+  border: 1px solid var(--heritage-glass-border);
   background: transparent;
-  color: var(--alpha-white-50);
-  font-size: var(--font-size-xs);
+  color: var(--heritage-cream);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   cursor: pointer;
-  transition: background var(--transition-base), color var(--transition-base);
+  transition: background 180ms, border-color 180ms, color 180ms;
 }
 
 .copyButton:hover:not(:disabled) {
-  background: var(--alpha-white-08);
-  color: var(--alpha-white-80);
+  background: rgba(200, 168, 101, 0.06);
+  border-color: var(--heritage-gold);
+  color: var(--heritage-gold-bright);
 }
 
 .copyButton:disabled {
@@ -90,73 +106,88 @@
 }
 
 .empty {
-  font-size: var(--font-size-sm);
-  color: var(--alpha-white-35);
+  font-family: var(--heritage-font-body);
+  font-size: 13px;
+  color: rgba(232, 223, 200, 0.4);
   text-align: center;
-  padding: var(--space-4);
+  padding: var(--space-5);
+  font-style: italic;
 }
 
 .error {
-  padding: var(--space-3) var(--space-4);
-  border-radius: 8px;
-  background: rgba(229, 62, 62, 0.1);
-  border: 1px solid rgba(229, 62, 62, 0.25);
-  color: #fc8181;
-  font-size: var(--font-size-sm);
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-lg);
+  background: rgba(232, 92, 51, 0.1);
+  border: 1px dashed rgba(232, 161, 92, 0.3);
+  color: #f0b98b;
+  font-family: var(--heritage-font-body);
+  font-size: 13px;
 }
 
 .statusBadge {
   display: inline-flex;
   align-items: center;
-  padding: var(--space-1) var(--space-3);
-  border-radius: 999px;
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
+  padding: 3px 10px;
+  border-radius: var(--heritage-radius-pill);
+  font-family: var(--heritage-font-body);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .statusActive {
   composes: statusBadge;
-  background: var(--color-pointer-badge-bg);
-  color: var(--color-pointer);
-  border: 1px solid var(--color-pointer-border);
+  background: rgba(46, 152, 118, 0.15);
+  color: var(--heritage-emerald-glow);
+  border: 1px solid rgba(46, 152, 118, 0.3);
 }
 
 .statusBroken {
   composes: statusBadge;
-  background: rgba(229, 62, 62, 0.1);
-  color: rgba(229, 62, 62, 0.7);
-  border: 1px solid rgba(229, 62, 62, 0.15);
+  background: rgba(232, 92, 51, 0.1);
+  color: #e8a15c;
+  border: 1px solid rgba(232, 161, 92, 0.25);
 }
 
 /* Confirm dialog inline */
 .confirmInline {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-3);
 }
 
 .confirmText {
-  font-size: var(--font-size-xs);
-  color: rgba(229, 62, 62, 0.85);
-  font-weight: var(--font-weight-medium);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  color: #f0b98b;
+  font-weight: 500;
+  letter-spacing: 0.02em;
 }
 
 .confirmYes {
-  padding: var(--space-1) var(--space-3);
-  border-radius: 6px;
-  border: 1px solid rgba(229, 62, 62, 0.35);
-  background: rgba(229, 62, 62, 0.15);
-  color: #fc8181;
-  font-size: var(--font-size-xs);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--heritage-radius-pill);
+  border: 1px solid rgba(232, 161, 92, 0.4);
+  background: linear-gradient(180deg, #b84a2c 0%, #7a2a15 100%);
+  color: var(--heritage-parchment);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
 
 .confirmNo {
-  padding: var(--space-1) var(--space-3);
-  border-radius: 6px;
-  border: 1px solid var(--alpha-white-15);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--heritage-radius-pill);
+  border: 1px solid var(--heritage-glass-border);
   background: transparent;
-  color: var(--alpha-white-50);
-  font-size: var(--font-size-xs);
+  color: var(--heritage-cream);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   cursor: pointer;
 }

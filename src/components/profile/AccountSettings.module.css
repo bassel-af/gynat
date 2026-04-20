@@ -1,23 +1,27 @@
 /* ============================================
-   ACCOUNT SETTINGS — Name & Email forms
+   ACCOUNT SETTINGS — Jeweled Heritage
    ============================================ */
 
 .form {
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
+  gap: var(--space-6);
+  font-family: var(--heritage-font-body);
 }
 
 .fieldRow {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
 }
 
 .label {
-  font-size: var(--font-size-sm);
-  color: var(--alpha-white-50);
-  font-weight: var(--font-weight-medium);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--heritage-gold);
 }
 
 .inputRow {
@@ -33,70 +37,82 @@
 
 .input {
   width: 100%;
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--alpha-white-10);
-  background: var(--alpha-white-04);
-  color: var(--alpha-white-85);
-  font-size: var(--font-size-base);
-  font-family: inherit;
+  padding: var(--space-5) var(--space-7);
+  border-radius: var(--heritage-radius-sm);
+  border: 1px solid rgba(200, 168, 101, 0.12);
+  background: rgba(10, 14, 26, 0.5);
+  color: var(--heritage-parchment);
+  font-family: var(--heritage-font-body);
+  font-size: 14px;
+  letter-spacing: 0.005em;
   outline: none;
-  transition: border-color var(--transition-base);
+  transition: border-color 220ms, background 220ms, box-shadow 220ms;
 }
 
 .input::placeholder {
-  color: var(--alpha-white-25);
+  color: rgba(232, 223, 200, 0.32);
 }
 
 .input:focus {
-  border-color: var(--color-primary);
+  border-color: var(--heritage-gold);
+  background: rgba(10, 14, 26, 0.7);
+  box-shadow:
+    0 0 0 3px rgba(200, 168, 101, 0.1),
+    inset 0 0 0 1px rgba(200, 168, 101, 0.25);
 }
 
 .input:disabled {
-  opacity: 0.35;
+  opacity: 0.4;
   cursor: not-allowed;
-  border-color: var(--alpha-white-06);
-  background: transparent;
+  border-color: rgba(200, 168, 101, 0.06);
+  background: rgba(10, 14, 26, 0.25);
 }
 
 .emailDisplay {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--alpha-white-06);
-  background: transparent;
-  color: var(--alpha-white-50);
-  font-size: var(--font-size-base);
+  padding: var(--space-4) var(--space-6);
+  border-radius: var(--heritage-radius-sm);
+  border: 1px dashed rgba(200, 168, 101, 0.14);
+  background: rgba(10, 14, 26, 0.3);
+  color: var(--heritage-cream);
+  font-family: var(--heritage-font-body);
+  font-size: 13px;
   direction: ltr;
   unicode-bidi: isolate;
 }
 
 .emailHint {
-  font-size: var(--font-size-xs);
-  color: var(--alpha-white-25);
-  line-height: 1.5;
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  color: rgba(232, 223, 200, 0.45);
+  line-height: 1.6;
+  letter-spacing: 0.02em;
 }
 
 .saveButton {
-  align-self: center;
+  align-self: flex-start;
 }
 
 .divider {
   border: none;
-  border-top: 1px solid var(--alpha-white-06);
-  margin: var(--space-1) 0;
+  border-top: 1px dashed rgba(200, 168, 101, 0.12);
+  margin: var(--space-2) 0;
 }
 
 .fieldError {
-  color: #fc8181;
-  font-size: var(--font-size-xs);
+  color: #f0b98b;
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  letter-spacing: 0.02em;
 }
 
 .fieldSuccess {
-  color: #68d391;
-  font-size: var(--font-size-xs);
+  color: var(--heritage-emerald-glow);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  letter-spacing: 0.02em;
 }
 
 /* ============================================
@@ -107,96 +123,102 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-4);
+  gap: var(--space-5);
   padding: var(--space-11) var(--space-9);
-  border-radius: var(--radius-2xl);
-  border: 1px solid rgba(74, 144, 217, 0.2);
-  background: rgba(74, 144, 217, 0.04);
+  border-radius: var(--heritage-radius-xl);
+  border: 1px dashed rgba(46, 152, 118, 0.28);
+  background: rgba(46, 152, 118, 0.06);
   text-align: center;
-  animation: confirmSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: confirmSlideIn 0.32s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes confirmSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .confirmationIcon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 56px;
-  height: 56px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
-  background: rgba(74, 144, 217, 0.1);
-  color: var(--color-primary-light);
+  background: linear-gradient(180deg, rgba(46, 152, 118, 0.25), rgba(15, 58, 45, 0.45));
+  border: 1px solid rgba(46, 152, 118, 0.45);
+  color: var(--heritage-emerald-glow);
   flex-shrink: 0;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    0 10px 26px rgba(46, 152, 118, 0.22);
 }
 
 .confirmationTitle {
   margin: 0;
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  color: var(--alpha-white-80);
-  line-height: var(--line-height-snug);
+  font-family: var(--heritage-font-display);
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--heritage-parchment);
+  line-height: 1.3;
+  letter-spacing: -0.005em;
 }
 
 .confirmationDescription {
   margin: 0;
-  font-size: var(--font-size-sm);
-  color: var(--alpha-white-40);
-  line-height: 1.7;
+  font-family: var(--heritage-font-body);
+  font-size: 13px;
+  color: rgba(232, 223, 200, 0.7);
+  line-height: 1.75;
 }
 
 .confirmationDescription strong {
-  color: var(--alpha-white-60);
-  font-weight: var(--font-weight-semibold);
+  color: var(--heritage-gold-bright);
+  font-weight: 600;
 }
 
 /* Email address list */
 .emailList {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
   width: 100%;
-  max-width: 340px;
+  max-width: 360px;
 }
 
 .emailListItem {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-4) var(--space-5);
   border-radius: var(--radius-lg);
-  background: var(--alpha-white-04);
-  border: 1px solid var(--alpha-white-06);
+  background: rgba(10, 14, 26, 0.5);
+  border: 1px solid var(--heritage-glass-border);
 }
 
 .emailBadge {
   flex-shrink: 0;
-  padding: 2px var(--space-3);
-  border-radius: var(--radius-full);
-  background: var(--alpha-white-08);
-  color: var(--alpha-white-40);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
+  padding: 3px var(--space-4);
+  border-radius: var(--heritage-radius-pill);
+  background: rgba(232, 223, 200, 0.06);
+  border: 1px solid rgba(232, 223, 200, 0.12);
+  color: rgba(232, 223, 200, 0.55);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   white-space: nowrap;
 }
 
 .emailBadgeNew {
-  background: rgba(74, 144, 217, 0.12);
-  color: var(--color-primary-light);
+  background: rgba(46, 152, 118, 0.12);
+  border-color: rgba(46, 152, 118, 0.3);
+  color: var(--heritage-emerald-glow);
 }
 
 .emailAddress {
-  font-size: var(--font-size-sm);
-  color: var(--alpha-white-70);
+  font-family: var(--heritage-font-body);
+  font-size: 12px;
+  color: var(--heritage-cream);
   direction: ltr;
   unicode-bidi: isolate;
   overflow: hidden;
@@ -207,40 +229,44 @@
 
 .confirmationHint {
   margin: 0;
-  font-size: var(--font-size-xs);
-  color: var(--alpha-white-25);
-  line-height: 1.6;
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  color: rgba(232, 223, 200, 0.45);
+  line-height: 1.7;
+  letter-spacing: 0.02em;
 }
 
 .dismissLink {
-  margin-top: var(--space-1);
+  margin-top: var(--space-2);
   padding: 0;
   border: none;
   background: none;
-  color: var(--alpha-white-35);
-  font-size: var(--font-size-xs);
-  font-family: inherit;
+  color: rgba(232, 223, 200, 0.5);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
   cursor: pointer;
   text-decoration: underline;
-  text-decoration-color: var(--alpha-white-15);
+  text-decoration-color: rgba(200, 168, 101, 0.25);
   text-underline-offset: 3px;
-  transition: color var(--transition-base);
+  letter-spacing: 0.04em;
+  transition: color 180ms, text-decoration-color 180ms;
 }
 
 .dismissLink:hover {
-  color: var(--alpha-white-60);
-  text-decoration-color: var(--alpha-white-35);
+  color: var(--heritage-gold-bright);
+  text-decoration-color: var(--heritage-gold);
 }
 
 .dismissLink:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(200, 168, 101, 0.25);
   border-radius: var(--radius-sm);
 }
 
 @media (max-width: 480px) {
   .inputRow {
     flex-direction: column;
+    align-items: stretch;
   }
 
   .confirmationCard {

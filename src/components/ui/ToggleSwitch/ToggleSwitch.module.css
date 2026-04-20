@@ -1,4 +1,7 @@
-/* Track (the outer pill) */
+/* ============================================
+   TOGGLE SWITCH — Jeweled Heritage
+   ============================================ */
+
 .track {
   position: relative;
   display: inline-flex;
@@ -7,31 +10,30 @@
   width: 44px;
   height: 24px;
   padding: 2px;
-  border: none;
+  border: 1px solid rgba(200, 168, 101, 0.18);
   border-radius: 999px;
-  background: var(--alpha-white-12);
+  background: rgba(10, 14, 26, 0.8);
   cursor: pointer;
-  transition:
-    background var(--transition-base),
-    box-shadow var(--transition-base);
+  transition: background 260ms, border-color 260ms, box-shadow 260ms;
   outline: none;
 }
 
 .track:focus-visible {
-  box-shadow: var(--shadow-focus-primary);
+  box-shadow: 0 0 0 3px rgba(200, 168, 101, 0.25);
 }
 
 .track:hover:not(:disabled) {
-  background: var(--alpha-white-15);
+  border-color: rgba(200, 168, 101, 0.35);
 }
 
 /* Active / ON state */
 .trackOn {
-  background: var(--color-primary);
+  background: linear-gradient(135deg, rgba(46, 152, 118, 0.5), rgba(15, 58, 45, 0.85));
+  border-color: rgba(46, 152, 118, 0.55);
 }
 
 .trackOn:hover:not(:disabled) {
-  background: var(--color-primary-dark);
+  background: linear-gradient(135deg, rgba(46, 152, 118, 0.65), rgba(15, 58, 45, 0.95));
 }
 
 /* Disabled state */
@@ -46,18 +48,24 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
-  background: var(--alpha-white-60);
-  transition: transform var(--transition-medium);
+  background: linear-gradient(135deg, var(--heritage-gold-bright), var(--heritage-gold-deep));
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1), background 260ms;
   /* RTL: default position is on the right; ON slides to the left */
   transform: translateX(0);
 }
 
 .thumbOn {
-  background: #fff;
+  background: linear-gradient(135deg, var(--heritage-parchment), var(--heritage-gold-bright));
   transform: translateX(-20px);
+  box-shadow:
+    0 2px 8px rgba(46, 152, 118, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45);
 }
 
 /* Spinner inside thumb while loading */
@@ -66,17 +74,15 @@
   width: 12px;
   height: 12px;
   border: 2px solid transparent;
-  border-top-color: var(--color-primary);
+  border-top-color: var(--heritage-midnight-deep);
   border-radius: 50%;
   animation: toggleSpin 0.6s linear infinite;
 }
 
 .trackOn .thumbSpinner {
-  border-top-color: var(--color-primary-dark);
+  border-top-color: var(--heritage-midnight-deep);
 }
 
 @keyframes toggleSpin {
-  to {
-    transform: rotate(360deg);
-  }
+  to { transform: rotate(360deg); }
 }

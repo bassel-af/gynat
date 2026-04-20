@@ -694,7 +694,7 @@ export default function WorkspaceDetailPage() {
               <button
                 onClick={handleOpenShareModal}
                 className={styles.inviteButton}
-                style={{ borderColor: 'var(--color-pointer)', color: 'var(--color-pointer-light)' }}
+                style={{ borderColor: 'var(--heritage-emerald-glow)', color: 'var(--heritage-emerald-glow)' }}
               >
                 إنشاء رمز مشاركة
               </button>

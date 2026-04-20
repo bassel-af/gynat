@@ -1,3 +1,7 @@
+/* ============================================
+   UNDO/REDO BUTTONS — Jeweled Heritage
+   ============================================ */
+
 .group {
   display: inline-flex;
   align-items: center;
@@ -8,31 +12,32 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   padding: 0;
   background: transparent;
   border: none;
   border-radius: var(--radius-md);
-  color: var(--color-text-inverse);
+  color: var(--heritage-cream);
   cursor: pointer;
-  transition: background var(--transition-fast);
-  font-family: inherit;
+  transition: background 180ms, color 180ms;
+  font-family: var(--heritage-font-body);
 }
 
 .button:hover:not(:disabled) {
-  background: var(--alpha-white-08);
+  background: rgba(200, 168, 101, 0.1);
+  color: var(--heritage-gold-bright);
 }
 
 .button:focus-visible {
   outline: none;
-  box-shadow: var(--shadow-focus-primary);
+  box-shadow: 0 0 0 2px rgba(200, 168, 101, 0.3);
 }
 
 .button:disabled {
   opacity: 0.35;
   cursor: not-allowed;
-  color: var(--alpha-white-40);
+  color: rgba(232, 223, 200, 0.35);
 }
 
 .button:disabled:hover {
@@ -41,33 +46,31 @@
 
 .icon {
   flex-shrink: 0;
-  color: var(--color-primary-light);
+  color: var(--heritage-gold);
 }
 
 .button:disabled .icon {
-  color: var(--alpha-white-40);
+  color: rgba(232, 223, 200, 0.35);
 }
 
 .spinner {
   display: inline-block;
   width: 12px;
   height: 12px;
-  border: 2px solid var(--alpha-white-10);
-  border-top-color: var(--color-primary-light);
+  border: 2px solid rgba(200, 168, 101, 0.12);
+  border-top-color: var(--heritage-gold);
   border-radius: 50%;
-  animation: spin 0.3s linear infinite;
+  animation: spin 0.4s linear infinite;
   flex-shrink: 0;
 }
 
 @keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+  to { transform: rotate(360deg); }
 }
 
 @media (max-width: 768px) {
   .button {
-    width: 26px;
-    height: 26px;
+    width: 28px;
+    height: 28px;
   }
 }

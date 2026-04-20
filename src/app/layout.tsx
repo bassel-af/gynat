@@ -33,7 +33,7 @@ const arefRuqaa = Aref_Ruqaa({
 });
 
 export const metadata: Metadata = {
-  title: 'صُلالَة',
+  title: 'سُلالَة',
   description: 'Family genealogy web application',
 };
 

@@ -227,11 +227,11 @@ export default function ProfileClient() {
             <span className={styles.sectionIcon} style={{ color: '#fc8181' }}>
               <iconify-icon icon="material-symbols:logout" width="18" height="18" />
             </span>
-            <h3 className={styles.sectionTitle} style={{ color: '#fc8181' }}>تسجيل الخروج</h3>
+            <h3 className={styles.sectionTitle} style={{ color: '#f0b98b' }}>تسجيل الخروج</h3>
           </div>
           <div className={styles.sectionBody}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-4)' }}>
-              <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--alpha-white-35)', lineHeight: '1.5' }}>
+              <span style={{ fontSize: 'var(--font-size-sm)', color: 'rgba(232, 223, 200, 0.5)', lineHeight: '1.6' }}>
                 سيتم تسجيل خروجك من جميع مساحات العائلة على هذا الجهاز
               </span>
               <Button

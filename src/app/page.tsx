@@ -52,7 +52,7 @@ export default function Home() {
 
       <div className={styles.page}>
         <nav className={styles.nav}>
-          <div className={styles.wordmark}>صُلالَة</div>
+          <div className={styles.wordmark}>سُلالَة</div>
           <div className={styles.navLinks}>
             <a href="/islamic-gedcom" className={styles.navLink}>مرجع GEDCOM الإسلامي</a>
             <a href="/policy" className={styles.navLink}>السياسة</a>
