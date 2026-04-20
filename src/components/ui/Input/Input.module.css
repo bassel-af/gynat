@@ -5,48 +5,71 @@
 }
 
 .label {
-  font-size: var(--font-size-sm);
-  color: var(--alpha-white-50);
-  font-weight: var(--font-weight-medium);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--heritage-gold);
 }
 
 .input {
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--alpha-white-10);
-  background: var(--alpha-white-04);
-  color: var(--alpha-white-85);
+  padding: var(--space-5) var(--space-7);
+  border-radius: var(--heritage-radius-sm);
+  border: 1px solid rgba(200, 168, 101, 0.12);
+  background: rgba(10, 14, 26, 0.5);
+  color: var(--heritage-parchment);
   font-size: var(--font-size-base);
-  font-family: inherit;
+  font-family: var(--heritage-font-body);
+  letter-spacing: 0.005em;
   outline: none;
-  transition: border-color var(--transition-base);
+  transition: border-color 220ms, background 220ms, box-shadow 220ms;
 }
 
 .input::placeholder {
-  color: var(--alpha-white-25);
+  color: rgba(232, 223, 200, 0.32);
+}
+
+.input:hover:not(:disabled) {
+  border-color: rgba(200, 168, 101, 0.25);
 }
 
 .input:focus {
-  border-color: var(--color-primary);
+  border-color: var(--heritage-gold);
+  background: rgba(10, 14, 26, 0.7);
+  box-shadow:
+    0 0 0 3px rgba(200, 168, 101, 0.1),
+    inset 0 0 0 1px rgba(200, 168, 101, 0.25);
 }
 
 .input:disabled {
-  opacity: 0.35;
+  opacity: 0.4;
   cursor: not-allowed;
-  border-color: var(--alpha-white-06);
-  background: transparent;
+  border-color: rgba(200, 168, 101, 0.06);
+  background: rgba(10, 14, 26, 0.25);
 }
 
 .inputError {
-  border-color: var(--color-error);
+  border-color: #e8a15c;
+}
+
+.inputError:focus {
+  border-color: #e8a15c;
+  box-shadow:
+    0 0 0 3px rgba(232, 161, 92, 0.14),
+    inset 0 0 0 1px rgba(232, 161, 92, 0.3);
 }
 
 .hint {
-  font-size: var(--font-size-xs);
-  color: var(--alpha-white-25);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  color: rgba(232, 223, 200, 0.55);
+  letter-spacing: 0.03em;
 }
 
 .errorMessage {
-  font-size: var(--font-size-xs);
-  color: #fc8181;
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  color: #f0b98b;
+  letter-spacing: 0.02em;
 }

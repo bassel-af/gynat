@@ -1,16 +1,20 @@
-/* Shared form element styles used by IndividualForm and FamilyEventForm */
+/* Shared form element styles — Jeweled Heritage
+   Used by IndividualForm, FamilyEventForm, RadaaFamilyForm */
 
 /* Field group */
 .fieldGroup {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
 }
 
 .label {
-  font-size: var(--font-size-sm);
-  color: var(--alpha-white-50);
-  font-weight: var(--font-weight-medium);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--heritage-gold);
 }
 
 /* Checkbox */
@@ -19,86 +23,97 @@
   align-items: center;
   gap: var(--space-3);
   cursor: pointer;
-  font-size: var(--font-size-base);
-  color: var(--alpha-white-60);
-  transition: color var(--transition-base);
+  font-family: var(--heritage-font-body);
+  font-size: 13px;
+  color: var(--heritage-cream);
+  transition: color 180ms;
 }
 
 .checkboxLabel:hover {
-  color: var(--alpha-white-80);
+  color: var(--heritage-gold-bright);
 }
 
 .checkbox {
   appearance: none;
-  width: 16px;
-  height: 16px;
-  border: 1.5px solid var(--alpha-white-25);
-  border-radius: var(--radius-sm);
-  background: transparent;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid rgba(200, 168, 101, 0.32);
+  border-radius: 5px;
+  background: rgba(10, 14, 26, 0.6);
   cursor: pointer;
-  transition: background var(--transition-base), border-color var(--transition-base);
+  transition: all 200ms;
   position: relative;
   flex-shrink: 0;
 }
 
 .checkbox:checked {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
+  background: linear-gradient(180deg, var(--heritage-gold-bright), var(--heritage-gold));
+  border-color: var(--heritage-gold);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 4px 10px rgba(200, 168, 101, 0.2);
 }
 
 .checkbox:checked::after {
   content: '';
   position: absolute;
-  top: 2px;
-  left: 4.5px;
-  width: 4px;
-  height: 7px;
-  border: solid var(--color-text-inverse);
-  border-width: 0 1.5px 1.5px 0;
-  transform: rotate(45deg);
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 6px;
+  border-left: 2px solid var(--heritage-midnight-deep);
+  border-bottom: 2px solid var(--heritage-midnight-deep);
+  transform: translate(-50%, -70%) rotate(-45deg);
 }
 
 .checkbox:focus-visible {
-  box-shadow: var(--shadow-focus-primary);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(200, 168, 101, 0.22);
 }
 
 /* Textarea */
 .textarea {
   width: 100%;
-  padding: var(--space-3) var(--space-4);
-  background: var(--alpha-white-04);
-  border: 1px solid var(--alpha-white-15);
-  border-radius: var(--radius-lg);
-  color: var(--alpha-white-85);
-  font-size: var(--font-size-base);
-  font-family: inherit;
+  padding: var(--space-5) var(--space-7);
+  background: rgba(10, 14, 26, 0.5);
+  border: 1px solid rgba(200, 168, 101, 0.12);
+  border-radius: var(--heritage-radius-sm);
+  color: var(--heritage-parchment);
+  font-family: var(--heritage-font-body);
+  font-size: 14px;
+  font-weight: 300;
+  line-height: 1.7;
   resize: vertical;
-  transition: border-color var(--transition-base), box-shadow var(--transition-base);
+  outline: none;
+  letter-spacing: 0.005em;
+  transition: border-color 220ms, background 220ms, box-shadow 220ms;
 }
 
 .textarea::placeholder {
-  color: var(--alpha-white-35);
+  color: rgba(232, 223, 200, 0.32);
 }
 
 .textarea:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: var(--shadow-focus-primary);
+  border-color: var(--heritage-gold);
+  background: rgba(10, 14, 26, 0.7);
+  box-shadow:
+    0 0 0 3px rgba(200, 168, 101, 0.1),
+    inset 0 0 0 1px rgba(200, 168, 101, 0.25);
 }
 
 /* Error area */
 .error {
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-4) var(--space-5);
   border-radius: var(--radius-lg);
-  background: rgba(229, 62, 62, 0.1);
-  border: 1px solid rgba(229, 62, 62, 0.25);
-  color: #fc8181;
-  font-size: var(--font-size-sm);
+  background: rgba(232, 92, 51, 0.1);
+  border: 1px dashed rgba(232, 161, 92, 0.3);
+  color: #f0b98b;
+  font-family: var(--heritage-font-body);
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 /* Hijri date field accent */
 .hijriFieldAccented {
-  border-inline-start: 2px solid var(--alpha-white-08);
-  padding-inline-start: var(--space-3);
+  border-inline-start: 2px solid rgba(200, 168, 101, 0.25);
+  padding-inline-start: var(--space-4);
   margin-inline-start: var(--space-1);
 }

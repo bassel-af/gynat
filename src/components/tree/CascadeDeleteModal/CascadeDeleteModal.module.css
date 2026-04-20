@@ -1,125 +1,196 @@
+/* ============================================
+   CASCADE DELETE MODAL — Danger (Jeweled Heritage)
+   ============================================ */
+
 .modal {
-  max-width: 480px;
+  max-width: 520px;
+  border-color: rgba(232, 161, 92, 0.32);
+  background: linear-gradient(180deg, rgba(40, 20, 18, 0.92), rgba(18, 10, 8, 0.96));
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+    0 2px 0 rgba(255, 255, 255, 0.05) inset,
+    0 50px 120px rgba(0, 0, 0, 0.7),
+    0 0 80px rgba(232, 92, 51, 0.15);
 }
 
+.modal::before {
+  background: linear-gradient(90deg, transparent, #e8a15c, transparent) !important;
+}
+
+/* ---------- Warning block ---------- */
 .warning {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  padding: 12px 14px;
-  background: rgba(229, 62, 62, 0.08);
-  border: 1px solid rgba(229, 62, 62, 0.2);
-  border-radius: var(--radius-md);
-  color: var(--color-error);
-  font-size: var(--font-size-sm);
-  line-height: 1.5;
-  margin-bottom: 12px;
+  gap: var(--space-5);
+  padding: var(--space-6);
+  background: rgba(10, 14, 26, 0.45);
+  border: 1px dashed rgba(232, 161, 92, 0.25);
+  border-radius: var(--radius-lg);
+  color: var(--heritage-text-soft);
+  font-family: var(--heritage-font-body);
+  font-size: var(--font-size-base);
+  line-height: 1.7;
 }
 
 .warningIcon {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
   margin-top: 2px;
-  color: var(--color-error);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(232, 92, 51, 0.22), rgba(120, 40, 30, 0.35));
+  border: 1px solid rgba(232, 161, 92, 0.4);
+  color: #f0b98b;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 10px 22px rgba(232, 92, 51, 0.18);
 }
 
 .warning p {
   margin: 0;
+  flex: 1;
 }
 
 .warning strong {
-  font-weight: var(--font-weight-semibold);
+  color: #f0b98b;
+  font-weight: 600;
 }
 
+/* ---------- Pointer warning ---------- */
 .pointerWarning {
-  padding: 8px 12px;
-  background: rgba(221, 107, 32, 0.08);
-  border: 1px solid rgba(221, 107, 32, 0.2);
-  border-radius: var(--radius-md);
-  color: rgba(221, 167, 72, 0.9);
-  font-size: var(--font-size-sm);
-  margin-bottom: 12px;
+  padding: var(--space-4) var(--space-5);
+  background: rgba(46, 152, 118, 0.08);
+  border: 1px dashed rgba(46, 152, 118, 0.28);
+  border-radius: var(--radius-lg);
+  color: var(--heritage-emerald-glow);
+  font-family: var(--heritage-font-body);
+  font-size: 13px;
+  line-height: 1.55;
 }
 
+.pointerWarning strong {
+  color: var(--heritage-parchment);
+  font-weight: 600;
+}
+
+/* ---------- Affected names list ---------- */
 .namesList {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 16px;
-  max-height: 160px;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  max-height: 180px;
   overflow-y: auto;
+  background: rgba(10, 14, 26, 0.4);
+  border: 1px dashed rgba(232, 161, 92, 0.18);
+  border-radius: var(--radius-lg);
 }
 
 .nameTag {
   display: inline-block;
-  padding: 2px 8px;
-  background: var(--alpha-white-06);
-  border-radius: var(--radius-sm);
-  font-size: var(--font-size-xs);
-  color: var(--alpha-white-70);
+  padding: 4px 12px;
+  background: rgba(232, 161, 92, 0.1);
+  border: 1px solid rgba(232, 161, 92, 0.28);
+  border-radius: var(--heritage-radius-pill);
+  font-family: var(--heritage-font-body);
+  font-size: 12px;
+  color: #f0b98b;
+  letter-spacing: 0.02em;
 }
 
 .truncatedNote {
   display: inline-block;
-  padding: 2px 8px;
-  font-size: var(--font-size-xs);
-  color: var(--alpha-white-40);
+  padding: 4px 12px;
+  background: rgba(232, 223, 200, 0.04);
+  border: 1px solid rgba(232, 223, 200, 0.1);
+  border-radius: var(--heritage-radius-pill);
+  font-family: var(--heritage-font-body);
+  font-size: 12px;
+  color: rgba(232, 223, 200, 0.55);
   font-style: italic;
 }
 
+/* ---------- Confirmation input ---------- */
 .nameConfirm {
-  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
 .nameConfirmLabel {
   display: block;
-  font-size: var(--font-size-sm);
-  margin-bottom: 6px;
-  color: var(--alpha-white-85);
+  font-family: var(--heritage-font-body);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--heritage-text-soft);
+  letter-spacing: 0.02em;
+}
+
+.nameConfirmLabel strong {
+  color: #f0b98b;
+  font-weight: 600;
 }
 
 .nameConfirmInput {
   width: 100%;
-  padding: 8px 12px;
-  border: 1px solid var(--alpha-white-15);
-  border-radius: var(--radius-md);
-  background: var(--alpha-white-04);
-  color: var(--alpha-white-85);
-  font-size: var(--font-size-sm);
-  font-family: inherit;
+  padding: var(--space-5) var(--space-6);
+  font-family: var(--heritage-font-body);
+  font-size: 14px;
+  color: var(--heritage-parchment);
+  background: rgba(10, 14, 26, 0.5);
+  border: 1px solid rgba(232, 161, 92, 0.22);
+  border-radius: var(--heritage-radius-sm);
   outline: none;
-  transition: border-color var(--transition-fast);
+  letter-spacing: 0.005em;
+  transition: border-color 220ms, background 220ms, box-shadow 220ms;
+}
+
+.nameConfirmInput::placeholder {
+  color: rgba(232, 223, 200, 0.32);
 }
 
 .nameConfirmInput:focus {
-  border-color: rgba(229, 62, 62, 0.5);
-  box-shadow: 0 0 0 2px rgba(229, 62, 62, 0.1);
+  border-color: #e8a15c;
+  background: rgba(10, 14, 26, 0.7);
+  box-shadow:
+    0 0 0 3px rgba(232, 161, 92, 0.14),
+    inset 0 0 0 1px rgba(232, 161, 92, 0.3);
 }
 
+/* ---------- Actions row ---------- */
 .actions {
   display: flex;
-  gap: 8px;
+  gap: var(--space-3);
   justify-content: flex-end;
+  align-items: center;
+  margin-top: var(--space-7);
+  padding-top: var(--space-6);
+  border-top: 1px dashed rgba(232, 161, 92, 0.2);
 }
 
 .cancelButton {
   display: inline-flex;
   align-items: center;
-  padding: var(--space-2) var(--space-5);
+  padding: var(--space-4) var(--space-8);
   background: transparent;
-  border: 1px solid var(--alpha-white-15);
-  border-radius: var(--radius-md);
-  color: var(--alpha-white-60);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  font-family: inherit;
+  border: 1px solid var(--heritage-glass-border-strong);
+  border-radius: var(--heritage-radius-pill);
+  color: var(--heritage-cream);
+  font-family: var(--heritage-font-body);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 180ms;
 }
 
 .cancelButton:hover:not(:disabled) {
-  background: var(--alpha-white-08);
-  border-color: var(--alpha-white-25);
-  color: var(--color-text-inverse);
+  background: rgba(200, 168, 101, 0.06);
+  border-color: var(--heritage-gold);
+  color: var(--heritage-gold-bright);
 }
 
 .cancelButton:disabled {
@@ -130,24 +201,29 @@
 .confirmButton {
   display: inline-flex;
   align-items: center;
-  padding: var(--space-2) var(--space-5);
-  background: rgba(229, 62, 62, 0.15);
-  border: 1px solid rgba(229, 62, 62, 0.35);
-  border-radius: var(--radius-md);
-  color: var(--color-error);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  font-family: inherit;
+  padding: var(--space-4) var(--space-9);
+  background: linear-gradient(180deg, #b84a2c 0%, #7a2a15 100%);
+  border: 1px solid rgba(232, 161, 92, 0.4);
+  border-radius: var(--heritage-radius-pill);
+  color: var(--heritage-parchment);
+  font-family: var(--heritage-font-display);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 240ms;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 10px 24px rgba(120, 40, 25, 0.35);
 }
 
 .confirmButton:hover:not(:disabled) {
-  background: rgba(229, 62, 62, 0.25);
-  border-color: rgba(229, 62, 62, 0.5);
+  background: linear-gradient(180deg, #c85435 0%, #8a321a 100%);
+  transform: translateY(-1px);
 }
 
 .confirmButton:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: not-allowed;
+  filter: saturate(0.6);
 }

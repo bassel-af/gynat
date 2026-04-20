@@ -1,5 +1,5 @@
 /* ============================================
-   ACKNOWLEDGMENT MODAL — Celebration Style
+   ACKNOWLEDGMENT MODAL — Jeweled Heritage Celebration
    ============================================ */
 
 /* ---------- Overlay ---------- */
@@ -11,9 +11,11 @@
   align-items: center;
   justify-content: center;
   padding: var(--space-7);
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 30%, rgba(200, 168, 101, 0.12) 0%, transparent 70%),
+    rgba(3, 5, 10, 0.8);
+  backdrop-filter: blur(10px) saturate(1.2);
+  -webkit-backdrop-filter: blur(10px) saturate(1.2);
   animation: overlayIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
@@ -55,26 +57,38 @@
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: thin;
-  scrollbar-color: var(--alpha-white-15) transparent;
+  scrollbar-color: rgba(200, 168, 101, 0.3) transparent;
   padding: var(--space-13) var(--space-14);
   background:
-    radial-gradient(ellipse at top center, rgba(246, 173, 85, 0.06) 0%, transparent 60%),
-    linear-gradient(
-      160deg,
-      rgba(37, 43, 72, 0.95) 0%,
-      rgba(26, 31, 54, 0.98) 100%
-    );
-  border: 1px solid rgba(246, 173, 85, 0.18);
-  border-radius: var(--radius-2xl);
+    radial-gradient(ellipse at top center, rgba(200, 168, 101, 0.14) 0%, transparent 60%),
+    linear-gradient(180deg, rgba(15, 21, 40, 0.94) 0%, rgba(7, 11, 24, 0.98) 100%);
+  border: 1px solid var(--heritage-glass-border-strong);
+  border-radius: var(--heritage-radius-xl);
+  backdrop-filter: blur(40px) saturate(1.3);
+  -webkit-backdrop-filter: blur(40px) saturate(1.3);
   box-shadow:
-    0 0 80px rgba(245, 166, 35, 0.08),
-    0 24px 80px rgba(0, 0, 0, 0.5),
-    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
-    0 1px 0 rgba(255, 255, 255, 0.06) inset;
+    0 0 100px rgba(200, 168, 101, 0.1),
+    0 50px 120px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset,
+    0 2px 0 rgba(255, 255, 255, 0.06) inset;
   text-align: center;
   direction: rtl;
   z-index: 2002;
-  animation: modalIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
+  animation: modalIn 0.55s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
+  font-family: var(--heritage-font-body);
+  color: var(--heritage-parchment);
+}
+
+.modal::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 8%;
+  right: 8%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--heritage-gold), transparent);
+  opacity: 0.7;
+  pointer-events: none;
 }
 
 .modalClosing {
@@ -87,13 +101,13 @@
   top: -60px;
   left: 50%;
   transform: translateX(-50%);
-  width: 300px;
+  width: 320px;
   height: 180px;
   border-radius: 50%;
   background: radial-gradient(
     ellipse,
-    rgba(245, 166, 35, 0.15) 0%,
-    rgba(245, 166, 35, 0.05) 40%,
+    rgba(200, 168, 101, 0.22) 0%,
+    rgba(200, 168, 101, 0.08) 40%,
     transparent 70%
   );
   pointer-events: none;
@@ -105,19 +119,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--space-6);
   animation: starIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
 }
 
 .star {
-  font-size: 32px;
-  color: var(--color-accent);
-  opacity: 0.7;
-  filter: drop-shadow(0 0 8px rgba(245, 166, 35, 0.4));
+  font-size: 34px;
+  color: var(--heritage-gold-bright);
+  opacity: 0.85;
+  filter: drop-shadow(0 0 12px rgba(200, 168, 101, 0.5));
   animation: starGlow 2.5s ease-in-out infinite;
 }
 
-/* ---------- Ornament (decorative divider) ---------- */
+/* ---------- Ornament ---------- */
 .ornament {
   display: flex;
   align-items: center;
@@ -129,12 +143,12 @@
 
 .ornamentLine {
   display: block;
-  width: 48px;
+  width: 56px;
   height: 1px;
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(246, 173, 85, 0.35) 50%,
+    rgba(200, 168, 101, 0.45) 50%,
     transparent 100%
   );
 }
@@ -143,35 +157,41 @@
   display: block;
   width: 6px;
   height: 6px;
-  background: var(--color-accent);
-  opacity: 0.5;
+  background: var(--heritage-gold);
   transform: rotate(45deg);
   flex-shrink: 0;
+  box-shadow: 0 0 8px rgba(200, 168, 101, 0.6);
 }
 
 /* ---------- Title ---------- */
 .title {
   margin: 0 0 var(--space-3);
-  font-size: var(--font-size-5xl);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-accent);
-  letter-spacing: var(--letter-spacing-tight);
-  line-height: var(--line-height-snug);
-  text-shadow: 0 0 30px rgba(245, 166, 35, 0.2);
+  font-family: var(--heritage-font-display);
+  font-size: 32px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  background: linear-gradient(135deg, var(--heritage-parchment) 0%, var(--heritage-gold-bright) 40%, var(--heritage-gold) 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 30px rgba(200, 168, 101, 0.2);
   animation: textIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
 }
 
-/* ---------- Body text ---------- */
+/* ---------- Body ---------- */
 .body {
   animation: textIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
 }
 
 .paragraph {
   margin: 0 0 var(--space-7);
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-normal);
-  color: var(--alpha-white-70);
-  line-height: 1.85;
+  font-family: var(--heritage-font-body);
+  font-size: 15px;
+  font-weight: 300;
+  color: rgba(232, 223, 200, 0.78);
+  line-height: 1.95;
   text-align: right;
 }
 
@@ -181,23 +201,25 @@
 
 /* ---------- Highlighted names ---------- */
 .name {
-  color: var(--color-accent);
-  font-weight: var(--font-weight-semibold);
+  color: var(--heritage-gold-bright);
+  font-weight: 600;
 }
 
 .family {
-  color: var(--color-primary-light);
-  font-weight: var(--font-weight-semibold);
+  color: var(--heritage-emerald-glow);
+  font-weight: 600;
 }
 
 /* ---------- Signature ---------- */
 .signature {
-  margin: var(--space-5) 0 0;
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-accent);
-  opacity: 0.6;
+  margin: var(--space-6) 0 0;
+  font-family: var(--heritage-font-script);
+  font-size: 20px;
+  font-weight: 400;
+  color: var(--heritage-gold-bright);
+  opacity: 0.85;
   text-align: left;
+  letter-spacing: 0.04em;
   animation: textIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.35s both;
 }
 
@@ -206,49 +228,45 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 140px;
-  margin-top: var(--space-5);
-  padding: var(--space-4) var(--space-13);
-  font-family: inherit;
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-dark-900);
-  background: linear-gradient(
-    135deg,
-    var(--color-accent) 0%,
-    var(--color-accent-dark) 100%
-  );
+  min-width: 160px;
+  margin-top: var(--space-7);
+  padding: var(--space-5) var(--space-13);
+  font-family: var(--heritage-font-display);
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--heritage-midnight-deep);
+  background: linear-gradient(135deg, var(--heritage-gold-bright) 0%, var(--heritage-gold) 100%);
   border: none;
-  border-radius: var(--radius-full);
+  border-radius: var(--heritage-radius-pill);
   cursor: pointer;
   box-shadow:
-    0 2px 16px rgba(245, 166, 35, 0.35),
-    0 0 0 0 rgba(245, 166, 35, 0);
-  transition:
-    transform var(--transition-base),
-    box-shadow var(--transition-base),
-    filter var(--transition-base);
+    0 0 0 1px rgba(255, 255, 255, 0.3) inset,
+    0 2px 0 rgba(255, 255, 255, 0.35) inset,
+    0 8px 24px rgba(200, 168, 101, 0.3);
+  transition: transform 280ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 280ms, filter 180ms;
   animation: buttonIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.45s both;
 }
 
 .dismissButton:hover {
   transform: translateY(-2px);
   box-shadow:
-    0 6px 24px rgba(245, 166, 35, 0.45),
-    0 0 0 3px rgba(245, 166, 35, 0.12);
-  filter: brightness(1.08);
+    0 0 0 1px rgba(255, 255, 255, 0.4) inset,
+    0 2px 0 rgba(255, 255, 255, 0.4) inset,
+    0 14px 32px rgba(200, 168, 101, 0.45);
 }
 
 .dismissButton:active {
   transform: translateY(0);
-  box-shadow: 0 1px 6px rgba(245, 166, 35, 0.25);
 }
 
 .dismissButton:focus-visible {
   outline: none;
   box-shadow:
-    0 2px 16px rgba(245, 166, 35, 0.35),
-    0 0 0 3px rgba(245, 166, 35, 0.25);
+    0 0 0 1px rgba(255, 255, 255, 0.3) inset,
+    0 2px 0 rgba(255, 255, 255, 0.35) inset,
+    0 8px 24px rgba(200, 168, 101, 0.3),
+    0 0 0 3px rgba(200, 168, 101, 0.35);
 }
 
 /* ---------- Animations ---------- */
@@ -263,89 +281,49 @@
 }
 
 @keyframes modalIn {
-  from {
-    opacity: 0;
-    transform: translateY(24px) scale(0.97);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+  from { opacity: 0; transform: translateY(24px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @keyframes modalOut {
-  from {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-  to {
-    opacity: 0;
-    transform: translateY(12px) scale(0.98);
-  }
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(12px) scale(0.98); }
 }
 
 @keyframes textIn {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes ornamentIn {
-  from {
-    opacity: 0;
-    transform: scaleX(0);
-  }
-  to {
-    opacity: 1;
-    transform: scaleX(1);
-  }
+  from { opacity: 0; transform: scaleX(0); }
+  to { opacity: 1; transform: scaleX(1); }
 }
 
 @keyframes buttonIn {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes starIn {
-  from {
-    opacity: 0;
-    transform: scale(0.3) rotate(-30deg);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) rotate(0deg);
-  }
+  from { opacity: 0; transform: scale(0.3) rotate(-30deg); }
+  to { opacity: 1; transform: scale(1) rotate(0deg); }
 }
 
 @keyframes starGlow {
   0%, 100% {
-    opacity: 0.7;
-    filter: drop-shadow(0 0 8px rgba(245, 166, 35, 0.4));
+    opacity: 0.85;
+    filter: drop-shadow(0 0 12px rgba(200, 168, 101, 0.5));
   }
   50% {
     opacity: 1;
-    filter: drop-shadow(0 0 16px rgba(245, 166, 35, 0.6));
+    filter: drop-shadow(0 0 20px rgba(200, 168, 101, 0.75));
   }
 }
 
 @keyframes glowPulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.6;
-  }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
 }
 
 @keyframes confettiFall {
@@ -366,16 +344,16 @@
   }
 
   .title {
-    font-size: var(--font-size-4xl);
+    font-size: 28px;
   }
 
   .paragraph {
-    font-size: var(--font-size-lg);
-    line-height: 1.8;
+    font-size: 14px;
+    line-height: 1.9;
   }
 
   .star {
-    font-size: 26px;
+    font-size: 28px;
   }
 }
 
@@ -389,25 +367,40 @@
   }
 
   .title {
-    font-size: var(--font-size-3xl);
+    font-size: 24px;
   }
 
   .paragraph {
-    font-size: var(--font-size-base);
-    line-height: 1.75;
+    font-size: 13px;
+    line-height: 1.8;
   }
 
   .ornamentLine {
-    width: 28px;
+    width: 32px;
   }
 
   .dismissButton {
-    padding: var(--space-3) var(--space-11);
-    font-size: var(--font-size-lg);
-    min-width: 120px;
+    padding: var(--space-4) var(--space-11);
+    font-size: 15px;
+    min-width: 140px;
   }
 
   .star {
-    font-size: 22px;
+    font-size: 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay,
+  .modal,
+  .starBurst,
+  .star,
+  .ornament,
+  .body,
+  .title,
+  .signature,
+  .dismissButton,
+  .glow {
+    animation: none !important;
   }
 }

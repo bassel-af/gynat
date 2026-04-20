@@ -28,45 +28,47 @@
 
 .required::after {
   content: ' *';
-  color: var(--color-error);
+  color: #e8a15c;
 }
 
 /* Sex radio group */
 .radioGroup {
   display: flex;
-  gap: var(--space-5);
+  gap: var(--space-7);
   padding-top: var(--space-1);
 }
 
 .radioLabel {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-3);
   cursor: pointer;
-  font-size: var(--font-size-base);
-  color: var(--alpha-white-70);
-  transition: color var(--transition-base);
+  font-family: var(--heritage-font-body);
+  font-size: 13px;
+  color: var(--heritage-cream);
+  transition: color 180ms;
 }
 
 .radioLabel:hover {
-  color: var(--alpha-white-85);
+  color: var(--heritage-gold-bright);
 }
 
 .radioInput {
   appearance: none;
-  width: 16px;
-  height: 16px;
-  border: 1.5px solid var(--alpha-white-25);
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid rgba(200, 168, 101, 0.35);
   border-radius: 50%;
-  background: transparent;
+  background: rgba(10, 14, 26, 0.6);
   cursor: pointer;
-  transition: border-color var(--transition-base), box-shadow var(--transition-base);
+  transition: border-color 200ms, box-shadow 200ms, background 200ms;
   position: relative;
   flex-shrink: 0;
 }
 
 .radioInput:checked {
-  border-color: var(--color-primary);
+  border-color: var(--heritage-gold);
+  background: rgba(10, 14, 26, 0.8);
 }
 
 .radioInput:checked::after {
@@ -75,29 +77,32 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  background: var(--color-primary);
+  background: linear-gradient(135deg, var(--heritage-gold-bright), var(--heritage-gold));
+  box-shadow: 0 0 8px rgba(200, 168, 101, 0.6);
 }
 
 .radioInput:focus-visible {
-  box-shadow: var(--shadow-focus-primary);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(200, 168, 101, 0.22);
 }
 
 /* Section divider */
 .sectionDivider {
   border: none;
-  border-top: 1px solid var(--alpha-white-06);
-  margin: var(--space-1) 0;
+  border-top: 1px dashed rgba(200, 168, 101, 0.12);
+  margin: var(--space-2) 0;
 }
 
 .sectionLabel {
-  font-size: var(--font-size-xs);
-  color: var(--alpha-white-25);
-  font-weight: var(--font-weight-medium);
+  font-family: var(--heritage-font-body);
+  font-size: 10px;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: var(--letter-spacing-wide);
+  letter-spacing: 0.22em;
+  color: var(--heritage-gold);
 }
 
 /* Checkbox */
@@ -138,121 +143,132 @@
 
 /* Branch link preview card */
 .branchPreviewCard {
-  padding: var(--space-4);
-  border-radius: var(--radius-md);
-  background: var(--color-pointer-bg);
-  border: 1px solid var(--color-pointer-border);
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  background: rgba(46, 152, 118, 0.08);
+  border: 1px dashed rgba(46, 152, 118, 0.28);
 }
 
 .branchPreviewLabel {
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-pointer);
-  margin-bottom: var(--space-3);
+  font-family: var(--heritage-font-body);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--heritage-emerald-glow);
+  margin-bottom: var(--space-4);
 }
 
 .branchPreviewRow {
   display: flex;
   gap: var(--space-3);
-  font-size: var(--font-size-sm);
-  color: var(--alpha-white-70);
+  font-family: var(--heritage-font-body);
+  font-size: 13px;
+  color: var(--heritage-text-soft);
   padding: var(--space-1) 0;
 }
 
 .branchPreviewKey {
-  color: var(--alpha-white-40);
+  color: rgba(232, 223, 200, 0.45);
   flex-shrink: 0;
 }
 
 .branchPersonList {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
-  max-height: 200px;
+  gap: var(--space-2);
+  max-height: 220px;
   overflow-y: auto;
+  padding: 2px;
 }
 
 .branchPersonItem {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
-  border: 1px solid var(--alpha-white-10);
-  background: transparent;
-  color: var(--alpha-white-70);
-  font-size: var(--font-size-sm);
+  border: 1px solid var(--heritage-glass-border);
+  background: rgba(10, 14, 26, 0.4);
+  color: var(--heritage-cream);
+  font-family: var(--heritage-font-body);
+  font-size: 13px;
   cursor: pointer;
   text-align: right;
-  transition: background var(--transition-fast), border-color var(--transition-fast);
+  transition: background 180ms, border-color 180ms, color 180ms;
 }
 
 .branchPersonItem:hover {
-  background: var(--alpha-white-04);
-  border-color: var(--alpha-white-20);
+  background: rgba(46, 152, 118, 0.08);
+  border-color: rgba(46, 152, 118, 0.28);
+  color: var(--heritage-parchment);
 }
 
 .branchPersonItemSelected {
-  background: var(--color-pointer-bg);
-  border-color: var(--color-pointer);
-  color: var(--color-pointer-light);
+  background: linear-gradient(90deg, rgba(46, 152, 118, 0.22), rgba(46, 152, 118, 0.06));
+  border-color: var(--heritage-emerald-glow);
+  color: var(--heritage-parchment);
 }
 
 .branchPersonMale {
-  color: var(--color-male);
+  color: var(--heritage-emerald-glow);
 }
 
 .branchPersonFemale {
-  color: var(--color-female);
+  color: var(--heritage-gold);
 }
 
 .branchPersonItemSelected .branchPersonMale,
 .branchPersonItemSelected .branchPersonFemale {
-  color: var(--color-pointer-light);
+  color: var(--heritage-parchment);
 }
 
 /* Rule 3: orphaned children prompt card */
 .childrenPromptCard {
-  margin-top: var(--space-3);
-  padding: var(--space-4);
-  border-radius: var(--radius-md);
-  background: var(--color-pointer-bg);
-  border: 1px solid var(--color-pointer-border);
+  margin-top: var(--space-4);
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  background: rgba(200, 168, 101, 0.08);
+  border: 1px dashed rgba(200, 168, 101, 0.28);
 }
 
 .childrenPromptText {
-  font-size: var(--font-size-sm);
-  color: var(--alpha-white-70);
-  margin-bottom: var(--space-2);
+  font-family: var(--heritage-font-body);
+  font-size: 13px;
+  color: var(--heritage-text-soft);
+  margin-bottom: var(--space-3);
+  line-height: 1.6;
 }
 
 .childrenList {
   list-style: none;
   padding: 0;
-  margin: 0 0 var(--space-3) 0;
+  margin: 0 0 var(--space-4) 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-2);
 }
 
 .childrenList li {
-  font-size: var(--font-size-sm);
-  color: var(--alpha-white-70);
-  padding-right: var(--space-3);
+  font-family: var(--heritage-font-body);
+  font-size: 13px;
+  color: var(--heritage-cream);
+  padding-right: var(--space-4);
 }
 
 .childrenList li::before {
-  content: '•';
+  content: '◆';
   margin-left: var(--space-2);
-  color: var(--alpha-white-40);
+  color: var(--heritage-gold);
+  font-size: 9px;
 }
 
 .childrenMore {
-  color: var(--alpha-white-40);
+  color: rgba(232, 223, 200, 0.45);
   font-style: italic;
 }
 
 /* Modal width override */
 .modal {
-  max-width: 500px;
+  max-width: 520px;
 }

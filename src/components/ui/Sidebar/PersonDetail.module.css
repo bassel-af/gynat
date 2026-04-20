@@ -1,5 +1,5 @@
 /* ============================================
-   PERSON DETAIL VIEW STYLES
+   PERSON DETAIL VIEW STYLES — Jeweled Heritage
    ============================================ */
 
 .container {
@@ -7,9 +7,14 @@
   flex-direction: column;
   flex: 1;
   overflow: hidden;
+  font-family: var(--heritage-font-body);
+  color: var(--heritage-parchment);
 }
 
-/* Back Button */
+/* ============================================
+   BACK BUTTON
+   ============================================ */
+
 .backButton {
   display: flex;
   align-items: center;
@@ -17,16 +22,19 @@
   padding: var(--space-6) var(--space-9);
   background: transparent;
   border: none;
-  border-bottom: 1px solid var(--alpha-white-06);
-  color: var(--color-primary-light);
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-medium);
+  border-bottom: 1px dashed rgba(200, 168, 101, 0.12);
+  color: var(--heritage-gold);
+  font-family: var(--heritage-font-body);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: color 180ms, background 180ms;
 }
 
 .backButton:hover {
-  background: var(--alpha-white-04);
+  color: var(--heritage-gold-bright);
+  background: rgba(200, 168, 101, 0.04);
 }
 
 .backButton svg {
@@ -37,69 +45,91 @@
   transform: translateX(4px);
 }
 
-/* Person Hero Section */
+/* ============================================
+   HERO
+   ============================================ */
+
 .hero {
-  padding: var(--space-9);
-  background: var(--gradient-search-hero);
-  border-bottom: 1px solid rgba(99, 179, 237, 0.15);
+  position: relative;
+  padding: var(--space-11) var(--space-9) var(--space-9);
+  text-align: center;
+  border-bottom: 1px dashed rgba(200, 168, 101, 0.12);
+  background: radial-gradient(ellipse 75% 48% at 50% 0%, rgba(200, 168, 101, 0.12) 0%, transparent 70%);
 }
 
 .heroName {
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-inverse);
-  line-height: var(--line-height-snug);
-  margin: 0 0 var(--space-3) 0;
+  margin: 0 0 var(--space-2);
+  font-family: var(--heritage-font-display);
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--heritage-parchment);
+  line-height: 1.2;
+  letter-spacing: -0.005em;
 }
 
 .heroKunya {
   display: block;
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-normal);
-  color: var(--alpha-white-50);
-  margin: 0 0 var(--space-3) 0;
+  margin: 0 0 var(--space-5);
+  font-family: var(--heritage-font-script);
+  font-size: 18px;
+  font-weight: 400;
+  color: var(--heritage-gold-bright);
+  letter-spacing: 0.02em;
 }
 
 .heroDates {
-  display: flex;
+  display: inline-flex;
   flex-direction: column;
   gap: var(--space-1);
-  font-size: var(--font-size-base);
-  color: var(--alpha-white-50);
-  margin: 0 0 var(--space-6) 0;
+  padding: var(--space-3) var(--space-7);
+  margin-bottom: var(--space-6);
+  border-radius: var(--heritage-radius-pill);
+  background: rgba(10, 14, 26, 0.55);
+  border: 1px solid var(--heritage-glass-border);
+  font-family: var(--heritage-font-body);
+  font-size: 12px;
+  color: rgba(232, 223, 200, 0.75);
+  letter-spacing: 0.04em;
 }
 
 .heroSexBadge {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-5);
-  border-radius: var(--radius-full);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
+  padding: 4px 14px;
+  border-radius: var(--heritage-radius-pill);
+  font-family: var(--heritage-font-body);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
 .heroSexBadge.male {
-  background: rgba(99, 179, 237, 0.15);
-  color: var(--color-primary-light);
-  border: 1px solid rgba(99, 179, 237, 0.25);
+  background: rgba(46, 152, 118, 0.15);
+  color: var(--heritage-emerald-glow);
+  border: 1px solid rgba(46, 152, 118, 0.3);
 }
 
 .heroSexBadge.female {
-  background: rgba(237, 100, 166, 0.15);
-  color: var(--color-secondary);
-  border: 1px solid rgba(237, 100, 166, 0.25);
+  background: rgba(200, 168, 101, 0.12);
+  color: var(--heritage-gold-bright);
+  border: 1px solid rgba(200, 168, 101, 0.3);
 }
 
-/* Hero Actions Row */
 .heroActions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-4);
-  margin-top: var(--space-6);
+  justify-content: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
 }
 
-/* Focus in Tree Button (also used for Edit button) */
+/* ============================================
+   FOCUS / EDIT / TREE BUTTONS
+   ============================================ */
+
 .focusButton {
   display: flex;
   align-items: center;
@@ -107,44 +137,47 @@
   width: 36px;
   height: 36px;
   padding: 0;
-  background: var(--alpha-white-08);
-  border: 1px solid var(--alpha-white-12);
-  border-radius: var(--radius-full);
-  color: var(--alpha-white-60);
+  background: rgba(10, 14, 26, 0.55);
+  border: 1px solid var(--heritage-glass-border);
+  border-radius: 50%;
+  color: var(--heritage-cream);
+  backdrop-filter: blur(10px);
   cursor: pointer;
-  transition: all var(--transition-base);
+  transition: all 200ms;
 }
 
 .focusButton:hover {
-  background: var(--alpha-white-15);
-  border-color: var(--alpha-white-25);
-  color: var(--color-text-inverse);
+  border-color: var(--heritage-gold);
+  background: rgba(200, 168, 101, 0.08);
+  color: var(--heritage-gold-bright);
 }
 
 .focusButton:focus-visible {
   outline: none;
-  box-shadow: var(--shadow-focus-primary);
-  border-color: var(--color-primary-light);
+  box-shadow: 0 0 0 3px rgba(200, 168, 101, 0.25);
+  border-color: var(--heritage-gold);
 }
 
 .focusButton:active {
-  transform: scale(0.92);
+  transform: scale(0.94);
 }
 
 /* ============================================
-   BRANCH POINTER BANNER
+   POINTER BANNER
    ============================================ */
 
 .pointerBanner {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding: var(--space-4) var(--space-9);
-  background: var(--color-pointer-bg);
-  border-bottom: 1px solid var(--color-pointer-border);
-  color: var(--color-pointer-light);
+  padding: var(--space-5) var(--space-9);
+  background:
+    linear-gradient(135deg, rgba(46, 152, 118, 0.12) 0%, rgba(15, 58, 45, 0.18) 100%);
+  border-bottom: 1px dashed rgba(46, 152, 118, 0.25);
+  color: var(--heritage-emerald-glow);
+  font-family: var(--heritage-font-body);
   font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
+  font-weight: 500;
 }
 
 .pointerBannerInfo {
@@ -155,7 +188,7 @@
 
 .pointerBannerInfo svg {
   flex-shrink: 0;
-  color: var(--color-pointer);
+  color: var(--heritage-emerald-glow);
 }
 
 .pointerBannerActions {
@@ -167,22 +200,22 @@
 .pointerCopyButton {
   display: inline-flex;
   align-items: center;
-  padding: var(--space-1) var(--space-4);
-  background: transparent;
-  border: 1px solid var(--color-pointer-border);
-  border-radius: var(--radius-md);
-  color: var(--color-pointer-light);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  font-family: inherit;
+  padding: var(--space-2) var(--space-5);
+  background: rgba(46, 152, 118, 0.12);
+  border: 1px solid rgba(46, 152, 118, 0.35);
+  border-radius: var(--heritage-radius-pill);
+  color: var(--heritage-emerald-glow);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 180ms;
 }
 
 .pointerCopyButton:hover {
-  background: var(--color-pointer-bg);
-  border-color: var(--color-pointer);
-  color: var(--color-pointer);
+  background: rgba(46, 152, 118, 0.22);
+  border-color: var(--heritage-emerald-glow);
 }
 
 .pointerCopyButton:disabled {
@@ -193,22 +226,23 @@
 .pointerBreakButton {
   display: inline-flex;
   align-items: center;
-  padding: var(--space-1) var(--space-4);
+  padding: var(--space-2) var(--space-5);
   background: transparent;
-  border: 1px solid rgba(229, 62, 62, 0.25);
-  border-radius: var(--radius-md);
-  color: rgba(229, 62, 62, 0.7);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  font-family: inherit;
+  border: 1px solid rgba(232, 161, 92, 0.3);
+  border-radius: var(--heritage-radius-pill);
+  color: #e8a15c;
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 180ms;
 }
 
 .pointerBreakButton:hover {
-  background: rgba(229, 62, 62, 0.1);
-  border-color: rgba(229, 62, 62, 0.4);
-  color: var(--color-error);
+  background: rgba(232, 161, 92, 0.12);
+  border-color: #e8a15c;
+  color: #f0b98b;
 }
 
 .pointerBreakButton:disabled {
@@ -219,12 +253,23 @@
 .pointerBannerConfirm {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: rgba(10, 14, 26, 0.4);
+  border: 1px dashed rgba(232, 161, 92, 0.22);
+  border-radius: var(--radius-lg);
 }
 
 .pointerBannerConfirmText {
   font-size: var(--font-size-xs);
-  color: rgba(229, 62, 62, 0.8);
+  color: #f0b98b;
+  line-height: 1.6;
+}
+
+.pointerBannerConfirmCopyText {
+  font-size: var(--font-size-xs);
+  color: var(--heritage-emerald-glow);
+  line-height: 1.6;
 }
 
 .pointerBannerConfirmButtons {
@@ -236,20 +281,23 @@
 .pointerBreakConfirmButton {
   display: inline-flex;
   align-items: center;
-  padding: var(--space-1) var(--space-4);
-  background: rgba(229, 62, 62, 0.15);
-  border: 1px solid rgba(229, 62, 62, 0.4);
-  border-radius: var(--radius-md);
-  color: var(--color-error);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  font-family: inherit;
+  padding: var(--space-2) var(--space-5);
+  background: linear-gradient(180deg, #b84a2c 0%, #7a2a15 100%);
+  border: 1px solid rgba(232, 161, 92, 0.45);
+  border-radius: var(--heritage-radius-pill);
+  color: var(--heritage-parchment);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 200ms;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 6px 16px rgba(120, 40, 25, 0.3);
 }
 
-.pointerBreakConfirmButton:hover {
-  background: rgba(229, 62, 62, 0.25);
+.pointerBreakConfirmButton:hover:not(:disabled) {
+  background: linear-gradient(180deg, #c85435 0%, #8a321a 100%);
+  transform: translateY(-1px);
 }
 
 .pointerBreakConfirmButton:disabled {
@@ -257,58 +305,56 @@
   cursor: not-allowed;
 }
 
-.pointerCancelButton {
+.pointerCopyConfirmButton {
   display: inline-flex;
   align-items: center;
-  padding: var(--space-1) var(--space-4);
-  background: transparent;
-  border: 1px solid var(--alpha-white-15);
-  border-radius: var(--radius-md);
-  color: var(--alpha-white-60);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  font-family: inherit;
+  padding: var(--space-2) var(--space-5);
+  background: linear-gradient(180deg, rgba(46, 152, 118, 0.45), rgba(15, 58, 45, 0.85));
+  border: 1px solid rgba(46, 152, 118, 0.5);
+  border-radius: var(--heritage-radius-pill);
+  color: var(--heritage-parchment);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 200ms;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 6px 16px rgba(0, 0, 0, 0.3);
 }
 
-.pointerCancelButton:hover {
-  background: var(--alpha-white-08);
-  color: var(--color-text-inverse);
+.pointerCopyConfirmButton:hover:not(:disabled) {
+  background: linear-gradient(180deg, rgba(46, 152, 118, 0.6), rgba(15, 58, 45, 0.95));
+  transform: translateY(-1px);
 }
 
-.pointerCancelButton:disabled {
+.pointerCopyConfirmButton:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.pointerBannerConfirmCopyText {
-  font-size: var(--font-size-xs);
-  color: var(--color-pointer-light);
-  line-height: 1.5;
-}
-
-.pointerCopyConfirmButton {
+.pointerCancelButton {
   display: inline-flex;
   align-items: center;
-  padding: var(--space-1) var(--space-4);
-  background: var(--color-pointer-bg);
-  border: 1px solid var(--color-pointer-border);
-  border-radius: var(--radius-md);
-  color: var(--color-pointer-light);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  font-family: inherit;
+  padding: var(--space-2) var(--space-5);
+  background: transparent;
+  border: 1px solid var(--heritage-glass-border-strong);
+  border-radius: var(--heritage-radius-pill);
+  color: var(--heritage-cream);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 180ms;
 }
 
-.pointerCopyConfirmButton:hover {
-  background: var(--color-pointer);
-  color: var(--color-bg);
+.pointerCancelButton:hover {
+  background: rgba(200, 168, 101, 0.06);
+  color: var(--heritage-gold-bright);
+  border-color: var(--heritage-gold);
 }
 
-.pointerCopyConfirmButton:disabled {
+.pointerCancelButton:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -320,40 +366,41 @@
 .actionBar {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-4) var(--space-9);
-  background: var(--alpha-white-04);
-  border-bottom: 1px solid var(--alpha-white-06);
   flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-9);
+  background: rgba(10, 14, 26, 0.35);
+  border-bottom: 1px dashed rgba(200, 168, 101, 0.1);
 }
 
 .actionButton {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-4);
-  background: transparent;
-  border: 1px solid var(--alpha-white-15);
-  border-radius: var(--radius-md);
-  color: var(--alpha-white-60);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  font-family: inherit;
+  padding: var(--space-3) var(--space-5);
+  background: rgba(10, 14, 26, 0.5);
+  border: 1px solid var(--heritage-glass-border);
+  border-radius: var(--heritage-radius-pill);
+  color: var(--heritage-cream);
+  font-family: var(--heritage-font-body);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 200ms;
   white-space: nowrap;
 }
 
 .actionButton:hover {
-  background: var(--alpha-white-08);
-  border-color: var(--alpha-white-25);
-  color: var(--color-text-inverse);
+  background: rgba(200, 168, 101, 0.08);
+  border-color: var(--heritage-gold);
+  color: var(--heritage-gold-bright);
 }
 
 .actionButton:focus-visible {
   outline: none;
-  box-shadow: var(--shadow-focus-primary);
-  border-color: var(--color-primary-light);
+  box-shadow: 0 0 0 3px rgba(200, 168, 101, 0.25);
+  border-color: var(--heritage-gold);
 }
 
 .actionButton:active {
@@ -364,42 +411,152 @@
   flex-shrink: 0;
 }
 
+.actionButtonMove {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  background: rgba(46, 152, 118, 0.1);
+  border: 1px solid rgba(46, 152, 118, 0.3);
+  border-radius: var(--heritage-radius-pill);
+  color: var(--heritage-emerald-glow);
+  font-family: var(--heritage-font-body);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: all 200ms;
+  white-space: nowrap;
+}
+
+.actionButtonMove:hover {
+  background: rgba(46, 152, 118, 0.2);
+  border-color: var(--heritage-emerald-glow);
+}
+
+.actionButtonMove:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(46, 152, 118, 0.2);
+}
+
+.actionButtonMove:active {
+  transform: scale(0.97);
+}
+
+.actionButtonMove svg {
+  flex-shrink: 0;
+}
+
+.actionButtonRadaa {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  background: rgba(200, 168, 101, 0.08);
+  border: 1px solid rgba(200, 168, 101, 0.25);
+  border-radius: var(--heritage-radius-pill);
+  color: var(--heritage-gold-bright);
+  font-family: var(--heritage-font-body);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: all 200ms;
+  white-space: nowrap;
+}
+
+.actionButtonRadaa:hover {
+  background: rgba(200, 168, 101, 0.18);
+  border-color: var(--heritage-gold);
+}
+
+.actionButtonRadaa:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(200, 168, 101, 0.2);
+}
+
+.actionButtonRadaa:active {
+  transform: scale(0.97);
+}
+
+.actionButtonRadaa svg {
+  flex-shrink: 0;
+}
+
+.actionButtonLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  background: rgba(46, 152, 118, 0.08);
+  border: 1px solid rgba(46, 152, 118, 0.28);
+  border-radius: var(--heritage-radius-pill);
+  color: var(--heritage-emerald-glow);
+  font-family: var(--heritage-font-body);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: all 200ms;
+  white-space: nowrap;
+}
+
+.actionButtonLink:hover {
+  background: rgba(46, 152, 118, 0.2);
+  border-color: var(--heritage-emerald-glow);
+}
+
+.actionButtonLink:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(46, 152, 118, 0.18);
+}
+
+.actionButtonLink:active {
+  transform: scale(0.97);
+}
+
+.actionButtonLink svg {
+  flex-shrink: 0;
+}
+
 /* ============================================
    DELETE SECTION
    ============================================ */
 
 .deleteSection {
   flex-shrink: 0;
-  padding: var(--space-5) var(--space-9);
-  border-top: 1px solid var(--alpha-white-06);
+  padding: var(--space-6) var(--space-9);
+  border-top: 1px dashed rgba(200, 168, 101, 0.12);
+  background: linear-gradient(0deg, rgba(3, 5, 10, 0.45), transparent);
 }
 
 .deleteButton {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-5);
   background: transparent;
-  border: 1px solid rgba(229, 62, 62, 0.25);
-  border-radius: var(--radius-md);
-  color: rgba(229, 62, 62, 0.7);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  font-family: inherit;
+  border: 1px solid rgba(232, 92, 51, 0.3);
+  border-radius: var(--heritage-radius-pill);
+  color: #e8a15c;
+  font-family: var(--heritage-font-body);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 200ms;
 }
 
-.deleteButton:hover {
-  background: rgba(229, 62, 62, 0.1);
-  border-color: rgba(229, 62, 62, 0.4);
-  color: var(--color-error);
+.deleteButton:hover:not(:disabled) {
+  background: rgba(232, 92, 51, 0.1);
+  border-color: rgba(232, 92, 51, 0.5);
+  color: #f0b98b;
 }
 
 .deleteButton:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.15);
-  border-color: var(--color-error);
+  box-shadow: 0 0 0 3px rgba(232, 92, 51, 0.2);
+  border-color: rgba(232, 92, 51, 0.5);
 }
 
 .deleteButton svg {
@@ -420,17 +577,21 @@
   to { transform: rotate(360deg); }
 }
 
-/* Delete confirmation */
 .deleteConfirm {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-4);
+  padding: var(--space-5);
+  background: rgba(40, 20, 18, 0.5);
+  border: 1px dashed rgba(232, 161, 92, 0.3);
+  border-radius: var(--radius-lg);
 }
 
 .deleteConfirmText {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: rgba(229, 62, 62, 0.85);
+  font-family: var(--heritage-font-body);
+  font-size: 13px;
+  font-weight: 500;
+  color: #f0b98b;
 }
 
 .deleteConfirmActions {
@@ -442,21 +603,23 @@
 .deleteConfirmYes {
   display: inline-flex;
   align-items: center;
-  padding: var(--space-2) var(--space-5);
-  background: rgba(229, 62, 62, 0.15);
-  border: 1px solid rgba(229, 62, 62, 0.35);
-  border-radius: var(--radius-md);
-  color: var(--color-error);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  font-family: inherit;
+  padding: var(--space-3) var(--space-6);
+  background: linear-gradient(180deg, #b84a2c 0%, #7a2a15 100%);
+  border: 1px solid rgba(232, 161, 92, 0.4);
+  border-radius: var(--heritage-radius-pill);
+  color: var(--heritage-parchment);
+  font-family: var(--heritage-font-body);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 200ms;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 6px 16px rgba(120, 40, 25, 0.3);
 }
 
-.deleteConfirmYes:hover {
-  background: rgba(229, 62, 62, 0.25);
-  border-color: rgba(229, 62, 62, 0.5);
+.deleteConfirmYes:hover:not(:disabled) {
+  background: linear-gradient(180deg, #c85435 0%, #8a321a 100%);
+  transform: translateY(-1px);
 }
 
 .deleteConfirmYes:disabled {
@@ -467,22 +630,23 @@
 .deleteConfirmNo {
   display: inline-flex;
   align-items: center;
-  padding: var(--space-2) var(--space-5);
+  padding: var(--space-3) var(--space-6);
   background: transparent;
-  border: 1px solid var(--alpha-white-15);
-  border-radius: var(--radius-md);
-  color: var(--alpha-white-60);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  font-family: inherit;
+  border: 1px solid var(--heritage-glass-border-strong);
+  border-radius: var(--heritage-radius-pill);
+  color: var(--heritage-cream);
+  font-family: var(--heritage-font-body);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 180ms;
 }
 
-.deleteConfirmNo:hover {
-  background: var(--alpha-white-08);
-  border-color: var(--alpha-white-25);
-  color: var(--color-text-inverse);
+.deleteConfirmNo:hover:not(:disabled) {
+  background: rgba(200, 168, 101, 0.06);
+  color: var(--heritage-gold-bright);
+  border-color: var(--heritage-gold);
 }
 
 .deleteConfirmNo:disabled {
@@ -490,7 +654,10 @@
   cursor: not-allowed;
 }
 
-/* Relationship Sections */
+/* ============================================
+   SECTIONS
+   ============================================ */
+
 .sections {
   composes: thin from '../../../styles/scrollbar.module.css';
   flex: 1;
@@ -499,72 +666,72 @@
 }
 
 .sectionTitle {
-  padding: var(--space-3) var(--space-9);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-primary-light);
-  background-color: var(--alpha-white-06);
-  border-inline-start: 2px solid var(--color-primary-light);
-  letter-spacing: 0.03em;
+  padding: var(--space-4) var(--space-9);
+  margin: 0;
+  font-family: var(--heritage-font-body);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--heritage-gold);
+  border-bottom: 1px dashed rgba(200, 168, 101, 0.1);
 }
 
-/* Relationship Person Item */
+/* ============================================
+   RELATIONSHIP ROWS
+   ============================================ */
+
 .relPerson {
   display: flex;
   align-items: center;
-  padding: var(--space-4) var(--space-9);
+  padding: var(--space-5) var(--space-9);
   padding-right: calc(var(--space-9) + 16px);
-  transition: all var(--transition-fast);
+  transition: background 180ms;
   position: relative;
 }
 
-/* Clickable person */
 .relPersonClickable {
   composes: relPerson;
   cursor: pointer;
   background: transparent;
-  border-top: none;
-  border-bottom: none;
-  border-left: none;
+  border: none;
   width: 100%;
   text-align: right;
-  font-family: inherit;
+  font-family: var(--heritage-font-body);
   color: inherit;
 }
 
 .relPersonClickable:hover {
-  background: var(--alpha-white-06);
+  background: rgba(200, 168, 101, 0.06);
 }
 
-/* Non-clickable person (not in tree but may be alive — do NOT grey out) */
 .relPersonStatic {
   composes: relPerson;
 }
 
-/* Deceased person — subtle dimming, still readable */
 .relPerson.deceased .relPersonName {
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(232, 223, 200, 0.5);
 }
 
 .relPerson.deceased .relPersonDates {
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(232, 223, 200, 0.3);
 }
 
 .relPerson.deceased.male::before {
-  background: rgba(99, 179, 237, 0.25);
+  background: rgba(46, 152, 118, 0.25);
   box-shadow: none;
 }
 
 .relPerson.deceased.female::before {
-  background: rgba(237, 100, 166, 0.25);
+  background: rgba(200, 168, 101, 0.25);
   box-shadow: none;
 }
 
-/* Out of scope label */
 .outOfScope {
   padding: var(--space-4) var(--space-9);
+  font-family: var(--heritage-font-body);
   font-size: var(--font-size-sm);
-  color: var(--alpha-white-35);
+  color: rgba(232, 223, 200, 0.3);
   font-style: italic;
 }
 
@@ -582,162 +749,53 @@
 }
 
 .relPerson.male::before {
-  background: rgba(99, 179, 237, 0.5);
-  box-shadow: 0 0 4px rgba(99, 179, 237, 0.3);
+  background: var(--heritage-emerald-glow);
+  box-shadow: 0 0 6px rgba(46, 152, 118, 0.55);
+  opacity: 0.75;
 }
 
 .relPerson.female::before {
-  background: rgba(237, 100, 166, 0.5);
-  box-shadow: 0 0 4px rgba(237, 100, 166, 0.3);
+  background: var(--heritage-gold);
+  box-shadow: 0 0 6px rgba(200, 168, 101, 0.55);
+  opacity: 0.75;
 }
 
-/* Person info */
 .relPersonInfo {
   flex: 1;
   min-width: 0;
 }
 
 .relPersonName {
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-inverse);
-  line-height: var(--line-height-snug);
+  font-family: var(--heritage-font-display);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--heritage-parchment);
+  line-height: 1.3;
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
+  letter-spacing: 0.005em;
 }
 
 .relPersonDates {
   display: flex;
   flex-direction: column;
-  font-size: var(--font-size-xs);
-  color: var(--alpha-white-40);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  color: rgba(232, 223, 200, 0.45);
   margin-top: var(--space-1);
+  letter-spacing: 0.02em;
 }
 
-/* Chevron for clickable */
 .relChevron {
-  color: var(--alpha-white-30);
+  color: rgba(200, 168, 101, 0.4);
   flex-shrink: 0;
   margin-right: var(--space-3);
+  transition: color 180ms;
 }
 
-/* ============================================
-   MOVE CHILD BUTTON (amber)
-   ============================================ */
-
-.actionButtonMove {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-4);
-  background: transparent;
-  border: 1px solid rgba(246, 173, 85, 0.3);
-  border-radius: var(--radius-md);
-  color: rgba(246, 173, 85, 0.8);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  font-family: inherit;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  white-space: nowrap;
-}
-
-.actionButtonMove:hover {
-  background: rgba(246, 173, 85, 0.1);
-  border-color: rgba(246, 173, 85, 0.5);
-  color: var(--color-accent);
-}
-
-.actionButtonMove:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(246, 173, 85, 0.15);
-  border-color: var(--color-accent);
-}
-
-.actionButtonMove:active {
-  transform: scale(0.97);
-}
-
-.actionButtonMove svg {
-  flex-shrink: 0;
-}
-
-.actionButtonRadaa {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-4);
-  background: transparent;
-  border: 1px solid rgba(129, 199, 132, 0.3);
-  border-radius: var(--radius-md);
-  color: rgba(129, 199, 132, 0.8);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  white-space: nowrap;
-}
-
-.actionButtonRadaa:hover {
-  background: rgba(129, 199, 132, 0.1);
-  border-color: rgba(129, 199, 132, 0.5);
-  color: rgb(129, 199, 132);
-}
-
-.actionButtonRadaa:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(129, 199, 132, 0.15);
-  border-color: rgb(129, 199, 132);
-}
-
-.actionButtonRadaa:active {
-  transform: scale(0.97);
-}
-
-.actionButtonRadaa svg {
-  flex-shrink: 0;
-}
-
-/* ============================================
-   LINK EXISTING SPOUSE BUTTON (teal)
-   ============================================ */
-
-.actionButtonLink {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-4);
-  background: transparent;
-  border: 1px solid rgba(56, 178, 172, 0.3);
-  border-radius: var(--radius-md);
-  color: rgba(56, 178, 172, 0.8);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  font-family: inherit;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  white-space: nowrap;
-}
-
-.actionButtonLink:hover {
-  background: rgba(56, 178, 172, 0.1);
-  border-color: rgba(56, 178, 172, 0.5);
-  color: rgb(56, 178, 172);
-}
-
-.actionButtonLink:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(56, 178, 172, 0.15);
-  border-color: rgb(56, 178, 172);
-}
-
-.actionButtonLink:active {
-  transform: scale(0.97);
-}
-
-.actionButtonLink svg {
-  flex-shrink: 0;
+.relPersonClickable:hover .relChevron {
+  color: var(--heritage-gold);
 }
 
 /* ============================================
@@ -745,170 +803,50 @@
    ============================================ */
 
 .actionError {
-  padding: var(--space-3) var(--space-9);
-  background: rgba(229, 62, 62, 0.1);
-  border-bottom: 1px solid rgba(229, 62, 62, 0.2);
-  color: #fc8181;
+  padding: var(--space-4) var(--space-9);
+  background: rgba(232, 92, 51, 0.1);
+  border-bottom: 1px dashed rgba(232, 161, 92, 0.25);
+  color: #f0b98b;
+  font-family: var(--heritage-font-body);
   font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
+  font-weight: 500;
   animation: slideDown var(--transition-fast) ease;
 }
 
 @keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* ============================================
-   DECEASED LABEL
+   DECEASED LABEL / EVENTS / NOTES
    ============================================ */
 
 .deceasedLabel {
-  color: var(--alpha-white-40);
+  color: rgba(232, 223, 200, 0.45);
   font-style: italic;
 }
 
 .eventDescription {
-  color: var(--alpha-white-50);
+  color: rgba(232, 223, 200, 0.6);
   font-size: inherit;
 }
 
 .eventNote {
   font-style: italic;
-  color: var(--alpha-white-40);
+  color: rgba(232, 223, 200, 0.45);
   font-size: inherit;
 }
 
-/* ============================================
-   NOTES SECTION
-   ============================================ */
-
 .notesContent {
-  padding: var(--space-4) var(--space-9);
-  font-size: var(--font-size-sm);
-  color: var(--alpha-white-60);
-  line-height: var(--line-height-relaxed);
+  padding: var(--space-5) var(--space-9);
+  font-family: var(--heritage-font-body);
+  font-size: 13px;
+  color: var(--heritage-text-soft);
+  line-height: 1.8;
+  font-weight: 300;
   white-space: pre-wrap;
   word-break: break-word;
-}
-
-/* ============================================
-   RESPONSIVE STYLES
-   ============================================ */
-
-@media (max-width: 768px) {
-  .backButton {
-    padding: var(--space-5) var(--space-7);
-  }
-
-  .hero {
-    padding: var(--space-7);
-  }
-
-  .heroName {
-    font-size: var(--font-size-xl);
-  }
-
-  .actionBar {
-    padding: var(--space-3) var(--space-7);
-  }
-
-  .sectionTitle {
-    padding: var(--space-3) var(--space-7);
-  }
-
-  .relPerson {
-    padding: var(--space-3) var(--space-7);
-    padding-right: calc(var(--space-7) + 16px);
-  }
-
-  .relPersonClickable {
-    padding: var(--space-3) var(--space-7);
-    padding-right: calc(var(--space-7) + 16px);
-  }
-
-  .deleteSection {
-    padding: var(--space-4) var(--space-7);
-  }
-
-  .actionError {
-    padding: var(--space-3) var(--space-7);
-  }
-
-  .notesContent {
-    padding: var(--space-3) var(--space-7);
-  }
-
-  .pointerBanner {
-    padding: var(--space-3) var(--space-7);
-  }
-
-  .radaEmpty {
-    padding: var(--space-3) var(--space-7);
-  }
-}
-
-@media (max-width: 480px) {
-  .backButton {
-    padding: var(--space-4) var(--space-6);
-  }
-
-  .hero {
-    padding: var(--space-6);
-  }
-
-  .heroName {
-    font-size: var(--font-size-lg);
-  }
-
-  .actionBar {
-    padding: var(--space-3) var(--space-6);
-    gap: var(--space-2);
-  }
-
-  .sectionTitle {
-    padding: var(--space-3) var(--space-6);
-  }
-
-  .relPerson {
-    padding: var(--space-3) var(--space-6);
-    padding-right: calc(var(--space-6) + 16px);
-  }
-
-  .relPersonClickable {
-    padding: var(--space-3) var(--space-6);
-    padding-right: calc(var(--space-6) + 16px);
-  }
-
-  .deleteSection {
-    padding: var(--space-3) var(--space-6);
-  }
-
-  .actionError {
-    padding: var(--space-3) var(--space-6);
-  }
-
-  .notesContent {
-    padding: var(--space-3) var(--space-6);
-  }
-
-  .pointerBanner {
-    padding: var(--space-3) var(--space-6);
-  }
-
-  .marriageBlock {
-    padding: var(--space-3) var(--space-7);
-  }
-
-  .radaEmpty {
-    padding: var(--space-3) var(--space-6);
-  }
 }
 
 /* ============================================
@@ -916,34 +854,38 @@
    ============================================ */
 
 .calendarToggle {
-  display: flex;
-  align-items: center;
-  background: var(--alpha-white-04);
-  border: 1px solid var(--alpha-white-08);
-  border-radius: var(--radius-full);
-  padding: 2px;
+  display: inline-flex;
+  padding: 3px;
+  background: rgba(10, 14, 26, 0.5);
+  border: 1px solid rgba(200, 168, 101, 0.1);
+  border-radius: var(--heritage-radius-pill);
+  gap: 2px;
 }
 
 .calendarToggleOption {
-  padding: var(--space-1) var(--space-4);
+  padding: 6px 14px;
   border: none;
-  border-radius: var(--radius-full);
+  border-radius: var(--heritage-radius-pill);
   background: transparent;
-  color: var(--alpha-white-40);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  font-family: inherit;
+  color: rgba(232, 223, 200, 0.55);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: color 180ms;
 }
 
 .calendarToggleOption:hover {
-  color: var(--alpha-white-60);
+  color: var(--heritage-parchment);
 }
 
 .calendarToggleOptionActive {
-  background: var(--alpha-white-12);
-  color: var(--color-primary-light);
+  background: linear-gradient(180deg, var(--heritage-gold-bright), var(--heritage-gold));
+  color: var(--heritage-midnight-deep);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 4px 10px rgba(200, 168, 101, 0.25);
 }
 
 /* ============================================
@@ -951,24 +893,27 @@
    ============================================ */
 
 .marriageBlock {
-  padding: var(--space-4) var(--space-9);
+  padding: var(--space-5) var(--space-9);
+  border-bottom: 1px dashed rgba(200, 168, 101, 0.06);
 }
 
-.marriageBlock + .marriageBlock {
-  border-top: 1px solid var(--alpha-white-04);
+.marriageBlock:last-child {
+  border-bottom: none;
 }
 
 .marriageBlockHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
 .marriageSpouseName {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--alpha-white-60);
+  font-family: var(--heritage-font-display);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--heritage-parchment);
+  letter-spacing: 0.005em;
 }
 
 .marriageEditButton {
@@ -978,17 +923,18 @@
   width: 28px;
   height: 28px;
   padding: 0;
-  background: var(--alpha-white-04);
-  border: 1px solid var(--alpha-white-08);
-  border-radius: var(--radius-full);
-  color: var(--alpha-white-40);
+  background: rgba(10, 14, 26, 0.5);
+  border: 1px solid var(--heritage-glass-border);
+  border-radius: 50%;
+  color: rgba(232, 223, 200, 0.55);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 180ms;
 }
 
 .marriageEditButton:hover {
-  background: var(--alpha-white-10);
-  color: var(--alpha-white-70);
+  background: rgba(200, 168, 101, 0.08);
+  border-color: var(--heritage-gold);
+  color: var(--heritage-gold-bright);
 }
 
 .marriageHeaderActions {
@@ -1005,35 +951,36 @@
   height: 28px;
   padding: 0;
   background: transparent;
-  border: 1px solid rgba(229, 62, 62, 0.15);
-  border-radius: var(--radius-full);
-  color: rgba(229, 62, 62, 0.5);
+  border: 1px solid rgba(232, 92, 51, 0.22);
+  border-radius: 50%;
+  color: rgba(232, 92, 51, 0.65);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 180ms;
 }
 
 .marriageUnlinkButton:hover {
-  background: rgba(229, 62, 62, 0.1);
-  border-color: rgba(229, 62, 62, 0.3);
-  color: var(--color-error);
+  background: rgba(232, 92, 51, 0.1);
+  border-color: rgba(232, 92, 51, 0.4);
+  color: #f0b98b;
 }
 
-/* Unlink confirmation — inline within marriage block */
+/* Unlink confirmation */
 .unlinkConfirm {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
-  margin-bottom: var(--space-3);
-  background: rgba(229, 62, 62, 0.06);
-  border: 1px solid rgba(229, 62, 62, 0.15);
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  margin-bottom: var(--space-4);
+  background: rgba(40, 20, 18, 0.4);
+  border: 1px dashed rgba(232, 161, 92, 0.25);
   border-radius: var(--radius-lg);
 }
 
 .unlinkConfirmText {
-  font-size: var(--font-size-xs);
-  color: rgba(229, 62, 62, 0.8);
-  line-height: 1.5;
+  font-family: var(--heritage-font-body);
+  font-size: 12px;
+  color: #f0b98b;
+  line-height: 1.6;
 }
 
 .unlinkConfirmActions {
@@ -1045,21 +992,23 @@
 .unlinkConfirmYes {
   display: inline-flex;
   align-items: center;
-  padding: var(--space-1) var(--space-4);
-  background: rgba(229, 62, 62, 0.15);
-  border: 1px solid rgba(229, 62, 62, 0.35);
-  border-radius: var(--radius-md);
-  color: var(--color-error);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  font-family: inherit;
+  padding: var(--space-2) var(--space-5);
+  background: linear-gradient(180deg, #b84a2c 0%, #7a2a15 100%);
+  border: 1px solid rgba(232, 161, 92, 0.4);
+  border-radius: var(--heritage-radius-pill);
+  color: var(--heritage-parchment);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 180ms;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
 
-.unlinkConfirmYes:hover {
-  background: rgba(229, 62, 62, 0.25);
-  border-color: rgba(229, 62, 62, 0.5);
+.unlinkConfirmYes:hover:not(:disabled) {
+  background: linear-gradient(180deg, #c85435 0%, #8a321a 100%);
+  transform: translateY(-1px);
 }
 
 .unlinkConfirmYes:disabled {
@@ -1070,22 +1019,23 @@
 .unlinkConfirmNo {
   display: inline-flex;
   align-items: center;
-  padding: var(--space-1) var(--space-4);
+  padding: var(--space-2) var(--space-5);
   background: transparent;
-  border: 1px solid var(--alpha-white-15);
-  border-radius: var(--radius-md);
-  color: var(--alpha-white-60);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  font-family: inherit;
+  border: 1px solid var(--heritage-glass-border-strong);
+  border-radius: var(--heritage-radius-pill);
+  color: var(--heritage-cream);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 180ms;
 }
 
-.unlinkConfirmNo:hover {
-  background: var(--alpha-white-08);
-  border-color: var(--alpha-white-25);
-  color: var(--color-text-inverse);
+.unlinkConfirmNo:hover:not(:disabled) {
+  background: rgba(200, 168, 101, 0.06);
+  color: var(--heritage-gold-bright);
+  border-color: var(--heritage-gold);
 }
 
 .unlinkConfirmNo:disabled {
@@ -1097,45 +1047,53 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  padding: var(--space-2) 0;
+  padding: var(--space-3) 0;
 }
 
 .marriageEvent + .marriageEvent {
-  border-top: 1px solid var(--alpha-white-04);
+  border-top: 1px dashed rgba(200, 168, 101, 0.06);
 }
 
 .marriageEventLabel {
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-primary-light);
+  font-family: var(--heritage-font-body);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--heritage-gold);
 }
 
 .marriageEventDate {
-  font-size: var(--font-size-sm);
-  color: var(--alpha-white-70);
+  font-family: var(--heritage-font-display);
+  font-size: 13px;
+  color: var(--heritage-parchment);
 }
 
 .marriageEventDateSecondary {
-  font-size: var(--font-size-xs);
-  color: var(--alpha-white-35);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  color: rgba(232, 223, 200, 0.45);
 }
 
 .marriageEventPlace {
-  font-size: var(--font-size-xs);
-  color: var(--alpha-white-40);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  color: rgba(232, 223, 200, 0.6);
 }
 
 .divorceBadge {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-1) var(--space-4);
-  border-radius: var(--radius-full);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  background: rgba(229, 62, 62, 0.1);
-  color: rgba(229, 62, 62, 0.7);
-  border: 1px solid rgba(229, 62, 62, 0.15);
+  padding: 4px 12px;
+  border-radius: var(--heritage-radius-pill);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  background: rgba(232, 92, 51, 0.1);
+  color: #f0b98b;
+  border: 1px solid rgba(232, 161, 92, 0.25);
 }
 
 /* ============================================
@@ -1154,13 +1112,13 @@
 }
 
 .dateSecondary {
-  font-size: var(--font-size-xs);
-  color: var(--alpha-white-35);
+  font-size: 11px;
+  color: rgba(232, 223, 200, 0.4);
   margin-top: var(--space-1);
 }
 
 /* ============================================
-   RADA'A (FOSTER NURSING) SECTION
+   RADA'A
    ============================================ */
 
 .sectionTitleRow {
@@ -1171,6 +1129,7 @@
 
 .sectionTitleRow .sectionTitle {
   flex: 1;
+  border-bottom: none;
 }
 
 .sectionEditButton {
@@ -1179,67 +1138,75 @@
   justify-content: center;
   width: 28px;
   height: 28px;
-  margin-inline-end: var(--space-3);
-  background: transparent;
-  border: 1px solid var(--alpha-white-12);
-  border-radius: var(--radius-full);
-  color: var(--alpha-white-50);
+  margin-inline-end: var(--space-7);
+  background: rgba(10, 14, 26, 0.5);
+  border: 1px solid var(--heritage-glass-border);
+  border-radius: 50%;
+  color: rgba(232, 223, 200, 0.55);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 180ms;
 }
 
 .sectionEditButton:hover {
-  background: var(--alpha-white-08);
-  border-color: var(--alpha-white-25);
-  color: var(--color-text-inverse);
+  background: rgba(200, 168, 101, 0.08);
+  border-color: var(--heritage-gold);
+  color: var(--heritage-gold-bright);
 }
 
-/* Rada'a family block — mirrors .marriageBlock pattern */
 .radaBlockHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-2) var(--space-9);
+  padding: var(--space-3) var(--space-9);
 }
 
 .radaBlockLabel {
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  color: var(--alpha-white-40);
+  font-family: var(--heritage-font-body);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(232, 223, 200, 0.45);
 }
 
 .radaRoleTag {
-  font-size: var(--font-size-xs);
-  color: var(--alpha-white-45);
-  font-weight: var(--font-weight-normal);
+  font-family: var(--heritage-font-body);
+  font-size: 10px;
+  color: var(--heritage-gold-bright);
+  font-weight: 500;
   margin-inline-start: var(--space-3);
   white-space: nowrap;
-  background: var(--alpha-white-06);
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-full);
-  line-height: 1;
+  background: rgba(200, 168, 101, 0.12);
+  border: 1px solid rgba(200, 168, 101, 0.25);
+  padding: 2px 10px;
+  border-radius: var(--heritage-radius-pill);
+  line-height: 1.2;
+  letter-spacing: 0.04em;
 }
 
 .radaNote {
-  margin-top: var(--space-3);
-  padding: var(--space-2) var(--space-4);
-  font-size: var(--font-size-xs);
+  margin: var(--space-2) var(--space-9) var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  font-family: var(--heritage-font-body);
+  font-size: 12px;
   font-style: italic;
-  color: var(--alpha-white-40);
-  background: var(--alpha-white-04);
+  color: rgba(232, 223, 200, 0.55);
+  background: rgba(10, 14, 26, 0.4);
+  border: 1px dashed rgba(200, 168, 101, 0.12);
   border-radius: var(--radius-md);
-  line-height: var(--line-height-normal);
+  line-height: 1.6;
 }
 
 .radaEmpty {
-  padding: var(--space-3) var(--space-9);
+  padding: var(--space-4) var(--space-9);
+  font-family: var(--heritage-font-body);
   font-size: var(--font-size-sm);
-  color: var(--alpha-white-35);
+  color: rgba(232, 223, 200, 0.35);
+  font-style: italic;
 }
 
 /* ============================================
-   LINK SPOUSE MODAL — allow picker dropdown
-   to overlay outside the modal content area
+   LINK SPOUSE MODAL CONTENT OVERFLOW
    ============================================ */
 
 .linkSpouseModalContent {
@@ -1247,7 +1214,7 @@
 }
 
 /* ============================================
-   AUDIT HISTORY — collapsible per-person section
+   AUDIT HISTORY
    ============================================ */
 
 .auditToggle {
@@ -1255,24 +1222,26 @@
   align-items: center;
   gap: var(--space-3);
   width: 100%;
-  padding: var(--space-4) 0;
+  padding: var(--space-4) var(--space-9);
   background: transparent;
   border: none;
-  color: var(--alpha-white-50);
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-medium);
-  font-family: inherit;
+  color: var(--heritage-gold);
+  font-family: var(--heritage-font-body);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
   cursor: pointer;
-  transition: color var(--transition-fast);
+  transition: color 180ms;
 }
 
 .auditToggle:hover {
-  color: var(--alpha-white-70);
+  color: var(--heritage-gold-bright);
 }
 
 .auditToggle svg:first-child {
   flex-shrink: 0;
-  opacity: 0.6;
+  opacity: 0.7;
 }
 
 .auditChevron {
@@ -1286,7 +1255,7 @@
 }
 
 .auditContent {
-  padding: var(--space-2) 0 var(--space-4);
+  padding: var(--space-2) var(--space-9) var(--space-4);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
@@ -1294,21 +1263,15 @@
 }
 
 @keyframes auditSlideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .auditEntry {
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
-  background: var(--alpha-white-04);
-  border: 1px solid var(--alpha-white-06);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  background: rgba(10, 14, 26, 0.4);
+  border: 1px solid var(--heritage-glass-border);
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -1322,30 +1285,151 @@
 }
 
 .auditAction {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-primary-light);
+  font-family: var(--heritage-font-display);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--heritage-gold-bright);
 }
 
 .auditTime {
-  font-size: var(--font-size-xs);
-  color: var(--alpha-white-30);
+  font-family: var(--heritage-font-body);
+  font-size: 10px;
+  color: rgba(232, 223, 200, 0.4);
+  letter-spacing: 0.04em;
 }
 
 .auditUser {
-  font-size: var(--font-size-xs);
-  color: var(--alpha-white-35);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  color: rgba(232, 223, 200, 0.5);
 }
 
 .auditLoading {
-  font-size: var(--font-size-sm);
-  color: var(--alpha-white-35);
-  padding: var(--space-2) 0;
+  font-family: var(--heritage-font-body);
+  font-size: 12px;
+  color: rgba(232, 223, 200, 0.45);
+  padding: var(--space-2) var(--space-9);
 }
 
 .auditEmpty {
-  font-size: var(--font-size-sm);
-  color: var(--alpha-white-30);
+  font-family: var(--heritage-font-body);
+  font-size: 12px;
+  color: rgba(232, 223, 200, 0.35);
   font-style: italic;
-  padding: var(--space-2) 0;
+  padding: var(--space-2) var(--space-9);
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 768px) {
+  .backButton {
+    padding: var(--space-5) var(--space-7);
+  }
+
+  .hero {
+    padding: var(--space-9) var(--space-7);
+  }
+
+  .heroName {
+    font-size: 20px;
+  }
+
+  .actionBar {
+    padding: var(--space-4) var(--space-7);
+  }
+
+  .sectionTitle {
+    padding: var(--space-4) var(--space-7);
+  }
+
+  .relPerson {
+    padding: var(--space-4) var(--space-7);
+    padding-right: calc(var(--space-7) + 16px);
+  }
+
+  .relPersonClickable {
+    padding: var(--space-4) var(--space-7);
+    padding-right: calc(var(--space-7) + 16px);
+  }
+
+  .deleteSection {
+    padding: var(--space-5) var(--space-7);
+  }
+
+  .actionError {
+    padding: var(--space-3) var(--space-7);
+  }
+
+  .notesContent {
+    padding: var(--space-4) var(--space-7);
+  }
+
+  .pointerBanner {
+    padding: var(--space-4) var(--space-7);
+  }
+
+  .radaEmpty,
+  .radaBlockHeader {
+    padding-left: var(--space-7);
+    padding-right: var(--space-7);
+  }
+
+  .marriageBlock {
+    padding: var(--space-4) var(--space-7);
+  }
+
+  .auditToggle,
+  .auditContent,
+  .auditLoading,
+  .auditEmpty {
+    padding-left: var(--space-7);
+    padding-right: var(--space-7);
+  }
+}
+
+@media (max-width: 480px) {
+  .backButton {
+    padding: var(--space-4) var(--space-6);
+  }
+
+  .hero {
+    padding: var(--space-8) var(--space-6);
+  }
+
+  .heroName {
+    font-size: 18px;
+  }
+
+  .actionBar {
+    padding: var(--space-3) var(--space-6);
+    gap: var(--space-2);
+  }
+
+  .sectionTitle {
+    padding: var(--space-3) var(--space-6);
+  }
+
+  .relPerson,
+  .relPersonClickable {
+    padding: var(--space-3) var(--space-6);
+    padding-right: calc(var(--space-6) + 16px);
+  }
+
+  .deleteSection,
+  .actionError,
+  .notesContent,
+  .pointerBanner,
+  .radaEmpty,
+  .radaBlockHeader,
+  .auditToggle,
+  .auditContent {
+    padding-left: var(--space-6);
+    padding-right: var(--space-6);
+  }
+
+  .marriageBlock {
+    padding: var(--space-3) var(--space-6);
+  }
 }

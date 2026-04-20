@@ -12,12 +12,12 @@
   width: 48px;
   height: 48px;
   padding: var(--space-5);
-  background: var(--gradient-toggle);
-  border: 1px solid var(--alpha-white-15);
+  background: linear-gradient(135deg, rgba(15, 21, 40, 0.85) 0%, rgba(7, 11, 24, 0.92) 100%);
+  border: 1px solid var(--heritage-glass-border-strong);
   border-radius: var(--radius-2xl);
   cursor: pointer;
   box-shadow:
-    var(--shadow-xl),
+    0 14px 32px rgba(0, 0, 0, 0.45),
     0 0 0 1px rgba(255, 255, 255, 0.05) inset;
   flex-direction: column;
   align-items: center;
@@ -28,9 +28,11 @@
 
 .toggle:hover {
   transform: scale(1.05);
+  border-color: var(--heritage-gold);
   box-shadow:
-    0 6px 24px var(--alpha-black-40),
-    0 0 0 1px var(--alpha-white-10) inset;
+    0 14px 32px rgba(0, 0, 0, 0.55),
+    0 0 32px rgba(200, 168, 101, 0.18),
+    0 0 0 1px rgba(200, 168, 101, 0.2) inset;
 }
 
 .toggle:active {
@@ -41,10 +43,11 @@
   display: block;
   width: 22px;
   height: 2.5px;
-  background: var(--gradient-toggle-bar);
+  background: linear-gradient(90deg, var(--heritage-gold-bright) 0%, var(--heritage-gold) 100%);
   border-radius: 2px;
   transition: all var(--transition-slow);
   transform-origin: center;
+  box-shadow: 0 0 8px rgba(200, 168, 101, 0.35);
 }
 
 .toggle.isOpen {
@@ -214,18 +217,19 @@
   width: 28px;
   height: 28px;
   padding: 0;
-  background: var(--alpha-white-15);
-  border: none;
+  background: rgba(10, 14, 26, 0.55);
+  border: 1px solid var(--heritage-glass-border);
   border-radius: 50%;
-  color: var(--alpha-white-70);
+  color: var(--heritage-cream);
   cursor: pointer;
   transition: all var(--transition-base);
 }
 
 .searchClear:hover {
-  background: var(--alpha-white-25);
-  color: var(--color-text-inverse);
-  transform: scale(1.1);
+  background: rgba(200, 168, 101, 0.08);
+  border-color: var(--heritage-gold);
+  color: var(--heritage-gold-bright);
+  transform: scale(1.08);
 }
 
 .searchClear:active {
@@ -394,19 +398,19 @@
   width: 22px;
   height: 22px;
   padding: 0;
-  border: 1px solid var(--alpha-white-10);
+  border: 1px solid var(--heritage-glass-border);
   border-radius: 50%;
-  background: var(--alpha-white-04);
-  color: var(--alpha-white-30);
+  background: rgba(10, 14, 26, 0.4);
+  color: rgba(200, 168, 101, 0.5);
   cursor: pointer;
   transition: all var(--transition-fast);
   flex-shrink: 0;
 }
 
 .aboutChip:hover {
-  background: var(--alpha-white-08);
-  border-color: var(--alpha-white-15);
-  color: var(--alpha-white-60);
+  background: rgba(200, 168, 101, 0.08);
+  border-color: var(--heritage-gold);
+  color: var(--heritage-gold-bright);
 }
 
 .aboutChip.isOpen {
@@ -517,17 +521,22 @@
 
 .settingsFieldLabel {
   display: block;
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--alpha-white-60);
-  margin-bottom: var(--space-1);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--heritage-gold);
+  margin-bottom: var(--space-2);
 }
 
 .settingsHint {
-  font-size: var(--font-size-xs);
-  color: var(--alpha-white-35);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  color: rgba(232, 223, 200, 0.5);
   margin: 0 0 var(--space-4) 0;
-  line-height: var(--line-height-normal);
+  line-height: 1.65;
+  letter-spacing: 0.03em;
 }
 
 /* Dropdown */
@@ -539,22 +548,25 @@
   width: 100%;
   padding: var(--space-6) var(--space-7);
   font-size: var(--font-size-lg);
-  background: var(--alpha-white-06);
-  border: 1px solid var(--alpha-white-08);
+  background: rgba(10, 14, 26, 0.5);
+  border: 1px solid rgba(200, 168, 101, 0.14);
   border-radius: var(--radius-lg);
-  color: var(--color-text-inverse);
-  transition: all var(--transition-base);
+  color: var(--heritage-parchment);
+  font-family: var(--heritage-font-body);
+  transition: border-color 220ms, background 220ms, box-shadow 220ms;
 }
 
 .dropdownInput::placeholder {
-  color: var(--alpha-white-40);
+  color: rgba(232, 223, 200, 0.32);
 }
 
 .dropdownInput:focus {
   outline: none;
-  background: var(--alpha-white-10);
-  border-color: rgba(99, 179, 237, 0.4);
-  box-shadow: 0 0 0 2px rgba(99, 179, 237, 0.1);
+  background: rgba(10, 14, 26, 0.7);
+  border-color: var(--heritage-gold);
+  box-shadow:
+    0 0 0 3px rgba(200, 168, 101, 0.1),
+    inset 0 0 0 1px rgba(200, 168, 101, 0.25);
 }
 
 .dropdownList {
@@ -564,36 +576,45 @@
   left: 0;
   max-height: 240px;
   overflow-y: auto;
-  background: var(--color-dark-700);
-  border: 1px solid var(--alpha-white-12);
+  background: linear-gradient(180deg, rgba(15, 21, 40, 0.95), rgba(7, 11, 24, 0.98));
+  border: 1px solid var(--heritage-glass-border-strong);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+    0 20px 50px rgba(0, 0, 0, 0.55);
   z-index: var(--z-sidebar-dropdown);
   list-style: none;
   margin: 0;
-  padding: var(--space-1);
+  padding: var(--space-2);
 }
 
 .dropdownItem {
   padding: var(--space-4) var(--space-5);
+  font-family: var(--heritage-font-body);
   font-size: var(--font-size-base);
+  color: var(--heritage-cream);
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: background 180ms, color 180ms;
 }
 
 .dropdownItem:hover {
-  background: rgba(99, 179, 237, 0.15);
+  background: rgba(200, 168, 101, 0.08);
+  color: var(--heritage-gold-bright);
 }
 
 .dropdownItem.selected {
-  background: rgba(99, 179, 237, 0.25);
-  color: var(--color-primary-light);
+  background: linear-gradient(90deg, rgba(200, 168, 101, 0.14), rgba(200, 168, 101, 0.04));
+  color: var(--heritage-gold-bright);
+  border-inline-start: 2px solid var(--heritage-gold);
 }
 
 .dropdownEmpty {
   padding: var(--space-5);
-  color: var(--alpha-white-40);
+  color: rgba(232, 223, 200, 0.45);
+  font-family: var(--heritage-font-body);
   font-style: italic;
   text-align: center;
 }

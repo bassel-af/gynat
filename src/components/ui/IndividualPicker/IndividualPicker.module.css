@@ -1,14 +1,21 @@
+/* ============================================
+   INDIVIDUAL PICKER — Jeweled Heritage
+   ============================================ */
+
 .wrapper {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
   position: relative;
+  font-family: var(--heritage-font-body);
 }
 
 .label {
-  font-size: var(--font-size-sm);
-  color: var(--alpha-white-50);
-  font-weight: var(--font-weight-medium);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--heritage-gold);
 }
 
 .inputWrapper {
@@ -19,82 +26,95 @@
 
 .input {
   width: 100%;
-  padding: var(--space-3) var(--space-4);
-  padding-inline-end: var(--space-10);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--alpha-white-10);
-  background: var(--alpha-white-04);
-  color: var(--alpha-white-85);
-  font-size: var(--font-size-base);
-  font-family: inherit;
+  padding: var(--space-5) var(--space-6);
+  padding-inline-end: 44px;
+  border-radius: var(--heritage-radius-sm);
+  border: 1px solid rgba(200, 168, 101, 0.12);
+  background: rgba(10, 14, 26, 0.5);
+  color: var(--heritage-parchment);
+  font-family: var(--heritage-font-body);
+  font-size: 14px;
+  letter-spacing: 0.005em;
   outline: none;
-  transition: border-color var(--transition-base);
+  transition: border-color 220ms, background 220ms, box-shadow 220ms;
 }
 
 .input::placeholder {
-  color: var(--alpha-white-25);
+  color: rgba(232, 223, 200, 0.32);
 }
 
 .input:focus {
-  border-color: var(--color-primary);
+  border-color: var(--heritage-gold);
+  background: rgba(10, 14, 26, 0.7);
+  box-shadow:
+    0 0 0 3px rgba(200, 168, 101, 0.1),
+    inset 0 0 0 1px rgba(200, 168, 101, 0.25);
 }
 
 .searchIcon {
   position: absolute;
-  inset-inline-end: var(--space-3);
+  inset-inline-end: var(--space-5);
   width: 16px;
   height: 16px;
-  color: var(--alpha-white-25);
+  color: var(--heritage-gold);
+  opacity: 0.7;
   pointer-events: none;
 }
 
-/* Selected chip */
+/* ---------- Selected chip ---------- */
 .selectedChip {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--alpha-white-15);
-  background: var(--alpha-white-06);
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--heritage-radius-pill);
+  border: 1px solid rgba(200, 168, 101, 0.28);
+  background: rgba(200, 168, 101, 0.08);
 }
 
 .selectedName {
   flex: 1;
-  font-size: var(--font-size-base);
-  color: var(--alpha-white-85);
+  font-family: var(--heritage-font-display);
+  font-size: 14px;
+  color: var(--heritage-gold-bright);
+  font-weight: 500;
+  letter-spacing: 0.005em;
 }
 
 .selectedYear {
-  font-size: var(--font-size-sm);
-  color: var(--alpha-white-35);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  color: rgba(232, 223, 200, 0.5);
+  letter-spacing: 0.04em;
 }
 
 .clearButton {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
-  border: none;
-  background: none;
-  color: var(--alpha-white-50);
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--heritage-glass-border);
+  background: rgba(10, 14, 26, 0.5);
+  color: rgba(232, 223, 200, 0.6);
   cursor: pointer;
   padding: 0;
-  border-radius: var(--radius-sm);
-  transition: color var(--transition-base);
+  border-radius: 50%;
+  transition: all 180ms;
 }
 
 .clearButton:hover {
-  color: var(--alpha-white-85);
+  color: var(--heritage-gold-bright);
+  border-color: var(--heritage-gold);
+  background: rgba(200, 168, 101, 0.08);
 }
 
 .clearIcon {
-  width: 12px;
-  height: 12px;
+  width: 11px;
+  height: 11px;
 }
 
-/* Sex indicator dot */
+/* ---------- Sex indicator dot ---------- */
 .sexIndicatorMale,
 .sexIndicatorFemale,
 .sexIndicatorUnknown {
@@ -105,33 +125,40 @@
 }
 
 .sexIndicatorMale {
-  background: var(--color-primary);
+  background: var(--heritage-emerald-glow);
+  box-shadow: 0 0 6px rgba(46, 152, 118, 0.55);
 }
 
 .sexIndicatorFemale {
-  background: var(--color-secondary-dark);
+  background: var(--heritage-gold);
+  box-shadow: 0 0 6px rgba(200, 168, 101, 0.6);
 }
 
 .sexIndicatorUnknown {
-  background: var(--alpha-white-25);
+  background: rgba(232, 223, 200, 0.3);
 }
 
-/* Dropdown */
+/* ---------- Dropdown ---------- */
 .dropdown {
   position: absolute;
   top: 100%;
   inset-inline-start: 0;
   inset-inline-end: 0;
   z-index: 50;
-  margin-top: var(--space-1);
-  padding: var(--space-1);
-  background: var(--color-dark-700);
+  margin-top: var(--space-2);
+  padding: var(--space-2);
+  background: linear-gradient(180deg, rgba(15, 21, 40, 0.95), rgba(7, 11, 24, 0.98));
+  border: 1px solid var(--heritage-glass-border-strong);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  max-height: 240px;
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+    0 20px 50px rgba(0, 0, 0, 0.55);
+  max-height: 260px;
   overflow-y: auto;
   scrollbar-width: thin;
-  scrollbar-color: var(--alpha-white-10) transparent;
+  scrollbar-color: rgba(200, 168, 101, 0.3) transparent;
 }
 
 .dropdownList {
@@ -141,33 +168,44 @@
 }
 
 .stateItem {
-  padding: var(--space-3) var(--space-4);
-  color: var(--alpha-white-50);
-  font-size: var(--font-size-sm);
+  padding: var(--space-4) var(--space-5);
+  color: rgba(232, 223, 200, 0.5);
+  font-family: var(--heritage-font-body);
+  font-size: 12px;
   text-align: center;
+  font-style: italic;
 }
 
 .option {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
   border-radius: var(--radius-md);
   cursor: pointer;
+  transition: background 180ms, color 180ms;
 }
 
 .option:hover,
 .optionHighlighted {
-  background: var(--alpha-white-06);
+  background: rgba(200, 168, 101, 0.08);
 }
 
 .optionName {
   flex: 1;
-  font-size: var(--font-size-base);
-  color: var(--alpha-white-85);
+  font-family: var(--heritage-font-body);
+  font-size: 13px;
+  color: var(--heritage-cream);
+}
+
+.option:hover .optionName,
+.optionHighlighted .optionName {
+  color: var(--heritage-gold-bright);
 }
 
 .optionYear {
-  font-size: var(--font-size-sm);
-  color: var(--alpha-white-35);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  color: rgba(232, 223, 200, 0.4);
+  letter-spacing: 0.04em;
 }

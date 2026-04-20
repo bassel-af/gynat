@@ -1,55 +1,60 @@
+/* ============================================
+   FAMILY PICKER MODAL — Jeweled Heritage
+   ============================================ */
+
 .modal {
-  max-width: 420px;
+  max-width: 460px;
 }
 
 .list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
 }
 
 .row {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-4) var(--space-5);
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-6);
   border-radius: var(--radius-lg);
-  background: var(--alpha-white-04);
-  border: 1px solid var(--alpha-white-10);
+  background: rgba(10, 14, 26, 0.4);
+  border: 1px solid var(--heritage-glass-border);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 200ms;
 }
 
 .row:hover {
-  background: var(--alpha-white-06);
-  border-color: var(--alpha-white-15);
+  background: rgba(200, 168, 101, 0.06);
+  border-color: rgba(200, 168, 101, 0.28);
 }
 
 .rowSelected {
-  background: rgba(74, 144, 217, 0.1);
-  border-color: rgba(99, 179, 237, 0.3);
+  background: linear-gradient(90deg, rgba(200, 168, 101, 0.14), rgba(200, 168, 101, 0.04));
+  border-color: var(--heritage-gold);
+  box-shadow: 0 0 0 1px rgba(200, 168, 101, 0.2) inset;
 }
 
 .rowSelected:hover {
-  background: rgba(74, 144, 217, 0.15);
-  border-color: rgba(99, 179, 237, 0.4);
+  background: linear-gradient(90deg, rgba(200, 168, 101, 0.2), rgba(200, 168, 101, 0.06));
 }
 
 .radioInput {
   appearance: none;
-  width: 16px;
-  height: 16px;
-  border: 1.5px solid var(--alpha-white-25);
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid rgba(200, 168, 101, 0.35);
   border-radius: 50%;
-  background: transparent;
+  background: rgba(10, 14, 26, 0.6);
   cursor: pointer;
-  transition: border-color var(--transition-base), box-shadow var(--transition-base);
+  transition: border-color 200ms, box-shadow 200ms, background 200ms;
   position: relative;
   flex-shrink: 0;
 }
 
 .radioInput:checked {
-  border-color: var(--color-primary);
+  border-color: var(--heritage-gold);
+  background: rgba(10, 14, 26, 0.8);
 }
 
 .radioInput:checked::after {
@@ -58,18 +63,27 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  background: var(--color-primary);
+  background: linear-gradient(135deg, var(--heritage-gold-bright), var(--heritage-gold));
+  box-shadow: 0 0 8px rgba(200, 168, 101, 0.6);
 }
 
 .radioInput:focus-visible {
-  box-shadow: var(--shadow-focus-primary);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(200, 168, 101, 0.22);
 }
 
 .familyLabel {
-  font-size: var(--font-size-base);
-  color: var(--alpha-white-85);
-  font-weight: var(--font-weight-medium);
+  font-family: var(--heritage-font-display);
+  font-size: 14px;
+  color: var(--heritage-parchment);
+  font-weight: 500;
+  letter-spacing: 0.005em;
+  line-height: 1.3;
+}
+
+.rowSelected .familyLabel {
+  color: var(--heritage-gold-bright);
 }

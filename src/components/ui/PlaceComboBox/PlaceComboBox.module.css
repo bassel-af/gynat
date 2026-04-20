@@ -1,14 +1,22 @@
+/* ============================================
+   PLACE COMBO BOX — Jeweled Heritage
+   ============================================ */
+
 .wrapper {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
   position: relative;
+  font-family: var(--heritage-font-body);
 }
 
 .label {
-  font-size: var(--font-size-sm);
-  color: var(--alpha-white-50);
-  font-weight: var(--font-weight-medium);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--heritage-gold);
 }
 
 .inputWrapper {
@@ -19,88 +27,108 @@
 
 .input {
   width: 100%;
-  padding: var(--space-3) var(--space-4);
-  padding-inline-end: var(--space-10);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--alpha-white-10);
-  background: var(--alpha-white-04);
-  color: var(--alpha-white-85);
-  font-size: var(--font-size-base);
-  font-family: inherit;
+  padding: var(--space-5) var(--space-7);
+  padding-inline-end: 44px;
+  border-radius: var(--heritage-radius-sm);
+  border: 1px solid rgba(200, 168, 101, 0.12);
+  background: rgba(10, 14, 26, 0.5);
+  color: var(--heritage-parchment);
+  font-family: var(--heritage-font-body);
+  font-size: 14px;
+  letter-spacing: 0.005em;
   outline: none;
-  transition: border-color var(--transition-base);
+  transition: border-color 220ms, background 220ms, box-shadow 220ms;
 }
 
 .input::placeholder {
-  color: var(--alpha-white-25);
+  color: rgba(232, 223, 200, 0.32);
 }
 
 .input:focus {
-  border-color: var(--color-primary);
+  border-color: var(--heritage-gold);
+  background: rgba(10, 14, 26, 0.7);
+  box-shadow:
+    0 0 0 3px rgba(200, 168, 101, 0.1),
+    inset 0 0 0 1px rgba(200, 168, 101, 0.25);
 }
 
 .input:disabled {
-  opacity: 0.35;
+  opacity: 0.4;
   cursor: not-allowed;
-  border-color: var(--alpha-white-06);
-  background: transparent;
+  border-color: rgba(200, 168, 101, 0.06);
+  background: rgba(10, 14, 26, 0.25);
 }
 
 .inputError {
-  border-color: var(--color-error);
+  border-color: #e8a15c;
+}
+
+.inputError:focus {
+  border-color: #e8a15c;
+  box-shadow:
+    0 0 0 3px rgba(232, 161, 92, 0.14),
+    inset 0 0 0 1px rgba(232, 161, 92, 0.3);
 }
 
 .locationIcon {
   position: absolute;
-  inset-inline-end: var(--space-3);
+  inset-inline-end: var(--space-5);
   width: 16px;
   height: 16px;
-  color: var(--alpha-white-25);
+  color: var(--heritage-gold);
+  opacity: 0.75;
   pointer-events: none;
 }
 
 .clearButton {
   position: absolute;
-  inset-inline-end: var(--space-8);
+  inset-inline-end: 42px;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
-  border: none;
-  background: none;
-  color: var(--alpha-white-50);
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--heritage-glass-border);
+  background: rgba(10, 14, 26, 0.55);
+  color: rgba(232, 223, 200, 0.6);
   cursor: pointer;
   padding: 0;
-  border-radius: var(--radius-sm);
-  transition: color var(--transition-base);
+  border-radius: 50%;
+  transition: all 180ms;
 }
 
 .clearButton:hover {
-  color: var(--alpha-white-85);
+  color: var(--heritage-gold-bright);
+  border-color: var(--heritage-gold);
+  background: rgba(200, 168, 101, 0.08);
 }
 
 .clearIcon {
-  width: 12px;
-  height: 12px;
+  width: 11px;
+  height: 11px;
 }
 
-/* Dropdown container */
+/* ---------- Dropdown ---------- */
 .dropdown {
   position: absolute;
   top: 100%;
   inset-inline-start: 0;
   inset-inline-end: 0;
   z-index: 50;
-  margin-top: var(--space-1);
-  padding: var(--space-1);
-  background: var(--color-dark-700);
+  margin-top: var(--space-2);
+  padding: var(--space-2);
+  background: linear-gradient(180deg, rgba(15, 21, 40, 0.96), rgba(7, 11, 24, 0.98));
+  border: 1px solid var(--heritage-glass-border-strong);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  max-height: 280px;
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+    0 20px 50px rgba(0, 0, 0, 0.55);
+  max-height: 300px;
   overflow-y: auto;
   scrollbar-width: thin;
-  scrollbar-color: var(--alpha-white-10) transparent;
+  scrollbar-color: rgba(200, 168, 101, 0.3) transparent;
 }
 
 .dropdownList {
@@ -110,96 +138,133 @@
 }
 
 .stateItem {
-  padding: var(--space-3) var(--space-4);
-  color: var(--alpha-white-50);
-  font-size: var(--font-size-sm);
+  padding: var(--space-4) var(--space-5);
+  color: rgba(232, 223, 200, 0.5);
+  font-family: var(--heritage-font-body);
+  font-size: 12px;
   text-align: center;
+  font-style: italic;
 }
 
 .option {
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-4) var(--space-5);
   border-radius: var(--radius-md);
   cursor: pointer;
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
+  transition: background 180ms, color 180ms;
 }
 
 .option:hover,
 .optionHighlighted {
-  background: var(--alpha-white-06);
+  background: rgba(200, 168, 101, 0.08);
 }
 
 .optionPrimary {
-  font-size: var(--font-size-base);
-  color: var(--alpha-white-85);
+  font-family: var(--heritage-font-display);
+  font-size: 14px;
+  color: var(--heritage-parchment);
+  letter-spacing: 0.005em;
+}
+
+.option:hover .optionPrimary,
+.optionHighlighted .optionPrimary {
+  color: var(--heritage-gold-bright);
 }
 
 .optionEn {
-  color: var(--alpha-white-35);
-  font-size: var(--font-size-sm);
+  color: rgba(232, 223, 200, 0.4);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  letter-spacing: 0.04em;
 }
 
 .optionSecondary {
-  font-size: var(--font-size-xs);
-  color: var(--alpha-white-35);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  color: rgba(232, 223, 200, 0.45);
+  letter-spacing: 0.02em;
 }
 
 .optionCreate {
-  color: var(--color-primary);
-  font-size: var(--font-size-sm);
+  color: var(--heritage-emerald-glow);
+  font-family: var(--heritage-font-body);
+  font-size: 12px;
+  font-style: italic;
+  border-top: 1px dashed rgba(200, 168, 101, 0.12);
+  margin-top: var(--space-2);
+  padding-top: var(--space-4);
+}
+
+.option:hover .optionCreate,
+.optionHighlighted .optionCreate {
+  color: var(--heritage-emerald-glow);
 }
 
 .optionSkip {
-  color: var(--alpha-white-50);
-  font-size: var(--font-size-sm);
-  border-top: 1px solid var(--alpha-white-06);
-  margin-top: var(--space-1);
-  padding-top: var(--space-3);
+  color: rgba(232, 223, 200, 0.5);
+  font-family: var(--heritage-font-body);
+  font-size: 12px;
+  border-top: 1px dashed rgba(200, 168, 101, 0.1);
+  margin-top: var(--space-2);
+  padding-top: var(--space-4);
 }
 
-/* Parent picker */
+/* ---------- Parent picker ---------- */
 .parentPicker {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
+  padding: var(--space-2);
 }
 
 .parentPickerHeader {
-  padding: var(--space-2) var(--space-3);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-primary);
+  padding: var(--space-3) var(--space-4);
+  font-family: var(--heritage-font-display);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--heritage-gold-bright);
 }
 
 .parentPickerLabel {
-  padding: 0 var(--space-3);
-  font-size: var(--font-size-xs);
-  color: var(--alpha-white-50);
+  padding: 0 var(--space-4);
+  font-family: var(--heritage-font-body);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--heritage-gold);
 }
 
 .parentInput {
-  margin: 0 var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--alpha-white-10);
-  background: var(--alpha-white-04);
-  color: var(--alpha-white-85);
-  font-size: var(--font-size-sm);
-  font-family: inherit;
+  margin: 0 var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--heritage-radius-sm);
+  border: 1px solid rgba(200, 168, 101, 0.12);
+  background: rgba(10, 14, 26, 0.5);
+  color: var(--heritage-parchment);
+  font-family: var(--heritage-font-body);
+  font-size: 13px;
   outline: none;
-  transition: border-color var(--transition-base);
+  transition: border-color 220ms, background 220ms, box-shadow 220ms;
 }
 
 .parentInput::placeholder {
-  color: var(--alpha-white-25);
+  color: rgba(232, 223, 200, 0.32);
 }
 
 .parentInput:focus {
-  border-color: var(--color-primary);
+  border-color: var(--heritage-gold);
+  background: rgba(10, 14, 26, 0.7);
+  box-shadow:
+    0 0 0 3px rgba(200, 168, 101, 0.1),
+    inset 0 0 0 1px rgba(200, 168, 101, 0.25);
 }
 
 .errorMessage {
-  font-size: var(--font-size-xs);
-  color: #fc8181;
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  color: #f0b98b;
+  letter-spacing: 0.02em;
 }

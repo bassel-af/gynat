@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
+import { createPortal } from 'react-dom';
 import styles from './Modal.module.css';
 
 interface ModalProps {
@@ -14,6 +15,12 @@ interface ModalProps {
 }
 
 export function Modal({ isOpen, onClose, title, children, actions, className, contentClassName }: ModalProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -30,11 +37,11 @@ export function Modal({ isOpen, onClose, title, children, actions, className, co
     }
   }, [isOpen, handleKeyDown]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
   const modalClassName = [styles.modal, className ?? ''].filter(Boolean).join(' ');
 
-  return (
+  return createPortal(
     <div className={styles.overlay} onClick={onClose}>
       <div
         className={modalClassName}
@@ -47,6 +54,7 @@ export function Modal({ isOpen, onClose, title, children, actions, className, co
         <div className={[styles.content, contentClassName ?? ''].filter(Boolean).join(' ')}>{children}</div>
         {actions && <div className={styles.actions}>{actions}</div>}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
