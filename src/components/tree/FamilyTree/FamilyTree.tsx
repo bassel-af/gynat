@@ -563,9 +563,18 @@ function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
   const { data, selectedRootId, initialRootId, config, searchQuery, focusPersonId, selectedPersonId, highlightedPersonId, setHighlightedPersonId, setSelectedPersonId, setSelectedRootId, setFocusPersonId, setMobileSidebarOpen, viewMode } = useTree();
   const { setViewport, setCenter, getZoom, getViewport, fitView } = useReactFlow();
   const [isReady, setIsReady] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const prevRootIdRef = useRef<string | null>(null);
   const savedViewportRef = useRef<{ x: number; y: number; zoom: number } | null>(null);
+
+  useEffect(() => {
+    const mql = window.matchMedia('(max-width: 768px)');
+    const update = () => setIsMobile(mql.matches);
+    update();
+    mql.addEventListener('change', update);
+    return () => mql.removeEventListener('change', update);
+  }, []);
 
   // Compute highlight state (ancestors and descendants of highlighted person)
   const highlightState = useMemo<HighlightState>(() => {
@@ -799,7 +808,7 @@ function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
           lineWidth={1}
           color="rgba(200, 168, 101, 0.08)"
         />
-        {!hideControls && <Controls />}
+        {!hideControls && !isMobile && <Controls />}
         {!hideMiniMap && <MiniMap nodeStrokeWidth={3} zoomable pannable />}
       </ReactFlow>
     </div>
