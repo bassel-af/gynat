@@ -18,7 +18,16 @@ export function AcknowledgmentModal() {
         // localStorage unavailable — show the modal
       }
     }
-    const timer = setTimeout(() => setIsVisible(true), 600);
+    const timer = setTimeout(() => {
+      setIsVisible(true);
+      if (!isDev) {
+        try {
+          localStorage.setItem(STORAGE_KEY, 'true');
+        } catch {
+          // localStorage unavailable
+        }
+      }
+    }, 600);
     return () => clearTimeout(timer);
   }, []);
 
@@ -100,8 +109,7 @@ export function AcknowledgmentModal() {
             ثم أشكر أخي <span className={styles.name}>خالد سعيّد</span> على مبادرته بتجميع المعلومات بشجرة عائلتنا،
             وأشكر <span className={styles.name}>أمي فدوى وأبي عبدالناصر وزوجتي رغد وعمي عبدالغني وعمتي غادة</span> على مساهمتهم
             الكبيرة في إنشاء الأشجار المختلفة لعوائلنا القريبة، <span className={styles.family}>سعيّد</span> و<span className={styles.family}>شربك</span> و<span className={styles.family}>الدالاتي</span> و<span className={styles.family}>الدباغ</span>، وأشكر إخوتي وكل من ساهم وأضاف معلومات ثمينة لجعل هذه
-            الأشجار تزدهر بالفروع والأوراق، ونزع عنها الأوراق الذابلة ذات
-            المعلومات الخاطئة.
+            الأشجار تزدهر بالفروع والأوراق.
           </p>
 
           <p className={styles.paragraph}>
