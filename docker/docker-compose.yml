@@ -101,7 +101,10 @@ services:
     image: kong/kong:3.9.1
     restart: unless-stopped
     ports:
-      - "8000:8000"
+      # ${KONG_HOST_BIND} lets prod bind to 127.0.0.1:8002 (nginx proxies to
+      # it) without conflicting with other docker-proxies on host port 8000.
+      # Dev leaves it empty so the default "8000:8000" binds all interfaces.
+      - "${KONG_HOST_BIND:-8000}:8000"
     environment:
       KONG_DATABASE: "off"
       KONG_DECLARATIVE_CONFIG: /etc/kong/kong.yml

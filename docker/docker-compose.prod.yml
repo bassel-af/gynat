@@ -1,0 +1,26 @@
+# Gynat — production compose override
+# Usage:
+#   cd /mnt/encrypted/gynat/app/docker
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Differences from base docker-compose.yml:
+#   - PostgreSQL data bind-mounts to the LUKS-encrypted volume at
+#     /mnt/encrypted/gynat/postgres so Postgres ciphertext lives behind LUKS.
+#   - Kong's host-port binding is set in docker/.env via
+#     KONG_HOST_BIND=127.0.0.1:8002 so nginx can proxy /auth/v1/* to it
+#     without colliding with existing docker-proxies on host port 8000.
+#   - `studio` and `mailpit` are assigned to the `disabled` profile so they
+#     do NOT start on `docker compose up`. Compose only runs services whose
+#     profile matches --profile flags, so these stay dormant in prod.
+
+services:
+  db:
+    volumes:
+      - /mnt/encrypted/gynat/postgres:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+
+  studio:
+    profiles: ["disabled"]
+
+  mailpit:
+    profiles: ["disabled"]

@@ -31,7 +31,7 @@ Gynat encrypts family data at rest with **two complementary layers**:
 - E2EE breaks branch pointers, magic links, server-side search, GEDCOM export, and audit logs.
 - The UX cost (passphrase prompts, lost-key scenarios, new-device bootstrap) is high.
 
-**Layer 1 future work — Phase 10c (Tang-bound unlock) is deferred**. The LUKS keyfile currently sits at `/root/.jeenat-luks.key` on the production server. This means a full root-FS compromise reveals it. Phase 10c will move unlock to a Tang server on a separate host, removing the keyfile from local disk. **Until 10c ships, do not put Layer 1 claims into the public privacy policy.**
+**Layer 1 future work — Phase 10c (Tang-bound unlock) is deferred**. The LUKS keyfile currently sits at `/root/.gynat-luks.key` on the production server. This means a full root-FS compromise reveals it. Phase 10c will move unlock to a Tang server on a separate host, removing the keyfile from local disk. **Until 10c ships, do not put Layer 1 claims into the public privacy policy.**
 
 ---
 
@@ -258,7 +258,7 @@ A companion script `scripts/verify-encryption.ts` reads every workspace through 
 ```
 
 **Independence**:
-- LUKS keyfile lives at `/root/.jeenat-luks.key` on production, mode 600. Independent of the app master key.
+- LUKS keyfile lives at `/root/.gynat-luks.key` on production, mode 600. Independent of the app master key.
 - App master key lives in `.env`, loaded by Node at startup. Independent of LUKS.
 - Per-workspace data keys live in `Workspace.encryptedKey`, unwrapped on demand by `getWorkspaceKey()`.
 
@@ -320,7 +320,7 @@ Mitigation:
 
 LUKS protects against this by design. The keyfile lives on the root filesystem, NOT on the volume — so a volume in isolation is unreadable.
 
-1. Verify the keyfile is still confidential. It lives at `/root/.jeenat-luks.key` on the production server, mode 600.
+1. Verify the keyfile is still confidential. It lives at `/root/.gynat-luks.key` on the production server, mode 600.
 2. If both the volume AND the root FS were stolen (e.g. the entire server was carted away), the LUKS keyfile is exposed. Assume the data is readable. Layer 2 is now the only line of defense — and Layer 2 holds because the master key is in `.env` on the same server, but only as long as the attacker has not booted the OS. If they boot the stolen server, they have everything.
 3. Restore from off-site DB backups (if any) onto a fresh server with a NEW LUKS volume + NEW keyfile + NEW master key.
 4. Notify all workspace admins. Phase 10c (Tang-bound unlock) would mitigate this scenario by removing the keyfile from local FS — track its priority after an incident.

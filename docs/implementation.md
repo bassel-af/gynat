@@ -209,7 +209,7 @@ Two layers, defense in depth.
 
 ### 6.1 Layer 1 — disk
 
-A LUKS2-encrypted Hetzner volume at `/mnt/encrypted`, unlocked at boot via a random 512-byte keyfile at `/root/.jeenat-luks.key` (mode 600). The app, PostgreSQL data directory, pm2 state, and backups all live on it. See `docs/deployment/layer-1-encryption.md`.
+A LUKS2-encrypted Hetzner volume at `/mnt/encrypted`, unlocked at boot via a random 512-byte keyfile at `/root/.gynat-luks.key` (mode 600). The app, PostgreSQL data directory, pm2 state, and backups all live on it. See `docs/deployment/layer-1-encryption.md`.
 
 This protects against stolen disks, leaked backups, orphaned volume reassignment, and physical theft. It does **not** protect against live SSH / running-application access — the keyfile is on the root FS at this stage. Phase 10c (Tang + Clevis) closes that gap.
 
