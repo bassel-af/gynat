@@ -96,7 +96,7 @@ export default function CreateWorkspacePage() {
                 value={nameAr}
                 onChange={(e) => setNameAr(e.target.value)}
                 className={styles.input}
-                placeholder="مثال: الدَبّاغ"
+                placeholder="مثال: الهاشمي"
                 required
               />
               {fieldErrors.nameAr && (
@@ -112,7 +112,7 @@ export default function CreateWorkspacePage() {
                 value={slug}
                 onChange={(e) => setSlug(e.target.value.toLowerCase())}
                 className={styles.input}
-                placeholder="al-dabbagh"
+                placeholder="al-hashimi"
                 required
                 dir="ltr"
               />
