@@ -57,6 +57,31 @@ export function Sidebar() {
     };
   }, [isMobileSidebarOpen]);
 
+  // On mobile, intercept the back button while viewing person info in the
+  // sidebar so it closes the sidebar instead of navigating away.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (window.innerWidth > 768) return;
+    if (!isMobileSidebarOpen || !selectedPersonId) return;
+
+    let poppedByBrowser = false;
+    window.history.pushState({ mobileSidebarDetail: true }, '');
+
+    const handlePopState = () => {
+      poppedByBrowser = true;
+      setMobileSidebarOpen(false);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      if (!poppedByBrowser && window.history.state?.mobileSidebarDetail) {
+        window.history.back();
+      }
+    };
+  }, [isMobileSidebarOpen, selectedPersonId, setMobileSidebarOpen]);
+
   // Get selected root display text
   const selectedRoot = rootsList.find((r) => r.id === selectedRootId);
   const selectedRootText = selectedRoot?.text || '';
