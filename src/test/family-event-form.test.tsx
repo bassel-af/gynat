@@ -15,7 +15,7 @@ describe('FamilyEventForm', () => {
 
   it('renders wedding section header', () => {
     render(<FamilyEventForm {...defaultProps} />)
-    expect(screen.getByText('حفل الزفاف')).toBeInTheDocument()
+    expect(screen.getByText('الزفاف')).toBeInTheDocument()
   })
 
   it('renders divorce section header', () => {

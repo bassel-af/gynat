@@ -184,7 +184,7 @@ export default function IslamicGedcomPage() {
             <div className={styles.mappingRow}>
               <span className={styles.mappingTag}>MARR</span>
               <span className={styles.mappingArrow}>&larr;</span>
-              <span className={styles.mappingConcept}>حفل الزفاف (الوليمة)</span>
+              <span className={styles.mappingConcept}>الزفاف (الوليمة)</span>
             </div>
             <div className={styles.mappingRow}>
               <span className={styles.mappingTag}>DIV</span>
@@ -203,7 +203,7 @@ export default function IslamicGedcomPage() {
             <p className={styles.tagDesc}>
               العقد الشرعي الذي يتم بحضور الولي والشهود مع تحديد المهر.
               هذا هو الحدث الذي يصبح فيه الزوجان مرتبطان شرعاً.
-              قد يسبق حفل الزفاف بأيام أو أشهر أو حتى سنوات.
+              قد يسبق الزفاف بأيام أو أشهر أو حتى سنوات.
             </p>
             <p className={styles.tagDesc}>
               علامة <span className={styles.inlineCode}>MARC</span> (Marriage Contract) موجودة
@@ -227,10 +227,10 @@ export default function IslamicGedcomPage() {
             <div className={styles.tagHeader}>
               <span className={`${styles.tagBadge} ${styles.tagBadgeStandard}`}>MARR</span>
               <span className={styles.tagLabel}>قياسي</span>
-              <span className={styles.tagName}>حفل الزفاف (الوليمة)</span>
+              <span className={styles.tagName}>الزفاف (الوليمة)</span>
             </div>
             <p className={styles.tagDesc}>
-              حفل الزفاف والوليمة — الاحتفال العلني بالزواج.
+              الزفاف والوليمة — الاحتفال العلني بالزواج.
               غالباً يكون بعد عقد القران بفترة.
               إذا تم عقد القران والزفاف في نفس اليوم، يمكن تسجيل كليهما بنفس التاريخ
               أو الاكتفاء بـ <span className={styles.inlineCode}>MARR</span>.

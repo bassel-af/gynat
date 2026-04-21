@@ -21,7 +21,7 @@ describe('FamilyEventForm with isUmmWalad', () => {
     );
     // Marriage contract and wedding sections should not be rendered
     expect(screen.queryByText('عقد القران')).not.toBeInTheDocument();
-    expect(screen.queryByText('حفل الزفاف')).not.toBeInTheDocument();
+    expect(screen.queryByText('الزفاف')).not.toBeInTheDocument();
     // Divorce section should also be hidden (no marriage to dissolve for umm walad)
     expect(screen.queryByText('الانفصال')).not.toBeInTheDocument();
   });
@@ -34,14 +34,14 @@ describe('FamilyEventForm with isUmmWalad', () => {
       />,
     );
     expect(screen.getByText('عقد القران')).toBeInTheDocument();
-    expect(screen.getByText('حفل الزفاف')).toBeInTheDocument();
+    expect(screen.getByText('الزفاف')).toBeInTheDocument();
     expect(screen.getByText('الانفصال')).toBeInTheDocument();
   });
 
   it('shows all sections when isUmmWalad is not provided', () => {
     render(<FamilyEventForm {...defaultProps} />);
     expect(screen.getByText('عقد القران')).toBeInTheDocument();
-    expect(screen.getByText('حفل الزفاف')).toBeInTheDocument();
+    expect(screen.getByText('الزفاف')).toBeInTheDocument();
     expect(screen.getByText('الانفصال')).toBeInTheDocument();
   });
 });

@@ -508,13 +508,13 @@
     <div class="mapping-card card-marr" onclick="highlightTag('MARR')">
       <div class="card-header">
         <div>
-          <div class="arabic-name">حفل الزفاف / العرس</div>
+          <div class="arabic-name">الزفاف / العرس</div>
           <div class="english-name">Marriage / Wedding (Walima)</div>
         </div>
         <span class="gedcom-badge">MARR</span>
       </div>
       <div class="card-desc">
-        حفل الزفاف أو الوليمة — الاحتفال العلني بالزواج.
+        الزفاف أو الوليمة — الاحتفال العلني بالزواج.
         في السعودية، غالباً يكون بعد عقد القران بأيام أو أشهر.
         <br><br>
         <strong>في GEDCOM:</strong> يُسجَّل كـ <code>1 MARR</code> مع تاريخ ومكان وملاحظات.
@@ -627,7 +627,7 @@
 1 <span class="tag highlight-green">MARC</span> <span class="val">12/2/1443</span>          <span class="comment">; ← التاريخ الهجري كوصف</span>
 2 <span class="tag">DATE</span> <span class="val">11/7/2022</span>          <span class="comment">; ← التاريخ الميلادي</span>
 
-<span class="comment">; ─── حفل الزفاف (MARR) ───</span>
+<span class="comment">; ─── الزفاف (MARR) ───</span>
 1 <span class="tag highlight">MARR</span> <span class="val">7/10/1443</span>          <span class="comment">; ← التاريخ الهجري كوصف</span>
 2 <span class="tag">DATE</span> <span class="val">27/4/2023</span>          <span class="comment">; ← التاريخ الميلادي</span>
 2 <span class="tag">PLAC</span> <span class="val">الرياض,,الرياض,السعودية</span>
@@ -705,7 +705,7 @@
         </tr>
         <tr>
           <td class="tag-cell" style="color: var(--accent)">MARR</td>
-          <td>حفل الزفاف / العرس</td>
+          <td>الزفاف / العرس</td>
           <td>الاحتفال والوليمة</td>
           <td><span class="check">نعم ✓</span></td>
           <td><span class="check">نعم ✓</span></td>
@@ -761,7 +761,7 @@
     <div class="insight-body">
       كل عائلة (Family) يمكن أن تحتوي على عدة أحداث زواج:<br><br>
       <strong>1. عقد القران (MARC)</strong> — تاريخ + مكان + وصف (هجري) + ملاحظات<br>
-      <strong>2. حفل الزفاف (MARR)</strong> — تاريخ + مكان + وصف (هجري) + ملاحظات<br>
+      <strong>2. الزفاف (MARR)</strong> — تاريخ + مكان + وصف (هجري) + ملاحظات<br>
       <strong>3. الطلاق (DIV)</strong> — تاريخ + مكان + ملاحظات<br><br>
       القيمة المباشرة بعد العلامة (مثل <code>12/2/1443</code>) تُحفظ كـ <strong>description</strong> — وهي المكان المناسب للتاريخ الهجري.
     </div>
@@ -793,12 +793,12 @@
       },
       {
         dot: 'dot-marr',
-        title: 'حفل الزفاف',
+        title: 'الزفاف',
         tag: 'MARR',
         dateHijri: '7/10/1443',
         dateGreg: '27/4/2023',
         place: 'الرياض، السعودية',
-        body: 'حفل الزفاف والوليمة — بعد العقد بحوالي 9 أشهر. هذا هو "يوم العرس" الذي يحتفل فيه مع الأهل والأصدقاء.',
+        body: 'الزفاف والوليمة — بعد العقد بحوالي 9 أشهر. هذا هو "يوم العرس" الذي يحتفل فيه مع الأهل والأصدقاء.',
         hijriClass: 'hijri-marr'
       }
     ],
@@ -913,7 +913,7 @@ Seed changes:
 - Map all new family fields from parsed GEDCOM to database during seeding
 
 UI changes:
-- Show marriage contract (عقد القران) and wedding (حفل الزفاف) info in the sidebar when viewing a married couple
+- Show marriage contract (عقد القران) and wedding (الزفاف) info in the sidebar when viewing a married couple
 - Show divorce (الطلاق) info if the family has a divorce record
 - In the IndividualForm/FamilyForm, allow editing these marriage event fields
 

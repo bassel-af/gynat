@@ -325,14 +325,14 @@ export function FamilyEventForm({
             className={styles.eventSectionHeader}
             onClick={() => toggleSection('marriage')}
           >
-            حفل الزفاف
+            الزفاف
             {chevronSvg(expandedSections.has('marriage'))}
           </button>
           {expandedSections.has('marriage') && (
             <div className={styles.eventSectionContent}>
               <Input
                 id="marriageDate"
-                label="تاريخ حفل الزفاف"
+                label="تاريخ الزفاف"
                 value={formData.marriageDate}
                 onChange={(e) => updateField('marriageDate', e.target.value)}
                 placeholder="مثال: 2021"
