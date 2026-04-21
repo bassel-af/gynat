@@ -28,7 +28,7 @@ const RULES: Rule[] = [
     ar: 'لم يتم تأكيد البريد الإلكتروني بعد',
   },
   {
-    test: /email rate limit exceeded/i,
+    test: /rate limit exceeded/i,
     ar: 'تم تجاوز الحد المسموح من الرسائل، حاول لاحقاً',
   },
   {

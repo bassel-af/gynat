@@ -183,7 +183,9 @@ describe('Magic link login', () => {
     fireEvent.click(screen.getByRole('button', { name: 'إرسال رابط الدخول' }));
 
     await waitFor(() => {
-      expect(screen.getByText('Rate limit exceeded')).toBeInTheDocument();
+      expect(
+        screen.getByText('تم تجاوز الحد المسموح من الرسائل، حاول لاحقاً')
+      ).toBeInTheDocument();
     });
 
     // Should stay in magic link mode (not switch to sent state)

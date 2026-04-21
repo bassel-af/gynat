@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { act, render, screen, waitFor, fireEvent } from '@testing-library/react';
 
 // Mock apiFetch
 const mockApiFetch = vi.fn();
@@ -113,6 +113,34 @@ describe('UserNav', () => {
 
     // Should NOT show any profile link
     expect(screen.queryByTitle('الملف الشخصي')).not.toBeInTheDocument();
+  });
+
+  it('updates displayName in response to profile:updated event', async () => {
+    mockApiFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: { displayName: 'باسل', avatarUrl: null },
+      }),
+    });
+
+    render(<UserNav />);
+
+    await waitFor(() => {
+      expect(screen.getByText('باسل')).toBeInTheDocument();
+    });
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('profile:updated', {
+          detail: { displayName: 'أحمد', avatarUrl: null },
+        }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('أحمد')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('باسل')).not.toBeInTheDocument();
   });
 
   it('renders nothing while loading', () => {

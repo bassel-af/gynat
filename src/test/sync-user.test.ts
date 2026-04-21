@@ -104,8 +104,6 @@ describe('POST /api/auth/sync-user', () => {
       where: { id: fakeUser.id },
       update: {
         email: fakeUser.email,
-        displayName: 'Test User',
-        avatarUrl: 'https://example.com/avatar.jpg',
         phone: '+1234567890',
       },
       create: {

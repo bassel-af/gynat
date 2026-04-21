@@ -90,6 +90,11 @@ export default function ProfileClient() {
       }
       const body = await res.json();
       setProfile((prev) => (prev ? { ...prev, displayName: body.data.displayName } : prev));
+      window.dispatchEvent(
+        new CustomEvent('profile:updated', {
+          detail: { displayName: body.data.displayName, avatarUrl: body.data.avatarUrl },
+        }),
+      );
     },
     [],
   );

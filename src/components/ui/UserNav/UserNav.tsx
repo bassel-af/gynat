@@ -36,6 +36,17 @@ export function UserNav() {
       }
     }
     fetchProfile();
+
+    function handleProfileUpdated(e: Event) {
+      const detail = (e as CustomEvent<{ displayName?: string; avatarUrl?: string | null }>).detail;
+      if (!detail) return;
+      setProfile((prev) => ({
+        displayName: detail.displayName ?? prev?.displayName ?? '',
+        avatarUrl: detail.avatarUrl !== undefined ? detail.avatarUrl : prev?.avatarUrl ?? null,
+      }));
+    }
+    window.addEventListener('profile:updated', handleProfileUpdated);
+    return () => window.removeEventListener('profile:updated', handleProfileUpdated);
   }, []);
 
   async function handleLogout() {
