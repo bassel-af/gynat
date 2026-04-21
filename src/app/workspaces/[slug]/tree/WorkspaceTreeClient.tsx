@@ -335,6 +335,7 @@ function EmptyTreeWithForm({ canEdit }: { canEdit: boolean }) {
           isLoading={formLoading}
           error={formError}
           enableKunya={enableKunya}
+          workspaceId={workspaceId}
         />
       )}
     </>
