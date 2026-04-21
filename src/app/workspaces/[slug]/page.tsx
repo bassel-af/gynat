@@ -557,6 +557,9 @@ export default function WorkspaceDetailPage() {
                   تسجيل علاقة أم الولد في سجلّات الأسرة — تصنيف شرعي يُميّز
                   عن الزوجة الحرّة
                 </p>
+                <p className={styles.featureNote}>
+                  مخصّص لمن يوثّق العائلات القديمة.
+                </p>
                 <a
                   href="/islamic-gedcom#umm-walad"
                   target="_blank"
