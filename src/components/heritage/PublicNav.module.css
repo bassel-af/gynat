@@ -1,0 +1,193 @@
+/* ============================================
+   PUBLIC NAV — Jeweled Heritage
+   Sticky glass bar for standalone reference pages.
+   ============================================ */
+
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  width: 100%;
+  background: rgba(5, 7, 15, 0.62);
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  isolation: isolate;
+}
+
+/* Gold hairline along the bottom edge — matches the `::before` motif
+   used by .section on policy / islamic-gedcom. */
+.nav::after {
+  content: '';
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--heritage-gold),
+    transparent
+  );
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 18px var(--space-7);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+}
+
+/* ---------- Wordmark (right edge in RTL) ---------- */
+
+.wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  font-family: var(--heritage-font-display);
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--heritage-gold-bright);
+  text-decoration: none;
+  transition: opacity 220ms;
+}
+
+.wordmark::before {
+  content: '';
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 30% 30%,
+    var(--heritage-gold-bright) 0%,
+    var(--heritage-gold) 35%,
+    var(--heritage-gold-deep) 100%
+  );
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.18),
+    0 0 20px rgba(200, 168, 101, 0.35);
+}
+
+.wordmark:hover {
+  opacity: 0.88;
+}
+
+.wordmarkText {
+  line-height: 1;
+}
+
+/* ---------- Center links ---------- */
+
+.links {
+  display: flex;
+  align-items: center;
+  gap: var(--space-7);
+}
+
+.backChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--heritage-font-body);
+  font-size: 13px;
+  color: var(--heritage-text-soft);
+  text-decoration: none;
+  letter-spacing: 0.02em;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  transition: color 220ms, border-color 220ms, background 220ms;
+}
+
+.backArrow {
+  display: inline-block;
+  color: var(--heritage-gold);
+  font-size: 14px;
+  line-height: 1;
+  transition: transform 220ms, color 220ms;
+  /* In RTL reading flow, the arrow is to the visual left of the word —
+     pointing "forward" (home-ward) along the reading axis. */
+}
+
+.backChip:hover {
+  color: var(--heritage-gold-bright);
+  border-color: var(--heritage-glass-border);
+  background: var(--heritage-glass-bg);
+}
+
+.backChip:hover .backArrow {
+  color: var(--heritage-gold-bright);
+  transform: translateX(2px); /* nudges visually leftward in RTL (toward the arrow head) */
+}
+
+.crossLink {
+  font-family: var(--heritage-font-body);
+  font-size: 13px;
+  color: var(--heritage-text-soft);
+  text-decoration: none;
+  letter-spacing: 0.02em;
+  transition: color 220ms;
+}
+
+.crossLink:hover {
+  color: var(--heritage-gold-bright);
+}
+
+/* ---------- Login pill (left edge in RTL) ---------- */
+
+.loginBtn {
+  padding: 10px 22px;
+  border-radius: 999px;
+  background: transparent;
+  border: 1px solid var(--heritage-glass-border-strong);
+  color: var(--heritage-cream);
+  font-family: var(--heritage-font-body);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  letter-spacing: 0.02em;
+  transition: background 220ms, border-color 220ms, color 220ms;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  white-space: nowrap;
+}
+
+.loginBtn:hover {
+  border-color: var(--heritage-gold);
+  background: var(--heritage-glass-bg);
+  color: var(--heritage-parchment);
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 640px) {
+  .inner {
+    padding: 14px var(--space-5);
+    gap: var(--space-4);
+  }
+
+  .wordmark {
+    font-size: 20px;
+    gap: 10px;
+  }
+
+  .wordmark::before {
+    width: 22px;
+    height: 22px;
+  }
+
+  .crossLink {
+    display: none;
+  }
+
+  .loginBtn {
+    padding: 8px 16px;
+    font-size: 12px;
+  }
+}

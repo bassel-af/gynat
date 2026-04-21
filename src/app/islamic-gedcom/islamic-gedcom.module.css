@@ -12,7 +12,7 @@
   font-family: var(--heritage-font-body);
   color: var(--heritage-parchment);
   direction: rtl;
-  padding: var(--space-11) var(--space-7);
+  padding: 0 var(--space-7) var(--space-11);
   position: relative;
   overflow: hidden;
   isolation: isolate;
@@ -34,6 +34,7 @@
   z-index: 1;
   max-width: 880px;
   margin: 0 auto;
+  padding-top: var(--space-11);
 }
 
 .header {
@@ -355,7 +356,11 @@
 
 @media (max-width: 640px) {
   .container {
-    padding: var(--space-8) var(--space-5);
+    padding: 0 var(--space-5) var(--space-8);
+  }
+
+  .content {
+    padding-top: var(--space-8);
   }
 
   .section {

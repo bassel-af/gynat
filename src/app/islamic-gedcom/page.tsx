@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { PublicNav } from '@/components/heritage/PublicNav';
 import styles from './islamic-gedcom.module.css';
 
 export const metadata: Metadata = {
@@ -56,6 +57,7 @@ export const metadata: Metadata = {
 export default function IslamicGedcomPage() {
   return (
     <div className={styles.container}>
+      <PublicNav currentPage="islamic-gedcom" />
       <div className={styles.content}>
         <header className={styles.header}>
           <h1 className={styles.pageTitle}>مرجع GEDCOM الإسلامي</h1>

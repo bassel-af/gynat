@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { PublicNav } from '@/components/heritage/PublicNav';
 import styles from './policy.module.css';
 
 export const metadata: Metadata = {
@@ -9,6 +10,7 @@ export const metadata: Metadata = {
 export default function PolicyPage() {
   return (
     <div className={styles.container}>
+      <PublicNav currentPage="policy" />
       <div className={styles.content}>
         <h1 className={styles.pageTitle}>السياسات والشروط</h1>
         <p className={styles.pageSubtitle}>Policies &amp; Terms</p>
