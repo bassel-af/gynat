@@ -63,23 +63,110 @@
 }
 
 .logoutButton {
-  padding: var(--space-2) var(--space-5);
-  border-radius: var(--heritage-radius-pill);
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 50%;
   border: 1px solid var(--heritage-glass-border);
   background: rgba(10, 14, 26, 0.4);
-  color: var(--heritage-cream);
-  font-family: var(--heritage-font-body);
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.04em;
+  color: rgba(232, 223, 200, 0.75);
   cursor: pointer;
-  transition: background 180ms, color 180ms, border-color 180ms;
+  transition: background 180ms ease, color 180ms ease, border-color 180ms ease, transform 180ms ease;
 }
 
-.logoutButton:hover {
-  background: rgba(200, 168, 101, 0.06);
+.logoutButton:hover,
+.logoutButton:focus-visible {
+  background: rgba(200, 168, 101, 0.1);
   color: var(--heritage-gold-bright);
   border-color: var(--heritage-gold);
+  transform: translateY(-1px);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(200, 168, 101, 0.14);
+}
+
+.logoutButton:active {
+  transform: translateY(0);
+}
+
+.logoutIcon {
+  display: block;
+  transition: transform 220ms ease;
+}
+
+/* Mirror the door icon for RTL so the arrow reads "out" toward the right */
+[dir='rtl'] .logoutIcon {
+  transform: scaleX(-1);
+}
+
+.logoutButton:hover .logoutIcon,
+.logoutButton:focus-visible .logoutIcon {
+  transform: scaleX(-1) translateX(1px);
+}
+
+.logoutTooltip {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  transform: translate(-50%, -4px);
+  padding: 6px 12px;
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--heritage-gold-bright);
+  background: linear-gradient(180deg, rgba(15, 21, 40, 0.96), rgba(7, 11, 24, 0.98));
+  border: 1px solid var(--heritage-glass-border-strong);
+  border-radius: var(--heritage-radius-pill);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+  transition: opacity 180ms ease, transform 220ms ease, visibility 0ms linear 180ms;
+  z-index: 10;
+}
+
+/* Gold caret pointing up to the button */
+.logoutTooltip::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 5px solid var(--heritage-glass-border-strong);
+}
+
+.logoutTooltip::after {
+  content: '';
+  position: absolute;
+  bottom: calc(100% - 1px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-bottom: 4px solid rgba(15, 21, 40, 0.96);
+}
+
+.logoutButton:hover .logoutTooltip,
+.logoutButton:focus-visible .logoutTooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
+  transition: opacity 180ms ease, transform 220ms ease, visibility 0ms linear 0ms;
 }
 
 @media (max-width: 640px) {

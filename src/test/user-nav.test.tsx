@@ -90,7 +90,7 @@ describe('UserNav', () => {
       expect(screen.getByText('باسل')).toBeInTheDocument();
     });
 
-    const logoutButton = screen.getByText('تسجيل الخروج');
+    const logoutButton = screen.getByLabelText('تسجيل الخروج');
     fireEvent.click(logoutButton);
 
     await waitFor(() => {
@@ -108,7 +108,7 @@ describe('UserNav', () => {
     render(<UserNav />);
 
     await waitFor(() => {
-      expect(screen.getByText('تسجيل الخروج')).toBeInTheDocument();
+      expect(screen.getByLabelText('تسجيل الخروج')).toBeInTheDocument();
     });
 
     // Should NOT show any profile link

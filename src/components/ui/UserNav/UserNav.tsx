@@ -76,8 +76,44 @@ export function UserNav() {
           <span className={styles.profileName}>{profile.displayName}</span>
         </Link>
       )}
-      <button onClick={handleLogout} className={styles.logoutButton}>
-        تسجيل الخروج
+      <button
+        onClick={handleLogout}
+        className={styles.logoutButton}
+        aria-label="تسجيل الخروج"
+      >
+        <svg
+          className={styles.logoutIcon}
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          aria-hidden="true"
+        >
+          <path
+            d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M10 17l-5-5 5-5"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M15 12H5"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+        <span className={styles.logoutTooltip} role="tooltip" aria-hidden="true">
+          تسجيل الخروج
+        </span>
       </button>
     </div>
   );
