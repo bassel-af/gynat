@@ -68,6 +68,7 @@ model Workspace {
   allowMemberExport    Boolean              @default(false) @map("allow_member_export")
   hideBirthDateForFemale Boolean             @default(false) @map("hide_birth_date_for_female")
   hideBirthDateForMale   Boolean             @default(false) @map("hide_birth_date_for_male")
+  defaultNewPersonDeceased Boolean           @default(false) @map("default_new_person_deceased")
   // Phase 10b: per-workspace data encryption key, wrapped with WORKSPACE_MASTER_KEY.
   // Nullable so existing workspaces can be migrated in a second pass by the migration script.
   encryptedKey         Bytes?               @map("encrypted_key")

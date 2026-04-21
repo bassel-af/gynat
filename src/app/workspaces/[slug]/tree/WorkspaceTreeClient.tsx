@@ -32,6 +32,7 @@ interface WorkspaceInfo {
   allowMemberExport?: boolean;
   hideBirthDateForFemale?: boolean;
   hideBirthDateForMale?: boolean;
+  defaultNewPersonDeceased?: boolean;
 }
 
 interface WorkspaceTreeClientProps {
@@ -138,6 +139,7 @@ function TreeContent({
         hideBirthDateForFemale={workspace.hideBirthDateForFemale}
         hideBirthDateForMale={workspace.hideBirthDateForMale}
         description={workspace.description}
+        defaultNewPersonDeceased={workspace.defaultNewPersonDeceased}
       >
         <EmptyTreeWithForm canEdit={canEdit} />
       </WorkspaceTreeProvider>
@@ -158,6 +160,7 @@ function TreeContent({
       hideBirthDateForFemale={workspace.hideBirthDateForFemale}
       hideBirthDateForMale={workspace.hideBirthDateForMale}
       description={workspace.description}
+      defaultNewPersonDeceased={workspace.defaultNewPersonDeceased}
     >
       <UndoStackProvider workspaceId={workspace.id} refreshTree={refreshTree} key={workspace.id}>
         <TreeShell workspaceSlug={workspace.slug} workspaceId={workspace.id} />
@@ -226,7 +229,7 @@ function TreeShell({ workspaceSlug, workspaceId }: { workspaceSlug: string; work
 }
 
 function EmptyTreeWithForm({ canEdit }: { canEdit: boolean }) {
-  const { workspaceId, refreshTree, enableKunya } = useWorkspaceTree();
+  const { workspaceId, refreshTree, enableKunya, defaultNewPersonDeceased } = useWorkspaceTree();
   const { showToast } = useToast();
   const [showForm, setShowForm] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
@@ -336,6 +339,7 @@ function EmptyTreeWithForm({ canEdit }: { canEdit: boolean }) {
           error={formError}
           enableKunya={enableKunya}
           workspaceId={workspaceId}
+          defaultDeceased={defaultNewPersonDeceased}
         />
       )}
     </>

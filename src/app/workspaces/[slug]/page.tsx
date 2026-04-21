@@ -43,6 +43,7 @@ interface Workspace {
   allowMemberExport?: boolean;
   hideBirthDateForFemale?: boolean;
   hideBirthDateForMale?: boolean;
+  defaultNewPersonDeceased?: boolean;
 }
 
 interface Member {
@@ -87,6 +88,9 @@ export default function WorkspaceDetailPage() {
 
   // Feature toggle loading state
   const [togglingFeature, setTogglingFeature] = useState<string | null>(null);
+
+  // Advanced options disclosure (collapsed by default, no persistence)
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   // Branch sharing state
   const [showShareModal, setShowShareModal] = useState(false);
@@ -288,7 +292,7 @@ export default function WorkspaceDetailPage() {
   }
 
   async function handleToggleFeature(
-    featureKey: 'enableUmmWalad' | 'enableRadaa' | 'enableKunya' | 'enableAuditLog' | 'enableVersionControl' | 'hideBirthDateForFemale' | 'hideBirthDateForMale',
+    featureKey: 'enableUmmWalad' | 'enableRadaa' | 'enableKunya' | 'enableAuditLog' | 'enableVersionControl' | 'hideBirthDateForFemale' | 'hideBirthDateForMale' | 'defaultNewPersonDeceased',
     newVal: boolean,
   ) {
     if (!workspace) return;
@@ -544,38 +548,6 @@ export default function WorkspaceDetailPage() {
               />
             </div>
 
-            {/* Umm Walad */}
-            <div className={styles.featureCard}>
-              <div className={styles.featureContent}>
-                <div className={styles.featureNameRow}>
-                  <span className={styles.featureName}>أم ولد</span>
-                  {(workspace.enableUmmWalad ?? false) && (
-                    <span className={styles.featureBadge}>مفعّل</span>
-                  )}
-                </div>
-                <p className={styles.featureDescription}>
-                  تسجيل علاقة أم الولد في سجلّات الأسرة — تصنيف شرعي يُميّز
-                  عن الزوجة الحرّة
-                </p>
-                <p className={styles.featureNote}>
-                  مخصّص لمن يوثّق العائلات القديمة.
-                </p>
-                <a
-                  href="/islamic-gedcom#umm-walad"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.featureLearnMore}
-                >
-                  تعرّف على المزيد
-                </a>
-              </div>
-              <ToggleSwitch
-                checked={workspace.enableUmmWalad ?? false}
-                onChange={(val) => handleToggleFeature('enableUmmWalad', val)}
-                disabled={!isAdmin}
-                loading={togglingFeature === 'enableUmmWalad'}
-              />
-            </div>
           </div>
         </div>
 
@@ -620,6 +592,90 @@ export default function WorkspaceDetailPage() {
                 disabled={!isAdmin}
                 loading={togglingFeature === 'hideBirthDateForMale'}
               />
+            </div>
+          </div>
+        </div>
+
+        {/* Advanced Options (collapsed by default) */}
+        <div className={styles.section}>
+          <button
+            type="button"
+            className={styles.advancedHeader}
+            onClick={() => setAdvancedOpen((v) => !v)}
+            aria-expanded={advancedOpen}
+            aria-controls="advanced-options-content"
+          >
+            <h3 className={styles.sectionTitle}>خيارات متقدمة</h3>
+            <span
+              className={`${styles.advancedChevron} ${advancedOpen ? styles.advancedChevronOpen : ''}`}
+              aria-hidden="true"
+            >
+              <iconify-icon icon="material-symbols:expand-more" width="20" height="20" />
+            </span>
+          </button>
+
+          <div
+            id="advanced-options-content"
+            className={`${styles.advancedContent} ${advancedOpen ? styles.advancedContentOpen : ''}`}
+          >
+            <div className={styles.advancedContentInner}>
+              <div className={styles.featureList}>
+                {/* Umm Walad */}
+                <div className={styles.featureCard}>
+                  <div className={styles.featureContent}>
+                    <div className={styles.featureNameRow}>
+                      <span className={styles.featureName}>أم ولد</span>
+                      {(workspace.enableUmmWalad ?? false) && (
+                        <span className={styles.featureBadge}>مفعّل</span>
+                      )}
+                    </div>
+                    <p className={styles.featureDescription}>
+                      تسجيل علاقة أم الولد في سجلّات الأسرة — تصنيف شرعي يُميّز
+                      عن الزوجة الحرّة
+                    </p>
+                    <p className={styles.featureNote}>
+                      مخصّص لمن يوثّق العائلات القديمة.
+                    </p>
+                    <a
+                      href="/islamic-gedcom#umm-walad"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={styles.featureLearnMore}
+                    >
+                      تعرّف على المزيد
+                    </a>
+                  </div>
+                  <ToggleSwitch
+                    checked={workspace.enableUmmWalad ?? false}
+                    onChange={(val) => handleToggleFeature('enableUmmWalad', val)}
+                    disabled={!isAdmin}
+                    loading={togglingFeature === 'enableUmmWalad'}
+                  />
+                </div>
+
+                {/* Default new person deceased */}
+                <div className={styles.featureCard}>
+                  <div className={styles.featureContent}>
+                    <div className={styles.featureNameRow}>
+                      <span className={styles.featureName}>
+                        تحديد خانة المتوفى تلقائياً{'  '}للأشخاص الجدد
+                      </span>
+                      {(workspace.defaultNewPersonDeceased ?? false) && (
+                        <span className={styles.featureBadge}>مفعّل</span>
+                      )}
+                    </div>
+                    <p className={styles.featureDescription}>
+                      مفيد عند إدخال بيانات أجيال تاريخية — يمكن إلغاء التحديد لكل شخص حي.
+                    </p>
+                  </div>
+                  <ToggleSwitch
+                    checked={workspace.defaultNewPersonDeceased ?? false}
+                    onChange={(val) => handleToggleFeature('defaultNewPersonDeceased', val)}
+                    disabled={!isAdmin}
+                    loading={togglingFeature === 'defaultNewPersonDeceased'}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>

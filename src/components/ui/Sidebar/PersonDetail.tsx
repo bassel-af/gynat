@@ -1379,6 +1379,7 @@ export function PersonDetail({ personId }: PersonDetailProps) {
           ummWaladFamilyId={formMode.kind === 'edit' ? formMode.ummWaladFamilyId : undefined}
           ummWaladInitialValue={formMode.kind === 'edit' ? formMode.ummWaladInitialValue : undefined}
           ummWaladHasMarriageData={formMode.kind === 'edit' && ummWaladEditContext ? ummWaladEditContext.hasMarriageData : undefined}
+          defaultDeceased={workspace?.defaultNewPersonDeceased}
         />
       )}
 

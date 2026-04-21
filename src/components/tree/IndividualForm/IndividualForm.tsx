@@ -56,6 +56,13 @@ interface IndividualFormProps {
   enableUmmWalad?: boolean;
   /** Whether the workspace has kunya feature enabled */
   enableKunya?: boolean;
+  /**
+   * When true and mode is 'create' and initialData.isDeceased is undefined,
+   * pre-check the deceased checkbox. Workspace setting:
+   * Workspace.defaultNewPersonDeceased. Ignored in edit mode and when the caller
+   * explicitly seeds initialData.isDeceased.
+   */
+  defaultDeceased?: boolean;
   /** Whether this form is in addSpouse mode (shows umm walad checkbox) */
   isAddSpouse?: boolean;
   /** In edit mode: the family ID to update isUmmWalad on (signals checkbox should show) */
@@ -106,11 +113,21 @@ export function IndividualForm({
   ummWaladFamilyId,
   ummWaladInitialValue,
   ummWaladHasMarriageData,
+  defaultDeceased = false,
 }: IndividualFormProps) {
   const [formData, setFormData] = useState<IndividualFormData>(() => {
     const base = { ...EMPTY_FORM, ...initialData };
     if (lockedSex) {
       base.sex = lockedSex;
+    }
+    // Workspace-level default: pre-check "deceased" for new people only.
+    // Edit mode must be untouched, and an explicit initialData.isDeceased always wins.
+    if (
+      mode === 'create' &&
+      defaultDeceased &&
+      initialData?.isDeceased === undefined
+    ) {
+      base.isDeceased = true;
     }
     return base;
   });

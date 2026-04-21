@@ -21,6 +21,7 @@ const updateWorkspaceSchema = z.object({
   allowMemberExport: z.boolean().optional(),
   hideBirthDateForFemale: z.boolean().optional(),
   hideBirthDateForMale: z.boolean().optional(),
+  defaultNewPersonDeceased: z.boolean().optional(),
 });
 
 // GET /api/workspaces/[id] — Get workspace details

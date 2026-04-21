@@ -366,4 +366,55 @@ describe('IndividualForm', () => {
       })
     })
   })
+
+  describe('defaultDeceased prop', () => {
+    it('pre-checks isDeceased when mode=create, defaultDeceased=true, and initialData.isDeceased is undefined', () => {
+      render(<IndividualForm {...defaultProps} defaultDeceased />)
+      const checkbox = screen.getByLabelText(/متوفى\/متوفية/) as HTMLInputElement
+      expect(checkbox.checked).toBe(true)
+    })
+
+    it('does not pre-check isDeceased when initialData.isDeceased is explicitly false (create mode)', () => {
+      render(
+        <IndividualForm
+          {...defaultProps}
+          defaultDeceased
+          initialData={{ isDeceased: false }}
+        />,
+      )
+      const checkbox = screen.getByLabelText(/متوفى\/متوفية/) as HTMLInputElement
+      expect(checkbox.checked).toBe(false)
+    })
+
+    it('does not pre-check isDeceased in edit mode even when defaultDeceased=true', () => {
+      render(
+        <IndividualForm
+          {...defaultProps}
+          mode="edit"
+          defaultDeceased
+          initialData={{ isDeceased: false, givenName: 'أحمد', sex: 'M' }}
+        />,
+      )
+      const checkbox = screen.getByLabelText(/متوفى\/متوفية/) as HTMLInputElement
+      expect(checkbox.checked).toBe(false)
+    })
+
+    it('does not pre-check isDeceased when defaultDeceased is false/omitted (regression guard)', () => {
+      render(<IndividualForm {...defaultProps} />)
+      const checkbox = screen.getByLabelText(/متوفى\/متوفية/) as HTMLInputElement
+      expect(checkbox.checked).toBe(false)
+    })
+
+    it('allows user to uncheck the pre-checked isDeceased, which collapses death fields', () => {
+      render(<IndividualForm {...defaultProps} defaultDeceased />)
+      const checkbox = screen.getByLabelText(/متوفى\/متوفية/) as HTMLInputElement
+      expect(checkbox.checked).toBe(true)
+      // Death field present when checked
+      expect(screen.getByLabelText('تاريخ الوفاة')).toBeInTheDocument()
+      fireEvent.click(checkbox)
+      expect(checkbox.checked).toBe(false)
+      // Death fields collapsed when unchecked
+      expect(screen.queryByLabelText('تاريخ الوفاة')).not.toBeInTheDocument()
+    })
+  })
 })

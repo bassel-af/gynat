@@ -717,6 +717,54 @@
   }
 }
 
+/* Advanced options disclosure */
+.advancedHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: var(--space-5);
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  text-align: inherit;
+  font: inherit;
+}
+
+.advancedHeader:focus-visible {
+  outline: 2px solid var(--heritage-gold);
+  outline-offset: 4px;
+  border-radius: var(--radius-sm, 4px);
+}
+
+.advancedChevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--heritage-gold);
+  transition: transform 200ms ease;
+}
+
+.advancedChevronOpen {
+  transform: rotate(180deg);
+}
+
+.advancedContent {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 220ms ease;
+}
+
+.advancedContentOpen {
+  grid-template-rows: 1fr;
+}
+
+.advancedContentInner {
+  overflow: hidden;
+}
+
 .featureContent {
   display: flex;
   flex-direction: column;

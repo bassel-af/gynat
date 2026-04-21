@@ -38,6 +38,8 @@ interface WorkspaceTreeContextValue {
   hideBirthDateForMale?: boolean;
   /** Workspace description (shown in sidebar "about" panel) */
   description?: string;
+  /** Pre-check "deceased" on new person forms (create mode only) */
+  defaultNewPersonDeceased?: boolean;
 }
 
 const WorkspaceTreeContext = createContext<WorkspaceTreeContextValue | null>(null);
@@ -58,6 +60,7 @@ interface WorkspaceTreeProviderProps {
   hideBirthDateForFemale?: boolean;
   hideBirthDateForMale?: boolean;
   description?: string;
+  defaultNewPersonDeceased?: boolean;
 }
 
 export function WorkspaceTreeProvider({
@@ -76,9 +79,10 @@ export function WorkspaceTreeProvider({
   hideBirthDateForFemale,
   hideBirthDateForMale,
   description,
+  defaultNewPersonDeceased,
 }: WorkspaceTreeProviderProps) {
   return (
-    <WorkspaceTreeContext.Provider value={{ workspaceId, canEdit, isAdmin, refreshTree, pointers, enableUmmWalad, enableRadaa, enableKunya, enableAuditLog, enableTreeExport, allowMemberExport, hideBirthDateForFemale, hideBirthDateForMale, description }}>
+    <WorkspaceTreeContext.Provider value={{ workspaceId, canEdit, isAdmin, refreshTree, pointers, enableUmmWalad, enableRadaa, enableKunya, enableAuditLog, enableTreeExport, allowMemberExport, hideBirthDateForFemale, hideBirthDateForMale, description, defaultNewPersonDeceased }}>
       {children}
     </WorkspaceTreeContext.Provider>
   );
