@@ -106,9 +106,9 @@ export function AcknowledgmentModal() {
           </p>
 
           <p className={styles.paragraph}>
-            ثم أشكر أخي <span className={styles.name}>خالد سعيّد</span> على مبادرته بتجميع المعلومات بشجرة عائلتنا،
+            ثم أشكر أخي <span className={styles.name}>خالد سعيّد</span> على مبادرته بتجميع المعلومات الخاصة بشجرة عائلتنا،
             وأشكر <span className={styles.name}>أمي فدوى وأبي عبدالناصر وزوجتي رغد وعمي عبدالغني وعمتي غادة</span> على مساهمتهم
-            الكبيرة في إنشاء الأشجار المختلفة لعوائلنا القريبة، <span className={styles.family}>سعيّد</span> و<span className={styles.family}>شربك</span> و<span className={styles.family}>الدالاتي</span> و<span className={styles.family}>الدباغ</span>، وأشكر إخوتي وكل من ساهم وأضاف معلومات ثمينة لجعل هذه
+            الكبيرة في إنشاء الأشجار المختلفة لعوائلنا القريبة، <span className={styles.family}>سعيّد</span> و<span className={styles.family}>شربك</span> و<span className={styles.family}>الدالاتي</span> و<span className={styles.family}>الدباغ</span>، وأشكر <span className={styles.name}>إخوتي</span> وكل من ساهم وأضاف معلومات ثمينة لجعل هذه
             الأشجار تزدهر بالفروع والأوراق.
           </p>
 

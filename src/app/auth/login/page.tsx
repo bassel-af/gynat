@@ -27,6 +27,15 @@ function LoginForm() {
   const [loginMode, setLoginMode] = useState<'password' | 'magiclink'>('password');
   const [magicLinkStatus, setMagicLinkStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [needsEmailConfirmation, setNeedsEmailConfirmation] = useState(false);
+  const [confirmResendStatus, setConfirmResendStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
+  const [confirmResendCooldown, setConfirmResendCooldown] = useState(0);
+
+  useEffect(() => {
+    if (confirmResendCooldown <= 0) return;
+    const timer = setTimeout(() => setConfirmResendCooldown(confirmResendCooldown - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [confirmResendCooldown]);
 
   useEffect(() => {
     if (resendCooldown <= 0) return;
@@ -47,6 +56,8 @@ function LoginForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+    setNeedsEmailConfirmation(false);
+    setConfirmResendStatus('idle');
     setLoading(true);
 
     const supabase = createClient();
@@ -54,6 +65,9 @@ function LoginForm() {
 
     if (error) {
       setError(translateAuthError(error.message));
+      if (/email not confirmed/i.test(error.message)) {
+        setNeedsEmailConfirmation(true);
+      }
       setLoading(false);
       return;
     }
@@ -100,6 +114,26 @@ function LoginForm() {
     await sendMagicLink();
   }
 
+  async function resendConfirmation() {
+    if (confirmResendCooldown > 0 || confirmResendStatus === 'sending') return;
+    setConfirmResendStatus('sending');
+    const supabase = createClient();
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+      },
+    });
+    if (error) {
+      setError(translateAuthError(error.message));
+      setConfirmResendStatus('idle');
+      return;
+    }
+    setConfirmResendStatus('sent');
+    setConfirmResendCooldown(60);
+  }
+
   return (
     <CenteredCardLayout>
       <AcknowledgmentModal />
@@ -116,6 +150,27 @@ function LoginForm() {
       {loginMode === 'password' ? (
         <form onSubmit={handleSubmit} className={styles.form}>
           {error && <div className={styles.error}>{error}</div>}
+
+          {needsEmailConfirmation && (
+            confirmResendStatus === 'sent' ? (
+              <div className={styles.successMessage}>
+                تم إرسال رابط التأكيد مجدداً إلى بريدك الإلكتروني.
+              </div>
+            ) : (
+              <button
+                type="button"
+                className={styles.resendLink}
+                aria-disabled={confirmResendCooldown > 0 || confirmResendStatus === 'sending' ? 'true' : undefined}
+                onClick={resendConfirmation}
+              >
+                {confirmResendStatus === 'sending'
+                  ? 'جاري الإرسال...'
+                  : confirmResendCooldown > 0
+                    ? `إعادة إرسال رابط التأكيد بعد ${confirmResendCooldown} ثانية`
+                    : 'إعادة إرسال رابط التأكيد'}
+              </button>
+            )
+          )}
 
           <div className={styles.field}>
             <label htmlFor="email" className={styles.label}>البريد الإلكتروني</label>

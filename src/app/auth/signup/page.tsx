@@ -27,8 +27,17 @@ function SignupForm() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<'idle' | 'needs-confirmation'>('idle');
+  const [resendStatus, setResendStatus] = useState<'idle' | 'sending'>('idle');
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   useEffect(() => { preloadZxcvbn(); }, []);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
 
   async function handleGoogleSignup() {
     const supabase = createClient();
@@ -70,6 +79,7 @@ function SignupForm() {
       password,
       options: {
         data: { display_name: displayName },
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
       },
     });
 
@@ -79,16 +89,83 @@ function SignupForm() {
       return;
     }
 
-    // Sync user if session is available
-    // (email confirmation may prevent immediate session)
-    if (data.session) {
-      await fetch('/api/auth/sync-user', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${data.session.access_token}` },
-      });
+    // If email confirmation is required, GoTrue returns no session.
+    // Show a "check your email" screen instead of redirecting the user to a
+    // protected page that would bounce them straight back to login.
+    if (!data.session) {
+      setStatus('needs-confirmation');
+      setResendCooldown(60);
+      setLoading(false);
+      return;
     }
 
+    await fetch('/api/auth/sync-user', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${data.session.access_token}` },
+    });
+
     window.location.href = next;
+  }
+
+  async function handleResend() {
+    if (resendCooldown > 0 || resendStatus === 'sending') return;
+    setError('');
+    setResendStatus('sending');
+
+    const supabase = createClient();
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+      },
+    });
+
+    setResendStatus('idle');
+
+    if (error) {
+      setError(translateAuthError(error.message));
+      return;
+    }
+
+    setResendCooldown(60);
+  }
+
+  if (status === 'needs-confirmation') {
+    return (
+      <CenteredCardLayout>
+        <div className={styles.icon}>
+          <iconify-icon icon="material-symbols:mark-email-read-outline" width="48" height="48" />
+        </div>
+        <h1 className={styles.title}>تحقق من بريدك الإلكتروني</h1>
+        <p className={styles.subtitle}>
+          أرسلنا رابط تأكيد إلى <span dir="ltr">{email}</span>. افتح الرابط لإكمال إنشاء الحساب.
+        </p>
+
+        {error && <div className={styles.error}>{error}</div>}
+
+        <div className={styles.successMessage}>
+          بعد تأكيد البريد، سيتم توجيهك تلقائياً إلى المنصة.
+        </div>
+
+        <button
+          type="button"
+          className={styles.resendLink}
+          aria-disabled={resendCooldown > 0 || resendStatus === 'sending' ? 'true' : undefined}
+          onClick={handleResend}
+        >
+          {resendStatus === 'sending'
+            ? 'جاري الإرسال...'
+            : resendCooldown > 0
+              ? `إعادة الإرسال بعد ${resendCooldown} ثانية`
+              : 'لم يصلك البريد؟ أعد الإرسال'}
+        </button>
+
+        <p className={styles.switchLink}>
+          <a href={`/auth/login${next !== '/workspaces' ? `?next=${encodeURIComponent(next)}` : ''}`}>العودة إلى تسجيل الدخول</a>
+        </p>
+      </CenteredCardLayout>
+    );
   }
 
   return (
