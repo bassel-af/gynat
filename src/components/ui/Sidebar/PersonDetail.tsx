@@ -549,9 +549,9 @@ export function PersonDetail({ personId }: PersonDetailProps) {
   const handleFocusInTree = useCallback(() => {
     setFocusPersonId(personId);
     if (typeof window !== 'undefined' && window.innerWidth <= 768) {
-      setSelectedPersonId(null);
+      setMobileSidebarOpen(false);
     }
-  }, [personId, setFocusPersonId, setSelectedPersonId]);
+  }, [personId, setFocusPersonId, setMobileSidebarOpen]);
 
   const handleViewFamilyTree = useCallback(() => {
     if (!externalFamilyInfo) return;
