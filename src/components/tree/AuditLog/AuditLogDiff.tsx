@@ -4,7 +4,7 @@ import styles from './AuditLog.module.css';
 
 const FIELD_LABELS: Record<string, string> = {
   givenName: 'الاسم',
-  surname: 'اللقب',
+  surname: 'اسم العائلة',
   fullName: 'الاسم الكامل',
   sex: 'الجنس',
   birthDate: 'تاريخ الميلاد',

@@ -449,10 +449,10 @@ export function IndividualForm({
           />
           <Input
             id="surname"
-            label="اللقب"
+            label="اسم العائلة"
             value={formData.surname}
             onChange={(e) => updateField('surname', e.target.value)}
-            placeholder="مثال: السعيد"
+            placeholder="مثال: السعيّد"
           />
         </div>
 
