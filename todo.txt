@@ -1,4 +1,7 @@
+- مرجع gedcom الإسلامي button doesn't appear in mobile in the landing page.
 - Non admin users shall not see workspace page.
+
+
 - See person full Nasab.
 - Search for families and ask to join (maybe through public family description). Also user can
 describe himself for the admins.
@@ -7,8 +10,6 @@ describe himself for the admins.
 
 - Data backup.
 - .env file backup
-
-
 
 
 Think about business model.
