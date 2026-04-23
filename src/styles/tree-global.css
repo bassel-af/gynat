@@ -27,6 +27,17 @@
   background: transparent;
 }
 
+/* Promote the pan/zoom viewport to its own GPU layer so touch panning stays smooth */
+.react-flow__viewport {
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* Let the browser reserve touch gestures for us — avoids the 300ms scroll-conflict stutter */
+.react-flow__pane {
+  touch-action: none;
+}
+
 /* Subtle grid overlay on the canvas */
 .react-flow__background {
   background-color: transparent;
@@ -597,4 +608,54 @@
   font-size: 18px;
   font-weight: 500;
   color: var(--heritage-gold);
+}
+
+/* ============================================
+   PAN/ZOOM PERFORMANCE OVERRIDES
+   Per-node backdrop-filter is expensive on
+   mobile GPUs AND on laptops with integrated
+   graphics. We only drop the glass look while
+   the viewport is actively moving — when idle,
+   the full jeweled-heritage aesthetic is
+   preserved. `is-panning` is toggled by
+   FamilyTree via onMoveStart/onMoveEnd.
+   ============================================ */
+
+#tree-container.is-panning .person,
+#tree-container.is-panning .react-flow__controls button,
+#tree-container.is-panning .react-flow__minimap,
+#tree-container.is-panning .spouse-family-badge,
+#tree-container.is-panning .graft-label {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+#tree-container.is-panning .person {
+  background: rgba(22, 32, 50, 0.96);
+  transition: none;
+}
+
+#tree-container.is-panning .person.root {
+  background: rgba(10, 24, 20, 0.97);
+}
+
+#tree-container.is-panning .person.deceased {
+  background: rgba(14, 20, 36, 0.95);
+}
+
+#tree-container.is-panning .person.search-match {
+  background: rgba(60, 48, 22, 0.97);
+}
+
+#tree-container.is-panning .person.lineage-selected {
+  background: rgba(70, 56, 22, 0.97);
+}
+
+#tree-container.is-panning .person.lineage-ancestor,
+#tree-container.is-panning .person.lineage-descendant {
+  background: rgba(40, 38, 22, 0.95);
+}
+
+#tree-container.is-panning .person.pointed {
+  background: rgba(18, 36, 40, 0.95);
 }

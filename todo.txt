@@ -5,8 +5,6 @@
 - A way to list workspaces and view their numbers.
 - Perhaps ask AI that we need to create dashboard that allow us to
 understand what is going on. Get insights and be able to take decisions.
-- Is the sender title in english or arabic (might need fix in google workspaces user info)
-
 
 - See person full Nasab.
 - Search for families and ask to join (maybe through public family description). Also user can

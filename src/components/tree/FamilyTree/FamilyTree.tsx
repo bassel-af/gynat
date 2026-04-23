@@ -765,6 +765,14 @@ function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
     );
   }
 
+  const handleMoveStart = useCallback(() => {
+    containerRef.current?.classList.add('is-panning');
+  }, []);
+
+  const handleMoveEnd = useCallback(() => {
+    containerRef.current?.classList.remove('is-panning');
+  }, []);
+
   return (
     <div id="tree-container" ref={containerRef} style={{ opacity: isReady ? 1 : 0 }}>
       {/* DISABLED: multi-root mode disabled for now — may re-enable in future */}
@@ -784,6 +792,8 @@ function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onInit={onInit}
+        onMoveStart={handleMoveStart}
+        onMoveEnd={handleMoveEnd}
         onNodeClick={(_event, node) => {
           // Strip graft prefix to get the real person ID
           const personId = node.id.replace(/^graft-(parent|sibling)-/, '');
@@ -798,18 +808,19 @@ function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
         nodesConnectable={false}
         elementsSelectable={false}
         panOnDrag
-        panOnScroll
+        panOnScroll={!isMobile}
         zoomOnScroll={false}
         zoomOnPinch
       >
         <Background
-          variant={BackgroundVariant.Lines}
-          gap={48}
+          variant={isMobile ? BackgroundVariant.Dots : BackgroundVariant.Lines}
+          gap={isMobile ? 32 : 48}
+          size={isMobile ? 1 : undefined}
           lineWidth={1}
           color="rgba(200, 168, 101, 0.08)"
         />
         {!hideControls && !isMobile && <Controls />}
-        {!hideMiniMap && <MiniMap nodeStrokeWidth={3} zoomable pannable />}
+        {!hideMiniMap && !isMobile && <MiniMap nodeStrokeWidth={3} zoomable pannable />}
       </ReactFlow>
     </div>
   );
