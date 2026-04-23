@@ -79,6 +79,14 @@ services:
       GOTRUE_MAILER_URLPATHS_EMAIL_CHANGE: "/auth/v1/verify"
       GOTRUE_MAILER_URLPATHS_MAGIC_LINK: "/auth/v1/verify"
 
+      # Email subjects (Arabic — matches RTL templates)
+      GOTRUE_MAILER_SUBJECTS_CONFIRMATION: "تأكيد البريد الإلكتروني — جينات"
+      GOTRUE_MAILER_SUBJECTS_RECOVERY: "إعادة تعيين كلمة المرور — جينات"
+      GOTRUE_MAILER_SUBJECTS_INVITE: "دعوة للانضمام — جينات"
+      GOTRUE_MAILER_SUBJECTS_EMAIL_CHANGE: "تأكيد تغيير البريد الإلكتروني — جينات"
+      GOTRUE_MAILER_SUBJECTS_MAGIC_LINK: "رابط تسجيل الدخول — جينات"
+      GOTRUE_MAILER_SUBJECTS_REAUTHENTICATION: "رمز إعادة التحقق — جينات"
+
       # Password policy
       GOTRUE_PASSWORD_MIN_LENGTH: "8"
       GOTRUE_PASSWORD_REQUIRED_CHARACTERS: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ:0123456789"
