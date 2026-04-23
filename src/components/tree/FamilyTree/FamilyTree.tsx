@@ -767,17 +767,6 @@ function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
 
   const momentumRafRef = useRef<number | null>(null);
 
-  const handleMoveStart = useCallback(() => {
-    containerRef.current?.classList.add('is-panning');
-  }, []);
-
-  const handleMoveEnd = useCallback(() => {
-    // Keep the is-panning class on while momentum is still animating
-    if (momentumRafRef.current === null) {
-      containerRef.current?.classList.remove('is-panning');
-    }
-  }, []);
-
   // Mobile-only momentum pan: native touch has no inertia by default, so after
   // the user flicks, we continue panning with exponential velocity decay until
   // it falls below a threshold or the user touches again.
@@ -831,7 +820,6 @@ function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
         vy *= maxV / speed;
       }
 
-      container.classList.add('is-panning');
       let lastFrame = performance.now();
       const step = (now: number) => {
         const frameDt = Math.min(now - lastFrame, 32);
@@ -846,7 +834,6 @@ function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
           momentumRafRef.current = requestAnimationFrame(step);
         } else {
           momentumRafRef.current = null;
-          container.classList.remove('is-panning');
         }
       };
       momentumRafRef.current = requestAnimationFrame(step);
@@ -887,8 +874,6 @@ function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onInit={onInit}
-        onMoveStart={handleMoveStart}
-        onMoveEnd={handleMoveEnd}
         onNodeClick={(_event, node) => {
           // Strip graft prefix to get the real person ID
           const personId = node.id.replace(/^graft-(parent|sibling)-/, '');
