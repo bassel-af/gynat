@@ -5,8 +5,6 @@
 - A way to list workspaces and view their numbers.
 - Perhaps ask AI that we need to create dashboard that allow us to
 understand what is going on. Get insights and be able to take decisions.
-- الخيارات المتقدمة design doesn't make it easy to understand it's expandable. under it
-immediately is الأعضاء
 - Is the sender title in english or arabic (might need fix in google workspaces user info)
 
 

@@ -17,6 +17,7 @@ The tree reads from the database via `GET /api/workspaces/[id]/tree`; static GED
 - **Production runbook** (deploy/restore/troubleshooting): `docs/deployment/runbook.md`
 - **Testing modes & query params**: `docs/testing.md`
 - **Local setup**: `docs/setup.md`
+- **File/folder layout reference**: `docs/project-structure.md`
 
 ## Package Management
 
@@ -32,6 +33,7 @@ This project uses **pnpm** as the package manager (version 10.28.0).
 - `pnpm test` - Run tests once
 - `pnpm test src/test/display.test.ts` - Run a single test file
 - `pnpm test:watch` - Run tests in watch mode
+- `pnpm test:e2e` - Run end-to-end tests (separate Vitest config: `vitest.e2e.config.ts`)
 - `cd docker && docker compose up -d` - Start Supabase stack (PostgreSQL, GoTrue, Kong, Studio)
 - `cd docker && docker compose down` - Stop Supabase stack
 - `npx prisma migrate dev` - Run Prisma migrations
