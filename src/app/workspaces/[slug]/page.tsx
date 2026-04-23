@@ -526,7 +526,8 @@ export default function WorkspaceDetailPage() {
               />
             </div>
 
-            {/* Version Control */}
+            {/* Version Control — hidden until feature is ready */}
+            {/*
             <div className={styles.featureCard}>
               <div className={styles.featureContent}>
                 <div className={styles.featureNameRow}>
@@ -547,6 +548,7 @@ export default function WorkspaceDetailPage() {
                 loading={togglingFeature === 'enableVersionControl'}
               />
             </div>
+            */}
 
           </div>
         </div>

@@ -4,7 +4,11 @@
 - A way to list users and support them like reset password or change email.
 - A way to list workspaces and view their numbers.
 - Hide التحكم بالإصدارات for now.
-- 
+- الخيارات المتقدمة design doesn't make it easy to understand it's expandable. under it
+immediately is الأعضاء
+- Hide invitation dialog after invitation is sent or show message without
+field.
+- Is the sender title in english or arabic (might need fix in google workspaces user info)
 
 
 - See person full Nasab.
