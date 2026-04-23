@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/api/auth';
+import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/db';
 import type { User, SupabaseClient } from '@supabase/supabase-js';
 
@@ -13,9 +14,12 @@ export type LayoutGuardResult =
 
 /**
  * Authenticates the request and verifies the user is a platform owner
- * (`User.isPlatformOwner === true`). Returns `{ user }` on success or a
- * `NextResponse` error on failure — same shape as `requireWorkspaceAdmin`
- * in `src/lib/api/workspace-auth.ts`.
+ * (`User.isPlatformOwner === true`). Accepts either a Bearer Authorization
+ * header or, if no Authorization header is present, a Supabase session
+ * cookie. A present-but-invalid Bearer token rejects 401 without falling
+ * back to the cookie (failed intent, not a foot-gun). Returns `{ user }`
+ * on success or a `NextResponse` error on failure — same shape as
+ * `requireWorkspaceAdmin` in `src/lib/api/workspace-auth.ts`.
  *
  * SECURITY: this is the ONLY supported gate for `/api/admin/*` route
  * handlers. The middleware also enforces the flag as a defense-in-depth
@@ -26,7 +30,21 @@ export type LayoutGuardResult =
 export async function requirePlatformOwner(
   request: NextRequest,
 ): Promise<PlatformOwnerAuthResult | NextResponse> {
-  const { user, error: authError } = await getAuthenticatedUser(request);
+  let user: User | null = null;
+  let authError: string | null = null;
+
+  const hasAuthHeader = request.headers.get('authorization') !== null;
+  if (hasAuthHeader) {
+    const result = await getAuthenticatedUser(request);
+    user = result.user;
+    authError = result.error;
+  } else {
+    const supabase = await createClient();
+    const { data, error } = await supabase.auth.getUser();
+    user = data.user;
+    authError = error?.message ?? null;
+  }
+
   if (!user) {
     return NextResponse.json({ error: authError ?? 'Unauthorized' }, { status: 401 });
   }

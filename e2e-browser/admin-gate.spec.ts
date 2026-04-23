@@ -187,14 +187,11 @@ test.describe('Admin gate — API route (/api/admin/healthcheck)', () => {
     const resp = await request.get('/api/admin/healthcheck', {
       headers: { Authorization: `Bearer ${token}` },
     });
-    // Middleware reads the cookie path, not Bearer — so this request hits
-    // middleware without a cookie and returns 401. Bearer alone isn't enough
-    // to pass the middleware fallback. That is by design; the handler's own
-    // requirePlatformOwner is what gates Bearer-authed clients.
-    //
-    // To exercise the 403 branch specifically, we need a cookie-carrying
-    // request. Spin up a browser context, log in, then re-fetch with a
-    // Bearer header as well so both gates see the user.
+    // Middleware for /api/admin/* gates on the Supabase session cookie, so a
+    // Bearer-only request with no cookie is rejected at middleware with 401.
+    // The handler's requirePlatformOwner now accepts either Bearer OR cookie,
+    // but middleware runs first — so to reach the handler's 403 branch we
+    // still need a cookie-carrying context (see the next test).
     expect(resp.status()).toBe(401);
   });
 

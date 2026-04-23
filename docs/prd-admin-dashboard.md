@@ -159,9 +159,9 @@ This is a load-bearing coincidence, not a design. Two options:
 **Recommendation: (A).** Reasons:
 - Handler-level dual-auth is symmetric with other codebase patterns (`requireWorkspaceAdmin` currently only accepts Bearer — changing to dual there is an easy follow-up if we ever need it).
 - Keeps middleware cheap (it already calls Supabase once via `updateSession`; adding Bearer verification there doubles GoTrue calls).
-- Playwright tests simplify: API tests can use Bearer only, no cookie dance required.
+- Pure-Bearer programmatic clients (CLIs, scripts, Postman) unblocked end-to-end. Note: the browser-driven Playwright gate tests still need a cookie because the **middleware** for `/api/admin/*` continues to gate on the session cookie; only the handler becomes dual-mode.
 
-**Must happen before Phase 1** below. Blocks: CLI-based metric scripts, simpler e2e tests, any future programmatic admin tooling.
+**Must happen before Phase 1** below. Blocks: CLI-based metric scripts and any future programmatic admin tooling.
 
 ---
 
