@@ -389,6 +389,10 @@ Topical sections below describe only work **not yet shipped**. For how the curre
 
 Admin-driven single-entity restore from `TreeEditLog` snapshots, gated by the existing `enableVersionControl` workspace toggle. Handles the "closed my laptop yesterday" and "other admin made a mistake" cases that session undo cannot. Detailed design deferred until session undo (Phase 15a) patterns are validated in production.
 
+### Phase 16 — Platform Owner Dashboard
+
+Cross-workspace, owner-only view of growth / engagement / platform health. Gating scaffold shipped (`/admin` route, `User.isPlatformOwner` flag, middleware + layout + route-handler defense in depth). Metrics, queries, and UI are designed in a dedicated PRD: **`docs/prd-admin-dashboard.md`**. That doc also captures a Phase-0 auth prerequisite: reconcile the cookie/Bearer asymmetry between the middleware gate and the route-handler gate before the first real admin API route ships.
+
 ---
 
 ## 8. Out of Scope (for now)
