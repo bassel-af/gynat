@@ -1,6 +1,6 @@
 # Product Requirements Document — Landing Page SEO
 
-**Status**: Phase 0 shipped (2026-04-24) — Phase 1 (metadata foundation) next
+**Status**: Phase 1 shipped (2026-04-24) — Phase 2 (social & icon assets) next
 **Audience**: Human developers, AI coding assistants
 **Parent PRD**: `docs/prd.md`
 
@@ -81,19 +81,19 @@ Each phase is a self-contained session. Phases are ordered by impact × effort.
 
 **Why**: single highest-ROI change. Title/description drive click-through on the search results page; OG/Twitter drive clicks on social shares.
 
-- [ ] In `src/app/layout.tsx`, expand `metadata`:
+- [x] In `src/app/layout.tsx`, expand `metadata`:
   - `metadataBase: new URL('https://gynat.com')`
   - `title: { default: 'جينات — شجرة العائلة وتوثيق الأنساب', template: '%s · جينات' }`
   - `description`: Arabic, 150–160 chars, include primary keywords + differentiators (hijri calendar, encryption, رَضاعة).
   - `keywords`: Arabic + English primaries.
   - `authors`, `creator`, `publisher`.
   - `alternates.canonical: '/'`, `alternates.languages: { 'ar': '/' }`.
-  - `openGraph`: `type: 'website'`, `locale: 'ar_SA'`, `url`, `siteName: 'جينات'`, `title`, `description`, `images: [{ url: '/opengraph-image.png', width: 1200, height: 630, alt: '...' }]`.
-  - `twitter`: `card: 'summary_large_image'`, title, description, images.
+  - `openGraph`: `type: 'website'`, `locale: 'ar_SA'`, `url`, `siteName: 'جينات'`, `title`, `description`. Image deferred to Phase 2.
+  - `twitter`: `card: 'summary'`, title, description. Upgrade to `summary_large_image` in Phase 2 when image lands.
   - `robots: { index: true, follow: true, googleBot: { index: true, follow: true, 'max-image-preview': 'large' } }`.
   - `formatDetection: { telephone: false, email: false, address: false }`.
-- [ ] Add per-page metadata for `/islamic-gedcom` (exists in `src/app/islamic-gedcom/page.tsx`) and `/policy` — each with its own title/description/canonical.
-- [ ] Add `noindex` metadata to `/auth/callback`, `/auth/confirm`, `/test`, `/design-preview`, and all authenticated routes (can be done via their layouts).
+- [x] Add per-page metadata for `/islamic-gedcom` (exists in `src/app/islamic-gedcom/page.tsx`) and `/policy` — each with its own title/description/canonical.
+- [x] Add `noindex` metadata to `/auth/confirm` (new `auth/confirm/layout.tsx`). `/auth/callback` is a route handler (no metadata surface). `/test` does not exist as a route. `/design-preview` was already `noindex`. Authenticated routes rely on middleware redirect (crawlers can't reach them).
 
 **Acceptance**: `view-source:` on `/` shows ≥ 15 `<meta>` tags including OG + Twitter + canonical; [metatags.io](https://metatags.io) preview renders correctly.
 
