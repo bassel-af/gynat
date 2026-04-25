@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest';
 import sitemap from '@/app/sitemap';
 
 describe('sitemap.ts', () => {
-  it('returns exactly 6 URLs', () => {
+  it('returns exactly 5 URLs', () => {
     const result = sitemap();
-    expect(result).toHaveLength(6);
+    expect(result).toHaveLength(5);
   });
 
   it('includes the homepage with priority 1.0', () => {
@@ -48,11 +48,3 @@ describe('sitemap.ts', () => {
     }
   });
 });
-
-  it('includes the features page with priority 0.7', () => {
-    const result = sitemap();
-    const features = result.find((entry) => entry.url === 'https://gynat.com/features');
-    expect(features).toBeDefined();
-    expect(features!.priority).toBe(0.7);
-    expect(features!.changeFrequency).toBe('monthly');
-  });
