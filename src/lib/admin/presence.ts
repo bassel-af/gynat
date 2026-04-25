@@ -161,14 +161,16 @@ export async function getActiveWorkspaceBreakdown(
 ): Promise<ActiveWorkspaceBreakdown> {
   const since = new Date(Date.now() - windowSeconds * 1000);
 
-  const groups = (await prisma.user.groupBy({
+  const groupsRaw = await prisma.user.groupBy({
     by: ['lastActiveWorkspaceId'],
     where: {
       isPlatformOwner: false,
       lastActiveAt: { gte: since },
     },
     _count: { _all: true },
-  })) as Array<{
+    orderBy: { lastActiveWorkspaceId: 'asc' },
+  });
+  const groups = groupsRaw as Array<{
     lastActiveWorkspaceId: string | null;
     _count: { _all: number };
   }>;
@@ -185,16 +187,17 @@ export async function getActiveWorkspaceBreakdown(
     };
   }
 
-  const [memberships, workspaces, activeUsers] = await Promise.all([
+  const [membershipsRaw, workspacesRaw, activeUsersRaw] = await Promise.all([
     prisma.workspaceMembership.groupBy({
       by: ['workspaceId'],
       where: { workspaceId: { in: workspaceIds } },
       _count: { userId: true },
-    }) as Promise<Array<{ workspaceId: string; _count: { userId: number } }>>,
+      orderBy: { workspaceId: 'asc' },
+    }),
     prisma.workspace.findMany({
       where: { id: { in: workspaceIds } },
       select: { id: true, nameAr: true },
-    }) as Promise<Array<{ id: string; nameAr: string }>>,
+    }),
     prisma.user.findMany({
       where: {
         isPlatformOwner: false,
@@ -202,10 +205,14 @@ export async function getActiveWorkspaceBreakdown(
         lastActiveWorkspaceId: { in: workspaceIds },
       },
       select: { lastActiveWorkspaceId: true, lastActiveRoute: true },
-    }) as Promise<
-      Array<{ lastActiveWorkspaceId: string | null; lastActiveRoute: string | null }>
-    >,
+    }),
   ]);
+  const memberships = membershipsRaw as Array<{ workspaceId: string; _count: { userId: number } }>;
+  const workspaces = workspacesRaw as Array<{ id: string; nameAr: string }>;
+  const activeUsers = activeUsersRaw as Array<{
+    lastActiveWorkspaceId: string | null;
+    lastActiveRoute: string | null;
+  }>;
 
   const memberCountById = new Map(memberships.map((m) => [m.workspaceId, m._count.userId]));
   const nameById = new Map(workspaces.map((w) => [w.id, w.nameAr]));

@@ -19,7 +19,8 @@ export interface PresencePayload {
 }
 
 type SectionState =
-  | { status: 'idle' | 'loading' }
+  | { status: 'idle' }
+  | { status: 'loading' }
   | { status: 'ok'; data: PresencePayload }
   | { status: 'error'; message: string };
 
