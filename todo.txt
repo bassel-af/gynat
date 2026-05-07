@@ -1,3 +1,5 @@
+- When first name is only provided, expoerted gedcom has first name as first and surname i believe.
+- أولاد العم children visualizaiton issue.
 - Complete SEO improvements
 - مرجع gedcom الإسلامي button doesn't appear in mobile in the landing page.
 - Non admin users shall not see workspace page.
@@ -9,7 +11,6 @@
 - Search for families and ask to join (maybe through public family description). Also user can
 describe himself for the admins.
 - SSO for the landing page.
-- when the person is selected glass (blur) is stopped on scroll. i do not like this.
 - when searching for person to share branch pointer, put date as well. this shall be
 reusable component.
 - Woman in the tree hijab or niqab is not needed, just make the shape as men it's okay 

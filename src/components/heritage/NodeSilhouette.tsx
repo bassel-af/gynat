@@ -1,6 +1,13 @@
 /**
  * Small circular silhouette used inside person tree cards.
  * Same shape for all sexes — only the gradient tint differs (male: emerald/gold, female: rose/gold).
+ *
+ * Note: the ring middle stop uses fixed heritage tones (deep forest for male,
+ * muted brown-rose for female) — these are part of the heritage design, NOT
+ * the user-customizable gender accent. The user's gender accent color drives
+ * the card border and spouse line via --color-male / --color-female; the
+ * silhouette ring stays consistent with the heritage palette to preserve the
+ * production look.
  */
 
 type Sex = 'M' | 'F' | '' | string | null | undefined;

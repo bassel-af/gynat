@@ -232,14 +232,14 @@
   color: rgba(232, 223, 200, 0.35);
 }
 
-/* ---- Gender accents (subtle bottom tint) ---- */
+/* ---- Gender accents (subtle bottom tint) — user-customizable via /profile ---- */
 
 .person.male {
-  border-color: rgba(46, 152, 118, 0.22);
+  border-color: color-mix(in srgb, var(--color-male) 22%, transparent);
 }
 
 .person.female {
-  border-color: rgba(237, 100, 166, 0.22);
+  border-color: color-mix(in srgb, var(--color-female) 22%, transparent);
 }
 
 /* ---- Root / patriarch card — emerald + gold halo ---- */
@@ -287,8 +287,8 @@
   color: var(--heritage-text-muted);
 }
 
-.person.deceased.male { border-color: rgba(46, 152, 118, 0.22); }
-.person.deceased.female { border-color: rgba(237, 100, 166, 0.22); }
+.person.deceased.male { border-color: color-mix(in srgb, var(--color-male) 22%, transparent); }
+.person.deceased.female { border-color: color-mix(in srgb, var(--color-female) 22%, transparent); }
 
 /* ---- Interactive ---- */
 
@@ -375,9 +375,14 @@
   background: var(--heritage-gold);
 }
 
-/* Spouse connector line (inline) — retuned to gold gradient regardless of inline color */
+/* Spouse connector line (inline) — male tint → heritage gold midpoint → female tint */
 .spouse-line {
-  background: linear-gradient(90deg, rgba(46, 152, 118, 0.5), var(--heritage-gold), rgba(237, 100, 166, 0.45)) !important;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--color-male) 50%, transparent),
+    var(--heritage-gold),
+    color-mix(in srgb, var(--color-female) 45%, transparent)
+  ) !important;
   height: 1.5px !important;
   opacity: 0.7;
   box-shadow: 0 0 6px rgba(200, 168, 101, 0.25);

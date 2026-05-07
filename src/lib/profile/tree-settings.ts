@@ -7,8 +7,8 @@
 
 const STORAGE_KEY = 'gynat:tree-display-settings';
 
-export const DEFAULT_MALE_COLOR = '#4a90d9';
-export const DEFAULT_FEMALE_COLOR = '#e91e8c';
+export const DEFAULT_MALE_COLOR = '#2e9876';
+export const DEFAULT_FEMALE_COLOR = '#ed64a6';
 
 export interface TreeColorSettings {
   maleNodeColor: string;

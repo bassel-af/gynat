@@ -40,10 +40,13 @@
 
   /* Semantic Colors */
   --color-error: #e53e3e;
-  --color-male: #4a90d9;
-  --color-male-light: #9ec5e8;
-  --color-female: #e91e8c;
-  --color-female-light: #f2a7cf;
+  /* Gender accent colors — defaults match the production tree tints
+     (emerald-glow for male, pink for female). User can override via
+     /profile; applied at runtime via useTreeColorOverrides hook. */
+  --color-male: #2e9876;
+  --color-male-light: #97ccbb;
+  --color-female: #ed64a6;
+  --color-female-light: #f6b2d3;
 
   /* Alpha Colors - White */
   --alpha-white-04: rgba(255, 255, 255, 0.04);

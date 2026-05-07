@@ -19,11 +19,11 @@
 }
 
 .person.male {
-  border-top: 4px solid var(--heritage-emerald);
+  border-top: 4px solid var(--color-male);
 }
 
 .person.female {
-  border-top: 4px solid var(--heritage-gold);
+  border-top: 4px solid var(--color-female);
 }
 
 .personName {
@@ -79,9 +79,9 @@
 }
 
 .person.deceased.male {
-  border-top-color: rgba(26, 93, 74, 0.55);
+  border-top-color: color-mix(in srgb, var(--color-male) 55%, transparent);
 }
 
 .person.deceased.female {
-  border-top-color: rgba(200, 168, 101, 0.55);
+  border-top-color: color-mix(in srgb, var(--color-female) 55%, transparent);
 }

@@ -114,7 +114,7 @@ export function TreeDisplaySettings() {
         >
           {resetSuccess
             ? 'تم إعادة تعيين الألوان'
-            : 'الألوان الافتراضية: أزرق للذكور، وردي للإناث'}
+            : 'الألوان الافتراضية: أخضر للذكور، وردي للإناث'}
         </span>
         <Button
           variant="ghost"

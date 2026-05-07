@@ -46,26 +46,21 @@ describe('default tree color CSS values', () => {
     const { lightenHex, DEFAULT_MALE_COLOR } = await import(
       '@/lib/profile/tree-settings'
     );
-    // DEFAULT_MALE_COLOR = #4a90d9
+    // DEFAULT_MALE_COLOR = #2e9876 (heritage emerald-glow)
+    // (46, 152, 118) → 50% toward white: (150.5, 203.5, 186.5) → (151, 204, 187) → #97ccbb
     const lightMale = lightenHex(DEFAULT_MALE_COLOR, 0.5);
-    // Should be a valid hex color
     expect(lightMale).toMatch(/^#[0-9a-f]{6}$/);
-    // And specifically: #a5c8ec
-    expect(lightMale).toBe('#a5c8ec');
+    expect(lightMale).toBe('#97ccbb');
   });
 
   test('default female color lightened 50% matches expected light variant', async () => {
     const { lightenHex, DEFAULT_FEMALE_COLOR } = await import(
       '@/lib/profile/tree-settings'
     );
-    // DEFAULT_FEMALE_COLOR = #e91e8c
-    // (233, 30, 140) → 50% toward white:
-    // (233 + 11 = 244, 30 + 112.5 = 142.5 → 143, 140 + 57.5 = 197.5 → 198)
-    // Wait: (255-233)*0.5 = 11, (255-30)*0.5 = 112.5, (255-140)*0.5 = 57.5
-    // 233+11=244, 30+112.5=142.5→143, 140+57.5=197.5→198
-    // → #f48fc6
+    // DEFAULT_FEMALE_COLOR = #ed64a6 (pink)
+    // (237, 100, 166) → 50% toward white: (246, 177.5, 210.5) → (246, 178, 211) → #f6b2d3
     const lightFemale = lightenHex(DEFAULT_FEMALE_COLOR, 0.5);
     expect(lightFemale).toMatch(/^#[0-9a-f]{6}$/);
-    expect(lightFemale).toBe('#f48fc6');
+    expect(lightFemale).toBe('#f6b2d3');
   });
 });
