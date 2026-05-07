@@ -4,7 +4,6 @@ import { useMemo, useCallback, useState, useRef, useEffect } from 'react';
 import {
   ReactFlow,
   Node,
-  Edge,
   useNodesState,
   useEdgesState,
   ConnectionLineType,
@@ -19,50 +18,36 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import type { GedcomData, Individual } from '@/lib/gedcom';
-import { getDisplayName, getAllAncestors, getAllDescendants, findTopmostAncestor, hasExternalFamily, computeGraftDescriptors } from '@/lib/gedcom';
+import type { Individual } from '@/lib/gedcom';
+import { getDisplayName, getAllAncestors, getAllDescendants } from '@/lib/gedcom';
 import { useTree } from '@/context/TreeContext';
 import { useOptionalWorkspaceTree } from '@/context/WorkspaceTreeContext';
 import { shouldHideBirthDate } from '@/lib/tree/birth-date-privacy';
 import { NodeSilhouette } from '@/components/heritage/NodeSilhouette';
-import { getLayoutedElements, NODE_WIDTH, NODE_HEIGHT, SPOUSE_WIDTH, SPOUSE_GAP, type GraftNodeBuilder } from './layout';
-
-// Highlight state for lineage tracing
-interface HighlightState {
-  ancestors: Set<string>;
-  descendants: Set<string>;
-  highlightedId: string | null;
-}
-
-// Custom node component for a person (with spouses)
-interface SpouseWithColor {
-  spouse: Individual;
-  color: string;
-  highlightClass: string;
-  hasExternalFamily: boolean;
-  topAncestorId: string | null;
-}
-
-interface PersonNodeData {
-  person: Individual;
-  spouses: SpouseWithColor[];
-  isRoot: boolean;
-  searchQuery: string;
-  isHighlightedPerson: boolean;
-  isAncestor: boolean;
-  isDescendant: boolean;
-  hasHighlight: boolean;
-  selectedPersonId: string | null;
-  isInLawExpansion?: boolean;
-  hideSpouseBadge?: boolean;
-  onPersonClick: (personId: string) => void;
-  onOpenSidebar: () => void;
-  onRerootToAncestor: (ancestorId: string, focusId?: string) => void;
-  [key: string]: unknown;
-}
+import { NODE_WIDTH, NODE_HEIGHT, SPOUSE_WIDTH, SPOUSE_GAP } from './layout';
+import { buildTreeData, computeOccurrenceLinkEdge, type HighlightState, type PersonNodeData } from './buildTreeData';
 
 function PersonNode({ data }: { data: PersonNodeData }) {
-  const { person, spouses, isRoot, searchQuery, isHighlightedPerson, isAncestor, isDescendant, hasHighlight, selectedPersonId, isInLawExpansion, hideSpouseBadge, onPersonClick, onOpenSidebar, onRerootToAncestor } = data;
+  const {
+    person,
+    spouses,
+    isRoot,
+    searchQuery,
+    isHighlightedPerson,
+    isAncestor,
+    isDescendant,
+    hasHighlight,
+    selectedPersonId,
+    isInLawExpansion,
+    hideSpouseBadge,
+    linkedTo: mainLinkedTo,
+    childrenElsewhere,
+    onPersonClick,
+    onOpenSidebar,
+    onRerootToAncestor,
+    onJumpToNode,
+    onSetHoveredOccurrence,
+  } = data;
   const wsContext = useOptionalWorkspaceTree();
 
   const getHighlightClass = (_personId: string, isMainPerson: boolean) => {
@@ -78,7 +63,12 @@ function PersonNode({ data }: { data: PersonNodeData }) {
     return 'lineage-dimmed';
   };
 
-  const renderPersonCard = (p: Individual, isMainPerson: boolean, spouseHighlightClass?: string) => {
+  const renderPersonCard = (
+    p: Individual,
+    isMainPerson: boolean,
+    spouseHighlightClass?: string,
+    linkedTo?: string,
+  ) => {
     const displayName = getDisplayName(p);
     const sexClass = p.sex === 'M' ? 'male' : p.sex === 'F' ? 'female' : '';
     const rootClass = isMainPerson && isRoot ? 'root' : '';
@@ -103,10 +93,26 @@ function PersonNode({ data }: { data: PersonNodeData }) {
       onPersonClick(p.id);
     };
 
+    const handleHoverEnter = linkedTo && onSetHoveredOccurrence
+      ? () => onSetHoveredOccurrence(p.id)
+      : undefined;
+    const handleHoverLeave = linkedTo && onSetHoveredOccurrence
+      ? () => onSetHoveredOccurrence(null)
+      : undefined;
+
+    const handleJumpToOccurrence = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (linkedTo && onJumpToNode) onJumpToNode(linkedTo);
+    };
+
     const isSelected = selectedPersonId === p.id;
 
     return (
-      <div className="person-card-wrapper">
+      <div
+        className="person-card-wrapper"
+        onMouseEnter={handleHoverEnter}
+        onMouseLeave={handleHoverLeave}
+      >
         <div
           className={`person person-clickable ${sexClass} ${rootClass} ${deceasedClass} ${matchClass} ${highlightClass} ${inLawClass} ${pointedClass}`.trim()}
           onClick={handleClick}
@@ -139,6 +145,20 @@ function PersonNode({ data }: { data: PersonNodeData }) {
               <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </div>
+        )}
+        {linkedTo && (
+          <button
+            type="button"
+            className="linked-occurrence-badge"
+            title="نفس الشخص — يظهر في موضعين"
+            aria-label="انتقل إلى الموضع الآخر لهذا الشخص"
+            onClick={handleJumpToOccurrence}
+          >
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="9" cy="12" r="5" stroke="currentColor" strokeWidth="2" />
+              <circle cx="15" cy="12" r="5" stroke="currentColor" strokeWidth="2" />
+            </svg>
+          </button>
         )}
         {p._sharedRoot && (
           <div className="shared-root-badge" title="فرع مُشارَك">
@@ -174,12 +194,12 @@ function PersonNode({ data }: { data: PersonNodeData }) {
       <Handle type="target" position={Position.Top} style={{ opacity: 0, left: NODE_WIDTH / 2 }} />
       {spouses.length === 0 ? (
         <>
-          {renderPersonCard(person, true)}
+          {renderPersonCard(person, true, undefined, mainLinkedTo)}
           <Handle type="source" position={Position.Bottom} id="default" style={{ opacity: 0 }} />
         </>
       ) : (
         <div className="couple" style={{ position: 'relative' }}>
-          {renderPersonCard(person, true)}
+          {renderPersonCard(person, true, undefined, mainLinkedTo)}
           {/* Connector lines from husband to each wife */}
           {spouses.map(({ color }, index) => {
             const lineWidth = SPOUSE_GAP + index * SPOUSE_WIDTH;
@@ -199,7 +219,7 @@ function PersonNode({ data }: { data: PersonNodeData }) {
             );
           })}
           {/* Wife cards */}
-          {spouses.map(({ spouse, highlightClass, hasExternalFamily: hasExtFam, topAncestorId }, spouseIdx) => (
+          {spouses.map(({ spouse, highlightClass, hasExternalFamily: hasExtFam, topAncestorId, linkedTo: spouseLinkedTo }, spouseIdx) => (
             <div key={spouse.id} className="spouse-card-wrapper" style={{ marginLeft: SPOUSE_GAP, position: 'relative' }}>
               {/* Target handle for graft parent edges */}
               <Handle
@@ -238,9 +258,31 @@ function PersonNode({ data }: { data: PersonNodeData }) {
                   </svg>
                 </div>
               )}
-              {renderPersonCard(spouse, false, highlightClass)}
+              {renderPersonCard(spouse, false, highlightClass, spouseLinkedTo)}
             </div>
           ))}
+          {/* "Children placed under your spouse" markers — appear when this
+              person's shared children with a spouse were claimed by the
+              spouse's canonical placement (cousin marriage). */}
+          {childrenElsewhere && childrenElsewhere.length > 0 && (
+            <div className="children-elsewhere-row">
+              {childrenElsewhere.map((entry) => (
+                <button
+                  key={entry.canonicalNodeId}
+                  type="button"
+                  className="children-elsewhere-pill"
+                  title={`${entry.count} أبناء ظاهرون مع ${entry.spouseName}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (onJumpToNode) onJumpToNode(entry.canonicalNodeId);
+                  }}
+                >
+                  <span className="children-elsewhere-arrow" aria-hidden="true">↗</span>
+                  <span>{entry.count} أبناء مع {entry.spouseName}</span>
+                </button>
+              ))}
+            </div>
+          )}
           {/* If only one spouse: centered handle between couple */}
           {/* If multiple spouses: handles under each wife */}
           {spouses.length === 1 ? (
@@ -309,258 +351,16 @@ const nodeTypes = {
   graftOverflow: GraftOverflowNode,
 };
 
-// Heritage-palette colors for distinguishing children of different mothers
-// in polygamous families. Warm, readable against the obsidian canvas.
-const SPOUSE_EDGE_COLORS = [
-  '#c8a865', // gold (primary)
-  '#2e9876', // emerald
-  '#d28b8b', // dusty rose
-  '#e6cf9e', // gold bright
-  '#7fa891', // sage
-  '#b59b73', // bronze
-];
-
-// Convert GEDCOM tree data to React Flow nodes and edges
-// Uses breadth-first traversal to keep siblings together in the layout
-function buildTreeData(
-  data: GedcomData,
-  rootId: string,
-  maxDepth: number,
-  searchQuery: string,
-  highlightState: HighlightState,
-  selectedPersonId: string | null,
-  onPersonClick: (personId: string) => void,
-  onOpenSidebar: () => void,
-  onRerootToAncestor: (ancestorId: string) => void,
-  useGrafts = false
-): { nodes: Node[]; edges: Edge[] } {
-  const nodes: Node[] = [];
-  const edges: Edge[] = [];
-  const visited = new Set<string>();
-
-  // Compute root descendants once for badge detection
-  const rootDescendants = getAllDescendants(data, rootId);
-  rootDescendants.add(rootId);
-
-  // Queue for breadth-first traversal: [personId, depth]
-  const queue: Array<[string, number]> = [[rootId, 0]];
-
-  while (queue.length > 0) {
-    const [personId, depth] = queue.shift()!;
-
-    if (depth > maxDepth || visited.has(personId)) continue;
-
-    const person = data.individuals[personId];
-    if (!person || person.isPrivate) continue;
-
-    visited.add(personId);
-
-    // Get all families where this person is a spouse
-    const personFamilies = person.familiesAsSpouse
-      .map((fid) => data.families[fid])
-      .filter(Boolean);
-
-
-    // Collect all unique non-private spouses
-    const spouseIds: string[] = [];
-    for (const fam of personFamilies) {
-      const spouseId = fam.husband === personId ? fam.wife : fam.husband;
-      if (spouseId && !spouseIds.includes(spouseId)) {
-        const spouse = data.individuals[spouseId];
-        if (spouse && !spouse.isPrivate) {
-          spouseIds.push(spouseId);
-        }
-      }
-    }
-
-    // Determine highlight class for a person
-    const getPersonHighlightClass = (id: string): string => {
-      if (!highlightState.highlightedId) return '';
-      if (id === highlightState.highlightedId) return 'lineage-selected';
-      if (highlightState.ancestors.has(id)) return 'lineage-ancestor';
-      if (highlightState.descendants.has(id)) return 'lineage-descendant';
-      return 'lineage-dimmed';
-    };
-
-    // Create spouses array with colors, highlight classes, and external family info
-    const spousesWithColors: SpouseWithColor[] = spouseIds
-      .map((id, index) => {
-        const spouse = data.individuals[id];
-        if (!spouse) return null;
-        const hasExtFam = hasExternalFamily(data, id, rootDescendants);
-        return {
-          spouse,
-          color: SPOUSE_EDGE_COLORS[index % SPOUSE_EDGE_COLORS.length],
-          highlightClass: getPersonHighlightClass(id),
-          hasExternalFamily: hasExtFam,
-          topAncestorId: hasExtFam ? (findTopmostAncestor(data, id) ?? id) : null,
-        };
-      })
-      .filter((s): s is SpouseWithColor => s !== null);
-
-    // Create node for this person with highlight flags
-    const isHighlightedPerson = personId === highlightState.highlightedId;
-    const isAncestor = highlightState.ancestors.has(personId);
-    const isDescendant = highlightState.descendants.has(personId);
-    const hasHighlight = highlightState.highlightedId !== null;
-
-    nodes.push({
-      id: personId,
-      type: 'person',
-      position: { x: 0, y: 0 }, // Will be set by layout
-      data: {
-        person,
-        spouses: spousesWithColors,
-        isRoot: depth === 0,
-        searchQuery,
-        isHighlightedPerson,
-        isAncestor,
-        isDescendant,
-        hasHighlight,
-        selectedPersonId,
-        hideSpouseBadge: useGrafts,
-        onPersonClick,
-        onOpenSidebar,
-        onRerootToAncestor,
-      } as PersonNodeData,
-    });
-
-    // Collect all children with their family info
-    const allChildren: Array<{
-      childId: string;
-      spouseIndex: number;
-      edgeColor: string;
-      sourceHandle: string;
-    }> = [];
-
-    const visitedChildren = new Set<string>();
-    for (let i = 0; i < personFamilies.length; i++) {
-      const fam = personFamilies[i];
-      const spouseId = fam.husband === personId ? fam.wife : fam.husband;
-      const spouseIndex = spouseId ? spouseIds.indexOf(spouseId) : -1;
-      const edgeColor = SPOUSE_EDGE_COLORS[Math.max(0, spouseIndex) % SPOUSE_EDGE_COLORS.length];
-      const sourceHandle = spouseIndex >= 0 ? `spouse-${spouseIndex}` : 'default';
-
-      for (const childId of fam.children) {
-        const child = data.individuals[childId];
-        if (!child || child.isPrivate) continue;
-
-        if (!visitedChildren.has(childId)) {
-          visitedChildren.add(childId);
-          allChildren.push({ childId, spouseIndex, edgeColor, sourceHandle });
-        }
-      }
-    }
-
-    // Pointed spouse source families: discover children from the pointed spouse's
-    // own families in the source workspace (not reachable through the current person)
-    const personFamilyIds = new Set(person.familiesAsSpouse);
-    for (const spouseId of spouseIds) {
-      const spouse = data.individuals[spouseId];
-      if (!spouse?._pointed) continue;
-      const spouseIndex = spouseIds.indexOf(spouseId);
-      const edgeColor = SPOUSE_EDGE_COLORS[Math.max(0, spouseIndex) % SPOUSE_EDGE_COLORS.length];
-      const sourceHandle = `spouse-${spouseIndex}`;
-      for (const famId of spouse.familiesAsSpouse) {
-        if (personFamilyIds.has(famId)) continue; // already traversed
-        const fam = data.families[famId];
-        if (!fam) continue;
-        for (const childId of fam.children) {
-          const child = data.individuals[childId];
-          if (!child || child.isPrivate || visitedChildren.has(childId)) continue;
-          visitedChildren.add(childId);
-          allChildren.push({ childId, spouseIndex, edgeColor, sourceHandle });
-        }
-      }
-    }
-
-    // Sort children by spouse index first, then by birth year
-    allChildren.sort((a, b) => {
-      if (a.spouseIndex !== b.spouseIndex) return a.spouseIndex - b.spouseIndex;
-      const childA = data.individuals[a.childId];
-      const childB = data.individuals[b.childId];
-      const yearA = childA?.birth ? parseInt(childA.birth.match(/\d{4}/)?.[0] || '9999') : 9999;
-      const yearB = childB?.birth ? parseInt(childB.birth.match(/\d{4}/)?.[0] || '9999') : 9999;
-      return yearA - yearB;
-    });
-
-    // Create edges and add children to queue (BFS)
-    for (const { childId, spouseIndex, edgeColor, sourceHandle } of allChildren) {
-      // Cap offset to avoid exceeding the vertical gap between generations
-      const edgeOffset = Math.min(20 + spouseIndex * 15, 50);
-
-      // Determine edge highlight class
-      let edgeClassName = '';
-
-      // Pointed edge: both parent and child are from a branch pointer
-      const child = data.individuals[childId];
-      if (person._pointed && child?._pointed) {
-        edgeClassName = 'pointed-edge';
-      }
-
-      if (highlightState.highlightedId) {
-        const sourceInLineage = personId === highlightState.highlightedId ||
-          highlightState.ancestors.has(personId) ||
-          highlightState.descendants.has(personId);
-        const targetInLineage = childId === highlightState.highlightedId ||
-          highlightState.ancestors.has(childId) ||
-          highlightState.descendants.has(childId);
-
-        if (sourceInLineage && targetInLineage) {
-          // Edge connects two lineage members - determine direction
-          if (highlightState.descendants.has(childId) ||
-              (personId === highlightState.highlightedId && highlightState.descendants.has(childId)) ||
-              (highlightState.descendants.has(personId) && highlightState.descendants.has(childId))) {
-            edgeClassName = 'lineage-descendant-edge';
-          } else {
-            edgeClassName = 'lineage-ancestor-edge';
-          }
-        } else {
-          edgeClassName = 'lineage-dimmed';
-        }
-      }
-
-      edges.push({
-        id: `${personId}-${childId}`,
-        source: personId,
-        sourceHandle,
-        target: childId,
-        type: 'bezier',
-        style: { stroke: edgeColor, strokeWidth: 1.6, opacity: 0.78 },
-        className: edgeClassName,
-        pathOptions: { offset: edgeOffset, borderRadius: 8 },
-      } as Edge);
-      // Add to queue for BFS traversal
-      queue.push([childId, depth + 1]);
-    }
-  }
-
-  const grafts = useGrafts ? computeGraftDescriptors(data, rootId) : undefined;
-  const graftNodeBuilder: GraftNodeBuilder | undefined = grafts ? {
-    buildPersonNode: (personId: string) => {
-      const person = data.individuals[personId];
-      return {
-        person: person || { id: personId, name: personId, familiesAsSpouse: [], sex: '' as const },
-        spouses: [],
-        isRoot: false,
-        searchQuery,
-        isHighlightedPerson: highlightState.highlightedId === personId,
-        isAncestor: highlightState.ancestors.has(personId),
-        isDescendant: highlightState.descendants.has(personId),
-        hasHighlight: !!highlightState.highlightedId,
-        selectedPersonId,
-        hideSpouseBadge: true,
-        onPersonClick,
-        onOpenSidebar,
-        onRerootToAncestor,
-      };
-    },
-  } : undefined;
-  return getLayoutedElements(nodes, edges, grafts, graftNodeBuilder);
-}
 
 function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
   const { data, selectedRootId, initialRootId, config, searchQuery, focusPersonId, selectedPersonId, highlightedPersonId, setHighlightedPersonId, setSelectedPersonId, setSelectedRootId, setFocusPersonId, setMobileSidebarOpen, viewMode } = useTree();
+  // Hover state for the cousin-marriage occurrence-link edge — kept local
+  // so its high-frequency updates don't ripple through every TreeContext
+  // consumer (Sidebar, SearchBar, Stats, every PersonNode...).
+  const [hoveredOccurrenceId, setHoveredOccurrenceIdState] = useState<string | null>(null);
+  const setHoveredOccurrenceId = useCallback((id: string | null) => {
+    setHoveredOccurrenceIdState(id);
+  }, []);
   const { setViewport, setCenter, getZoom, getViewport, fitView } = useReactFlow();
   const [isReady, setIsReady] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -654,6 +454,18 @@ function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
     [setViewport, setCenter, getZoom]
   );
 
+  // Ref to the latest layouted nodes, so the jump-to-occurrence /
+  // jump-to-canonical callbacks captured inside React Flow node data can
+  // resolve a node's screen position without us re-creating buildTreeData.
+  const nodesRef = useRef<Node[]>([]);
+
+  const handleJumpToNode = useCallback(
+    (nodeId: string) => {
+      scrollToNode(nodeId, nodesRef.current, 'center', true);
+    },
+    [scrollToNode],
+  );
+
   const { initialNodes, initialEdges } = useMemo(() => {
     if (!data || !selectedRootId) {
       return { initialNodes: [], initialEdges: [] };
@@ -666,23 +478,46 @@ function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
       searchQuery,
       highlightState,
       selectedPersonId,
-      handlePersonClick,
-      handleOpenSidebar,
-      handleRerootToAncestor,
+      {
+        onPersonClick: handlePersonClick,
+        onOpenSidebar: handleOpenSidebar,
+        onRerootToAncestor: handleRerootToAncestor,
+        onJumpToNode: handleJumpToNode,
+        onSetHoveredOccurrence: setHoveredOccurrenceId,
+      },
       viewMode === 'multi'
     );
 
     return { initialNodes: nodes, initialEdges: edges };
-  }, [data, selectedRootId, config.maxDepth, searchQuery, highlightState, selectedPersonId, handlePersonClick, handleOpenSidebar, handleRerootToAncestor, viewMode]);
+  }, [data, selectedRootId, config.maxDepth, searchQuery, highlightState, selectedPersonId, handlePersonClick, handleOpenSidebar, handleRerootToAncestor, handleJumpToNode, setHoveredOccurrenceId, viewMode]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+
+  // Keep nodesRef in sync so the in-data jump callbacks can resolve
+  // positions for `scrollToNode` without going through React state.
+  useEffect(() => {
+    nodesRef.current = nodes;
+  }, [nodes]);
 
   // Update nodes when data changes
   useMemo(() => {
     setNodes(initialNodes);
     setEdges(initialEdges);
   }, [initialNodes, initialEdges, setNodes, setEdges]);
+
+  // Dashed gold connector between two occurrences of the same person
+  // (cousin marriage). Recomputed on hover state change — does NOT touch
+  // the underlying edges state, so the family tree edges stay stable.
+  const occurrenceLinkEdge = useMemo(
+    () => computeOccurrenceLinkEdge(nodes, hoveredOccurrenceId),
+    [nodes, hoveredOccurrenceId],
+  );
+
+  const displayEdges = useMemo(
+    () => (occurrenceLinkEdge ? [...edges, occurrenceLinkEdge] : edges),
+    [edges, occurrenceLinkEdge],
+  );
 
   // Center viewport on focused person (including spouses who are part of another node)
   // Clear focusPersonId after centering so the effect only fires once per focus request.
@@ -870,7 +705,7 @@ function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
       </svg>
       <ReactFlow
         nodes={nodes}
-        edges={edges}
+        edges={displayEdges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onInit={onInit}

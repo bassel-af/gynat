@@ -591,6 +591,108 @@
   height: 13px;
 }
 
+/* Linked-occurrence badge: marks a card whose person also appears as
+   another card elsewhere (cousin marriage). Click to jump to the linked
+   occurrence. Subtle gold tint so it doesn't shout against the canvas. */
+.linked-occurrence-badge {
+  position: absolute;
+  top: 18px;
+  right: -8px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 50%;
+  background: rgba(10, 14, 26, 0.85);
+  border: 1.5px solid var(--heritage-gold, #c8a865);
+  color: var(--heritage-gold, #c8a865);
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.linked-occurrence-badge:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 8px rgba(200, 168, 101, 0.6);
+}
+
+.linked-occurrence-badge svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Occurrence-link edge: dashed gold line connecting the two cards of the
+   same person (cousin marriage). Appears on hover; "marching ants" so the
+   line clearly traces from one card to the other even when the linked
+   card is off-screen or at a different zoom level. */
+@keyframes occurrence-dash-march {
+  to { stroke-dashoffset: -20; }
+}
+
+.react-flow__edge.occurrence-link .react-flow__edge-path {
+  stroke: var(--heritage-gold, #c8a865) !important;
+  stroke-dasharray: 6 4;
+  stroke-width: 2;
+  opacity: 0.92;
+  filter: drop-shadow(0 0 6px rgba(200, 168, 101, 0.4));
+  animation: occurrence-dash-march 800ms linear infinite;
+}
+
+.react-flow__edge.occurrence-link .react-flow__edge-text {
+  font-family: inherit;
+  font-size: 11px;
+  fill: var(--heritage-gold, #c8a865);
+}
+
+.react-flow__edge.occurrence-link .react-flow__edge-textbg {
+  fill: rgba(10, 14, 26, 0.85);
+}
+
+/* Children-elsewhere pill: shown beneath a couple when the shared
+   children rendered under the OTHER parent (cousin marriage canonical
+   placement). Gold border, transparent fill, heritage type. */
+.children-elsewhere-row {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  z-index: 4;
+  pointer-events: none; /* Pills below opt back in. */
+}
+
+.children-elsewhere-pill {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(10, 14, 26, 0.55);
+  border: 1px solid rgba(200, 168, 101, 0.55);
+  color: var(--heritage-gold, #c8a865);
+  font-size: 11px;
+  font-family: var(--heritage-font-arabic, inherit);
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.children-elsewhere-pill:hover {
+  background: rgba(200, 168, 101, 0.12);
+  border-color: rgba(200, 168, 101, 0.9);
+  transform: translateY(-1px);
+}
+
+.children-elsewhere-arrow {
+  font-size: 12px;
+  line-height: 1;
+}
+
 /* Pointed edge: dashed teal */
 .react-flow__edge.pointed-edge .react-flow__edge-path {
   stroke: var(--heritage-emerald-glow) !important;
