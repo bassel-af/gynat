@@ -135,6 +135,78 @@ export interface BuildTreeDataCallbacks {
   onSetHoveredOccurrence?: (id: string | null) => void;
 }
 
+interface SisterWifeCluster {
+  husbandId: string;
+  sisterIds: string[]; // eldest-first (by birth year, F.children-order tiebreak)
+  anchorBirthYear: number; // birth year of eldest sister, used for surrogate slot
+}
+
+function detectSisterWifeClusters(
+  parentFamilies: import('@/lib/gedcom').Family[],
+  data: GedcomData,
+  claimedDescendants: Set<string>,
+): SisterWifeCluster[] {
+  const childIds: string[] = [];
+  const seen = new Set<string>();
+  for (const fam of parentFamilies) {
+    for (const cid of fam.children) {
+      if (seen.has(cid)) continue;
+      const c = data.individuals[cid];
+      if (!c || c.isPrivate) continue;
+      seen.add(cid);
+      childIds.push(cid);
+    }
+  }
+  if (childIds.length < 2) return [];
+
+  // Group children by their outsider spouses.
+  const spouseToSiblings = new Map<string, string[]>();
+  for (const cid of childIds) {
+    const c = data.individuals[cid];
+    if (!c) continue;
+    for (const fid of c.familiesAsSpouse) {
+      const fam = data.families[fid];
+      if (!fam) continue;
+      const spouseId = fam.husband === cid ? fam.wife : fam.husband;
+      if (!spouseId) continue;
+      const list = spouseToSiblings.get(spouseId) ?? [];
+      list.push(cid);
+      spouseToSiblings.set(spouseId, list);
+    }
+  }
+
+  const birthYear = (id: string): number => {
+    const ind = data.individuals[id];
+    if (!ind?.birth) return Number.POSITIVE_INFINITY;
+    const m = ind.birth.match(/\d{4}/);
+    return m ? parseInt(m[0]) : Number.POSITIVE_INFINITY;
+  };
+
+  const clusters: SisterWifeCluster[] = [];
+  for (const [husbandId, siblings] of spouseToSiblings) {
+    if (siblings.length < 2) continue;
+    const husband = data.individuals[husbandId];
+    if (!husband || husband.isPrivate) continue;
+    // Bail when H is already a blood descendant claimed via another path —
+    // sisters render as his normal spouse-cards under that path's claim.
+    if (claimedDescendants.has(husbandId)) continue;
+
+    const sortedSisters = [...siblings].sort((a, b) => {
+      const ya = birthYear(a);
+      const yb = birthYear(b);
+      if (ya !== yb) return ya - yb;
+      return childIds.indexOf(a) - childIds.indexOf(b);
+    });
+
+    clusters.push({
+      husbandId,
+      sisterIds: sortedSisters,
+      anchorBirthYear: birthYear(sortedSisters[0]),
+    });
+  }
+  return clusters;
+}
+
 /**
  * Convert GEDCOM tree data to React Flow nodes and edges.
  *
@@ -175,6 +247,26 @@ export function buildTreeData(
   // that drove the cousin-marriage explosion.
   const claimedDescendants = new Set<string>();
 
+  // Sister-wives clustering (A.2): when a man H marries multiple sisters, H
+  // is promoted to a main BFS node (surrogate child of their shared parent
+  // F). The sisters become spouse-cards on H's node. F→H parent-edges are
+  // deferred until H's spouses[] is finalized so we can target the right
+  // spouse-target handles.
+  //
+  //   clusterSurrogates: parent id → husband ids inserted as surrogate
+  //     children at this parent. Used to suppress the natural single F→H
+  //     edge during BFS — replaced by the deferred edges in pass 2.
+  //   clusterBirthYearOverride: husband id → effective birth year (eldest
+  //     sister's), consulted by allChildren.sort to slot H correctly.
+  //   pendingClusterParentEdges: deferred F→H edges keyed by ordering.
+  const clusterSurrogates = new Map<string, Set<string>>();
+  const clusterBirthYearOverride = new Map<string, number>();
+  const pendingClusterParentEdges: Array<{
+    parentId: string;
+    husbandId: string;
+    sisterIds: string[];
+  }> = [];
+
   // Buffer of "your children are over there" markers — gathered during BFS,
   // attached to nodes in the second pass once we know which spouses actually
   // have a main-node id in this rendering.
@@ -198,6 +290,26 @@ export function buildTreeData(
       .map((fid) => data.families[fid])
       .filter(Boolean);
 
+    // Detect sister-wife clusters at this parent. For each cluster, register
+    // a surrogate H child (in lieu of S1, S2…) and queue H's BFS visit.
+    const clusters = detectSisterWifeClusters(personFamilies, data, claimedDescendants);
+    const sisterIdsToSkipAsChildren = new Set<string>();
+    for (const cluster of clusters) {
+      for (const sid of cluster.sisterIds) {
+        claimedDescendants.add(sid);
+        sisterIdsToSkipAsChildren.add(sid);
+      }
+      claimedDescendants.add(cluster.husbandId);
+      clusterBirthYearOverride.set(cluster.husbandId, cluster.anchorBirthYear);
+      const surrogates = clusterSurrogates.get(personId) ?? new Set<string>();
+      surrogates.add(cluster.husbandId);
+      clusterSurrogates.set(personId, surrogates);
+      pendingClusterParentEdges.push({
+        parentId: personId,
+        husbandId: cluster.husbandId,
+        sisterIds: cluster.sisterIds,
+      });
+    }
 
     // Collect all unique non-private spouses
     const spouseIds: string[] = [];
@@ -306,6 +418,10 @@ export function buildTreeData(
 
         bucket.total += 1;
 
+        // Sister-wives: skip cluster sisters here (they're rendered as
+        // spouse-cards on the surrogate husband, not as F's main-node children).
+        if (sisterIdsToSkipAsChildren.has(childId)) continue;
+
         // First BFS dequeue wins. If another parent has already claimed
         // this child, skip entirely — no edge, no queue entry. Document
         // the rule deliberately: determinism > "correct" parent choice.
@@ -317,6 +433,22 @@ export function buildTreeData(
       }
 
       familyBuckets.push(bucket);
+    }
+
+    // Insert sister-wife husband surrogates as children of F. They render as
+    // their own main node with the sisters as spouse-cards. The natural
+    // F→surrogate edge is emitted with sourceHandle 'default'; pass 2
+    // replaces it with N spouse-target edges, one per sister.
+    const surrogatesAtThisParent = clusterSurrogates.get(personId);
+    if (surrogatesAtThisParent && surrogatesAtThisParent.size > 0) {
+      for (const husbandId of surrogatesAtThisParent) {
+        allChildren.push({
+          childId: husbandId,
+          spouseIndex: -1,
+          edgeColor: SPOUSE_EDGE_COLORS[0],
+          sourceHandle: 'default',
+        });
+      }
     }
 
     // Pointed spouse source families: discover children from the pointed spouse's
@@ -342,17 +474,29 @@ export function buildTreeData(
       }
     }
 
-    // Sort children by spouse index first, then by birth year
+    // Sort children by spouse index first, then by birth year. Cluster
+    // surrogate husbands use their eldest sister's birth year as their
+    // ordering key (clusterBirthYearOverride) so they slot into F's siblings
+    // in the place a sister would have occupied.
     allChildren.sort((a, b) => {
       if (a.spouseIndex !== b.spouseIndex) return a.spouseIndex - b.spouseIndex;
-      const childA = data.individuals[a.childId];
-      const childB = data.individuals[b.childId];
-      const yearA = childA?.birth ? parseInt(childA.birth.match(/\d{4}/)?.[0] || '9999') : 9999;
-      const yearB = childB?.birth ? parseInt(childB.birth.match(/\d{4}/)?.[0] || '9999') : 9999;
+      const yearA = clusterBirthYearOverride.has(a.childId)
+        ? clusterBirthYearOverride.get(a.childId)!
+        : (() => {
+            const childA = data.individuals[a.childId];
+            return childA?.birth ? parseInt(childA.birth.match(/\d{4}/)?.[0] || '9999') : 9999;
+          })();
+      const yearB = clusterBirthYearOverride.has(b.childId)
+        ? clusterBirthYearOverride.get(b.childId)!
+        : (() => {
+            const childB = data.individuals[b.childId];
+            return childB?.birth ? parseInt(childB.birth.match(/\d{4}/)?.[0] || '9999') : 9999;
+          })();
       return yearA - yearB;
     });
 
     // Create edges and add children to queue (BFS)
+    const surrogatesHere = clusterSurrogates.get(personId);
     for (const { childId, spouseIndex, edgeColor, sourceHandle } of allChildren) {
       // Cap offset to avoid exceeding the vertical gap between generations
       const edgeOffset = Math.min(20 + spouseIndex * 15, 50);
@@ -388,14 +532,20 @@ export function buildTreeData(
         }
       }
 
+      // For sister-wife surrogates, emit a placeholder F→H edge here so the
+      // edge appears in the correct sibling order. Pass 2 swaps it for N
+      // spouse-target edges (one per sister).
+      const isSurrogate = surrogatesHere?.has(childId) === true;
       edges.push({
-        id: `${personId}-${childId}`,
+        id: isSurrogate
+          ? `cluster-placeholder-${personId}-${childId}`
+          : `${personId}-${childId}`,
         source: personId,
         sourceHandle,
         target: childId,
         type: 'bezier',
         style: { stroke: edgeColor, strokeWidth: 1.6, opacity: 0.78 },
-        className: edgeClassName,
+        className: isSurrogate ? 'cluster-placeholder' : edgeClassName,
         pathOptions: { offset: edgeOffset, borderRadius: 8 },
       } as Edge);
       // Add to queue for BFS traversal
@@ -420,6 +570,43 @@ export function buildTreeData(
         canonicalNodeId: bucket.spouseId, // resolved (and filtered) below
       });
       childrenElsewhereByPerson.set(personId, list);
+    }
+  }
+
+  // Deferred F→H parent-edges for sister-wife clusters: replace each
+  // placeholder F→H edge with N spouse-target edges (one per sister), each
+  // targeting that sister's spouse-target handle on H. Splice in place so
+  // the resulting edges keep F's sibling-order position.
+  for (const pending of pendingClusterParentEdges) {
+    const placeholderIdx = edges.findIndex(
+      (e) => e.id === `cluster-placeholder-${pending.parentId}-${pending.husbandId}`,
+    );
+    const husbandNode = nodes.find((n) => n.id === pending.husbandId);
+    if (!husbandNode) {
+      if (placeholderIdx >= 0) edges.splice(placeholderIdx, 1);
+      continue;
+    }
+    const husbandData = husbandNode.data as PersonNodeData;
+    const replacements: Edge[] = [];
+    for (const sisterId of pending.sisterIds) {
+      const sisterIdx = husbandData.spouses.findIndex((s) => s.spouse.id === sisterId);
+      if (sisterIdx < 0) continue;
+      const color = SPOUSE_EDGE_COLORS[sisterIdx % SPOUSE_EDGE_COLORS.length];
+      replacements.push({
+        id: `${pending.parentId}-${pending.husbandId}-via-${sisterId}`,
+        source: pending.parentId,
+        sourceHandle: 'default',
+        target: pending.husbandId,
+        targetHandle: `spouse-target-${sisterIdx}`,
+        type: 'bezier',
+        style: { stroke: color, strokeWidth: 1.6, opacity: 0.78 },
+        pathOptions: { offset: 20 + sisterIdx * 15, borderRadius: 8 },
+      } as Edge);
+    }
+    if (placeholderIdx >= 0) {
+      edges.splice(placeholderIdx, 1, ...replacements);
+    } else {
+      edges.push(...replacements);
     }
   }
 

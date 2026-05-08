@@ -86,12 +86,19 @@ export function getLayoutedElements(
   const childHandleMap = new Map<string, Map<string, string>>();
   edges.forEach((edge) => {
     const children = childrenOf.get(edge.source) || [];
-    children.push(edge.target);
+    // Dedupe: a child can have multiple incoming edges from the same parent
+    // (e.g. sister-wife husband H gets one F→H edge per sister, each targeting
+    // a different spouse-target handle). Layout treats H as a single child.
+    if (!children.includes(edge.target)) {
+      children.push(edge.target);
+    }
     childrenOf.set(edge.source, children);
     hasParent.add(edge.target);
-    // Track which source handle connects to each child
+    // Track which source handle connects to each child (first edge wins).
     const parentMap = childHandleMap.get(edge.source) || new Map<string, string>();
-    parentMap.set(edge.target, edge.sourceHandle || 'default');
+    if (!parentMap.has(edge.target)) {
+      parentMap.set(edge.target, edge.sourceHandle || 'default');
+    }
     childHandleMap.set(edge.source, parentMap);
   });
 
