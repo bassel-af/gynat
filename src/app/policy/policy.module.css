@@ -52,16 +52,6 @@
   -webkit-text-fill-color: transparent;
 }
 
-.pageSubtitle {
-  font-family: var(--heritage-font-body);
-  font-size: 15px;
-  color: rgba(232, 223, 200, 0.65);
-  text-align: center;
-  margin: 0 0 var(--space-11);
-  line-height: 1.75;
-  font-weight: 300;
-}
-
 .section {
   position: relative;
   margin-bottom: var(--space-11);
@@ -101,42 +91,12 @@
   letter-spacing: -0.005em;
 }
 
-.arabicBlock {
-  margin-bottom: var(--space-7);
-}
-
 .arabicBlock p {
   font-family: var(--heritage-font-body);
   font-size: 14px;
   color: var(--heritage-text-soft);
   line-height: 1.95;
   margin: 0 0 var(--space-4);
-  font-weight: 300;
-}
-
-.englishBlock {
-  direction: ltr;
-  text-align: left;
-  padding-top: var(--space-5);
-  border-top: 1px dashed rgba(200, 168, 101, 0.14);
-}
-
-.englishLabel {
-  font-family: var(--heritage-font-body);
-  font-size: 10px;
-  font-weight: 500;
-  color: var(--heritage-gold);
-  margin: 0 0 var(--space-4);
-  text-transform: uppercase;
-  letter-spacing: 0.22em;
-}
-
-.englishBlock p {
-  font-family: var(--heritage-font-body);
-  font-size: 13px;
-  color: rgba(232, 223, 200, 0.65);
-  line-height: 1.8;
-  margin: 0 0 var(--space-2);
   font-weight: 300;
 }
 
