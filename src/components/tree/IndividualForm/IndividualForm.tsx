@@ -456,7 +456,7 @@ export function IndividualForm({
         <div className={styles.row}>
           <Input
             id="givenName"
-            label="الاسم الأول"
+            label="الاسم"
             value={formData.givenName}
             onChange={(e) => updateField('givenName', e.target.value)}
             placeholder="مثال: أحمد"
