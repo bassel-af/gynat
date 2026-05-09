@@ -758,7 +758,6 @@ export function PersonDetail({ personId }: PersonDetailProps) {
   // Single merged list shown in the picker — existing FAMs first, then free-floating
   // individuals (which create a new single-parent FAM on confirm).
   const moveOptions = useMemo<MoveSubtreeOption[]>(() => {
-    if (!data) return [];
     const familyOpts: MoveSubtreeOption[] = targetFamilies.map((f) => ({
       kind: 'family',
       familyId: f.familyId,
@@ -767,10 +766,9 @@ export function PersonDetail({ personId }: PersonDetailProps) {
     const soloOpts: MoveSubtreeOption[] = soloCandidates.map((p) => ({
       kind: 'solo',
       individualId: p.id,
-      // Disambiguate similarly-named individuals by including father's name (nasab) and
-      // surname when available. Falls back to plain givenName when the person has no
-      // recorded father — matches existing behavior in the rest of the app.
-      name: getDisplayNameWithNasab(data, p),
+      // soloCandidates is itself empty when data is null, so this branch only runs with
+      // a real GedcomData — the assertion documents that invariant for the type-checker.
+      name: getDisplayNameWithNasab(data!, p),
       sex: p.sex as 'M' | 'F',
     }));
     return [...familyOpts, ...soloOpts];

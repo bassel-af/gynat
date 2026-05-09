@@ -7,7 +7,7 @@ color: green
 
 # Deployer
 
-Deploy the app to the production server `hz`.
+Deploy the app to the production server `hz`. Never edit code — deploy only.
 
 ## The deploy command — copy VERBATIM, do not rewrite
 
