@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/Input';
 import { PlaceComboBox } from '@/components/ui/PlaceComboBox';
 import { Button } from '@/components/ui/Button';
 import { getDisplayNameWithNasab } from '@/lib/gedcom/display';
+import { getAddRelationshipLabel } from '@/lib/tree/relationship-labels';
 import type { GedcomData } from '@/lib/gedcom/types';
 import styles from './IndividualForm.module.css';
 
@@ -71,6 +72,19 @@ interface IndividualFormProps {
   ummWaladInitialValue?: boolean;
   /** In edit mode: whether the family has existing MARC/MARR data (triggers confirmation) */
   ummWaladHasMarriageData?: boolean;
+}
+
+function buildFormTitle(
+  mode: 'create' | 'edit',
+  relationshipType: IndividualFormProps['relationshipType'],
+  anchorSex: IndividualFormProps['anchorSex'],
+  anchorName: IndividualFormProps['anchorName'],
+): string {
+  if (mode === 'edit') {
+    return anchorName ? `تعديل بيانات ${anchorName}` : 'تعديل بيانات الشخص';
+  }
+  const stem = getAddRelationshipLabel(relationshipType, anchorSex);
+  return anchorName ? `${stem} لـ ${anchorName}` : stem;
 }
 
 const EMPTY_FORM: IndividualFormData = {
@@ -158,7 +172,9 @@ export function IndividualForm({
     (mode === 'edit' && !!ummWaladFamilyId)
   );
 
-  const title = branchLinkMode ? 'ربط فرع من مساحة أخرى' : (mode === 'create' ? 'إضافة شخص جديد' : 'تعديل بيانات الشخص');
+  const title = branchLinkMode
+    ? 'ربط فرع من مساحة أخرى'
+    : buildFormTitle(mode, relationshipType, anchorSex, anchorName);
   const submitLabel = branchLinkMode
     ? (orphanedChildNames.length > 0 ? 'تأكيد الربط' : 'ربط الفرع')
     : (mode === 'create' ? 'إضافة' : 'حفظ');
