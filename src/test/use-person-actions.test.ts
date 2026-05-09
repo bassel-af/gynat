@@ -651,7 +651,7 @@ describe('usePersonActions', () => {
     );
 
     await act(async () => {
-      await result.current.moveSubtree('@F2@');
+      await result.current.moveSubtree({ kind: 'family', familyId: '@F2@', parentNames: 'p1 + p2' });
     });
 
     expect(mockApiFetch).toHaveBeenCalledWith(
@@ -781,7 +781,7 @@ describe('usePersonActions', () => {
     );
 
     await act(async () => {
-      await result.current.moveSubtree('@F2@');
+      await result.current.moveSubtree({ kind: 'family', familyId: '@F2@', parentNames: 'p1 + p2' });
     });
 
     expect(result.current.formError).toBe('move failed');

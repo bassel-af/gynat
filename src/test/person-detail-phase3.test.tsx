@@ -9,6 +9,8 @@ import {
   canMoveSubtree,
   getTargetFamiliesForMove,
   computeSubtreeIds,
+  detectOrphanedPreviousParents,
+  getSoloIndividualsForParenting,
   buildEditInitialData,
   buildFamilyEventInitialData,
 } from '@/lib/person-detail-helpers'
@@ -371,11 +373,280 @@ describe('PersonDetail Phase 7a – move subtree', () => {
     expect(targets.some(t => t.familyId === '@F2@')).toBe(true)
   })
 
-  it('getTargetFamiliesForMove returns empty when no familyAsChild', () => {
+  it('getTargetFamiliesForMove returns candidate families when person has no familyAsChild', () => {
+    // Person with no parents — should be able to assign existing parents.
+    // Setup: parentless man @I1@ married to wife @I2@ in @F1@; another couple @I5@ + @I6@ in @F2@.
+    const ASSIGN_GEDCOM = `
+0 @I1@ INDI
+1 NAME Husband
+1 SEX M
+1 FAMS @F1@
+0 @I2@ INDI
+1 NAME Wife
+1 SEX F
+1 FAMS @F1@
+0 @I5@ INDI
+1 NAME PossibleFather
+1 SEX M
+1 FAMS @F2@
+0 @I6@ INDI
+1 NAME PossibleMother
+1 SEX F
+1 FAMS @F2@
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+0 @F2@ FAM
+1 HUSB @I5@
+1 WIFE @I6@
+`.trim()
+    const data = parseGedcom(ASSIGN_GEDCOM)
+    const husband = data.individuals['@I1@']
+    const subtreeIds = computeSubtreeIds(data, husband.id)
+    const targets = getTargetFamiliesForMove(husband, data, subtreeIds)
+    // @F2@ (couple with no link to husband) is a valid candidate
+    expect(targets.some(t => t.familyId === '@F2@')).toBe(true)
+    // @F1@ excluded — husband is a spouse there, not a child
+    expect(targets.some(t => t.familyId === '@F1@')).toBe(false)
+  })
+
+  it('getTargetFamiliesForMove still excludes own marriage family for parentless person', () => {
     const data = parseGedcom(POLYGAMOUS_GEDCOM)
     const father = data.individuals['@I1@']
     const subtreeIds = computeSubtreeIds(data, father.id)
-    expect(getTargetFamiliesForMove(father, data, subtreeIds)).toEqual([])
+    const targets = getTargetFamiliesForMove(father, data, subtreeIds)
+    // Father is a husband in @F1@ and @F2@; both should be excluded as targets
+    expect(targets.some(t => t.familyId === '@F1@')).toBe(false)
+    expect(targets.some(t => t.familyId === '@F2@')).toBe(false)
+  })
+})
+
+describe('detectOrphanedPreviousParents', () => {
+  it('returns empty when person has no familyAsChild', () => {
+    const data = parseGedcom(`
+0 @I1@ INDI
+1 NAME Solo
+1 SEX M
+`.trim())
+    const person = data.individuals['@I1@']
+    expect(detectOrphanedPreviousParents(person, data)).toEqual([])
+  })
+
+  it('returns both parents when source family has only those two parents and the person', () => {
+    // Both parents have no other family, no familyAsChild, no siblings, no other children.
+    // After removing person, the source family is just husband+wife with no link elsewhere.
+    // Per spec: a parent becomes orphan only if they have ZERO connections (no parents,
+    // no siblings, no other spouse, no other child, AND no spouse left in the source family).
+    // Here, after removal, husband still has wife → NOT orphan. Wife still has husband → NOT orphan.
+    const data = parseGedcom(`
+0 @I1@ INDI
+1 NAME Father
+1 SEX M
+1 FAMS @F1@
+0 @I2@ INDI
+1 NAME Mother
+1 SEX F
+1 FAMS @F1@
+0 @I3@ INDI
+1 NAME Child
+1 SEX M
+1 FAMC @F1@
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+1 CHIL @I3@
+`.trim())
+    const child = data.individuals['@I3@']
+    const orphans = detectOrphanedPreviousParents(child, data)
+    expect(orphans.map(p => p.id)).toEqual([])
+  })
+
+  it('returns the lone parent when source family has just one parent and the person', () => {
+    // Single-parent family. After removing person, the parent is alone with no other
+    // connections → orphan.
+    const data = parseGedcom(`
+0 @I1@ INDI
+1 NAME LoneParent
+1 SEX M
+1 FAMS @F1@
+0 @I3@ INDI
+1 NAME Child
+1 SEX M
+1 FAMC @F1@
+0 @F1@ FAM
+1 HUSB @I1@
+1 CHIL @I3@
+`.trim())
+    const child = data.individuals['@I3@']
+    const orphans = detectOrphanedPreviousParents(child, data)
+    expect(orphans.map(p => p.id)).toEqual(['@I1@'])
+  })
+
+  it('does not flag a parent who has parents of their own', () => {
+    const data = parseGedcom(`
+0 @I0@ INDI
+1 NAME Grandfather
+1 SEX M
+1 FAMS @F0@
+0 @I1@ INDI
+1 NAME LoneParent
+1 SEX M
+1 FAMC @F0@
+1 FAMS @F1@
+0 @I3@ INDI
+1 NAME Child
+1 SEX M
+1 FAMC @F1@
+0 @F0@ FAM
+1 HUSB @I0@
+1 CHIL @I1@
+0 @F1@ FAM
+1 HUSB @I1@
+1 CHIL @I3@
+`.trim())
+    const child = data.individuals['@I3@']
+    const orphans = detectOrphanedPreviousParents(child, data)
+    expect(orphans.map(p => p.id)).toEqual([])
+  })
+
+  it('does not flag a parent who has another marriage', () => {
+    const data = parseGedcom(`
+0 @I1@ INDI
+1 NAME LoneParent
+1 SEX M
+1 FAMS @F1@
+1 FAMS @F2@
+0 @I3@ INDI
+1 NAME Child
+1 SEX M
+1 FAMC @F1@
+0 @I4@ INDI
+1 NAME OtherWife
+1 SEX F
+1 FAMS @F2@
+0 @F1@ FAM
+1 HUSB @I1@
+1 CHIL @I3@
+0 @F2@ FAM
+1 HUSB @I1@
+1 WIFE @I4@
+`.trim())
+    const child = data.individuals['@I3@']
+    const orphans = detectOrphanedPreviousParents(child, data)
+    expect(orphans.map(p => p.id)).toEqual([])
+  })
+
+  it('does not flag a parent when source family has another remaining child', () => {
+    const data = parseGedcom(`
+0 @I1@ INDI
+1 NAME LoneParent
+1 SEX M
+1 FAMS @F1@
+0 @I3@ INDI
+1 NAME Child
+1 SEX M
+1 FAMC @F1@
+0 @I4@ INDI
+1 NAME Sibling
+1 SEX F
+1 FAMC @F1@
+0 @F1@ FAM
+1 HUSB @I1@
+1 CHIL @I3@
+1 CHIL @I4@
+`.trim())
+    const child = data.individuals['@I3@']
+    const orphans = detectOrphanedPreviousParents(child, data)
+    expect(orphans.map(p => p.id)).toEqual([])
+  })
+})
+
+describe('getSoloIndividualsForParenting', () => {
+  it('returns a free-floating person of either sex when target has no parents', () => {
+    // هالة exists as an individual with no marriage and no children/parents.
+    // The target person has no familyAsChild and no descendants. She must be a candidate.
+    const data = parseGedcom(`
+0 @I1@ INDI
+1 NAME أبو-العاص
+1 SEX M
+0 @I2@ INDI
+1 NAME هالة
+1 SEX F
+`.trim())
+    const target = data.individuals['@I1@']
+    const subtreeIds = computeSubtreeIds(data, target.id)
+    const solos = getSoloIndividualsForParenting(target, data, subtreeIds)
+    expect(solos.map(p => p.id)).toEqual(['@I2@'])
+  })
+
+  it('excludes individuals who are already a parent in some family', () => {
+    // The mother is wife in a separate family — she shows up via the families list,
+    // not the solos list, so we exclude her here to avoid duplicates.
+    const data = parseGedcom(`
+0 @I1@ INDI
+1 NAME Target
+1 SEX M
+0 @I2@ INDI
+1 NAME ExistingMother
+1 SEX F
+1 FAMS @F1@
+0 @I3@ INDI
+1 NAME ExistingFather
+1 SEX M
+1 FAMS @F1@
+0 @F1@ FAM
+1 HUSB @I3@
+1 WIFE @I2@
+`.trim())
+    const target = data.individuals['@I1@']
+    const subtreeIds = computeSubtreeIds(data, target.id)
+    const solos = getSoloIndividualsForParenting(target, data, subtreeIds)
+    expect(solos.map(p => p.id)).toEqual([])
+  })
+
+  it('excludes the target person themselves', () => {
+    const data = parseGedcom(`
+0 @I1@ INDI
+1 NAME Target
+1 SEX M
+`.trim())
+    const target = data.individuals['@I1@']
+    const subtreeIds = computeSubtreeIds(data, target.id)
+    expect(getSoloIndividualsForParenting(target, data, subtreeIds)).toEqual([])
+  })
+
+  it('excludes descendants of the target (cycle prevention)', () => {
+    const data = parseGedcom(`
+0 @I1@ INDI
+1 NAME Target
+1 SEX M
+1 FAMS @F1@
+0 @I2@ INDI
+1 NAME Child
+1 SEX F
+1 FAMC @F1@
+0 @F1@ FAM
+1 HUSB @I1@
+1 CHIL @I2@
+`.trim())
+    const target = data.individuals['@I1@']
+    const subtreeIds = computeSubtreeIds(data, target.id)
+    const solos = getSoloIndividualsForParenting(target, data, subtreeIds)
+    expect(solos.map(p => p.id)).toEqual([])
+  })
+
+  it('excludes individuals without a known sex', () => {
+    // Without a sex, we cannot decide HUSB vs WIFE for the new family.
+    const data = parseGedcom(`
+0 @I1@ INDI
+1 NAME Target
+1 SEX M
+0 @I2@ INDI
+1 NAME Unknown
+`.trim())
+    const target = data.individuals['@I1@']
+    const subtreeIds = computeSubtreeIds(data, target.id)
+    expect(getSoloIndividualsForParenting(target, data, subtreeIds)).toEqual([])
   })
 })
 

@@ -71,7 +71,10 @@ export function canMoveSubtree(person: Individual): boolean {
 }
 
 /**
- * Get all possible target families for move-subtree.
+ * Get all possible target families for move-subtree / assign-parents.
+ * Works for both cases:
+ *   - person has a current familyAsChild → "change parents"
+ *   - person has no familyAsChild → "assign parents to a parentless person"
  * Caller must pre-compute subtreeIds (person + all descendants) and pass it in
  * to avoid recomputing on every call.
  */
@@ -80,8 +83,6 @@ export function getTargetFamiliesForMove(
   data: GedcomData,
   subtreeIds: Set<string>,
 ): Array<{ familyId: string; parentNames: string }> {
-  if (!person.familyAsChild) return [];
-
   const results: Array<{ familyId: string; parentNames: string }> = [];
   const currentFamilyId = person.familyAsChild;
 
@@ -89,7 +90,8 @@ export function getTargetFamiliesForMove(
     if (famId === currentFamilyId) continue;
     // Skip pointed families — can't move into external data
     if (family._pointed) continue;
-    // Exclude families where either parent is inside the subtree (cycle prevention)
+    // Exclude families where either parent is inside the subtree (cycle prevention,
+    // also excludes families where the person themselves is a parent)
     if (family.husband && subtreeIds.has(family.husband)) continue;
     if (family.wife && subtreeIds.has(family.wife)) continue;
     // Exclude families where the person is already a child
@@ -110,6 +112,73 @@ export function getTargetFamiliesForMove(
     });
   }
   return results;
+}
+
+/**
+ * Return individuals who can be picked as a single new parent of the target person,
+ * creating a one-parent FAM (HUSB-only or WIFE-only) on confirm. Filters out:
+ *   - the target person themselves and their descendants (cycle prevention),
+ *   - anyone already a parent in any FAM (those rows come from the families list),
+ *   - pointed individuals (read-only, can't be re-homed),
+ *   - individuals without a known sex (can't decide HUSB vs WIFE).
+ * GEDCOM 5.5.1 + 7.0 allow FAM with only HUSB+CHIL or only WIFE+CHIL — both standard.
+ */
+export function getSoloIndividualsForParenting(
+  person: Individual,
+  data: GedcomData,
+  subtreeIds: Set<string>,
+): Individual[] {
+  const results: Individual[] = [];
+  for (const candidate of Object.values(data.individuals)) {
+    if (candidate.id === person.id) continue;
+    if (subtreeIds.has(candidate.id)) continue;
+    if (candidate._pointed) continue;
+    if (candidate.sex !== 'M' && candidate.sex !== 'F') continue;
+    if (candidate.familiesAsSpouse.length > 0) continue;
+    results.push(candidate);
+  }
+  return results;
+}
+
+/**
+ * Identify previous parents who would become fully disconnected (orphan nodes) after the
+ * person is moved out of their current familyAsChild. A previous parent is considered an
+ * orphan when, after removing `person` from the source family, they have:
+ *   - no familyAsChild (no parents/siblings of their own), AND
+ *   - no other familiesAsSpouse, AND
+ *   - no other child remaining in the source family, AND
+ *   - no spouse remaining in the source family.
+ * Returns the orphaned parents so the caller can warn and delete them.
+ */
+export function detectOrphanedPreviousParents(
+  person: Individual,
+  data: GedcomData,
+): Individual[] {
+  if (!person.familyAsChild) return [];
+  const source = data.families[person.familyAsChild];
+  if (!source) return [];
+
+  const orphans: Individual[] = [];
+  const sourceFamilyId = source.id;
+  const otherChildren = source.children.filter((c) => c !== person.id);
+
+  for (const parentId of [source.husband, source.wife]) {
+    if (!parentId) continue;
+    const parent = data.individuals[parentId];
+    if (!parent) continue;
+    // Has parents/siblings of their own?
+    if (parent.familyAsChild) continue;
+    // Has another marriage?
+    const otherSpouseFamilies = parent.familiesAsSpouse.filter((f) => f !== sourceFamilyId);
+    if (otherSpouseFamilies.length > 0) continue;
+    // Source family still has another remaining child?
+    if (otherChildren.length > 0) continue;
+    // Source family still has the other spouse?
+    const otherParentId = parentId === source.husband ? source.wife : source.husband;
+    if (otherParentId) continue;
+    orphans.push(parent);
+  }
+  return orphans;
 }
 
 /** Compute subtree IDs (person + all descendants) for move-subtree operations */

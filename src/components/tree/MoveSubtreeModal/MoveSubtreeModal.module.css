@@ -166,6 +166,29 @@
   font-weight: 500;
   letter-spacing: 0.005em;
   line-height: 1.3;
+  flex: 1;
+}
+
+/* Inline badge marking solo individuals — picking one creates a new single-parent FAM. */
+.newFamilyBadge {
+  flex-shrink: 0;
+  font-family: var(--heritage-font-body);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--heritage-gold);
+  background: rgba(200, 168, 101, 0.1);
+  border: 1px solid rgba(200, 168, 101, 0.28);
+  border-radius: 999px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+
+.rowSelected .newFamilyBadge {
+  color: var(--heritage-gold-bright);
+  background: rgba(200, 168, 101, 0.18);
+  border-color: rgba(200, 168, 101, 0.5);
 }
 
 .rowSelected .familyLabel {
@@ -240,6 +263,33 @@
   color: var(--heritage-text-soft);
   font-weight: 400;
   line-height: 1.75;
+}
+
+/* Orphan warning — softer, danger-tinted treatment for the auto-delete notice. */
+.orphanWarning {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-6);
+  background: rgba(132, 32, 32, 0.18);
+  border: 1px solid rgba(204, 84, 84, 0.45);
+  border-radius: var(--radius-lg);
+}
+
+.orphanIcon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  color: rgba(232, 168, 168, 0.95);
+  margin-top: 2px;
+}
+
+.orphanText {
+  flex: 1;
+  font-family: var(--heritage-font-body);
+  font-size: 13px;
+  color: rgba(244, 220, 220, 0.95);
+  line-height: 1.65;
 }
 
 .confirmDetail {

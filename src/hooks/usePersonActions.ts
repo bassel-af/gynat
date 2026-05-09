@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import type { Individual, GedcomData } from '@/lib/gedcom/types';
 import type { IndividualFormData } from '@/components/tree/IndividualForm/IndividualForm';
 import type { FamilyEventFormData } from '@/components/tree/FamilyEventForm/FamilyEventForm';
+import type { MoveSubtreeOption } from '@/components/tree/MoveSubtreeModal';
 import { apiFetch } from '@/lib/api/client';
 import { serializeIndividualForm } from '@/lib/person-detail-helpers';
 import type { UndoEntry } from '@/lib/undo/types';
@@ -104,7 +105,7 @@ export interface UsePersonActionsReturn {
   handleDeleteClick: () => Promise<void>;
   handleCascadeConfirm: (confirmationName?: string) => Promise<void>;
   unlinkSpouse: (familyId: string) => Promise<void>;
-  moveSubtree: (targetFamilyId: string) => Promise<void>;
+  moveSubtree: (option: MoveSubtreeOption, options?: { orphanIds?: string[] }) => Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -823,31 +824,103 @@ export function usePersonActions({
   // Move subtree
   // -------------------------------------------------------------------------
 
-  const moveSubtree = useCallback(async (targetFamilyId: string) => {
-    if (!workspace || !person?.familyAsChild || isPointed) return;
+  const moveSubtree = useCallback(async (
+    option: MoveSubtreeOption,
+    options?: { orphanIds?: string[] },
+  ) => {
+    if (!workspace || !person || isPointed) return;
     const fromFamilyId = person.familyAsChild;
     const personName = person.name;
+    const orphanIds = options?.orphanIds ?? [];
     let succeeded = false;
+    let resolvedTargetFamilyId: string | null = null;
+
     await withFormAction(async () => {
-      const res = await apiFetch(
-        `/api/workspaces/${workspace.workspaceId}/tree/families/${fromFamilyId}/children/${personId}/move`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ targetFamilyId }),
-        },
-      );
-      if (!res.ok) {
-        const json = await res.json();
-        throw new Error(json.error ?? 'حدث خطأ');
+      // Step 1: ensure we have a target FAM. If the picked option is a free-floating
+      // individual, create a one-parent FAM (HUSB-only or WIFE-only) using their sex.
+      if (option.kind === 'family') {
+        resolvedTargetFamilyId = option.familyId;
+      } else {
+        const familyOpts: { husbandId?: string; wifeId?: string } = option.sex === 'F'
+          ? { wifeId: option.individualId }
+          : { husbandId: option.individualId };
+        const r = await apiFetch(
+          `/api/workspaces/${workspace.workspaceId}/tree/families`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(familyOpts),
+          },
+        );
+        if (!r.ok) {
+          const json = await r.json();
+          throw new Error(json.error ?? 'حدث خطأ');
+        }
+        const json = await r.json();
+        resolvedTargetFamilyId = json.data.id as string;
+      }
+
+      // Step 2: place the target person into that family.
+      if (fromFamilyId) {
+        // "تغيير الوالدين" — move from one family to another.
+        const res = await apiFetch(
+          `/api/workspaces/${workspace.workspaceId}/tree/families/${fromFamilyId}/children/${personId}/move`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ targetFamilyId: resolvedTargetFamilyId }),
+          },
+        );
+        if (!res.ok) {
+          const json = await res.json();
+          throw new Error(json.error ?? 'حدث خطأ');
+        }
+      } else {
+        // "تعيين والدين موجودين" — attach a parentless person as a child.
+        const res = await apiFetch(
+          `/api/workspaces/${workspace.workspaceId}/tree/families/${resolvedTargetFamilyId}/children`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ individualId: personId }),
+          },
+        );
+        if (!res.ok) {
+          const json = await res.json();
+          throw new Error(json.error ?? 'حدث خطأ');
+        }
+      }
+
+      // Step 3: auto-delete previous parents who are now fully disconnected from the tree.
+      // Best-effort: a failure here doesn't roll back the move; surface as form error.
+      for (const orphanId of orphanIds) {
+        const r = await apiFetch(
+          `/api/workspaces/${workspace.workspaceId}/tree/individuals/${orphanId}`,
+          { method: 'DELETE' },
+        );
+        if (!r.ok && r.status !== 204) {
+          const json = await r.json().catch(() => ({}));
+          throw new Error(json.error ?? 'تعذر حذف الوالد المنفصل');
+        }
       }
       succeeded = true;
     });
-    if (succeeded && onPushUndo) {
+
+    if (
+      succeeded &&
+      onPushUndo &&
+      fromFamilyId &&
+      orphanIds.length === 0 &&
+      option.kind === 'family' &&
+      resolvedTargetFamilyId
+    ) {
+      // Only the simple in-place move (no FAM creation, no orphan deletion) is undoable
+      // today — restoring deleted individuals or rolling back a freshly-created FAM
+      // isn't wired into the undo stack yet.
       const inverse = buildMoveChildInverse({
         workspaceId: workspace.workspaceId,
         fromFamilyId,
-        toFamilyId: targetFamilyId,
+        toFamilyId: resolvedTargetFamilyId,
         individualId: personId,
       });
       onPushUndo({

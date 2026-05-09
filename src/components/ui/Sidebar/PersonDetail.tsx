@@ -5,7 +5,7 @@ import { useMemo, useState, useCallback, useEffect } from 'react';
 import { useTree } from '@/context/TreeContext';
 import { useOptionalWorkspaceTree } from '@/context/WorkspaceTreeContext';
 import { useOptionalUndoStack } from '@/context/UndoStackContext';
-import { getDisplayName, getPersonRelationships, getRadaRelationships, getAllDescendants, findTopmostAncestor, hasExternalFamily } from '@/lib/gedcom';
+import { getDisplayName, getDisplayNameWithNasab, getPersonRelationships, getRadaRelationships, getAllDescendants, findTopmostAncestor, hasExternalFamily } from '@/lib/gedcom';
 import type { Individual } from '@/lib/gedcom';
 import { IndividualForm, type IndividualFormData } from '@/components/tree/IndividualForm/IndividualForm';
 import { FamilyPickerModal } from '@/components/tree/FamilyPickerModal/FamilyPickerModal';
@@ -29,11 +29,13 @@ import {
   canMoveSubtree,
   getTargetFamiliesForMove,
   computeSubtreeIds,
+  detectOrphanedPreviousParents,
+  getSoloIndividualsForParenting,
   buildEditInitialData,
   buildFamilyEventInitialData,
   getFamiliesForPicker,
 } from '@/lib/person-detail-helpers';
-import { MoveSubtreeModal } from '@/components/tree/MoveSubtreeModal';
+import { MoveSubtreeModal, type MoveSubtreeOption } from '@/components/tree/MoveSubtreeModal';
 import type { AddParentResult } from '@/lib/person-detail-helpers';
 import { apiFetch } from '@/lib/api/client';
 import { shouldHideBirthDate } from '@/lib/tree/birth-date-privacy';
@@ -598,10 +600,14 @@ export function PersonDetail({ personId }: PersonDetailProps) {
     setFamilyPickerMode('moveSubtree');
   }, []);
 
-  const handleMoveSubtreeConfirm = useCallback((targetFamilyId: string) => {
+  const handleMoveSubtreeConfirm = useCallback(async (option: MoveSubtreeOption) => {
+    const orphans = person && data ? detectOrphanedPreviousParents(person, data) : [];
+    const orphanIds = orphans.map((p) => p.id);
+    // Keep the modal open while the API call runs so the modal's loading prop drives the
+    // confirm button into "جارٍ..." and the user can't double-fire. Close on resolution.
+    await moveSubtree(option, { orphanIds });
     setFamilyPickerMode(null);
-    moveSubtree(targetFamilyId);
-  }, [moveSubtree]);
+  }, [moveSubtree, person, data]);
 
   // Branch link handler — redeem a share token via the branch-pointers API
   const handleBranchLink = useCallback(async (token: string, selectedPersonId: string, linkChildrenToAnchor?: boolean) => {
@@ -732,8 +738,6 @@ export function PersonDetail({ personId }: PersonDetailProps) {
   const hasRadaData = personRadaFamilies.length > 0;
   const showRadaaSection = enableRadaa || hasRadaData;
 
-  const showMoveSubtree = canEdit && person && canMoveSubtree(person);
-
   const subtreeIds = useMemo(() => {
     if (!person || !data) return new Set<string>();
     return computeSubtreeIds(data, person.id);
@@ -745,6 +749,47 @@ export function PersonDetail({ personId }: PersonDetailProps) {
     if (!person || !data) return [];
     return getTargetFamiliesForMove(person, data, subtreeIds);
   }, [person, data, subtreeIds]);
+
+  const soloCandidates = useMemo(() => {
+    if (!person || !data) return [];
+    return getSoloIndividualsForParenting(person, data, subtreeIds);
+  }, [person, data, subtreeIds]);
+
+  // Single merged list shown in the picker — existing FAMs first, then free-floating
+  // individuals (which create a new single-parent FAM on confirm).
+  const moveOptions = useMemo<MoveSubtreeOption[]>(() => {
+    const familyOpts: MoveSubtreeOption[] = targetFamilies.map((f) => ({
+      kind: 'family',
+      familyId: f.familyId,
+      parentNames: f.parentNames,
+    }));
+    const soloOpts: MoveSubtreeOption[] = soloCandidates.map((p) => ({
+      kind: 'solo',
+      individualId: p.id,
+      // Disambiguate similarly-named individuals by including father's name (nasab) and
+      // surname when available. Falls back to plain givenName when the person has no
+      // recorded father — matches existing behavior in the rest of the app.
+      name: getDisplayNameWithNasab(data, p),
+      sex: p.sex as 'M' | 'F',
+    }));
+    return [...familyOpts, ...soloOpts];
+  }, [targetFamilies, soloCandidates, data]);
+
+  const moveIntent = person && canMoveSubtree(person) ? 'change' : 'assign';
+
+  // The button is shown whenever there is at least one candidate (existing family or
+  // free-floating individual) the editor can attach this person to.
+  const showMoveSubtree = canEdit && !!person && moveOptions.length > 0;
+
+  const orphanedPreviousParents = useMemo(() => {
+    if (!person || !data) return [];
+    return detectOrphanedPreviousParents(person, data);
+  }, [person, data]);
+
+  const orphanedParentNames = useMemo(
+    () => orphanedPreviousParents.map((p) => getDisplayName(p)),
+    [orphanedPreviousParents],
+  );
 
   const familiesForPicker = person && data ? getFamiliesForPicker(person, data) : [];
 
@@ -1033,7 +1078,7 @@ export function PersonDetail({ personId }: PersonDetailProps) {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                 <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              نقل الفرع
+              {moveIntent === 'assign' ? 'تعيين والدين موجودين' : 'تغيير الوالدين'}
             </button>
           )}
           {enableRadaa && (
@@ -1398,9 +1443,11 @@ export function PersonDetail({ personId }: PersonDetailProps) {
           isOpen
           onClose={() => setFamilyPickerMode(null)}
           onConfirm={handleMoveSubtreeConfirm}
-          families={targetFamilies}
+          options={moveOptions}
           personName={getDisplayName(person)}
           descendantCount={descendantCount}
+          intent={moveIntent}
+          orphanedParentNames={orphanedParentNames}
           loading={formLoading}
         />
       )}

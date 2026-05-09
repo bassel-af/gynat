@@ -604,7 +604,7 @@ describe('usePersonActions — undo integration', () => {
       }),
     );
     await act(async () => {
-      await result.current.moveSubtree('@F2@');
+      await result.current.moveSubtree({ kind: 'family', familyId: '@F2@', parentNames: 'p1 + p2' });
     });
     expect(onPushUndo).toHaveBeenCalledOnce();
     const entry = onPushUndo.mock.calls[0][0] as UndoEntry;
