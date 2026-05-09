@@ -108,11 +108,9 @@ export function computeOccurrenceLinkEdge(
     targetHandle: `spouse-target-${spouseIdx}`,
     type: 'straight',
     className: 'occurrence-link',
-    label: 'نفس الشخص',
-    labelBgPadding: [6, 4],
-    labelBgBorderRadius: 8,
     selectable: false,
     focusable: false,
+    zIndex: 1000,
   };
 }
 
