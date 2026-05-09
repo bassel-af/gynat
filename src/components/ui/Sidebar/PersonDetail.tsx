@@ -758,6 +758,7 @@ export function PersonDetail({ personId }: PersonDetailProps) {
   // Single merged list shown in the picker — existing FAMs first, then free-floating
   // individuals (which create a new single-parent FAM on confirm).
   const moveOptions = useMemo<MoveSubtreeOption[]>(() => {
+    if (!data) return [];
     const familyOpts: MoveSubtreeOption[] = targetFamilies.map((f) => ({
       kind: 'family',
       familyId: f.familyId,
