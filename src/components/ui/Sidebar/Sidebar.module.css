@@ -353,7 +353,7 @@
 }
 
 .personName {
-  font-family: var(--heritage-font-display);
+  font-family: var(--heritage-font-body);
   font-size: var(--font-size-base);
   font-weight: 500;
   color: var(--heritage-parchment);

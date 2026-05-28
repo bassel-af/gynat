@@ -59,7 +59,7 @@
 
 .heroName {
   margin: 0 0 var(--space-2);
-  font-family: var(--heritage-font-display);
+  font-family: var(--heritage-font-body);
   font-size: 22px;
   font-weight: 500;
   color: var(--heritage-parchment);
@@ -766,7 +766,7 @@
 }
 
 .relPersonName {
-  font-family: var(--heritage-font-display);
+  font-family: var(--heritage-font-body);
   font-size: 14px;
   font-weight: 500;
   color: var(--heritage-parchment);

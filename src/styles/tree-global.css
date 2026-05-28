@@ -183,7 +183,7 @@
 }
 
 .person-name {
-  font-family: var(--heritage-font-display);
+  font-family: var(--heritage-font-body);
   font-size: 14px;
   font-weight: 500;
   margin: 4px 0 2px;
