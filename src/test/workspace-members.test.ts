@@ -282,6 +282,37 @@ describe('POST /api/workspaces/[id]/members', () => {
     expect(body.emailSent).toBe(true);
   });
 
+  test('normalizes the invite email (trims + lowercases) before storing/sending', async () => {
+    mockAuth();
+    mockMembershipFindUnique.mockResolvedValue({
+      userId: fakeUser.id,
+      workspaceId: wsId,
+      role: 'workspace_admin',
+    });
+    mockUserFindUnique
+      .mockResolvedValueOnce(null) // membership check
+      .mockResolvedValueOnce({ displayName: 'Admin' }); // inviter lookup
+    mockMembershipFindMany.mockResolvedValue([]);
+    mockWorkspaceFindUnique.mockResolvedValue({ name: 'آل سعيد' });
+    mockSendEmail.mockResolvedValue({});
+    mockInvitationCreate.mockResolvedValue({ id: 'inv-norm', type: 'email', email: 'ayman@gmail.com' });
+
+    const { POST } = await import('@/app/api/workspaces/[id]/members/route');
+    const req = makeRequest(`http://localhost:3000/api/workspaces/${wsId}/members`, {
+      method: 'POST',
+      body: { email: '  Ayman@Gmail.com  ' },
+    });
+    const res = await POST(req, membersParams);
+    expect(res.status).toBe(201);
+
+    // Stored lowercased — so it matches the GoTrue account at accept time.
+    expect(mockInvitationCreate.mock.calls[0][0].data.email).toBe('ayman@gmail.com');
+    // Duplicate-member lookup also uses the normalized address.
+    expect(mockUserFindUnique.mock.calls[0][0].where.email).toBe('ayman@gmail.com');
+    // Email is sent to the normalized address.
+    expect(mockSendEmail.mock.calls[0][0].to).toBe('ayman@gmail.com');
+  });
+
   test('creates invitation with optional individualId', async () => {
     mockAuth();
     mockMembershipFindUnique.mockResolvedValue({

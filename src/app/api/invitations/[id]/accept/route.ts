@@ -51,9 +51,28 @@ export async function POST(
     return invalidInvitationResponse();
   }
 
-  // Email match check for email-type invitations
-  if (invitation.type === 'email' && invitation.email !== user.email) {
-    return invalidInvitationResponse();
+  // Email match check for email-type invitations.
+  // Case-insensitive: GoTrue stores account emails lowercased, but an admin may
+  // type the invite address with different casing (e.g. "Ayman@..." vs the
+  // account's "ayman@..."). A case-sensitive comparison silently rejected valid
+  // invitations and surfaced the generic "expired" message to the invitee.
+  if (
+    invitation.type === 'email' &&
+    invitation.email?.trim().toLowerCase() !== user.email?.trim().toLowerCase()
+  ) {
+    // Distinct from the generic invalid/expired response: the invitation is
+    // fine, the signed-in account just doesn't match. The /invite page already
+    // shows the (masked) invited address, so this leaks nothing new, and the
+    // client renders an actionable "sign in with the right email" message
+    // instead of a misleading "expired" one.
+    return NextResponse.json(
+      {
+        error:
+          'هذه الدعوة مخصصة لبريد إلكتروني آخر. يرجى تسجيل الدخول بالبريد الإلكتروني الذي وصلتك عليه الدعوة.',
+        code: 'EMAIL_MISMATCH',
+      },
+      { status: 403 },
+    );
   }
 
   // Check if already a member

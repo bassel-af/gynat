@@ -175,17 +175,39 @@ describe('POST /api/invitations/[id]/accept', () => {
     expect(body.error).toBe('دعوة غير صالحة أو منتهية الصلاحية');
   });
 
-  test('returns generic error for email invitation with wrong user', async () => {
-    mockAuth();
+  test('returns 403 EMAIL_MISMATCH (not "expired") when signed in with a different email', async () => {
+    mockAuth(); // fakeUser.email = 'user@example.com'
     mockInvitationFindUnique.mockResolvedValue(
       makePendingInvitation({ type: 'email', email: 'other@example.com' }),
     );
     const { POST } = await import('@/app/api/invitations/[id]/accept/route');
     const req = makeRequest(`http://localhost:3000/api/invitations/${invId}/accept`);
     const res = await POST(req, acceptParams);
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(403);
     const body = await res.json();
-    expect(body.error).toBe('دعوة غير صالحة أو منتهية الصلاحية');
+    expect(body.code).toBe('EMAIL_MISMATCH');
+    // Must NOT read as "expired" — that was the production bug.
+    expect(body.error).not.toContain('منتهية الصلاحية');
+  });
+
+  test('accepts email invitation when only the casing differs (GoTrue lowercases accounts)', async () => {
+    // Reproduces the production bug: admin typed "User@Example.com", the
+    // invitee's GoTrue account is "user@example.com".
+    mockAuth(); // fakeUser.email = 'user@example.com'
+    mockInvitationFindUnique.mockResolvedValue(
+      makePendingInvitation({ type: 'email', email: 'User@Example.com' }),
+    );
+    mockMembershipFindUnique.mockResolvedValue(null);
+    mockTransaction.mockResolvedValue({
+      userId: fakeUser.id,
+      workspaceId: wsId,
+      role: 'workspace_member',
+    });
+
+    const { POST } = await import('@/app/api/invitations/[id]/accept/route');
+    const req = makeRequest(`http://localhost:3000/api/invitations/${invId}/accept`);
+    const res = await POST(req, acceptParams);
+    expect(res.status).toBe(201);
   });
 
   test('skips email check for code-type invitations', async () => {

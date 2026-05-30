@@ -9,7 +9,9 @@ import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
 type RouteParams = { params: Promise<{ id: string }> };
 
 const inviteSchema = z.object({
-  email: z.string().max(254).email('Valid email is required'),
+  // .trim() runs before .email() so a space-padded address still validates;
+  // the handler then lowercases it (see below) to match the GoTrue account.
+  email: z.string().trim().max(254).email('Valid email is required'),
   individualId: z.string().uuid().optional(),
 });
 
@@ -36,7 +38,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   const parsed = await parseValidatedBody(request, inviteSchema);
   if (isParseError(parsed)) return parsed;
 
-  const { email, individualId } = parsed.data;
+  const { individualId } = parsed.data;
+  // Normalize the invite address: GoTrue stores account emails lowercased, so
+  // the invitation must match. Trim + lowercase so a capitalized or
+  // space-padded address still matches the invitee's account at accept time
+  // (and so the duplicate-member check below isn't fooled by casing).
+  const email = parsed.data.email.trim().toLowerCase();
 
   // Check if email is already a member
   const existingUser = await prisma.user.findUnique({
