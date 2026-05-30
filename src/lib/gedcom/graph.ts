@@ -118,6 +118,57 @@ export function getTreeVisibleIndividuals(
 }
 
 /**
+ * All individuals connected to `rootId` through blood (parent↔child / sibling)
+ * or marriage (spouse) edges, at any distance — i.e. the connected component of
+ * the relationship graph that contains `rootId`.
+ *
+ * Two people are "connected" if you can walk between them along parent-child or
+ * spouse links. Married-in spouses' whole families are therefore included (the
+ * marriage edge bridges them), at any number of hops — but genuinely separate,
+ * unlinked family islands (e.g. from a multi-cluster GEDCOM import) are not.
+ *
+ * Traversal passes *through* private individuals (whose family structure is
+ * preserved even when their PII is redacted) so a private person can still
+ * bridge two parts of the graph — but private individuals are excluded from the
+ * returned set, mirroring `getTreeVisibleIndividuals(…, excludePrivate)`.
+ *
+ * Used to scope the side panel's people list and stat counts.
+ */
+export function getConnectedIndividuals(data: GedcomData, rootId: string): Set<string> {
+  const { individuals, families } = data;
+  if (!individuals[rootId]) return new Set<string>();
+
+  const visited = new Set<string>([rootId]);
+  const queue: string[] = [rootId];
+
+  while (queue.length > 0) {
+    const currentId = queue.shift()!;
+    const person = individuals[currentId];
+    if (!person) continue;
+
+    // Every family this person belongs to — as a spouse (marriage) or as a
+    // child (blood). All members of those families are direct neighbours.
+    const familyIds = [...person.familiesAsSpouse];
+    if (person.familyAsChild) familyIds.push(person.familyAsChild);
+
+    for (const familyId of familyIds) {
+      const family = families[familyId];
+      if (!family) continue;
+
+      const members = [family.husband, family.wife, ...family.children];
+      for (const memberId of members) {
+        if (memberId && individuals[memberId] && !visited.has(memberId)) {
+          visited.add(memberId);
+          queue.push(memberId);
+        }
+      }
+    }
+  }
+
+  return filterOutPrivate(visited, individuals);
+}
+
+/**
  * Filter out private individuals from a set of IDs
  * This is the core privacy filtering logic used throughout the app
  */

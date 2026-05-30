@@ -32,6 +32,7 @@ export function Sidebar() {
     setHighlightedPersonId,
     visiblePersonIds,
     graftPersonIds,
+    panelScopeIds,
     isMobileSidebarOpen,
     setMobileSidebarOpen,
   } = useTree();
@@ -125,9 +126,10 @@ export function Sidebar() {
   const filteredIndividuals = useMemo(() => {
     let filtered = allIndividuals;
 
-    // Filter to show only individuals visible in the tree (root + descendants + spouses)
-    if (visiblePersonIds.size > 0) {
-      filtered = filtered.filter((p) => visiblePersonIds.has(p.id));
+    // Scope to everyone connected to the current root by blood or marriage
+    // (includes married-in spouses' families at any distance — see panelScopeIds).
+    if (panelScopeIds.size > 0) {
+      filtered = filtered.filter((p) => panelScopeIds.has(p.id));
     }
 
     // Apply search filter and sort by relevance
@@ -138,30 +140,23 @@ export function Sidebar() {
     }
 
     return filtered;
-  }, [allIndividuals, searchFilter, visiblePersonIds]);
+  }, [allIndividuals, searchFilter, panelScopeIds]);
 
-  // Stats based on individuals visible in the tree (excluding private)
+  // Stats reflect everyone connected by blood or marriage (the same scope as the
+  // list above), so the header counts and the people list always agree.
+  // panelScopeIds already excludes private individuals.
   const { indCount, famCount } = useMemo(() => {
-    if (!data || visiblePersonIds.size === 0) return { indCount: 0, famCount: 0 };
+    if (!data || panelScopeIds.size === 0) return { indCount: 0, famCount: 0 };
 
-    // Filter out private individuals from count
-    let nonPrivateCount = 0;
-    for (const id of visiblePersonIds) {
-      const person = data.individuals[id];
-      if (person && !person.isPrivate) {
-        nonPrivateCount++;
-      }
-    }
+    const nonPrivateCount = panelScopeIds.size;
 
     let familyCount = 0;
     for (const famId in data.families) {
       const fam = data.families[famId];
-      const husband = fam.husband ? data.individuals[fam.husband] : null;
-      const wife = fam.wife ? data.individuals[fam.wife] : null;
-      // Only count families where at least one non-private spouse is visible
+      // Count families where at least one spouse is in scope.
       if (
-        (husband && !husband.isPrivate && visiblePersonIds.has(fam.husband!)) ||
-        (wife && !wife.isPrivate && visiblePersonIds.has(fam.wife!))
+        (fam.husband && panelScopeIds.has(fam.husband)) ||
+        (fam.wife && panelScopeIds.has(fam.wife))
       ) {
         familyCount++;
       }
@@ -171,7 +166,7 @@ export function Sidebar() {
       indCount: nonPrivateCount,
       famCount: familyCount,
     };
-  }, [data, visiblePersonIds]);
+  }, [data, panelScopeIds]);
 
   const handleRootSelect = (id: string, text: string) => {
     setSelectedRootId(id);
@@ -184,10 +179,18 @@ export function Sidebar() {
   };
 
   const handlePersonClick = (id: string) => {
-    if (graftPersonIds.has(id) && data) {
+    // If the person isn't drawn on the current canvas (a married-in relative, or
+    // an explicit graft), re-root onto their own family — the same flow as the
+    // re-root button on spouse cards — then focus them once the new tree builds.
+    // Otherwise we'd try to select a node that isn't rendered, which does nothing.
+    if (data && (!visiblePersonIds.has(id) || graftPersonIds.has(id))) {
       const topAncestorId = findTopmostAncestor(data, id) ?? id;
       setSelectedRootId(topAncestorId);
       setSelectedPersonId(null);
+      setFocusPersonId(id);
+      if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+        setMobileSidebarOpen(false);
+      }
       return;
     }
     setSelectedPersonId(id);

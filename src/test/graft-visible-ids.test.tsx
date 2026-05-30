@@ -208,6 +208,27 @@ describe('TreeContext - visiblePersonIds includes graft individuals in all view 
     expect(result.current.graftPersonIds.has('@WIFE_SIS@')).toBe(true);
   });
 
+  test('panelScopeIds includes the married-in family AND the core tree', () => {
+    const { result } = renderHook(() => useTree(), { wrapper });
+    const data = buildFixture();
+
+    act(() => {
+      result.current.setData(data);
+    });
+    act(() => {
+      result.current.setSelectedRootId('@ROOT@');
+    });
+
+    // Married-in family (connected via marriage) is in panel scope...
+    expect(result.current.panelScopeIds.has('@WIFE_DAD@')).toBe(true);
+    expect(result.current.panelScopeIds.has('@WIFE_SIS@')).toBe(true);
+    // ...alongside the core tree.
+    expect(result.current.panelScopeIds.has('@ROOT@')).toBe(true);
+    expect(result.current.panelScopeIds.has('@SON@')).toBe(true);
+    expect(result.current.panelScopeIds.has('@WIFE@')).toBe(true);
+    expect(result.current.panelScopeIds.has('@GRANDCHILD@')).toBe(true);
+  });
+
   test('graftPersonIds does NOT contain people who are in the core tree', () => {
     const { result } = renderHook(() => useTree(), { wrapper });
     const data = buildFixture();

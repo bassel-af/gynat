@@ -356,7 +356,7 @@ function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
   const { data, selectedRootId, initialRootId, config, searchQuery, focusPersonId, selectedPersonId, highlightedPersonId, setHighlightedPersonId, setSelectedPersonId, setSelectedRootId, setFocusPersonId, setMobileSidebarOpen, viewMode } = useTree();
   // Hover state for the cousin-marriage occurrence-link edge — kept local
   // so its high-frequency updates don't ripple through every TreeContext
-  // consumer (Sidebar, SearchBar, Stats, every PersonNode...).
+  // consumer (Sidebar, every PersonNode...).
   const [hoveredOccurrenceId, setHoveredOccurrenceIdState] = useState<string | null>(null);
   const setHoveredOccurrenceId = useCallback((id: string | null) => {
     setHoveredOccurrenceIdState(id);
@@ -524,25 +524,37 @@ function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
   useEffect(() => {
     if (!focusPersonId || !isReady) return;
 
-    // First try to find a node with this ID directly
-    let targetNodeId = focusPersonId;
-    const directNode = nodes.find((n) => n.id === focusPersonId);
+    // Find the node id that renders this person — either directly, or the hub
+    // node that renders them as a merged spouse. Returns null if absent.
+    const findTargetIn = (list: typeof nodes): string | null => {
+      const direct = list.find((n) => n.id === focusPersonId);
+      if (direct) return direct.id;
+      const hub = list.find((n) =>
+        (n.data as PersonNodeData).spouses?.some((s) => s.spouse.id === focusPersonId),
+      );
+      return hub ? hub.id : null;
+    };
 
-    if (!directNode) {
-      // Search for a node that contains this person as a spouse
-      const nodeWithSpouse = nodes.find((n) => {
-        const nodeData = n.data as PersonNodeData;
-        return nodeData.spouses?.some((s) => s.spouse.id === focusPersonId);
-      });
-      if (nodeWithSpouse) {
-        targetNodeId = nodeWithSpouse.id;
-      }
+    const targetInNodes = findTargetIn(nodes);
+    if (targetInNodes) {
+      scrollToNode(targetInNodes, nodes, 'center', true);
+      // Clear focus target so subsequent node changes don't re-trigger centering
+      setFocusPersonId(null);
+      return;
     }
 
-    scrollToNode(targetNodeId, nodes, 'center', true);
-    // Clear focus target so subsequent node changes don't re-trigger centering
-    setFocusPersonId(null);
-  }, [focusPersonId, nodes, isReady, scrollToNode, setFocusPersonId]);
+    // Not in the live (lagging) `nodes` yet. `initialNodes` is the layout for the
+    // CURRENT root, computed synchronously. If the person is there, `nodes` is
+    // just mid-rebuild (e.g. a side-panel click that re-rooted onto their family)
+    // — wait for the `setNodes(initialNodes)` sync. If they're not in
+    // `initialNodes` either, they aren't on this canvas at all (e.g. a private/
+    // redacted relative or one beyond maxDepth) — clear the request so it can't
+    // strand and permanently disable scroll-to-root.
+    if (!findTargetIn(initialNodes)) {
+      setFocusPersonId(null);
+    }
+    return;
+  }, [focusPersonId, nodes, initialNodes, isReady, scrollToNode, setFocusPersonId]);
 
   // Scroll to root when selectedRootId changes (not on initial load)
   useEffect(() => {

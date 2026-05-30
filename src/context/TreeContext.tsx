@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 import type { GedcomData, RootAncestor, TreeConfig } from '@/lib/gedcom';
-import { findRootAncestors, findDefaultRoot, getDisplayNameWithNasab, DEFAULT_NASAB_DEPTH, getAllDescendants, getTreeVisibleIndividuals, findTopmostAncestor, computeGraftDescriptors } from '@/lib/gedcom';
+import { findRootAncestors, findDefaultRoot, getDisplayNameWithNasab, DEFAULT_NASAB_DEPTH, getAllDescendants, getTreeVisibleIndividuals, getConnectedIndividuals, findTopmostAncestor, computeGraftDescriptors } from '@/lib/gedcom';
 
 export type RootFilterStrategy = 'all' | 'descendants';
 export type ViewMode = 'single' | 'multi';
@@ -27,6 +27,13 @@ interface TreeState {
   highlightedPersonId: string | null;
   visiblePersonIds: Set<string>;
   graftPersonIds: Set<string>;
+  /**
+   * Everyone connected to the current root by blood or marriage (any distance).
+   * Wider than `visiblePersonIds` (which is canvas-truth): this also includes
+   * married-in spouses' full families. Used to scope the side panel list + stats
+   * — NOT the canvas. See getConnectedIndividuals.
+   */
+  panelScopeIds: Set<string>;
   isMobileSidebarOpen: boolean;
   config: TreeConfig;
   isLoading: boolean;
@@ -150,9 +157,14 @@ export function TreeProvider({ children, forcedRootId }: TreeProviderProps) {
     setHighlightedPersonIdState(id);
   }, []);
 
-  const { visiblePersonIds, graftPersonIds } = useMemo(() => {
-    if (!data || !selectedRootId) return { visiblePersonIds: new Set<string>(), graftPersonIds: new Set<string>() };
+  const { visiblePersonIds, graftPersonIds, panelScopeIds } = useMemo(() => {
+    if (!data || !selectedRootId) return { visiblePersonIds: new Set<string>(), graftPersonIds: new Set<string>(), panelScopeIds: new Set<string>() };
     const visible = getTreeVisibleIndividuals(data, selectedRootId);
+
+    // Side-panel scope: everyone connected to the root by blood or marriage
+    // (includes married-in families at any distance). Separate from `visible`
+    // so the canvas and PersonDetail "is this on screen" checks are unaffected.
+    const panelScope = getConnectedIndividuals(data, selectedRootId);
 
     // Always include graft individuals (parents + siblings of married-in spouses)
     const graftOnly = new Set<string>();
@@ -174,7 +186,7 @@ export function TreeProvider({ children, forcedRootId }: TreeProviderProps) {
       }
     }
 
-    return { visiblePersonIds: visible, graftPersonIds: graftOnly };
+    return { visiblePersonIds: visible, graftPersonIds: graftOnly, panelScopeIds: panelScope };
   }, [data, selectedRootId]);
 
   const setError = useCallback((err: string | null) => {
@@ -195,6 +207,7 @@ export function TreeProvider({ children, forcedRootId }: TreeProviderProps) {
     highlightedPersonId,
     visiblePersonIds,
     graftPersonIds,
+    panelScopeIds,
     isMobileSidebarOpen,
     config,
     isLoading,
