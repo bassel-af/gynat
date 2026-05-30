@@ -169,6 +169,118 @@ export function getConnectedIndividuals(data: GedcomData, rootId: string): Set<s
 }
 
 /**
+ * The set of individuals the canvas actually draws for a given root: root +
+ * descendants + their spouses (married-in) + grafts (parents/siblings of
+ * married-in spouses). This mirrors what `FamilyTree` renders and what
+ * `TreeContext.visiblePersonIds` holds — kept here so navigation logic can ask
+ * "would this person be on screen under root X?" without the React layer.
+ */
+export function getCanvasVisibleIndividuals(data: GedcomData, rootId: string): Set<string> {
+  const visible = getTreeVisibleIndividuals(data, rootId);
+  const grafts = computeGraftDescriptors(data, rootId);
+  for (const descriptors of grafts.values()) {
+    for (const graft of descriptors) {
+      for (const parentId of graft.parentIds) visible.add(parentId);
+      for (const siblingId of graft.siblingIds) visible.add(siblingId);
+    }
+  }
+  return visible;
+}
+
+/**
+ * Shortest path of individual IDs from `startId` to the nearest member of
+ * `target`, walking blood (parent↔child) and marriage (spouse) edges. Returns
+ * `[startId, …, bridge]` where `bridge ∈ target`, or `[startId]` if startId is
+ * itself in target or no path exists.
+ */
+function shortestFamilyPath(data: GedcomData, startId: string, target: Set<string>): string[] {
+  const { individuals, families } = data;
+  if (!individuals[startId] || target.has(startId)) return [startId];
+
+  const prev = new Map<string, string | null>([[startId, null]]);
+  const queue: string[] = [startId];
+
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    if (current !== startId && target.has(current)) {
+      const path: string[] = [];
+      let node: string | null = current;
+      while (node != null) {
+        path.push(node);
+        node = prev.get(node) ?? null;
+      }
+      return path.reverse();
+    }
+    const person = individuals[current];
+    if (!person) continue;
+    const familyIds = [...person.familiesAsSpouse];
+    if (person.familyAsChild) familyIds.push(person.familyAsChild);
+    for (const familyId of familyIds) {
+      const family = families[familyId];
+      if (!family) continue;
+      for (const neighbor of [family.husband, family.wife, ...family.children]) {
+        if (neighbor && individuals[neighbor] && !prev.has(neighbor)) {
+          prev.set(neighbor, current);
+          queue.push(neighbor);
+        }
+      }
+    }
+  }
+  return [startId];
+}
+
+/**
+ * Choose the root to navigate to when the user clicks a person who is NOT on the
+ * current canvas — so they appear *embedded* in the family they connect to,
+ * rather than rooted on their own (often tiny, married-in) ancestral stub.
+ *
+ * Strategy: try candidate roots in order of decreasing context and return the
+ * first one that actually draws the clicked person:
+ *   1. The top of the family currently being viewed — embeds the person when
+ *      they connect within it (e.g. a spouse married into a sibling's branch).
+ *   2. Walking from the current view toward the person family-by-family (their
+ *      in-law chain), preferring the most context first ("multiple hops until
+ *      found"), so a distant in-law lands in the largest family that can show them.
+ *   3. The person's own family root — the guaranteed fallback (always draws them).
+ *
+ * `getCanvasVisibleIndividuals` defines "drawn under root X", so the returned
+ * root is always one under which `clickedId` is visible.
+ */
+export function resolveNavigationRoot(
+  data: GedcomData,
+  clickedId: string,
+  currentRootId: string,
+): string {
+  const { individuals } = data;
+  const ownFamilyRoot = findTopmostAncestor(data, clickedId) ?? clickedId;
+  if (!individuals[clickedId] || !individuals[currentRootId]) return ownFamilyRoot;
+
+  const candidates: string[] = [];
+  const add = (id: string | null | undefined) => {
+    if (id && individuals[id] && !candidates.includes(id)) candidates.push(id);
+  };
+
+  // 1. The whole family currently in view.
+  add(findTopmostAncestor(data, currentRootId) ?? currentRootId);
+
+  // 2. Families along the chain from the current view toward the clicked person,
+  //    added from the current-view side inward (most context first).
+  const currentVisible = getCanvasVisibleIndividuals(data, currentRootId);
+  const path = shortestFamilyPath(data, clickedId, currentVisible);
+  for (let i = path.length - 1; i >= 0; i--) {
+    add(findTopmostAncestor(data, path[i]) ?? path[i]);
+  }
+
+  // 3. Guaranteed fallback: the clicked person's own family always draws them.
+  add(ownFamilyRoot);
+
+  for (const root of candidates) {
+    if (getCanvasVisibleIndividuals(data, root).has(clickedId)) return root;
+  }
+  return ownFamilyRoot;
+}
+
+/**
  * Filter out private individuals from a set of IDs
  * This is the core privacy filtering logic used throughout the app
  */

@@ -4,7 +4,7 @@ import { useMemo, useState, useEffect } from 'react';
 import clsx from 'clsx';
 import { useTree } from '@/context/TreeContext';
 import { useWorkspaceTree } from '@/context/WorkspaceTreeContext';
-import { getDisplayNameWithNasab, DEFAULT_NASAB_DEPTH, findTopmostAncestor } from '@/lib/gedcom';
+import { getDisplayNameWithNasab, DEFAULT_NASAB_DEPTH, findTopmostAncestor, resolveNavigationRoot } from '@/lib/gedcom';
 import { shouldHideBirthDate } from '@/lib/tree/birth-date-privacy';
 import { PersonDetail } from './PersonDetail';
 import { matchesSearch, searchRelevance } from '@/lib/utils/search';
@@ -178,19 +178,27 @@ export function Sidebar() {
     }
   };
 
+  const rerootAndFocus = (rootId: string, focusId: string) => {
+    setSelectedRootId(rootId);
+    setSelectedPersonId(null);
+    setFocusPersonId(focusId);
+    if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+      setMobileSidebarOpen(false);
+    }
+  };
+
   const handlePersonClick = (id: string) => {
-    // If the person isn't drawn on the current canvas (a married-in relative, or
-    // an explicit graft), re-root onto their own family — the same flow as the
-    // re-root button on spouse cards — then focus them once the new tree builds.
-    // Otherwise we'd try to select a node that isn't rendered, which does nothing.
-    if (data && (!visiblePersonIds.has(id) || graftPersonIds.has(id))) {
-      const topAncestorId = findTopmostAncestor(data, id) ?? id;
-      setSelectedRootId(topAncestorId);
-      setSelectedPersonId(null);
-      setFocusPersonId(id);
-      if (typeof window !== 'undefined' && window.innerWidth <= 768) {
-        setMobileSidebarOpen(false);
-      }
+    if (data && graftPersonIds.has(id)) {
+      // An inline in-law (graft) — expand into their own family, as before.
+      rerootAndFocus(findTopmostAncestor(data, id) ?? id, id);
+      return;
+    }
+    if (data && !visiblePersonIds.has(id)) {
+      // Not drawn on the current canvas. Re-root so they appear EMBEDDED in the
+      // family that connects them to what's on screen (e.g. a person married into
+      // a sibling's branch shows up within the main tree), instead of on their own
+      // isolated ancestral stub. Then focus them once the new tree builds.
+      rerootAndFocus(resolveNavigationRoot(data, id, selectedRootId ?? id), id);
       return;
     }
     setSelectedPersonId(id);

@@ -245,3 +245,86 @@ test('finds and navigates to a married-in spouse\'s hidden relative (nephew)', a
     await withPg((c) => c.query('DELETE FROM workspaces WHERE id = $1', [ws])).catch(() => {});
   }
 });
+
+test('embeds a married-in relative in the connecting family, not on their own stub', async ({ browser }) => {
+  test.setTimeout(120_000);
+  const api = makeApiClient(token);
+  const tag = randomUUID().slice(0, 6);
+  const slug = `mis2-${tag}`;
+
+  const wsRes = await api.post('/api/workspaces', {
+    slug, nameAr: `تضمين-المصاهرة ${tag}`, description: 'married-in embed e2e',
+  });
+  if (wsRes.status !== 201) throw new Error(`workspace create failed: ${wsRes.status} ${JSON.stringify(wsRes.data)}`);
+  const ws = wsRes.data.data.id as string;
+
+  // BRO_WIFE married the brother of a married-in wife. Under the main root she's
+  // hidden and her OWN family is just herself (no parents) — the "cut off" stub.
+  // Smart navigation should instead root on the WIFE'S family, embedding her —
+  // which makes that family's grandchild (gc1) visible. A stub root would not
+  // show gc1.
+  const BRO_WIFE_NAME = `زوجة-الأخ-${tag}`;
+  let gc1 = '';
+  let broChild = '';
+  try {
+    const root = await ind(api, ws, { givenName: `الجد-${tag}`, sex: 'M', birthDate: '1900' });
+    const son1 = await ind(api, ws, { givenName: `ابن1-${tag}`, sex: 'M', birthDate: '1930' });
+    const son2 = await ind(api, ws, { givenName: `ابن2-${tag}`, sex: 'M', birthDate: '1932' });
+    const rootFam = await fam(api, ws, { husbandId: root });
+    await addChild(api, ws, rootFam, son1);
+    await addChild(api, ws, rootFam, son2);
+
+    // son1 marries the married-in wife; their child gc1 is the embedding witness.
+    const daughterInLaw = await ind(api, ws, { givenName: `الكنّة-${tag}`, sex: 'F', birthDate: '1934' });
+    const son1Fam = await fam(api, ws, { husbandId: son1, wifeId: daughterInLaw });
+    gc1 = await ind(api, ws, { givenName: `حفيد1-${tag}`, sex: 'M', birthDate: '1960' });
+    await addChild(api, ws, son1Fam, gc1);
+
+    // son2 gets extra descendants so `root` stays the default root.
+    const son2Wife = await ind(api, ws, { givenName: `زوجة2-${tag}`, sex: 'F', birthDate: '1936' });
+    const son2Fam = await fam(api, ws, { husbandId: son2, wifeId: son2Wife });
+    for (const y of ['1962', '1964']) {
+      const gc = await ind(api, ws, { givenName: `حفيد-${y}-${tag}`, sex: 'M', birthDate: y });
+      await addChild(api, ws, son2Fam, gc);
+    }
+
+    // The wife's family: father + brother.
+    const wifeFather = await ind(api, ws, { givenName: `والد-الكنّة-${tag}`, sex: 'M', birthDate: '1905' });
+    const wifeBrother = await ind(api, ws, { givenName: `أخو-الكنّة-${tag}`, sex: 'M', birthDate: '1938' });
+    const wifeFam = await fam(api, ws, { husbandId: wifeFather });
+    await addChild(api, ws, wifeFam, daughterInLaw);
+    await addChild(api, ws, wifeFam, wifeBrother);
+
+    // The brother's wife (hidden, no parents) + their child.
+    const broWife = await ind(api, ws, { givenName: BRO_WIFE_NAME, sex: 'F', birthDate: '1942' });
+    broChild = await ind(api, ws, { givenName: `ابن-الأخ-${tag}`, sex: 'M', birthDate: '1968' });
+    const broFam = await fam(api, ws, { husbandId: wifeBrother, wifeId: broWife });
+    await addChild(api, ws, broFam, broChild);
+
+    const ctx = await browser.newContext();
+    await loginViaUI(ctx, user.email);
+    const page = await ctx.newPage();
+    await page.goto(`/workspaces/${slug}/tree`);
+    await page.waitForLoadState('networkidle');
+    await page.locator(`.react-flow__node[data-id="${root}"]`).waitFor({ timeout: 30_000 });
+
+    // Initially: gc1 (wife-family grandchild) is on the main canvas; broChild
+    // (brother's child) is hidden.
+    await expect(page.locator(`.react-flow__node[data-id="${gc1}"]`)).toBeVisible();
+    await expect(page.locator(`.react-flow__node[data-id="${broChild}"]`)).toHaveCount(0);
+
+    // Click the brother's wife from the search.
+    await page.getByPlaceholder('ابحث عن شخص في العائلة...').fill(BRO_WIFE_NAME);
+    await page.locator('li', { hasText: BRO_WIFE_NAME }).click();
+
+    // She lands embedded in the WIFE'S family: broChild is now drawn AND gc1 is
+    // still drawn (a stub root on her alone could never show gc1).
+    await expect(page.locator(`.react-flow__node[data-id="${broChild}"]`)).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator(`.react-flow__node[data-id="${gc1}"]`)).toBeVisible();
+
+    await page.screenshot({ path: 'e2e-browser/screenshots/married-in-embed.png', fullPage: true });
+    await ctx.close();
+  } finally {
+    await withPg((c) => c.query('DELETE FROM workspaces WHERE id = $1', [ws])).catch(() => {});
+  }
+});
