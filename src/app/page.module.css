@@ -368,6 +368,10 @@
   color: rgba(200, 168, 101, 0.45);
 }
 
+.footerMobileLink {
+  display: none;
+}
+
 /* ---------- Animations ---------- */
 
 @keyframes fadeUp {
@@ -400,4 +404,5 @@
   .hero { grid-template-columns: 1fr; gap: 48px; }
   .showcase { justify-self: center; max-width: 340px; }
   .footer { flex-direction: column; text-align: center; }
+  .footerMobileLink { display: block; }
 }

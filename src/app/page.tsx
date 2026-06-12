@@ -59,6 +59,9 @@ export default function Home() {
           <div>
             <a href="mailto:contact@gynat.com">contact@gynat.com</a>
           </div>
+          <div className={styles.footerMobileLink}>
+            <a href="/islamic-gedcom">مرجع GEDCOM الإسلامي</a>
+          </div>
           <div className={styles.footerAyah}>﴿ وَمِنْ آيَاتِهِ أَنْ خَلَقَ لَكُم مِّنْ أَنفُسِكُمْ أَزْوَاجًا ﴾</div>
         </footer>
       </div>
