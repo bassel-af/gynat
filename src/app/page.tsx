@@ -59,7 +59,7 @@ export default function Home() {
           <div>
             <a href="mailto:contact@gynat.com">contact@gynat.com</a>
           </div>
-          <div className={styles.footerAyah}>﴾ وَمِنْ آيَاتِهِ أَنْ خَلَقَ لَكُم مِّنْ أَنفُسِكُمْ أَزْوَاجًا ﴿</div>
+          <div className={styles.footerAyah}>﴿ وَمِنْ آيَاتِهِ أَنْ خَلَقَ لَكُم مِّنْ أَنفُسِكُمْ أَزْوَاجًا ﴾</div>
         </footer>
       </div>
     </main>
