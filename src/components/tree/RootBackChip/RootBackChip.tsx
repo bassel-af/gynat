@@ -1,6 +1,7 @@
 'use client';
 
 import { useTree } from '@/context/TreeContext';
+import { useOptionalRerootTransition } from '@/context/RerootTransitionContext';
 import { getDisplayName } from '@/lib/gedcom';
 import styles from './RootBackChip.module.css';
 
@@ -10,6 +11,7 @@ import styles from './RootBackChip.module.css';
  */
 export function RootBackChip() {
   const { selectedRootId, initialRootId, data, setSelectedRootId, setSelectedPersonId } = useTree();
+  const transition = useOptionalRerootTransition();
 
   // Only show when viewing a different root than the initial one
   if (!data || !selectedRootId || !initialRootId || selectedRootId === initialRootId) {
@@ -22,8 +24,20 @@ export function RootBackChip() {
   const rootName = getDisplayName(initialRoot);
 
   const handleClick = () => {
-    setSelectedRootId(initialRootId);
-    setSelectedPersonId(null);
+    const commit = () => {
+      setSelectedRootId(initialRootId);
+      setSelectedPersonId(null);
+    };
+    if (!transition) {
+      commit();
+      return;
+    }
+    // "Back" gets the same motion grammar but no bloom — nothing new to spotlight.
+    transition.reroot({
+      commit,
+      banner: { title: `عُدنا إلى شجرة ${rootName}` },
+      bloom: false,
+    });
   };
 
   return (

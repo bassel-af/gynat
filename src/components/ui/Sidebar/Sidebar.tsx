@@ -4,7 +4,8 @@ import { useMemo, useState, useEffect } from 'react';
 import clsx from 'clsx';
 import { useTree } from '@/context/TreeContext';
 import { useWorkspaceTree } from '@/context/WorkspaceTreeContext';
-import { getDisplayNameWithNasab, DEFAULT_NASAB_DEPTH, findTopmostAncestor, resolveNavigationRoot } from '@/lib/gedcom';
+import { useOptionalRerootTransition } from '@/context/RerootTransitionContext';
+import { getDisplayName, getDisplayNameWithNasab, DEFAULT_NASAB_DEPTH, findTopmostAncestor, resolveNavigationRoot } from '@/lib/gedcom';
 import { shouldHideBirthDate } from '@/lib/tree/birth-date-privacy';
 import { PersonDetail } from './PersonDetail';
 import { matchesSearch, searchRelevance } from '@/lib/utils/search';
@@ -38,6 +39,7 @@ export function Sidebar() {
   } = useTree();
 
   const { description, hideBirthDateForFemale, hideBirthDateForMale } = useWorkspaceTree();
+  const transition = useOptionalRerootTransition();
 
   const [searchFilter, setSearchFilter] = useState('');
   const [rootDropdownOpen, setRootDropdownOpen] = useState(false);
@@ -169,22 +171,51 @@ export function Sidebar() {
   }, [data, panelScopeIds]);
 
   const handleRootSelect = (id: string, text: string) => {
-    setSelectedRootId(id);
-    setRootFilter(text);
-    setRootDropdownOpen(false);
-    // Close sidebar on mobile after selecting root
-    if (window.innerWidth <= 768) {
-      setMobileSidebarOpen(false);
+    const commit = () => {
+      setSelectedRootId(id);
+      setRootFilter(text);
+      setRootDropdownOpen(false);
+      // Close sidebar on mobile after selecting root
+      if (window.innerWidth <= 768) {
+        setMobileSidebarOpen(false);
+      }
+    };
+    if (!transition) {
+      commit();
+      return;
     }
+    transition.reroot({
+      commit,
+      banner: { title: `الجدّ الأعلى: ${text}` },
+      bloom: false,
+    });
   };
 
   const rerootAndFocus = (rootId: string, focusId: string) => {
-    setSelectedRootId(rootId);
-    setSelectedPersonId(null);
-    setFocusPersonId(focusId);
-    if (typeof window !== 'undefined' && window.innerWidth <= 768) {
-      setMobileSidebarOpen(false);
+    const commit = () => {
+      setSelectedRootId(rootId);
+      setSelectedPersonId(null);
+      setFocusPersonId(focusId);
+      if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+        setMobileSidebarOpen(false);
+      }
+    };
+    if (!transition || !data) {
+      commit();
+      return;
     }
+    const person = data.individuals[focusId];
+    const root = data.individuals[rootId];
+    const personName = person ? getDisplayName(person) : '';
+    const rootName = root ? getDisplayName(root) : '';
+    transition.reroot({
+      commit,
+      banner: {
+        title: `وصلت إلى: ${personName}`,
+        subtitle: rootName && rootId !== focusId ? `ضمن شجرة ${rootName}` : undefined,
+      },
+      bloom: true,
+    });
   };
 
   const handlePersonClick = (id: string) => {

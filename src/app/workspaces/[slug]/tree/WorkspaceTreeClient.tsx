@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { TreeProvider, useTree } from '@/context/TreeContext';
 import { WorkspaceTreeProvider, useWorkspaceTree } from '@/context/WorkspaceTreeContext';
 import { UndoStackProvider, useUndoStack } from '@/context/UndoStackContext';
+import { RerootTransitionProvider } from '@/context/RerootTransitionContext';
 import { useWorkspaceTreeData } from '@/hooks/useWorkspaceTreeData';
 import { useTreeColorOverrides } from '@/hooks/useTreeColorOverrides';
 import { useKeyboardUndoRedo } from '@/hooks/useKeyboardUndoRedo';
@@ -207,24 +208,26 @@ function TreeShell({ workspaceSlug, workspaceId }: { workspaceSlug: string; work
     : undefined;
 
   return (
-    <div className="app-layout">
-      <Sidebar />
-      <main className="main-content">
-        <CanvasToolbar
-          workspaceSlug={workspaceSlug}
-          workspaceId={workspaceId}
-          undoRedo={undoRedoProps}
+    <RerootTransitionProvider>
+      <div className="app-layout">
+        <Sidebar />
+        <main className="main-content">
+          <CanvasToolbar
+            workspaceSlug={workspaceSlug}
+            workspaceId={workspaceId}
+            undoRedo={undoRedoProps}
+          />
+          <FamilyTree hideMiniMap />
+        </main>
+        <ConflictDialog
+          isOpen={undoStack.conflict !== null}
+          variant={undoStack.conflict?.kind ?? 'stale'}
+          onRefresh={() => {
+            if (typeof window !== 'undefined') window.location.reload();
+          }}
         />
-        <FamilyTree hideMiniMap />
-      </main>
-      <ConflictDialog
-        isOpen={undoStack.conflict !== null}
-        variant={undoStack.conflict?.kind ?? 'stale'}
-        onRefresh={() => {
-          if (typeof window !== 'undefined') window.location.reload();
-        }}
-      />
-    </div>
+      </div>
+    </RerootTransitionProvider>
   );
 }
 

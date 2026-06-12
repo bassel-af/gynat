@@ -1,0 +1,413 @@
+/* ============================================
+   RE-ROOT TRANSITION OVERLAYS — Jeweled Heritage
+   Curtain (A, intensified) · Journey veil + meridian (B)
+   · Canvas slide (C) · Banner (shared) · Debug panel
+   ============================================ */
+
+/* ---- Veil base ---- */
+
+.veil {
+  position: absolute;
+  inset: 0;
+  z-index: 45;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* ===== Curtain (Direction A — intensified theatrical drape) ===== */
+
+.veilCurtain {
+  background: rgba(3, 5, 12, 0.18);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.veilCurtain.veilIn {
+  animation: curtainDim 200ms ease forwards;
+}
+
+.veilCurtain.veilOut {
+  animation: curtainUndim 340ms ease forwards;
+}
+
+@keyframes curtainDim {
+  from { background: rgba(3, 5, 12, 0.18); backdrop-filter: blur(2px); }
+  to { background: rgba(3, 5, 12, 0.55); backdrop-filter: blur(9px); }
+}
+
+@keyframes curtainUndim {
+  from { background: rgba(3, 5, 12, 0.55); backdrop-filter: blur(9px); }
+  to { background: rgba(3, 5, 12, 0); backdrop-filter: blur(0); }
+}
+
+/* Two near-opaque obsidian panels that meet in the middle. */
+.drape {
+  position: absolute;
+  top: -2%;
+  height: 104%;
+  width: 52%;
+  box-shadow: 0 0 80px rgba(0, 0, 0, 0.7);
+}
+
+.drapeStart {
+  right: 0;
+  background: linear-gradient(
+    to left,
+    #02040a 0%,
+    #05080f 55%,
+    rgba(140, 116, 65, 0.22) 92%,
+    rgba(230, 207, 158, 0.55) 99%,
+    rgba(230, 207, 158, 0.9) 100%
+  );
+}
+
+.drapeEnd {
+  left: 0;
+  background: linear-gradient(
+    to right,
+    #02040a 0%,
+    #05080f 55%,
+    rgba(140, 116, 65, 0.22) 92%,
+    rgba(230, 207, 158, 0.55) 99%,
+    rgba(230, 207, 158, 0.9) 100%
+  );
+}
+
+.veilIn .drapeStart { animation: drapeCloseStart 220ms cubic-bezier(0.5, 0, 0.2, 1) forwards; }
+.veilIn .drapeEnd { animation: drapeCloseEnd 220ms cubic-bezier(0.5, 0, 0.2, 1) forwards; }
+.veilOut .drapeStart { animation: drapeOpenStart 340ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.veilOut .drapeEnd { animation: drapeOpenEnd 340ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+@keyframes drapeCloseStart { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes drapeCloseEnd { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+@keyframes drapeOpenStart { from { transform: translateX(0); } to { transform: translateX(100%); } }
+@keyframes drapeOpenEnd { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+
+/* Luminous gold seam where the panels meet. */
+.seam {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 3px;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(230, 207, 158, 0.85) 18%,
+    rgba(255, 240, 200, 1) 50%,
+    rgba(230, 207, 158, 0.85) 82%,
+    transparent 100%
+  );
+  box-shadow: 0 0 24px 4px rgba(230, 207, 158, 0.7);
+  opacity: 0;
+}
+
+.veilIn .seam { animation: seamGlow 220ms ease 80ms forwards; }
+.veilOut .seam { animation: seamFade 200ms ease forwards; }
+
+@keyframes seamGlow { from { opacity: 0; } to { opacity: 1; } }
+@keyframes seamFade { from { opacity: 1; } to { opacity: 0; } }
+
+/* ===== Journey (Direction B — flight into the dark) ===== */
+
+.veilJourney.veilIn {
+  animation: journeyDim 400ms cubic-bezier(0.6, 0, 0.4, 1) forwards;
+}
+
+.veilJourney.veilOut {
+  animation: journeyUndim 420ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* A night vignette: edges go deep-dark while the centre stays just legible, so
+   the current tree visibly recedes into the void as the camera lifts off. */
+@keyframes journeyDim {
+  from {
+    background: radial-gradient(ellipse 90% 80% at 50% 45%, rgba(3, 5, 12, 0) 0%, rgba(3, 5, 12, 0) 100%);
+    backdrop-filter: blur(0);
+  }
+  to {
+    background: radial-gradient(ellipse 60% 50% at 50% 45%, rgba(3, 5, 12, 0.35) 0%, rgba(2, 3, 9, 0.95) 78%);
+    backdrop-filter: blur(3px);
+  }
+}
+
+@keyframes journeyUndim {
+  from {
+    background: radial-gradient(ellipse 60% 50% at 50% 45%, rgba(3, 5, 12, 0.35) 0%, rgba(2, 3, 9, 0.95) 78%);
+    backdrop-filter: blur(3px);
+  }
+  to {
+    background: radial-gradient(ellipse 90% 80% at 50% 45%, rgba(3, 5, 12, 0) 0%, rgba(3, 5, 12, 0) 100%);
+    backdrop-filter: blur(0);
+  }
+}
+
+/* Gold meridian: a luminous vertical bar that sweeps across the dark, reading
+   as lateral travel toward a far-off place. */
+.meridian {
+  position: absolute;
+  top: -10%;
+  left: 0;
+  width: 14%;
+  height: 120%;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(200, 168, 101, 0.05) 40%,
+    rgba(230, 207, 158, 0.6) 50%,
+    rgba(200, 168, 101, 0.05) 60%,
+    transparent 100%
+  );
+  filter: blur(1px);
+  transform: translateX(-120%);
+  animation: meridianSweep 760ms cubic-bezier(0.5, 0, 0.3, 1) forwards;
+}
+
+@keyframes meridianSweep {
+  from { transform: translateX(-120%); opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  to { transform: translateX(820%); opacity: 0; }
+}
+
+/* ===== Portal flash (Direction D — masks the icon→tree content swap) ===== */
+
+.flash {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(255, 240, 200, 0.55) 0%,
+    rgba(230, 207, 158, 0.28) 14%,
+    rgba(200, 168, 101, 0.08) 30%,
+    transparent 55%
+  );
+  animation: portalFlash 260ms ease-out forwards;
+}
+
+@keyframes portalFlash {
+  0% { opacity: 0; transform: scale(0.4); }
+  35% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.25); }
+}
+
+/* ===== Canvas slide (Direction C — directional push) =====
+   Applied by FamilyTree to the wrapper around <ReactFlow>. */
+
+.canvasStage {
+  position: absolute;
+  inset: 0;
+  will-change: transform, opacity;
+}
+
+.sweepOut {
+  transform: translateX(-112%);
+  opacity: 0.18;
+  transition: transform 320ms cubic-bezier(0.6, 0, 0.35, 1), opacity 320ms ease;
+}
+
+.sweepInStart {
+  transform: translateX(112%);
+  opacity: 0.18;
+  transition: none;
+}
+
+.sweepIn {
+  transform: translateX(0);
+  opacity: 1;
+  transition: transform 440ms cubic-bezier(0.16, 1, 0.3, 1), opacity 300ms ease;
+}
+
+/* ---- Banner (shared across treatments) ---- */
+
+.bannerWrap {
+  position: absolute;
+  top: var(--space-5, 20px);
+  left: 0;
+  right: 0;
+  z-index: 60;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  max-width: min(86vw, 460px);
+  padding: var(--space-3, 10px) var(--space-7, 24px);
+  border-radius: var(--heritage-radius-pill);
+  background: rgba(7, 11, 24, 0.82);
+  border: 1px solid var(--heritage-glass-border-strong);
+  backdrop-filter: blur(22px) saturate(1.2);
+  -webkit-backdrop-filter: blur(22px) saturate(1.2);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+    0 18px 44px rgba(0, 0, 0, 0.55),
+    0 0 30px rgba(200, 168, 101, 0.12);
+  text-align: center;
+  animation: bannerDrop 360ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.bannerTitle {
+  font-family: var(--heritage-font-display);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--heritage-gold-bright);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.bannerSubtitle {
+  font-family: var(--heritage-font-body);
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--heritage-text-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+@keyframes bannerDrop {
+  from { opacity: 0; transform: translateY(-14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.bannerLeaving {
+  animation: bannerLift 280ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+@keyframes bannerLift {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-14px); }
+}
+
+/* ---- Debug panel ---- */
+
+.debugPanel {
+  position: fixed;
+  top: 76px;
+  left: 14px; /* physical left = canvas side (sidebar is on the right), clear of the search list */
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border-radius: var(--heritage-radius-md);
+  background: rgba(7, 11, 24, 0.92);
+  border: 1px solid var(--heritage-glass-border);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+  font-family: var(--heritage-font-body);
+  /* Click-through container; only the buttons below capture pointer events, so
+     the panel never blocks clicks on nodes/search results beneath it. */
+  pointer-events: none;
+}
+
+.debugCollapsed {
+  flex-direction: row;
+  align-items: center;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.debugHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.debugTitle {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--heritage-gold);
+  letter-spacing: 0.02em;
+}
+
+.debugToggle {
+  border: none;
+  background: transparent;
+  color: var(--heritage-text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 2px 4px;
+  pointer-events: auto;
+}
+
+.debugButtons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.debugBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 7px 10px;
+  border-radius: var(--heritage-radius-sm);
+  border: 1px solid var(--heritage-glass-border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--heritage-text-soft);
+  cursor: pointer;
+  text-align: start;
+  transition: border-color 160ms, color 160ms, background 160ms, transform 120ms;
+  pointer-events: auto;
+}
+
+.debugBtn:hover {
+  border-color: var(--heritage-glass-border-strong);
+  color: var(--heritage-cream);
+}
+
+.debugBtn:active {
+  transform: scale(0.97);
+}
+
+.debugBtnActive {
+  border-color: var(--heritage-gold);
+  background: rgba(200, 168, 101, 0.14);
+  color: var(--heritage-gold-bright);
+  box-shadow: 0 0 18px rgba(200, 168, 101, 0.18);
+}
+
+.debugBtnLabel {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.debugBtnSub {
+  font-size: 9.5px;
+  opacity: 0.7;
+  letter-spacing: 0.02em;
+}
+
+.debugHint {
+  font-size: 9.5px;
+  color: var(--heritage-text-faint);
+  line-height: 1.4;
+  max-width: 188px;
+}
+
+/* ---- Reduced motion: strip the moving parts, keep the meaning ---- */
+
+@media (prefers-reduced-motion: reduce) {
+  .veil { display: none; }
+  .flash { display: none; }
+  .canvasStage { transition: none !important; transform: none !important; opacity: 1 !important; }
+  .banner { animation: none; }
+  .bannerLeaving { animation: none; opacity: 0; }
+}

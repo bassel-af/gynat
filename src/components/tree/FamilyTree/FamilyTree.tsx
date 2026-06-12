@@ -22,6 +22,9 @@ import type { Individual } from '@/lib/gedcom';
 import { getDisplayName, getAllAncestors, getAllDescendants } from '@/lib/gedcom';
 import { useTree } from '@/context/TreeContext';
 import { useOptionalWorkspaceTree } from '@/context/WorkspaceTreeContext';
+import { useOptionalRerootTransition, useBloomId } from '@/context/RerootTransitionContext';
+import { RerootOverlays } from '@/components/tree/RerootTransition/RerootOverlays';
+import rerootStyles from '@/components/tree/RerootTransition/RerootTransition.module.css';
 import { shouldHideBirthDate } from '@/lib/tree/birth-date-privacy';
 import { NodeSilhouette } from '@/components/heritage/NodeSilhouette';
 import { NODE_WIDTH, NODE_HEIGHT, SPOUSE_WIDTH, SPOUSE_GAP } from './layout';
@@ -49,6 +52,8 @@ function PersonNode({ data }: { data: PersonNodeData }) {
     onSetHoveredOccurrence,
   } = data;
   const wsContext = useOptionalWorkspaceTree();
+  // One-shot "landing bloom" target after a re-root navigation (prototype).
+  const bloomId = useBloomId();
 
   const getHighlightClass = (_personId: string, isMainPerson: boolean) => {
     if (!hasHighlight) return '';
@@ -82,6 +87,7 @@ function PersonNode({ data }: { data: PersonNodeData }) {
     const isMatch =
       searchQuery && displayName.toLowerCase().includes(searchQuery.toLowerCase());
     const matchClass = isMatch ? 'search-match' : '';
+    const bloomClass = bloomId && bloomId === p.id ? 'landing-bloom' : '';
 
     // Highlight class
     const highlightClass = isMainPerson
@@ -114,7 +120,7 @@ function PersonNode({ data }: { data: PersonNodeData }) {
         onMouseLeave={handleHoverLeave}
       >
         <div
-          className={`person person-clickable ${sexClass} ${rootClass} ${deceasedClass} ${matchClass} ${highlightClass} ${inLawClass} ${pointedClass}`.trim()}
+          className={`person person-clickable ${sexClass} ${rootClass} ${deceasedClass} ${matchClass} ${bloomClass} ${highlightClass} ${inLawClass} ${pointedClass}`.trim()}
           onClick={handleClick}
         >
           <div className="person-avatar">
@@ -361,7 +367,22 @@ function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
   const setHoveredOccurrenceId = useCallback((id: string | null) => {
     setHoveredOccurrenceIdState(id);
   }, []);
-  const { setViewport, setCenter, getZoom, getViewport, fitView } = useReactFlow();
+  const { setViewport, setCenter, getZoom, getViewport, fitView, zoomTo, screenToFlowPosition } = useReactFlow();
+  // Re-root transition harness (prototype). Held in a ref so the timing-sensitive
+  // focus effect can fire `signalLanded` without taking the context as a dep
+  // (the context identity changes on every banner/veil tick).
+  const transition = useOptionalRerootTransition();
+  const transitionRef = useRef(transition);
+  transitionRef.current = transition;
+  // Direction C: slide the whole canvas off one edge and the new place in from
+  // the other ('idle' → 'out' → 'inStart' → 'in').
+  const [sweepPhase, setSweepPhase] = useState<'idle' | 'out' | 'inStart' | 'in'>('idle');
+  // Direction "portal": a continuous camera zoom. We lead the camera into the
+  // clicked icon, then (once the new layout exists) reveal the WHOLE destination
+  // tree as a small cluster where the icon was, then glide to the person. The
+  // reveal must happen after relayout, so it's armed here and executed by the
+  // focus effect (which already fires post-relayout).
+  const portalRevealRef = useRef(false);
   const [isReady, setIsReady] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -401,12 +422,33 @@ function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
 
   // Re-root to a spouse's topmost ancestor
   const handleRerootToAncestor = useCallback((ancestorId: string, focusId?: string) => {
-    setSelectedRootId(ancestorId);
-    setSelectedPersonId(null);
-    if (focusId) {
-      setFocusPersonId(focusId);
+    const commit = () => {
+      setSelectedRootId(ancestorId);
+      setSelectedPersonId(null);
+      if (focusId) {
+        setFocusPersonId(focusId);
+      }
+    };
+    const t = transitionRef.current;
+    if (!t) {
+      commit();
+      return;
     }
-  }, [setSelectedRootId, setSelectedPersonId, setFocusPersonId]);
+    const focusPerson = focusId ? data?.individuals[focusId] : undefined;
+    const ancestor = data?.individuals[ancestorId];
+    const ancestorName = ancestor ? getDisplayName(ancestor) : '';
+    const personName = focusPerson ? getDisplayName(focusPerson) : ancestorName;
+    t.reroot({
+      commit,
+      banner: focusPerson
+        ? {
+            title: `وصلت إلى: ${personName}`,
+            subtitle: ancestorName ? `ضمن عائلة ${ancestorName}` : undefined,
+          }
+        : { title: `الجدّ الأعلى: ${ancestorName}` },
+      bloom: Boolean(focusId),
+    });
+  }, [data, setSelectedRootId, setSelectedPersonId, setFocusPersonId]);
 
   // Clear highlight when root changes
   useEffect(() => {
@@ -465,6 +507,45 @@ function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
     },
     [scrollToNode],
   );
+
+  // --- Re-root transition stage controller (camera + canvas) ---
+  // Journey: rise off the current branch into the dark. The descent (zoom back
+  // in on the landed person) is handled by the existing focus / root-scroll
+  // effects, so this never needs the new layout's geometry early.
+  const liftOff = useCallback(() => {
+    zoomTo(0.16, { duration: 360 });
+  }, [zoomTo]);
+
+  const sweepOut = useCallback(() => setSweepPhase('out'), []);
+
+  const sweepIn = useCallback(() => {
+    setSweepPhase('inStart');
+    // Two frames so the no-transition "inStart" position paints before animating.
+    requestAnimationFrame(() => requestAnimationFrame(() => setSweepPhase('in')));
+    window.setTimeout(() => setSweepPhase('idle'), 480);
+  }, []);
+
+  // Portal lead-in: push the camera into the clicked icon (magnify + centre it)
+  // on the OLD tree, and arm the reveal. The reveal itself (whole new tree small
+  // → glide to person) runs in the focus effect, once the new layout exists.
+  const portalBegin = useCallback(
+    (ox: number, oy: number) => {
+      portalRevealRef.current = true;
+      const flow = screenToFlowPosition({ x: ox, y: oy });
+      const targetZoom = Math.min(Math.max(getZoom() * 4, 3), 6);
+      // Finish before PORTAL_OUT so this lead-in doesn't override the reveal.
+      setCenter(flow.x, flow.y, { zoom: targetZoom, duration: 260 });
+    },
+    [screenToFlowPosition, getZoom, setCenter],
+  );
+
+  // Register the stage with the transition context once (controller fns are
+  // stable; reading the context via ref avoids re-registering on banner ticks).
+  useEffect(() => {
+    const t = transitionRef.current;
+    if (!t) return;
+    return t.registerStage({ liftOff, sweepOut, sweepIn, portalBegin });
+  }, [liftOff, sweepOut, sweepIn, portalBegin]);
 
   const { initialNodes, initialEdges } = useMemo(() => {
     if (!data || !selectedRootId) {
@@ -537,7 +618,20 @@ function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
 
     const targetInNodes = findTargetIn(nodes);
     if (targetInNodes) {
-      scrollToNode(targetInNodes, nodes, 'center', true);
+      if (portalRevealRef.current) {
+        // Portal: first frame the COMPLETE new tree (small, centred — the family
+        // "seen inside the icon"), hold a beat, then glide in to the person. One
+        // continuous zoom that reads as "the family was inside the icon".
+        portalRevealRef.current = false;
+        const landNodes = nodes;
+        fitView({ duration: 0, padding: 0.8 });
+        window.setTimeout(() => scrollToNode(targetInNodes, landNodes, 'center', true), 620);
+      } else {
+        scrollToNode(targetInNodes, nodes, 'center', true);
+      }
+      // The relayout is done and we know the landed person — let the transition
+      // harness lift its veil / dissolve its travel card and bloom this person.
+      transitionRef.current?.signalLanded(focusPersonId);
       // Clear focus target so subsequent node changes don't re-trigger centering
       setFocusPersonId(null);
       return;
@@ -554,7 +648,7 @@ function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
       setFocusPersonId(null);
     }
     return;
-  }, [focusPersonId, nodes, initialNodes, isReady, scrollToNode, setFocusPersonId]);
+  }, [focusPersonId, nodes, initialNodes, isReady, scrollToNode, setFocusPersonId, fitView]);
 
   // Scroll to root when selectedRootId changes (not on initial load)
   useEffect(() => {
@@ -702,20 +796,30 @@ function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
     };
   }, [isMobile, getViewport, setViewport]);
 
+  const sweepClass =
+    sweepPhase === 'out'
+      ? rerootStyles.sweepOut
+      : sweepPhase === 'inStart'
+        ? rerootStyles.sweepInStart
+        : sweepPhase === 'in'
+          ? rerootStyles.sweepIn
+          : '';
+
   return (
     <div id="tree-container" ref={containerRef} style={{ opacity: isReady ? 1 : 0 }}>
       {/* DISABLED: multi-root mode disabled for now — may re-enable in future */}
       {/* {selectedRootId === initialRootId && <ViewModeToggle />} */}
-      <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden>
-        <defs>
-          <linearGradient id="treeEdgeGold" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#e6cf9e" stopOpacity="0.25" />
-            <stop offset="50%" stopColor="#c8a865" stopOpacity="0.9" />
-            <stop offset="100%" stopColor="#8c7441" stopOpacity="0.35" />
-          </linearGradient>
-        </defs>
-      </svg>
-      <ReactFlow
+      <div className={`${rerootStyles.canvasStage} ${sweepClass}`.trim()}>
+        <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden>
+          <defs>
+            <linearGradient id="treeEdgeGold" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#e6cf9e" stopOpacity="0.25" />
+              <stop offset="50%" stopColor="#c8a865" stopOpacity="0.9" />
+              <stop offset="100%" stopColor="#8c7441" stopOpacity="0.35" />
+            </linearGradient>
+          </defs>
+        </svg>
+        <ReactFlow
         nodes={nodes}
         edges={displayEdges}
         onNodesChange={onNodesChange}
@@ -748,7 +852,9 @@ function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
         />
         {!hideControls && !isMobile && <Controls />}
         {!hideMiniMap && !isMobile && <MiniMap nodeStrokeWidth={3} zoomable pannable />}
-      </ReactFlow>
+        </ReactFlow>
+      </div>
+      <RerootOverlays />
     </div>
   );
 }
