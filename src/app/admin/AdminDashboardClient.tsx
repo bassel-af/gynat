@@ -7,14 +7,15 @@ import type {
   GrowthMetrics,
   EngagementMetrics,
   HealthMetrics,
+  ContentMetrics,
 } from '@/lib/admin/queries';
 import { PresenceSection, type PresencePayload } from './PresenceSection';
 
 /**
- * Client dashboard — fetches all four metric endpoints in parallel and
- * renders four stacked sections (Presence, Growth, Engagement, Health).
- * Each section can fail independently without blowing up the page (PRD §11
- * non-functional requirement: dashboard reads never 500).
+ * Client dashboard — fetches all five metric endpoints in parallel and
+ * renders five stacked sections (Presence, Growth, Content, Engagement,
+ * Health). Each section can fail independently without blowing up the page
+ * (PRD §11 non-functional requirement: dashboard reads never 500).
  *
  * The refresh button simply re-fetches. There's no polling — the PRD
  * explicitly rules it out ("refreshes on demand").
@@ -68,6 +69,9 @@ export default function AdminDashboardClient() {
   const [presence, setPresence] = useState<SectionState<PresencePayload>>({
     status: 'idle',
   });
+  const [content, setContent] = useState<SectionState<ContentMetrics>>({
+    status: 'idle',
+  });
   const [lastRefresh, setLastRefresh] = useState<number | null>(null);
 
   const loadSection = useCallback(
@@ -115,6 +119,7 @@ export default function AdminDashboardClient() {
         setEngagement,
       ),
       loadSection<HealthMetrics>('/api/admin/metrics/health', setHealth),
+      loadSection<ContentMetrics>('/api/admin/metrics/content', setContent),
     ]).then(() => {
       setLastRefresh(Date.now());
     });
@@ -128,7 +133,8 @@ export default function AdminDashboardClient() {
     growth.status === 'loading' ||
     engagement.status === 'loading' ||
     health.status === 'loading' ||
-    presence.status === 'loading';
+    presence.status === 'loading' ||
+    content.status === 'loading';
 
   return (
     <>
@@ -158,6 +164,7 @@ export default function AdminDashboardClient() {
 
       <PresenceSection state={presence} />
       <GrowthSection state={growth} />
+      <ContentSection state={content} />
       <EngagementSection state={engagement} />
       <HealthSection state={health} />
     </>
@@ -249,6 +256,87 @@ function GrowthSection({ state }: { state: SectionState<GrowthMetrics> }) {
             secondary="آخر ٣٠ يومًا"
           />
         </div>
+      )}
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Content — people recorded per workspace
+// ---------------------------------------------------------------------------
+
+function ContentSection({ state }: { state: SectionState<ContentMetrics> }) {
+  return (
+    <section className={styles.section} aria-labelledby="content-heading">
+      <div id="content-heading">
+        <SectionHead
+          kicker="السجلّات"
+          title="عدد الأفراد في كلّ مساحة"
+          meta="حصرٌ كامل"
+        />
+      </div>
+      {state.status === 'loading' || state.status === 'idle' ? (
+        <div className={styles.loading}>جارٍ التحميل…</div>
+      ) : state.status === 'error' ? (
+        <div className={styles.error}>تعذر تحميل المقاييس: {state.message}</div>
+      ) : (
+        <>
+          <div className={styles.grid}>
+            <Card
+              label="إجمالي الأفراد"
+              value={state.data.totalPeople}
+              secondary="في جميع المساحات"
+            />
+            <Card
+              label="مساحات نشطة"
+              value={state.data.workspaces.length - state.data.emptyWorkspaces}
+              secondary="بها فردٌ واحد على الأقل"
+            />
+            <Card
+              label="مساحات فارغة"
+              value={state.data.emptyWorkspaces}
+              secondary="لم تُضِف أفرادًا بعد"
+            />
+          </div>
+
+          <div className={styles.tableWrap}>
+            <span className={styles.tableCaption}>
+              الأفراد المسجّلون لكلّ مساحة
+            </span>
+            <table className={styles.topTable}>
+              <thead>
+                <tr>
+                  <th>المساحة</th>
+                  <th style={{ textAlign: 'end' }}>عدد الأفراد</th>
+                </tr>
+              </thead>
+              <tbody>
+                {state.data.workspaces.length === 0 ? (
+                  <tr>
+                    <td colSpan={2} className={styles.empty}>
+                      لا توجد مساحات
+                    </td>
+                  </tr>
+                ) : (
+                  state.data.workspaces.map((w) => {
+                    const isEmpty = w.people === 0;
+                    return (
+                      <tr
+                        key={w.workspaceId}
+                        className={isEmpty ? styles.rowMuted : undefined}
+                      >
+                        <td className={styles.colName}>{w.name}</td>
+                        <td className={styles.colNumber}>
+                          {isEmpty ? '—' : w.people}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </section>
   );

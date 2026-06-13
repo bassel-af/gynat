@@ -51,6 +51,21 @@ export interface EngagementMetrics {
   branchPointers: { active: number; revoked: number; broken: number };
 }
 
+export interface WorkspaceContentRow {
+  workspaceId: string;
+  name: string;
+  /** Total individuals recorded in this workspace's tree (private rows included — this is a count, never a name). */
+  people: number;
+}
+
+export interface ContentMetrics {
+  /** Every workspace, sorted by people desc then name — a full inventory, not a top-N. */
+  workspaces: WorkspaceContentRow[];
+  totalPeople: number;
+  /** Count of workspaces with zero people recorded yet. */
+  emptyWorkspaces: number;
+}
+
 export interface HealthMetrics {
   db: { ok: boolean; error?: string };
   gotrue: { ok: boolean; status?: number; error?: string };
@@ -275,6 +290,68 @@ export async function getEngagementMetrics(): Promise<EngagementMetrics> {
     topActiveWorkspaces7d,
     branchPointers: pointerCounts,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Content (people recorded per workspace)
+// ---------------------------------------------------------------------------
+
+/**
+ * Per-workspace headcount of recorded individuals.
+ *
+ * Unlike the engagement top-N list, this is a DELIBERATE full inventory with
+ * NO k-anonymity floor: the platform owner needs to see every workspace —
+ * including the empty ones — to know who has started building a tree and who
+ * hasn't. That's safe here because:
+ *   - It's metadata only: a record COUNT, never any individual's name/PII.
+ *   - Workspace `nameAr` is already semi-public to members (see file header).
+ *   - A count can't single out a person the way an activity ranking can.
+ *
+ * Private individuals are included in the count (we never read their fields —
+ * only `COUNT(*)`), so the totals match the raw DB and "0 people" honestly
+ * means an empty tree.
+ */
+export async function getContentMetrics(): Promise<ContentMetrics> {
+  const [workspaces, individualGroups] = await Promise.all([
+    prisma.workspace.findMany({
+      select: {
+        id: true,
+        nameAr: true,
+        familyTree: { select: { id: true } },
+      },
+    }),
+    prisma.individual.groupBy({
+      by: ['treeId'],
+      _count: { _all: true },
+    }),
+  ]);
+
+  const individualGroupsTyped = individualGroups as Array<{
+    treeId: string;
+    _count: { _all: number };
+  }>;
+  const countByTree = new Map<string, number>();
+  for (const g of individualGroupsTyped) {
+    countByTree.set(g.treeId, g._count._all);
+  }
+
+  const workspacesTyped = workspaces as Array<{
+    id: string;
+    nameAr: string;
+    familyTree: { id: string } | null;
+  }>;
+  const rows: WorkspaceContentRow[] = workspacesTyped
+    .map((w) => ({
+      workspaceId: w.id,
+      name: w.nameAr,
+      people: w.familyTree ? countByTree.get(w.familyTree.id) ?? 0 : 0,
+    }))
+    .sort((a, b) => b.people - a.people || a.name.localeCompare(b.name, 'ar'));
+
+  const totalPeople = rows.reduce((sum, r) => sum + r.people, 0);
+  const emptyWorkspaces = rows.filter((r) => r.people === 0).length;
+
+  return { workspaces: rows, totalPeople, emptyWorkspaces };
 }
 
 // ---------------------------------------------------------------------------

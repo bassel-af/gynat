@@ -537,6 +537,18 @@
   letter-spacing: -0.005em;
 }
 
+/* Workspaces with no people recorded yet — dimmed so the eye skips past them
+   while the picture stays complete. */
+.topTable tbody tr.rowMuted .colName {
+  color: var(--heritage-text-muted);
+}
+
+.topTable tbody tr.rowMuted .colNumber {
+  color: var(--heritage-text-muted);
+  font-family: var(--heritage-font-body);
+  font-size: 16px;
+}
+
 /* Category tag inside table */
 
 .tag {
