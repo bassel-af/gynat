@@ -1,6 +1,6 @@
 # Product Requirements Document — Landing Page SEO
 
-**Status**: Phase 1 shipped (2026-04-24) — Phase 2 (landing content expansion) next. Social/icon assets deferred to Phase 4 while content comes first.
+**Status**: Phase 2 shipped (2026-06-13) — landing content expansion (features grid + how-it-works + FAQ + FAQPage JSON-LD + richer footer) live. Phase 3 (structured data) next. Social/icon assets deferred to Phase 4 while content comes first.
 **Audience**: Human developers, AI coding assistants
 **Parent PRD**: `docs/prd.md`
 
@@ -107,34 +107,35 @@ Each phase is a self-contained session. Phases are ordered by impact × effort.
 
 #### Sections to build
 
-- [ ] **Hero** (keep current) — no change.
-- [ ] **"لماذا جينات؟" — features grid** (6 cards). Each card: `<h3>` headline + 1–2 sentence paragraph. Suggested copy:
+- [x] **Hero** (keep current) — no change.
+- [x] **"لماذا جينات؟" — features grid** (6 cards). Each card: `<h3>` headline + 1–2 sentence paragraph. Suggested copy:
   - **التقويم الهجري** — "تواريخ الميلاد والوفاة بالهجري والميلادي معاً."
   - **الرَضاعة والنَسَب** — "أول منصّة توثّق أبناء الرضاعة كجزء من شجرة العائلة."
   - **تشفير مزدوج** — "بياناتك محميّة بطبقتين من التشفير، حتى نحن لا نراها."
   - **صلاحيات المشاركة** — "أنت تختار من يرى ومن يُعدّل، فرداً فرداً."
   - **سجل التعديلات** — "كلّ تغيير محفوظ ومعروف مَن أجراه ومتى."
   - **استيراد وتصدير GEDCOM** — "أحضر سجلّاتك من أي برنامج أنساب، وصدّرها متى شئت."
-- [ ] **"كيف تعمل" — 3 steps** (numbered, each with `<h3>`):
+- [x] **"كيف تعمل" — 3 steps** (numbered, each with `<h3>`):
   1. أنشئ مساحة لعائلتك.
   2. ابنِ الشجرة أو استورد ملف GEDCOM.
   3. ادعُ أقاربك بصلاحيات تختارها.
-- [ ] **"أسئلة شائعة" — FAQ**, `<h2>أسئلة شائعة</h2>`, Q&A pairs as `<h3>` + `<p>`. Wrap as `FAQPage` JSON-LD for Google rich results eligibility. Suggested questions:
+- [x] **"أسئلة شائعة" — FAQ**, `<h2>أسئلة شائعة</h2>`, Q&A pairs as `<h3>` + `<p>`. Wrap as `FAQPage` JSON-LD for Google rich results eligibility. Suggested questions:
   - "هل بياناتي آمنة؟"
   - "هل يدعم التقويم الهجري؟"
   - "هل يمكنني استيراد ملف GEDCOM؟"
   - "ما الفرق بين النسب والرَضاعة في المنصّة؟"
-  - "هل التطبيق مجاني؟" **← blocker: needs a decision on pricing stance before copy can be written.**
+  - "هل التطبيق مجاني؟" **← resolved: free, no time limit ("نعم، استخدام جينات مجاني بالكامل").**
   - "هل يمكنني تصدير بياناتي إذا أردت؟"
-- [ ] **Footer with site links** — replace current (email + ayah) with: السياسات، مرجع GEDCOM الإسلامي، تسجيل الدخول، إنشاء حساب، contact email. Improves crawl depth and distributes link equity.
-- [ ] **Heading hierarchy**: exactly one `<h1>` (hero), `<h2>` per section, `<h3>` per card / step / FAQ item. Validate no skipped levels.
-- [ ] **Internal links**: at least one in-body link from landing → `/islamic-gedcom` (e.g. from the GEDCOM feature card or FAQ answer about imports). Feeds link equity to a lower-priority indexed page.
+- [x] **Footer with site links** — added a richer site-links band at the bottom of `<main>` (السياسات، مرجع GEDCOM الإسلامي، تسجيل الدخول، إنشاء حساب، contact email + brand line). The original hero email + ayah footer was kept inside `.page` untouched per the no-touch-hero constraint. Improves crawl depth and distributes link equity.
+- [x] **Heading hierarchy**: exactly one `<h1>` (hero), `<h2>` per section, `<h3>` per card / step / FAQ item. Validated — no skipped levels.
+- [x] **Internal links**: in-body `<a href="/islamic-gedcom">` link from the GEDCOM feature card (card 6). Feeds link equity to a lower-priority indexed page.
+- [x] **Cross-family branch-sharing explainer** — added a full-width `<h2 id="branch-sharing">` band between the features grid and "كيف تعمل" explaining that two related families can share their common branch once (live link, not a copy; opt-in and owner-controlled). Adds indexable keyword surface. No new FAQ entry was added (owner declined); FAQ stays at 7 questions and the FAQPage JSON-LD is unchanged.
 
 **Acceptance**: landing page word count ≥ 500 Arabic words; `FAQPage` JSON-LD validates clean in Rich Results Test; all headings follow h1→h2→h3 hierarchy with no gaps.
 
-**Open questions**:
-- Pricing stance for the "هل التطبيق مجاني؟" FAQ — free forever? beta-free? free up to N members?
-- Do we want testimonials / member count / tree count stats in this phase, or defer until real numbers exist?
+**Open questions** (resolved):
+- ~~Pricing stance for the "هل التطبيق مجاني؟" FAQ~~ — **Resolved**: the product is free, with no time limit and no member cap. Copy reads "نعم، استخدام جينات مجاني بالكامل." No duration or "beta" qualifier.
+- ~~Do we want testimonials / member count / tree count stats in this phase?~~ — **Resolved: deferred**. No testimonials, member counts, ratings, or other stats are included in this phase — we do not fabricate numbers. Revisit once real, verifiable figures exist.
 
 ---
 

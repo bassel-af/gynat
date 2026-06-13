@@ -406,3 +406,349 @@
   .footer { flex-direction: column; text-align: center; }
   .footerMobileLink { display: block; }
 }
+
+/* ===================================================
+   Below-the-fold SEO content (Phase 2)
+   New classes only — does not touch hero / .page / .root
+   =================================================== */
+
+.contentBand {
+  position: relative;
+  z-index: 1;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 40px;
+}
+
+.section {
+  padding: 80px 0;
+  border-top: 1px solid rgba(200, 168, 101, 0.08);
+}
+
+.sectionTitle {
+  font-family: var(--heritage-font-display);
+  font-size: clamp(30px, 4.4vw, 46px);
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  margin: 0 0 18px;
+  text-align: center;
+  background: var(--heritage-gradient-title);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+.sectionTitle::after {
+  content: '';
+  display: block;
+  width: 56px;
+  height: 2px;
+  margin: 20px auto 0;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent 0%, var(--heritage-gold) 50%, transparent 100%);
+}
+
+.sectionIntro {
+  max-width: 720px;
+  margin: 0 auto 52px;
+  text-align: center;
+  font-size: 17px;
+  line-height: 1.85;
+  font-weight: 300;
+  color: var(--heritage-text-soft);
+}
+
+/* ---------- Feature grid ---------- */
+
+.featureGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+}
+
+.featureCard {
+  position: relative;
+  padding: 30px 28px;
+  border-radius: var(--heritage-radius-lg);
+  background: var(--heritage-glass-bg);
+  border: 1px solid var(--heritage-glass-border);
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  box-shadow: var(--heritage-shadow-card);
+  overflow: hidden;
+  transition: transform 280ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 280ms, box-shadow 280ms;
+}
+
+.featureCard::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(46, 152, 118, 0.12) 0%, transparent 60%);
+  opacity: 0;
+  transition: opacity 320ms;
+}
+
+.featureCard:hover {
+  transform: translateY(-4px);
+  border-color: var(--heritage-glass-border-strong);
+  box-shadow: var(--heritage-shadow-card-hover);
+}
+
+.featureCard:hover::before {
+  opacity: 1;
+}
+
+.cardTitle {
+  font-family: var(--heritage-font-display);
+  font-size: 21px;
+  font-weight: 500;
+  line-height: 1.35;
+  margin: 0 0 14px;
+  color: var(--heritage-gold-bright);
+}
+
+.cardText {
+  font-size: 15px;
+  line-height: 1.8;
+  font-weight: 300;
+  color: var(--heritage-text-soft);
+  margin: 0;
+}
+
+.inlineLink {
+  color: var(--heritage-gold);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(200, 168, 101, 0.35);
+  transition: color 220ms, border-color 220ms;
+}
+
+.inlineLink:hover {
+  color: var(--heritage-gold-bright);
+  border-color: var(--heritage-gold-bright);
+}
+
+/* ---------- Cross-family branch sharing (full-width band) ---------- */
+
+.branchBand {
+  position: relative;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 44px 48px;
+  border-radius: var(--heritage-radius-xl);
+  background:
+    radial-gradient(ellipse 90% 70% at 100% 0%, rgba(46, 152, 118, 0.1) 0%, transparent 55%),
+    var(--heritage-glass-bg-strong);
+  border: 1px solid var(--heritage-glass-border);
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  box-shadow: var(--heritage-shadow-card);
+  overflow: hidden;
+}
+
+.branchBand::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 3px;
+  background: linear-gradient(180deg, var(--heritage-gold-bright) 0%, var(--heritage-emerald-glow) 100%);
+  opacity: 0.7;
+}
+
+.branchLead {
+  font-size: 17px;
+  line-height: 1.9;
+  font-weight: 300;
+  color: var(--heritage-text);
+  margin: 0 0 20px;
+}
+
+.branchText {
+  font-size: 16px;
+  line-height: 1.9;
+  font-weight: 300;
+  color: var(--heritage-text-soft);
+  margin: 0 0 28px;
+}
+
+.branchReassurance {
+  font-size: 15px;
+  line-height: 1.9;
+  font-weight: 300;
+  color: var(--heritage-text-muted);
+  margin: 0;
+  padding-top: 24px;
+  border-top: 1px solid rgba(200, 168, 101, 0.12);
+}
+
+/* ---------- How it works (steps) ---------- */
+
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+  counter-reset: step;
+}
+
+.step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 32px 28px;
+  border-radius: var(--heritage-radius-lg);
+  background: var(--heritage-glass-bg);
+  border: 1px solid var(--heritage-glass-border);
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  box-shadow: var(--heritage-shadow-card);
+  transition: transform 280ms cubic-bezier(0.16, 1, 0.3, 1), border-color 280ms;
+}
+
+.step:hover {
+  transform: translateY(-4px);
+  border-color: var(--heritage-glass-border-strong);
+}
+
+.stepBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  font-family: var(--heritage-font-display);
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--heritage-midnight-deep);
+  background: var(--heritage-gradient-gold);
+  box-shadow: 0 0 24px rgba(200, 168, 101, 0.28), inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
+.stepBody {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- FAQ ---------- */
+
+.faqList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.faqItem {
+  padding: 26px 30px;
+  border-radius: var(--heritage-radius-md);
+  background: var(--heritage-glass-bg);
+  border: 1px solid var(--heritage-glass-border);
+  backdrop-filter: blur(18px) saturate(1.15);
+  -webkit-backdrop-filter: blur(18px) saturate(1.15);
+  transition: border-color 280ms, background 280ms;
+}
+
+.faqItem:hover {
+  border-color: var(--heritage-glass-border-strong);
+  background: var(--heritage-glass-bg-strong);
+}
+
+.faqQuestion {
+  font-family: var(--heritage-font-display);
+  font-size: 19px;
+  font-weight: 500;
+  line-height: 1.45;
+  margin: 0 0 12px;
+  color: var(--heritage-parchment);
+}
+
+.faqAnswer {
+  font-size: 15px;
+  line-height: 1.85;
+  font-weight: 300;
+  color: var(--heritage-text-soft);
+  margin: 0;
+}
+
+/* ---------- Site-links footer ---------- */
+
+.siteFooter {
+  position: relative;
+  z-index: 1;
+  padding: 48px 0 64px;
+  border-top: 1px solid rgba(200, 168, 101, 0.12);
+  background: rgba(3, 5, 12, 0.4);
+}
+
+.siteFooterNav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 14px 30px;
+  margin-bottom: 22px;
+}
+
+.siteFooterLink {
+  font-size: 14px;
+  color: var(--heritage-gold);
+  text-decoration: none;
+  letter-spacing: 0.02em;
+  transition: color 220ms;
+}
+
+.siteFooterLink:hover {
+  color: var(--heritage-gold-bright);
+}
+
+.siteFooterBrand {
+  text-align: center;
+  margin: 0;
+  font-family: var(--heritage-font-script);
+  font-size: 16px;
+  color: rgba(200, 168, 101, 0.55);
+}
+
+/* ---------- Entry animation ---------- */
+
+.section {
+  animation: sectionReveal 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes sectionReveal {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .section { animation: none; }
+  .featureCard, .step, .faqItem { transition: none; }
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 900px) {
+  .contentBand { padding: 0 24px; }
+  .section { padding: 56px 0; }
+  .featureGrid { grid-template-columns: 1fr; }
+  .steps { grid-template-columns: 1fr; }
+  .sectionIntro { margin-bottom: 36px; }
+  .branchBand { padding: 32px 26px; }
+}
+
+/* Inline brand name — sets جينات apart in body copy so it reads as the brand, not part of the surrounding phrase */
+.brand {
+  font-family: var(--heritage-font-display);
+  font-weight: 600;
+  color: var(--heritage-gold-bright);
+}
+
