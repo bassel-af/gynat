@@ -17,9 +17,27 @@ export const metadata: Metadata = {
   },
 };
 
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'جينات', item: 'https://gynat.com' },
+    {
+      '@type': 'ListItem',
+      position: 2,
+      name: 'السياسات والشروط',
+      item: 'https://gynat.com/policy',
+    },
+  ],
+};
+
 export default function PolicyPage() {
   return (
     <div className={styles.container}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
       <PublicNav currentPage="policy" />
       <div className={styles.content}>
         <h1 className={styles.pageTitle}>السياسات والشروط</h1>

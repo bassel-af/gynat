@@ -1,6 +1,10 @@
 # Product Requirements Document — Landing Page SEO
 
-**Status**: Phase 2 shipped (2026-06-13) — landing content expansion (features grid + how-it-works + FAQ + FAQPage JSON-LD + richer footer) live. Phase 3 (structured data) next. Social/icon assets deferred to Phase 4 while content comes first.
+**Status**: Phase 2 shipped (2026-06-13); refined + IndexNow fix (2026-06-14).
+- **Live**: landing content expansion (features grid + how-it-works + cross-family branch-sharing explainer + 7-question FAQ + FAQPage JSON-LD + richer footer). Hero untouched.
+- **Structured data live (Phase 3, 2026-06-14)**: Organization (site-wide) + SoftwareApplication w/ free offer on `/` + BreadcrumbList on `/islamic-gedcom` and `/policy`, all native server-rendered JSON-LD. `WebSite`/`SearchAction` skipped (no site search); `logo`/`sameAs`/`aggregateRating` deliberately omitted (no assets/socials/ratings yet).
+- **Indexing pipeline live**: Google Search Console verified + sitemap submitted (Google's channel). IndexNow ownership key now hosted (`public/<key>.txt`) and pinging on every deploy → Bing/Yandex/Naver/Seznam (see `docs/indexnow.md`). Note: IndexNow does not reach Google.
+- **Remaining**: Phase 4 (social/OG image + icons; also unlocks Organization `logo`), and the rest of Phase 5 (sitemap `lastModified`, Lighthouse/CWV audit, Bing Webmaster Tools, 30-day monitoring).
 **Audience**: Human developers, AI coding assistants
 **Parent PRD**: `docs/prd.md`
 
@@ -125,11 +129,13 @@ Each phase is a self-contained session. Phases are ordered by impact × effort.
   - "هل يمكنني استيراد ملف GEDCOM؟"
   - "ما الفرق بين النسب والرَضاعة في المنصّة؟"
   - "هل التطبيق مجاني؟" **← resolved: free, no time limit ("نعم، استخدام جينات مجاني بالكامل").**
+  - "هل يمكنني نشر عائلتي للعموم؟" **← shipped: private by default; historical-families publishing framed as قريباً بإذن الله.**
   - "هل يمكنني تصدير بياناتي إذا أردت؟"
+  - *Shipped 7 questions (added the "نشر عائلتي للعموم" question above). The GEDCOM-import answer renders "مرجع GEDCOM الإسلامي" as an in-body link to `/islamic-gedcom`, while the answer text in the FAQPage JSON-LD stays plain (valid structured data).*
 - [x] **Footer with site links** — added a richer site-links band at the bottom of `<main>` (السياسات، مرجع GEDCOM الإسلامي، تسجيل الدخول، إنشاء حساب، contact email + brand line). The original hero email + ayah footer was kept inside `.page` untouched per the no-touch-hero constraint. Improves crawl depth and distributes link equity.
 - [x] **Heading hierarchy**: exactly one `<h1>` (hero), `<h2>` per section, `<h3>` per card / step / FAQ item. Validated — no skipped levels.
-- [x] **Internal links**: in-body `<a href="/islamic-gedcom">` link from the GEDCOM feature card (card 6). Feeds link equity to a lower-priority indexed page.
-- [x] **Cross-family branch-sharing explainer** — added a full-width `<h2 id="branch-sharing">` band between the features grid and "كيف تعمل" explaining that two related families can share their common branch once (live link, not a copy; opt-in and owner-controlled). Adds indexable keyword surface. No new FAQ entry was added (owner declined); FAQ stays at 7 questions and the FAQPage JSON-LD is unchanged.
+- [x] **Internal links**: two in-body `<a href="/islamic-gedcom">` links — one from the GEDCOM feature card (card 6) and one from the GEDCOM-import FAQ answer. Feeds link equity to a lower-priority indexed page.
+- [x] **Cross-family branch-sharing explainer** — added a full-width `<h2 id="branch-sharing">` band (heading "عائلتان تجمعهما قرابة؟ شاركوا الفرع المشترك"), placed **below "كيف تعمل"** (owner moved it there). Explains that two related families can share their common branch (live link, not a copy; opt-in, owner-controlled, specific branch + chosen family + chosen depth, revocable, never public). Trimmed to setup → two-trees analogy → privacy reassurance (the benefit-bullets were removed to avoid repeating the "shared once" point). No new FAQ entry (owner declined); FAQ stays at 7 questions, FAQPage JSON-LD unchanged.
 
 **Acceptance**: landing page word count ≥ 500 Arabic words; `FAQPage` JSON-LD validates clean in Rich Results Test; all headings follow h1→h2→h3 hierarchy with no gaps.
 
@@ -143,13 +149,13 @@ Each phase is a self-contained session. Phases are ordered by impact × effort.
 
 **Why**: eligibility for rich results in Google, disambiguates brand queries, feeds Knowledge Graph. Should ship alongside or just after Phase 2's FAQ JSON-LD so all schema lands together.
 
-- [ ] Add `<Script type="application/ld+json">` to root layout with an `Organization` schema (name, url, logo, sameAs for social profiles once they exist, contactPoint with `contact@gynat.com`).
-- [ ] Add a `WebSite` schema with `potentialAction: SearchAction` if/when site search exists (skip for now).
-- [ ] Add a `SoftwareApplication` schema on `/`: name, operatingSystem, applicationCategory "LifestyleApplication", description, in-language "ar", aggregateRating (skip until real ratings exist).
-- [ ] Add `BreadcrumbList` on `/islamic-gedcom` and `/policy`.
-- [ ] Validate with [Rich Results Test](https://search.google.com/test/rich-results).
+- [x] Added native server-rendered `<script type="application/ld+json">` to root layout with an `Organization` schema (name, alternateName, url, description, inLanguage, contactPoint with `contact@gynat.com`). **`logo` + `sameAs` deferred to Phase 4** (pending icon asset + social profiles — never reference non-existent URLs).
+- [x] `WebSite` schema — **skipped** (no on-site search, so `SearchAction` doesn't apply; a bare WebSite block is redundant with Organization). Revisit if site search ships.
+- [x] Added `SoftwareApplication` schema on `/`: name, applicationCategory "LifestyleApplication", operatingSystem "Web", description, inLanguage "ar", publisher, and a free `offers` Offer (`price: "0"`, matches FAQ "مجاني بالكامل"). `aggregateRating` omitted (no real ratings — not fabricated).
+- [x] Added `BreadcrumbList` on `/islamic-gedcom` and `/policy` (names match each page's H1/title).
+- [x] Validated locally: each page's JSON-LD parses cleanly and is present in the raw server HTML (not the flight payload) — `/` has Organization + FAQPage + SoftwareApplication; sub-pages have Organization + BreadcrumbList. **Owner/dev follow-up**: run the live URLs through [Rich Results Test](https://search.google.com/test/rich-results) post-deploy to confirm 0 errors (a "no logo"/"no rating" note is a non-blocking suggestion, expected).
 
-**Acceptance**: Rich Results Test reports 0 errors, detects Organization + SoftwareApplication on `/`.
+**Acceptance**: Rich Results Test reports 0 errors, detects Organization + SoftwareApplication on `/`. *(Shipped 2026-06-14; structured data implemented directly in code — no design step.)*
 
 ---
 
@@ -172,13 +178,15 @@ Each phase is a self-contained session. Phases are ordered by impact × effort.
 
 **Why**: smaller wins that compound once the foundation is in place.
 
+- [x] **IndexNow instant-crawl pings** — `scripts/seo-ping.ts` (`pnpm seo:ping`) submits all sitemap URLs to IndexNow on every deploy. **Fixed 2026-06-14**: the ownership key file (`public/dc3b8360bea04bd18cdba72cd06ee11c.txt`) was never hosted (404), so prior pings were silently no-ops; it now returns 200 and pings validate. Reaches Bing/Yandex/Naver/Seznam only — **not Google**. Documented in `docs/indexnow.md`.
+- [x] Submit sitemap to **Google Search Console** — done (owner verified the property and resubmitted the sitemap, 2026-06-14).
+- [x] Set up Search Console domain property verification — done (owner).
 - [ ] Add `lastModified` to every entry in `src/app/sitemap.ts` (pull from git `HEAD` time or hardcode on content change).
 - [ ] Add `BreadcrumbList` structured data where hierarchy exists.
 - [ ] Audit `src/app/layout.tsx` script strategies — third-party analytics should be `afterInteractive` (already correct), Iconify is `beforeInteractive` (consider deferring since it's not used above the fold).
 - [ ] Lighthouse SEO audit on `/` — target ≥ 95 (currently unmeasured).
 - [ ] Verify Core Web Vitals: LCP < 2.5s, CLS < 0.1, INP < 200ms on the landing page.
-- [ ] Submit sitemap to Google Search Console + Bing Webmaster Tools.
-- [ ] Set up Search Console domain property verification (DNS TXT record).
+- [ ] Submit sitemap to **Bing Webmaster Tools** (separate from IndexNow — gives Bing-side reporting).
 - [ ] Monitor first 30 days post-launch: impressions, CTR, average position for target keywords.
 
 **Acceptance**: Lighthouse SEO ≥ 95; Search Console reports "valid" for sitemap; landing page has no CWV regressions.

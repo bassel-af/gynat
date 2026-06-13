@@ -47,6 +47,29 @@ const faqSchema = {
   })),
 };
 
+const softwareApplicationSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'جينات',
+  applicationCategory: 'LifestyleApplication',
+  operatingSystem: 'Web',
+  inLanguage: 'ar',
+  url: 'https://gynat.com',
+  description:
+    'جينات منصّة عربية لبناء شجرة العائلة وتوثيق الأنساب عبر الأجيال، بدعم التقويم الهجري وتسجيل الرضاعة، مع تشفير مزدوج وصلاحيات مشاركة دقيقة تحفظ خصوصية بيانات العائلة.',
+  // Genuinely free (matches FAQ "مجاني بالكامل") — truthful, not fabricated data.
+  offers: {
+    '@type': 'Offer',
+    price: '0',
+    priceCurrency: 'USD',
+  },
+  publisher: {
+    '@type': 'Organization',
+    name: 'جينات',
+    url: 'https://gynat.com',
+  },
+};
+
 // Renders an FAQ answer, turning the GEDCOM-reference phrase into a link to the
 // reference page. The answer strings stay plain text so the FAQPage JSON-LD
 // above remains valid (structured data should not contain markup).
@@ -304,6 +327,11 @@ export default function Home() {
         id="faq-jsonld"
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      />
+      <script
+        id="softwareapplication-jsonld"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareApplicationSchema) }}
       />
     </main>
   );
