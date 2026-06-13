@@ -252,7 +252,7 @@ export default function IslamicGedcomPage() {
               <span className={styles.tagName}>الطلاق أو الخلع</span>
             </div>
             <p className={styles.tagDesc}>
-              إنهاء عقد الزواج، سواء بطلاق أو خلع.
+              إنهاء عقد الزواج، سواء بطلاق أو خلع،
               لا يؤثر على شجرة النسب — الأطفال يبقون مرتبطين بسجل العائلة
               وبكلا الوالدين بعد الطلاق، لذا ليس هناك داع لعلامات مخصصة.
             </p>
