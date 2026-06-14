@@ -20,6 +20,11 @@ The agreed priority, highest first:
 4. **Flexible tree** — let users drag nodes freely, overriding the layout algorithm
 5. **Another ways for presenting** — alternative tree presentation modes
 
+Additional features captured (priority not yet assigned):
+
+- **MCP control** — edit the tree and perform workspace actions through an MCP integration
+- **How-to-use documentation** — user-facing documentation for the website (video, text, or both)
+
 ---
 
 ## 1. Public Tree
@@ -119,6 +124,46 @@ Provide alternative ways to present a tree beyond the current canvas layout.
 - What presentation modes are wanted (this is currently open-ended and needs definition)?
 - Which presentations are for editing vs. read-only/public viewing?
 - How do alternative presentations interact with public trees and collections?
+
+---
+
+## 6. MCP Control
+
+### Summary
+Allow editing the tree and performing workspace actions through an **MCP (Model Context Protocol) integration** — so a user can drive the platform using an AI assistant / MCP client rather than only the web UI.
+
+### Why
+- Lets users manage their tree and workspace conversationally or programmatically through MCP-capable tools.
+- Opens the platform to automation and AI-assisted data entry.
+
+### Open questions for planning
+- Which actions are exposed — tree editing only, or full workspace actions (members, invitations, settings, etc.)?
+- How does authentication and authorization work for MCP clients (mapping to existing roles/permissions)?
+- How is this scoped per workspace and per user?
+- How do MCP-initiated changes interact with audit logging, privacy, and rate limiting?
+- Read-only vs. read-write capabilities, and how destructive actions are gated.
+
+---
+
+## 7. How-to-Use Documentation
+
+### Summary
+User-facing documentation explaining **how to use the software** — essentially a help/guide section for the website. Content can be **video, text, or both**.
+
+### Why
+- Helps new users understand the platform and reduces confusion.
+- Lowers the barrier to adoption for non-technical family members.
+
+### Scope notes from the owner
+- Format is flexible: video, written text, or a combination.
+- This is end-user documentation for the website (not developer docs).
+
+### Open questions for planning
+- Where does it live (in-app help section, public marketing site, both)?
+- Is it Arabic-only (consistent with the platform) or multilingual?
+- What topics/flows must be covered first?
+- Hosting for video content, and whether it should be indexable for SEO.
+- Is content static, or does it tie into contextual in-app help?
 
 ---
 
