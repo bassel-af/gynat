@@ -3,8 +3,8 @@
 **Status**: Phase 2 shipped (2026-06-13); refined + IndexNow fix (2026-06-14).
 - **Live**: landing content expansion (features grid + how-it-works + cross-family branch-sharing explainer + 7-question FAQ + FAQPage JSON-LD + richer footer). Hero untouched.
 - **Structured data live (Phase 3, 2026-06-14)**: Organization (site-wide) + **WebApplication** w/ free offer on `/` + BreadcrumbList on `/islamic-gedcom` and `/policy`, all native server-rendered JSON-LD. (Used `WebApplication`, the SoftwareApplication subtype for browser-based apps — confirmed via Google's software-app docs.) `WebSite`/`SearchAction` skipped (no site search); `logo`/`sameAs`/`aggregateRating` deliberately omitted (no assets/socials/ratings yet). **Note**: Google's app *rich result* needs offers + a rating, so the visible app snippet stays ineligible until real reviews exist — the markup still aids entity understanding.
-- **Indexing pipeline live**: Google Search Console verified + sitemap submitted (Google's channel). IndexNow ownership key now hosted (`public/<key>.txt`) and pinging on every deploy → Bing/Yandex/Naver/Seznam (see `docs/indexnow.md`). Note: IndexNow does not reach Google.
-- **Remaining**: Phase 4 (social/OG image + icons; also unlocks Organization `logo`), and the rest of Phase 5 (sitemap `lastModified`, Lighthouse/CWV audit, Bing Webmaster Tools, 30-day monitoring).
+- **Indexing pipeline live**: Google Search Console verified + sitemap submitted (Google's channel); **Bing Webmaster Tools** sitemap submitted too (2026-06-14). IndexNow ownership key now hosted (`public/<key>.txt`) and pinging on every deploy → Bing/Yandex/Naver/Seznam (see `docs/indexnow.md`). Note: IndexNow does not reach Google.
+- **Remaining**: Phase 4 (social/OG image + icons; also unlocks Organization `logo`), and the rest of Phase 5 (sitemap `lastModified`, Lighthouse/CWV audit, 30-day monitoring).
 **Audience**: Human developers, AI coding assistants
 **Parent PRD**: `docs/prd.md`
 
@@ -182,11 +182,11 @@ Each phase is a self-contained session. Phases are ordered by impact × effort.
 - [x] Submit sitemap to **Google Search Console** — done (owner verified the property and resubmitted the sitemap, 2026-06-14).
 - [x] Set up Search Console domain property verification — done (owner).
 - [ ] Add `lastModified` to every entry in `src/app/sitemap.ts` (pull from git `HEAD` time or hardcode on content change).
-- [ ] Add `BreadcrumbList` structured data where hierarchy exists.
+- [x] Add `BreadcrumbList` structured data where hierarchy exists — done in Phase 3 (`/islamic-gedcom`, `/policy`).
 - [ ] Audit `src/app/layout.tsx` script strategies — third-party analytics should be `afterInteractive` (already correct), Iconify is `beforeInteractive` (consider deferring since it's not used above the fold).
 - [ ] Lighthouse SEO audit on `/` — target ≥ 95 (currently unmeasured).
 - [ ] Verify Core Web Vitals: LCP < 2.5s, CLS < 0.1, INP < 200ms on the landing page.
-- [ ] Submit sitemap to **Bing Webmaster Tools** (separate from IndexNow — gives Bing-side reporting).
+- [x] Submit sitemap to **Bing Webmaster Tools** — done (owner, 2026-06-14). Separate from IndexNow; gives Bing-side reporting (impressions, backlinks, etc.).
 - [ ] Monitor first 30 days post-launch: impressions, CTR, average position for target keywords.
 
 **Acceptance**: Lighthouse SEO ≥ 95; Search Console reports "valid" for sitemap; landing page has no CWV regressions.
