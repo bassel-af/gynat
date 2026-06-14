@@ -47,12 +47,15 @@ const faqSchema = {
   })),
 };
 
-const softwareApplicationSchema = {
+const webApplicationSchema = {
   '@context': 'https://schema.org',
-  '@type': 'SoftwareApplication',
+  // WebApplication: the SoftwareApplication subtype for browser-based apps that
+  // aren't downloaded/installed (Google supports it for the software-app result).
+  '@type': 'WebApplication',
   name: 'جينات',
   applicationCategory: 'LifestyleApplication',
-  operatingSystem: 'Web',
+  operatingSystem: 'All',
+  browserRequirements: 'Requires a modern web browser with JavaScript enabled.',
   inLanguage: 'ar',
   url: 'https://gynat.com',
   description:
@@ -329,9 +332,9 @@ export default function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
       />
       <script
-        id="softwareapplication-jsonld"
+        id="webapplication-jsonld"
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareApplicationSchema) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(webApplicationSchema) }}
       />
     </main>
   );
