@@ -24,6 +24,7 @@ Additional features captured (priority not yet assigned):
 
 - **MCP control** — edit the tree and perform workspace actions through an MCP integration
 - **How-to-use documentation** — user-facing documentation for the website (video, text, or both)
+- **Person biography (سيرة)** — general free-form information / life story about a person
 
 ---
 
@@ -164,6 +165,24 @@ User-facing documentation explaining **how to use the software** — essentially
 - What topics/flows must be covered first?
 - Hosting for video content, and whether it should be indexable for SEO.
 - Is content static, or does it tie into contextual in-app help?
+
+---
+
+## 8. Person Biography (سيرة)
+
+### Summary
+Allow adding **general information about a person** — a free-form biography or life story (سيرة) — beyond the structured fields (name, dates, places, events) we already capture.
+
+### Why
+- Structured genealogy fields don't capture a person's story, character, achievements, or context.
+- A سيرة lets families preserve richer memory and history about each individual.
+
+### Open questions for planning
+- Format: plain text, rich text, sections, or attachments (photos/documents)?
+- Length limits and storage considerations.
+- How it interacts with privacy (`isPrivate`), public trees, citations (§3), and audit logging.
+- Where it's displayed (person detail, tree card) and whether it's exported (e.g., GEDCOM `NOTE`).
+- Who can edit it (same permissions as other tree edits).
 
 ---
 
