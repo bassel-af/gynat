@@ -49,6 +49,9 @@ Allow users to share a tree with the public through a link. If the owner decides
 - What does an unauthenticated public viewer experience look like (read-only, which fields, which controls)?
 - Indexability: what gets indexed, and how does this interact with the existing SEO surface (`docs/prd-seo.md`)?
 
+### General rule — SEO
+Public trees are a new indexable surface, so **SEO must be a first-class concern** wherever public trees (and collections, §2) are involved: proper metadata, structured data, sane URLs, performance, and discoverability. Treat SEO as a requirement for any public-facing tree work, not an afterthought. Align with `docs/prd-seo.md`.
+
 ---
 
 ## 2. Collection of Trees
