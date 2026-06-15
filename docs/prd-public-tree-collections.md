@@ -3,7 +3,7 @@
 **Status**: Design agreed (decisions captured) — not yet planned for implementation
 **Audience**: Human developers, AI coding assistants
 **Created**: 2026-06-15
-**Revised**: 2026-06-15 — folded in decisions from a scenario gap review (§1.3, §1.7, §1.10, §1.11, §2.10)
+**Revised**: 2026-06-15 — folded in decisions from a scenario gap review (§1.3, §1.7, §1.10, §1.11, §2.10); added build sequencing (§5)
 
 This document captures the **decisions** for two related features — Public Tree and Collections — together with the **reasoning** behind each one, so future work understands not just *what* we chose but *why*. It deliberately stops short of technical implementation (schema, endpoints, components); that comes in planning.
 
@@ -201,6 +201,26 @@ Concretely: a public collection can only contain public trees; a borrowed privat
 
 ---
 
-## 5. Implementation note (dependency status, not design)
+## 5. Sequencing & build order
+
+**Decision:** Public Tree and Collections ship **separately and in sequence — Public Tree first, then Collections — on one shared foundation** laid deliberately in the first effort, so Collections slot on without a rebuild.
+
+**Why sequential, not together:**
+- **Collections depend on Public Tree.** They pull in public trees from other workspaces, reuse the same private / by-link / public visibility levels (§1.2), consume the "public but not reusable" opt-in (§1.10), and a published collection only shows trees that are already public (§2.10). Collections cannot be finished before Public Tree exists.
+- **Public Tree is valuable on its own** — families sharing and being found brings people in, independent of collections.
+- **Smaller, safer releases.** Public Tree is the highest-risk piece here (the first time the platform faces the open internet); harden that base before layering curation on top.
+- **Collections add surface Public Tree doesn't need** — e.g., multiple trees per workspace exist *only* for collections (§0); Public Tree just publishes the main tree.
+
+**Design-ahead caveats (decide the shape during the first effort, even if built later):**
+- The way trees are stored must allow **more than one tree per workspace from the start**, even if Public Tree only ever uses the main one — otherwise adding extra trees later is a painful change.
+- The **reuse opt-in** (§1.10) and the **going-private / report-and-takedown machinery** (§1.11) should be shaped early so Collections plug in rather than forcing a redo.
+
+**Rough order:**
+1. **Public Tree** — visibility levels, read-only public view, publish checkpoint, borrowed-branch protection, make-private + report. *Within-phase follow-ons:* server-rendered readable pages for real search ranking (§1.7), and platform-admin approval for search (§1.7).
+2. **Collections** — turn-on setting, extra trees, nesting, link/copy items, members-as-viewers (plus surfacing the join-code, §6), with "publish only public trees + warn" (§2.10) built last.
+
+---
+
+## 6. Implementation note (dependency status, not design)
 
 - **Workspace join-code:** the back-end capability exists (generate a code, join by code), but there is **no user interface for it yet** — members are currently added by email invitation. Surfacing it (a button to generate a code, a place to enter one) is a small follow-up, relevant to the teacher-and-students flow in §2.8. (Not to be confused with the "create share code" button in a workspace, which shares tree *branches*, a different feature.)
