@@ -8,6 +8,8 @@ This document captures the **what** and **why** of the next batch of features. I
 
 For the overall product vision and core concepts, see `docs/prd.md`. For how subsystems work today, see `docs/implementation.md`.
 
+> **Public Tree & Collections** have since been designed in detail (decisions + reasoning) in **`docs/prd-public-tree-collections.md`**. The §1 and §2 entries below remain the short overview; that document is the source of truth for those two features.
+
 ---
 
 ## Priority Order
