@@ -60,3 +60,6 @@ playwright-report/
 
 # GeoNames raw downloads (large, not committed)
 scripts/geonames-data/
+
+# Logo preview gallery (local only — never published)
+logos-preview/
