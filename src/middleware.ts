@@ -15,6 +15,7 @@ const PUBLIC_PATHS = [
   '/islamic-gedcom',
   '/test', // test route for browser testing
   '/design-preview', // design direction prototype (no-auth preview)
+  '/public-tree-preview', // public-tree feature mockups (no-auth preview)
 ];
 
 function isPublicPath(pathname: string): boolean {
