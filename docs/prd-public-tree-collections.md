@@ -3,7 +3,7 @@
 **Status**: Design agreed (decisions captured) — not yet planned for implementation
 **Audience**: Human developers, AI coding assistants
 **Created**: 2026-06-15
-**Revised**: 2026-06-15 — folded in decisions from a scenario gap review (§1.3, §1.7, §1.10, §1.11, §2.10); added build sequencing (§5); added implementation-planning decisions from the architect/security/designer team review (§7)
+**Revised**: 2026-06-15 — folded in decisions from a scenario gap review (§1.3, §1.7, §1.10, §1.11, §2.10); added build sequencing (§5); added implementation-planning decisions from the architect/security/designer team review (§7); added the public URL scheme (§7.11)
 
 This document captures the **decisions** for two related features — Public Tree and Collections — together with the **reasoning** behind each one, so future work understands not just *what* we chose but *why*. It deliberately stops short of technical implementation (schema, endpoints, components); that comes in planning.
 
@@ -271,3 +271,11 @@ A planning team (software architect, security engineer, frontend designer) turne
 
 ### 7.10 Next step before building: static design mockups
 - The designer will produce **static, non-functional mockups** of the key screens (public viewer, publish flow + checkpoint, make-private dialog, readable person/family pages) for the owner to review **before any implementation** — so gaps surface early and are cheap to reverse.
+
+### 7.11 Public URL scheme — separate, auto-generated, never user-chosen
+- The public tree lives at a **separate public URL**, distinct from the members' login-required tree at `/workspaces/<slug>/tree`. *Why:* the public page is a separate, locked-down door (deny-by-default, §7.1); the public link shouldn't expose the internal workspace address; and indexing/caching are controlled on the public address independently. A logged-in member who opens the public link sees the public (redacted) version there; their editing view stays at the member URL.
+- The public address is **always auto-generated and unique — the user never types or chooses it.** *Why:* avoids name-squatting, collisions, abusive/inappropriate slugs, and "name taken" friction.
+- **Format by purpose:**
+  - **Findable-in-Google trees:** a short, readable address (may auto-derive from the family name + a short unique suffix, e.g. `/family/al-saeed-7f3a`). Short is fine — it's meant to be discovered, not secret; the readable family name is a minor SEO plus.
+  - **Link-only trees:** a clean, compact random code (letters + numbers, **not** a long dashed UUID) but **long enough to be unguessable** (≈20 chars), because for a link-only tree the link itself is the access control. Too short here would let attackers enumerate/guess private trees.
+- Renaming the public address later issues redirects so search rankings aren't lost (see §1.6).
