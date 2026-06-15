@@ -3,6 +3,7 @@
 **Status**: Design agreed (decisions captured) — not yet planned for implementation
 **Audience**: Human developers, AI coding assistants
 **Created**: 2026-06-15
+**Revised**: 2026-06-15 — folded in decisions from a scenario gap review (§1.3, §1.7, §1.10, §1.11, §2.10)
 
 This document captures the **decisions** for two related features — Public Tree and Collections — together with the **reasoning** behind each one, so future work understands not just *what* we chose but *why*. It deliberately stops short of technical implementation (schema, endpoints, components); that comes in planning.
 
@@ -45,6 +46,8 @@ Before a tree goes public, the publisher is shown **all the living people** in t
 
 **Why require typing a phrase:** Repeated confirmation dialogs cause "warning fatigue" (habituation) — people click past things they've seen before without reading. Forcing the publisher to *type* something breaks that reflex and makes the action deliberate. We already use this "type-to-confirm" pattern for large deletions, so it's consistent.
 
+**Who counts as "living":** a person is treated as living if they are **not** marked deceased **and** are not provably old enough to have died — specifically, anyone whose birth date would make them **130 years or older is presumed deceased** and excluded from the checkpoint. People with neither a birth date nor a deceased mark are treated as living (they appear in the checkpoint). *Why:* the deceased mark alone is unreliable — many real ancestors are never marked — which would otherwise flood the checkpoint with long-dead people and make it meaningless. The 130-year cutoff is a safe, well-understood genealogy rule that clears out the obviously-deceased without risking a living person.
+
 ### 1.4 Privacy posture: rules + accountability, not silent hiding
 We considered silently auto-hiding living people from public view. **We rejected that.** Instead:
 
@@ -76,6 +79,8 @@ Anyone (including non-users) can request that a public tree exposing them be tak
 
 **Why staged:** Admin approval is a safety valve against abuse and accidental exposure at scale, but it's operational overhead we don't need on day one. We ship the capability first and add the gate once volume justifies it.
 
+**Collections are never search-indexed.** Only public *trees* are ever eligible for search listing (under the staged model above). *Why:* trees are the primary content worth surfacing; collection pages are curation wrappers that don't need their own search presence, and excluding them keeps the indexable surface small and easy to reason about.
+
 **Known requirement for real discoverability:** the interactive, draggable tree view is essentially invisible to search engines (it's rendered by in-browser JavaScript). For a public tree to genuinely appear in and benefit from search, it needs plain, server-rendered readable pages (for example, a readable page per public person, the way large genealogy sites do it). This connects to `docs/prd-seo.md` and must be addressed in planning as part of the indexable surface.
 
 ### 1.8 Borrowed branches from other families
@@ -91,6 +96,22 @@ We already let a family display a branch borrowed from another family's tree. Th
 Only **workspace admins** can change any visibility or indexing setting.
 
 **Why:** Exposure to the public internet is a high-consequence, irreversible-in-part decision; it belongs with admins, not every member.
+
+### 1.10 Public does not automatically mean reusable
+Making a tree public makes it **viewable**. It does **not** automatically allow others to pull it into their own collections. The owning family opts in to reuse with a separate setting (a simple "others may include this tree in their collections" checkbox).
+
+**Why:** "Anyone can look at my tree" and "anyone can repackage my family into their own material" are two different permissions. A family might be glad to be viewable but unhappy to be featured — possibly uncredited — inside someone else's course. Keeping the two separate leaves control with the source family.
+
+### 1.11 Going private, copies, and the admin takedown
+Three related rules govern what happens to data that has already been shared:
+
+- **Routine "make private" must not break dependents.** When a family turns a previously-public tree private, any **live links** to it from other collections are **automatically converted into frozen copies** at that moment. The tree stops being publicly viewable on its own, but the collections that relied on it keep working.
+- **Deliberate copies are permanent snapshots.** When a curator copies a tree, we **warn** that it's a permanent snapshot — it won't track the source's later edits or removals. We don't auto-propagate changes to copies.
+- **Genuine privacy problems use the report → admin takedown path.** If data should never have been public (a privacy violation, or a complaint from an exposed person), the affected party reports it and an **admin can remove it everywhere — including from copies.** To make that possible, every copy keeps a hidden record of where it originally came from.
+
+**Why:** This is the "left-pad" lesson from software packages — letting one family silently un-publish and instantly destroy dozens of curators' collections is its own kind of harm, so the routine path preserves dependents instead of breaking them. But personal data still needs a hard escape hatch, so the report → admin global takedown always exists. The two paths reflect two different intents: *"I want to stop sharing going forward"* versus *"this must come down everywhere, now."*
+
+**Tension to keep in mind:** preserving copies over a family's wish to retract is the right call for stability, but it sits uneasily with personal genealogy data. So the "make private" dialog must be honest that copies already sitting in others' collections will remain, and must point clearly to the report path for true removal.
 
 ---
 
@@ -145,6 +166,13 @@ Collections are disabled by default and turned on per-workspace in settings, lik
 
 **Why:** The vast majority of families never need collections. Keeping it off by default keeps their interface simple and uncluttered; only those who ask for it ever see the extra-trees and collection concepts.
 
+### 2.10 Publishing a collection (and what it includes)
+A tree inside a collection can be public **either** on its own (a standalone public tree) **or** as part of the collection. When a collection is published, it shows **only the trees that are public** — any private trees in it are **withheld**. At the moment a curator shares or publishes a collection, we **clearly tell them which of their trees are private and therefore won't appear.**
+
+**Why:** This is the §3 safety principle applied to collections — a public collection can never widen the visibility of a private tree — but the curator needs to *see* what's being withheld so the published result isn't a surprise.
+
+**Scope note:** the private-tree handling and the warning here are **deferred to the last implementation step** of this feature. The core collection experience can ship before this edge case is fully built.
+
 ---
 
 ## 3. Cross-feature safety principle
@@ -165,6 +193,11 @@ Concretely: a public collection can only contain public trees; a borrowed privat
 - **Server-rendered readable pages for true search discoverability** — required for indexing to actually work (§1.7); scope to be set in planning. *Why flagged:* the interactive canvas alone won't rank.
 - **Published-snapshot / versioning of public trees** — future; v1 serves the live (redacted) tree with caching. *Why later:* the publishing checkpoint and rules make live serving safe enough; snapshots add control we don't yet need.
 - **Per-collection granular viewing (separate viewer lists)** — not planned; separate workspaces cover it (§2.8).
+- **Collection publishing's private-tree handling + warning** — build last (§2.10). *Why later:* the core collection experience works without it; it's a refinement on the publish step.
+
+**Consciously set aside (for now):**
+- **Checkpoint-vs-rule for ordinary living people (scenario gap 1)** — we have not pinned down whether an ordinary living person is excluded, blanked, or shown-with-consent at the checkpoint. Left open intentionally.
+- **Re-review of living people added *after* a tree is already public (scenario gap 3)** — not addressed yet; new living people added post-publish currently wouldn't re-trigger the checkpoint.
 
 ---
 
