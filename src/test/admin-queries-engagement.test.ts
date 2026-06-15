@@ -120,9 +120,9 @@ describe('getEngagementMetrics', () => {
       { treeId: 'tree-big-b', _count: { _all: 30 } },
     ]);
     mockWorkspaceFindMany.mockResolvedValue([
-      { id: 'ws-small', nameAr: 'آل صغير', familyTree: { id: 'tree-small' }, _count: { memberships: 2 } },
-      { id: 'ws-big-a', nameAr: 'آل كبير أ', familyTree: { id: 'tree-big-a' }, _count: { memberships: 7 } },
-      { id: 'ws-big-b', nameAr: 'آل كبير ب', familyTree: { id: 'tree-big-b' }, _count: { memberships: 5 } },
+      { id: 'ws-small', nameAr: 'آل صغير', familyTrees: [{ id: 'tree-small' }], _count: { memberships: 2 } },
+      { id: 'ws-big-a', nameAr: 'آل كبير أ', familyTrees: [{ id: 'tree-big-a' }], _count: { memberships: 7 } },
+      { id: 'ws-big-b', nameAr: 'آل كبير ب', familyTrees: [{ id: 'tree-big-b' }], _count: { memberships: 5 } },
     ]);
 
     const metrics = await getEngagementMetrics();
@@ -146,7 +146,7 @@ describe('getEngagementMetrics', () => {
       Array.from({ length: 15 }, (_, i) => ({
         id: `ws-${i}`,
         nameAr: `family-${i}`,
-        familyTree: { id: `tree-${i}` },
+        familyTrees: [{ id: `tree-${i}` }],
         _count: { memberships: 5 },
       })),
     );
@@ -162,9 +162,9 @@ describe('getEngagementMetrics', () => {
       { treeId: 'tree-c', _count: { _all: 30 } },
     ]);
     mockWorkspaceFindMany.mockResolvedValue([
-      { id: 'ws-a', nameAr: 'a', familyTree: { id: 'tree-a' }, _count: { memberships: 5 } },
-      { id: 'ws-b', nameAr: 'b', familyTree: { id: 'tree-b' }, _count: { memberships: 5 } },
-      { id: 'ws-c', nameAr: 'c', familyTree: { id: 'tree-c' }, _count: { memberships: 5 } },
+      { id: 'ws-a', nameAr: 'a', familyTrees: [{ id: 'tree-a' }], _count: { memberships: 5 } },
+      { id: 'ws-b', nameAr: 'b', familyTrees: [{ id: 'tree-b' }], _count: { memberships: 5 } },
+      { id: 'ws-c', nameAr: 'c', familyTrees: [{ id: 'tree-c' }], _count: { memberships: 5 } },
     ]);
 
     const metrics = await getEngagementMetrics();
@@ -179,7 +179,7 @@ describe('getEngagementMetrics', () => {
       {
         id: 'ws-a',
         nameAr: 'a',
-        familyTree: { id: 'tree-a' },
+        familyTrees: [{ id: 'tree-a' }],
         _count: { memberships: 5 },
       },
     ]);

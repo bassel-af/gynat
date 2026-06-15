@@ -23,6 +23,20 @@ export interface DeepCopyResult {
   stitchFamily: Family | null;
 }
 
+/**
+ * Provenance for a copied subtree. When supplied to `persistDeepCopy`, a hidden
+ * `CopyProvenance` row is written (raw UUIDs, no FK) so the copy can later be
+ * found and removed by the admin global takedown — even after the source
+ * workspace is deleted. See PRD §1.11.
+ */
+export interface DeepCopyProvenance {
+  reason: 'going_private' | 'token_revoked' | 'manual_copy';
+  sourceWorkspaceId: string;
+  sourceTreeId: string;
+  sourceRootId: string;
+  copiedRootId: string;
+}
+
 // ---------------------------------------------------------------------------
 // prepareDeepCopy
 // ---------------------------------------------------------------------------
@@ -171,6 +185,7 @@ export async function persistDeepCopy(
   targetTreeId: string,
   copyResult: DeepCopyResult,
   targetWorkspaceKey: Buffer,
+  provenance?: DeepCopyProvenance,
 ): Promise<void> {
   const enc = (value: string | null): Buffer | null =>
     encryptFieldNullable(value, targetWorkspaceKey);
@@ -258,6 +273,21 @@ export async function persistDeepCopy(
         data: { familyId: fam.id, individualId: childId },
       });
     }
+  }
+
+  // Record provenance (raw UUIDs, no FK) so the admin global takedown can find
+  // and remove this copy later — surviving even source-workspace deletion.
+  if (provenance) {
+    await tx.copyProvenance.create({
+      data: {
+        copiedTreeId: targetTreeId,
+        copiedRootId: provenance.copiedRootId,
+        sourceWorkspaceId: provenance.sourceWorkspaceId,
+        sourceTreeId: provenance.sourceTreeId,
+        sourceRootId: provenance.sourceRootId,
+        reason: provenance.reason,
+      },
+    });
   }
 }
 

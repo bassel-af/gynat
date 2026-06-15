@@ -36,6 +36,7 @@ const mockPrisma = {
   },
   familyTree: {
     findUnique: (...args: unknown[]) => mockFamilyTreeFindUnique(...args),
+    findFirst: (...args: unknown[]) => mockFamilyTreeFindUnique(...args),
     create: (...args: unknown[]) => mockFamilyTreeCreate(...args),
     update: (...args: unknown[]) => mockFamilyTreeUpdate(...args),
   },

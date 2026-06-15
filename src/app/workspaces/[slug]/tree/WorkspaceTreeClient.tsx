@@ -11,6 +11,7 @@ import { FamilyTree, EmptyTreeState, IndividualForm } from '@/components/tree';
 import type { IndividualFormData } from '@/components/tree';
 import { CanvasToolbar } from '@/components/tree/CanvasToolbar';
 import { ConflictDialog } from '@/components/tree/ConflictDialog';
+import { PublishFlowContainer } from './PublishFlowContainer';
 import { Sidebar } from '@/components/ui';
 import { Spinner } from '@/components/ui/Spinner';
 import { apiFetch } from '@/lib/api/client';
@@ -157,22 +158,39 @@ function TreeContent({
       enableRadaa={workspace.enableRadaa}
       enableKunya={workspace.enableKunya}
       enableAuditLog={workspace.enableAuditLog}
+      enableTreeExport={workspace.enableTreeExport}
+      allowMemberExport={workspace.allowMemberExport}
       hideBirthDateForFemale={workspace.hideBirthDateForFemale}
       hideBirthDateForMale={workspace.hideBirthDateForMale}
       description={workspace.description}
       defaultNewPersonDeceased={workspace.defaultNewPersonDeceased}
     >
       <UndoStackProvider workspaceId={workspace.id} refreshTree={refreshTree} key={workspace.id}>
-        <TreeShell workspaceSlug={workspace.slug} workspaceId={workspace.id} />
+        <TreeShell
+          workspaceSlug={workspace.slug}
+          workspaceId={workspace.id}
+          workspaceNameAr={workspace.nameAr}
+        />
       </UndoStackProvider>
     </WorkspaceTreeProvider>
   );
 }
 
-function TreeShell({ workspaceSlug, workspaceId }: { workspaceSlug: string; workspaceId: string }) {
-  const { canEdit } = useWorkspaceTree();
+function TreeShell({
+  workspaceSlug,
+  workspaceId,
+  workspaceNameAr,
+}: {
+  workspaceSlug: string;
+  workspaceId: string;
+  workspaceNameAr: string;
+}) {
+  const { canEdit, isAdmin } = useWorkspaceTree();
   const undoStack = useUndoStack();
   const { showToast } = useToast();
+  const [publishOpen, setPublishOpen] = useState(false);
+  // Publishing is an admin-only capability.
+  const canPublish = isAdmin;
 
   const handleUndo = useCallback(async () => {
     const label = undoStack.topUndoLabel;
@@ -214,6 +232,7 @@ function TreeShell({ workspaceSlug, workspaceId }: { workspaceSlug: string; work
           workspaceSlug={workspaceSlug}
           workspaceId={workspaceId}
           undoRedo={undoRedoProps}
+          onPublish={canPublish ? () => setPublishOpen(true) : undefined}
         />
         <FamilyTree hideMiniMap />
       </main>
@@ -224,6 +243,14 @@ function TreeShell({ workspaceSlug, workspaceId }: { workspaceSlug: string; work
           if (typeof window !== 'undefined') window.location.reload();
         }}
       />
+      {/* Real publish flow — fetches the live checkpoint and persists. */}
+      {canPublish && publishOpen && (
+        <PublishFlowContainer
+          workspaceId={workspaceId}
+          familyName={workspaceNameAr}
+          onClose={() => setPublishOpen(false)}
+        />
+      )}
     </div>
   );
 }

@@ -303,8 +303,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
   // Audit log (best effort)
   try {
-    const tree = await prisma.familyTree.findUnique({
-      where: { workspaceId },
+    const tree = await prisma.familyTree.findFirst({
+      where: { workspaceId, kind: 'main' },
       select: { id: true },
     });
     if (tree) {

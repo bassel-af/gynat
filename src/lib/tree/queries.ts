@@ -30,7 +30,7 @@ const PLACE_SELECT = {
   },
 } as const
 
-const TREE_INCLUDES = {
+export const TREE_INCLUDES = {
   individuals: {
     include: {
       birthPlaceRef: PLACE_SELECT,
@@ -57,18 +57,22 @@ const TREE_INCLUDES = {
 // ---------------------------------------------------------------------------
 
 /**
- * Returns the FamilyTree for a workspace with all included data
- * (individuals, families with children). Returns null if no tree exists.
+ * Returns the MAIN FamilyTree for a workspace with all included data
+ * (individuals, families with children). Returns null if no main tree exists.
+ *
+ * Multi-tree foundation: a workspace can hold one `main` tree plus optional
+ * `extra` trees (collections, a later effort). Public Tree v1 only ever uses
+ * the main tree, so this resolver always scopes to `kind: 'main'`.
  */
 export async function getTreeByWorkspaceId(workspaceId: string) {
-  return prisma.familyTree.findUnique({
-    where: { workspaceId },
+  return prisma.familyTree.findFirst({
+    where: { workspaceId, kind: 'main' },
     include: TREE_INCLUDES,
   })
 }
 
 /**
- * Gets or lazily creates a FamilyTree for a workspace.
+ * Gets or lazily creates the MAIN FamilyTree for a workspace.
  * Returns the tree with all includes.
  */
 export async function getOrCreateTree(workspaceId: string) {
@@ -76,7 +80,7 @@ export async function getOrCreateTree(workspaceId: string) {
   if (existing) return existing
 
   return prisma.familyTree.create({
-    data: { workspaceId },
+    data: { workspaceId, kind: 'main' },
     include: TREE_INCLUDES,
   })
 }

@@ -210,8 +210,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
   // Log the token revocation itself (best effort — don't fail the revoke if logging fails)
   try {
-    const revokeTree = await prisma.familyTree.findUnique({
-      where: { workspaceId },
+    const revokeTree = await prisma.familyTree.findFirst({
+      where: { workspaceId, kind: 'main' },
       select: { id: true },
     });
     if (revokeTree) {

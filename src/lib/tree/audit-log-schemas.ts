@@ -19,6 +19,9 @@ export const AUDIT_ACTION_TYPES = [
   'MOVE_SUBTREE',
   'disconnect',
   'token_revoked',
+  'publish',
+  'unpublish',
+  'change_visibility',
 ] as const;
 
 export const AUDIT_ENTITY_TYPES = [

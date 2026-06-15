@@ -45,9 +45,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
   const { page, limit, entityType, entityId, userId, action, from, to } = parsed.data;
 
-  // Get tree for workspace
-  const tree = await prisma.familyTree.findUnique({
-    where: { workspaceId },
+  // Get tree for workspace (main tree — multi-tree foundation)
+  const tree = await prisma.familyTree.findFirst({
+    where: { workspaceId, kind: 'main' },
     select: { id: true },
   });
   if (!tree) {

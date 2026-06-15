@@ -41,7 +41,29 @@ export interface Individual {
   _pointerId?: string;
   /** True if this person is a shared branch root (source tree only) */
   _sharedRoot?: boolean;
+  /**
+   * Public visibility discriminant. Derived, response-only — never persisted
+   * (not in Prisma). Set by `redactForPublic` on the serialized public
+   * GedcomData. Undefined in the member view is equivalent to `'full'`.
+   */
+  publicDisplay?: 'full' | 'living' | 'redacted';
 }
+
+/**
+ * Fields that must NEVER reach the anonymous public surface: internal
+ * composition flags and cross-workspace place-id references. Co-located with
+ * `Individual` so the strip list (used by `redactForPublic`) tracks the type —
+ * adding a new internal `_`/`*PlaceId` field here keeps it out of public output.
+ * NOTE: `publicDisplay` is intentionally NOT here — it is the public output.
+ */
+export const INTERNAL_INDIVIDUAL_KEYS = [
+  '_pointed',
+  '_sourceWorkspaceId',
+  '_pointerId',
+  '_sharedRoot',
+  'birthPlaceId',
+  'deathPlaceId',
+] as const;
 
 export interface Family {
   id: string;

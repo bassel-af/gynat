@@ -17,6 +17,7 @@ vi.mock('@/lib/db', () => ({
   prisma: {
     familyTree: {
       findUnique: (...args: unknown[]) => mockFamilyTreeFindUnique(...args),
+      findFirst: (...args: unknown[]) => mockFamilyTreeFindUnique(...args),
       create: (...args: unknown[]) => mockFamilyTreeCreate(...args),
       update: (...args: unknown[]) => mockFamilyTreeUpdate(...args),
     },
@@ -121,7 +122,7 @@ describe('getTreeByWorkspaceId', () => {
 
     expect(result).toEqual(fakeDbTree)
     expect(mockFamilyTreeFindUnique).toHaveBeenCalledWith({
-      where: { workspaceId: WORKSPACE_ID },
+      where: { workspaceId: WORKSPACE_ID, kind: 'main' },
       include: TREE_INCLUDES,
     })
   })
@@ -153,7 +154,7 @@ describe('getOrCreateTree', () => {
 
     expect(result).toEqual(fakeDbTree)
     expect(mockFamilyTreeCreate).toHaveBeenCalledWith({
-      data: { workspaceId: WORKSPACE_ID },
+      data: { workspaceId: WORKSPACE_ID, kind: 'main' },
       include: TREE_INCLUDES,
     })
   })

@@ -45,6 +45,7 @@ model User {
   uploadedMedia        AlbumMedia[]
   createdShareTokens   BranchShareToken[]
   createdPointers      BranchPointer[]
+  publishedTrees       FamilyTree[]          @relation("TreePublisher")
 
   @@index([lastActiveAt])
   @@map("users")
@@ -88,7 +89,7 @@ model Workspace {
   createdBy               User                  @relation("WorkspaceCreator", fields: [createdById], references: [id])
   memberships             WorkspaceMembership[]
   invitations             WorkspaceInvitation[]
-  familyTree              FamilyTree?
+  familyTrees             FamilyTree[]
   posts                   Post[]
   albums                  Album[]
   events                  Event[]
@@ -208,19 +209,71 @@ model UserTreeLink {
 // Family Tree
 // =============================================================================
 
+// Public Tree: a tree may be private (members only), public-by-link, or
+// public-and-listed-in-search. Mapped to the UI's VisibilityLevel at the API
+// layer (private<->private, link<->public_link, search<->public_listed).
+enum TreeVisibility {
+  private
+  public_link
+  public_listed
+}
+
+// Multi-tree foundation (laid now, only `main` used in Public Tree v1).
+// A workspace has exactly one `main` tree plus optional `extra` trees that
+// exist only inside collections (a later effort).
+enum TreeKind {
+  main
+  extra
+}
+
 model FamilyTree {
   id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  workspaceId    String   @unique @map("workspace_id") @db.Uuid
+  // NOTE: workspaceId is intentionally NOT @unique anymore — a workspace can
+  // hold one main tree plus optional extra trees. "At most one main tree per
+  // workspace" is enforced by a partial unique index added in the migration:
+  //   CREATE UNIQUE INDEX ... ON family_trees (workspace_id) WHERE kind = 'main'
+  workspaceId    String   @map("workspace_id") @db.Uuid
+  kind           TreeKind @default(main)
+  nameAr         String?  @map("name_ar")
   lastModifiedAt DateTime @default(now()) @map("last_modified_at")
+
+  // Public Tree visibility / publishing
+  visibility            TreeVisibility @default(private)
+  publicSlug            String?        @unique @map("public_slug") // auto-generated; null when private
+  allowReuse            Boolean        @default(false) @map("allow_reuse")
+  publishedAt           DateTime?      @map("published_at")
+  publishedById         String?        @map("published_by") @db.Uuid
+  searchListingApproved Boolean        @default(false) @map("search_listing_approved") // column only; not enforced in v1
 
   // Relations
   workspace    Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  publishedBy  User?        @relation("TreePublisher", fields: [publishedById], references: [id])
   individuals  Individual[]
   families     Family[]
   radaFamilies RadaFamily[]
   editLogs     TreeEditLog[]
 
+  @@index([workspaceId])
   @@map("family_trees")
+}
+
+// Public Tree: hidden provenance trail for copied subtrees. Raw UUIDs with NO
+// foreign keys so the trail survives source-workspace deletion — it backs the
+// admin global takedown (walk by sourceRootId / sourceWorkspaceId).
+model CopyProvenance {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  copiedTreeId      String   @map("copied_tree_id") @db.Uuid
+  copiedRootId      String   @map("copied_root_id") @db.Uuid
+  sourceWorkspaceId String   @map("source_workspace_id") @db.Uuid
+  sourceTreeId      String   @map("source_tree_id") @db.Uuid
+  sourceRootId      String   @map("source_root_id") @db.Uuid
+  reason            String   // 'going_private' | 'token_revoked' | 'manual_copy'
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@index([sourceWorkspaceId])
+  @@index([sourceRootId])
+  @@index([copiedTreeId])
+  @@map("copy_provenance")
 }
 
 model Individual {

@@ -13,9 +13,12 @@ const PUBLIC_PATHS = [
   '/auth/forgot-password',
   '/policy',
   '/islamic-gedcom',
+  '/family', // public tree pages (anonymous, deny-by-default in the route)
   '/test', // test route for browser testing
   '/design-preview', // design direction prototype (no-auth preview)
   '/public-tree-preview', // public-tree feature mockups (no-auth preview)
+  '/public-tree-components', // public-tree component preview harness (no-auth preview)
+  '/public-tree-view-preview', // read-only public viewer preview (no-auth preview)
 ];
 
 function isPublicPath(pathname: string): boolean {

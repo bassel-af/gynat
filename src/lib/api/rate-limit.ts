@@ -65,3 +65,14 @@ export const treeExportLimiter = new RateLimiter({ maxRequests: 20, windowMs: 15
 export const treeImportLimiter = new RateLimiter({ maxRequests: 10, windowMs: 60 * 60 * 1000 });
 export const cascadePreviewLimiter = new RateLimiter({ maxRequests: 10, windowMs: 60 * 1000 });
 export const auditLogLimiter = new RateLimiter({ maxRequests: 60, windowMs: 60 * 1000 });
+// Public, anonymous, IP-keyed limiters (the authed limiters above don't cover
+// anonymous callers). Public tree reads are heavily cached, so this only needs
+// to blunt scrapers/enumeration, not normal browsing.
+export const publicTreeLimiter = new RateLimiter({ maxRequests: 120, windowMs: 60 * 1000 });
+export const publicReportLimiter = new RateLimiter({ maxRequests: 5, windowMs: 15 * 60 * 1000 });
+
+/** Extract the client IP from forwarding headers (first hop), for IP-keyed rate limiting. */
+export function clientIpKey(request: { headers: { get(name: string): string | null } }): string {
+  const fwd = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
+  return fwd || request.headers.get('x-real-ip')?.trim() || 'unknown';
+}

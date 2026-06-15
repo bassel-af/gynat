@@ -53,15 +53,15 @@ export async function seedTreeFromGedcomData(
   prismaClient: PrismaLike,
 ): Promise<SeedTreeResult> {
   return prismaClient.$transaction(async (tx) => {
-    // 1. Get or create FamilyTree
-    let tree = await tx.familyTree.findUnique({
-      where: { workspaceId },
+    // 1. Get or create the MAIN FamilyTree (multi-tree foundation)
+    let tree = await tx.familyTree.findFirst({
+      where: { workspaceId, kind: 'main' },
       include: { individuals: true, families: { include: { children: true } } },
     })
 
     if (!tree) {
       tree = await tx.familyTree.create({
-        data: { workspaceId },
+        data: { workspaceId, kind: 'main' },
         include: { individuals: true, families: { include: { children: true } } },
       })
     }

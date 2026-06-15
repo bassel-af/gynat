@@ -42,6 +42,7 @@ vi.mock('@/lib/db', () => ({
     },
     familyTree: {
       findUnique: (...args: unknown[]) => mockFamilyTreeFindUnique(...args),
+      findFirst: (...args: unknown[]) => mockFamilyTreeFindUnique(...args),
     },
     familyChild: {
       findFirst: vi.fn().mockResolvedValue(null),
@@ -352,6 +353,7 @@ vi.mock('@/lib/db', async () => {
       },
       familyTree: {
         findUnique: (...args: unknown[]) => mockFamilyTreeFindUnique(...args),
+        findFirst: (...args: unknown[]) => mockFamilyTreeFindUnique(...args),
       },
       familyChild: {
         findFirst: vi.fn().mockResolvedValue(null),

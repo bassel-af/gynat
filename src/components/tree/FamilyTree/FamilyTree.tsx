@@ -602,16 +602,6 @@ function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
     requestAnimationFrame(() => setIsReady(true));
   }, [initialNodes, scrollToNode, viewMode, fitView]);
 
-  if (!data || !selectedRootId) {
-    return (
-      <div id="tree-container">
-        <p style={{ textAlign: 'center', color: '#666' }}>
-          اختر الجد الأعلى لعرض الشجرة
-        </p>
-      </div>
-    );
-  }
-
   const momentumRafRef = useRef<number | null>(null);
 
   // Mobile-only momentum pan: native touch has no inertia by default, so after
@@ -701,6 +691,19 @@ function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
       container.removeEventListener('touchcancel', onTouchEnd, opts);
     };
   }, [isMobile, getViewport, setViewport]);
+
+  // Placeholder when no tree/root is selected. Rendered only AFTER every hook
+  // above has run unconditionally — keeping the early return below all hooks
+  // satisfies the rules of hooks (was previously mid-hooks; see public-tree §10).
+  if (!data || !selectedRootId) {
+    return (
+      <div id="tree-container">
+        <p style={{ textAlign: 'center', color: '#666' }}>
+          اختر الجد الأعلى لعرض الشجرة
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div id="tree-container" ref={containerRef} style={{ opacity: isReady ? 1 : 0 }}>

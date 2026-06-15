@@ -1,0 +1,39 @@
+/* Shared amber search-irreversibility warning. The outer positioning margin is
+   applied by the consumer (via className); this owns the inner block. */
+
+.box {
+  padding: var(--space-8) var(--space-9);
+  border-radius: var(--heritage-radius-md);
+  background: linear-gradient(180deg, rgba(232, 161, 92, 0.08), rgba(120, 60, 25, 0.05));
+  border: 1px solid rgba(232, 161, 92, 0.3);
+  display: flex;
+  gap: var(--space-6);
+  align-items: flex-start;
+}
+
+.icon {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--heritage-radius-sm);
+  background: linear-gradient(180deg, rgba(232, 161, 92, 0.2), rgba(120, 60, 25, 0.3));
+  border: 1px solid rgba(232, 161, 92, 0.4);
+  color: #f0b98b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.title {
+  font-family: var(--heritage-font-display);
+  font-size: var(--font-size-lg);
+  color: #f0b98b;
+  margin: 0 0 var(--space-3);
+}
+
+.text {
+  font-size: var(--font-size-md);
+  line-height: 1.65;
+  color: var(--heritage-text-soft);
+  margin: 0;
+}

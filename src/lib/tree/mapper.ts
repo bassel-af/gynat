@@ -386,7 +386,35 @@ function mapSex(sex: string | null): 'M' | 'F' | null {
 // Privacy redaction
 // ---------------------------------------------------------------------------
 
-const PRIVATE_PLACEHOLDER = 'خاص'
+/** Public placeholder shown in place of a private person's name. */
+export const PRIVATE_PERSON_PLACEHOLDER = 'خاص'
+
+/**
+ * Blank all PII on a private individual IN PLACE: name → placeholder, every
+ * birth/death/kunya/notes field cleared, and the place-id references removed.
+ * Structural data (id, sex, family references) is preserved so the tree layout
+ * still works. Shared by the member redactor (`redactPrivateIndividuals`) and
+ * the public redactor (`redactForPublic`) so the blanked field set can't drift.
+ */
+export function blankPrivatePerson(ind: Individual): void {
+  ind.name = PRIVATE_PERSON_PLACEHOLDER
+  ind.givenName = PRIVATE_PERSON_PLACEHOLDER
+  ind.surname = ''
+  ind.birth = ''
+  ind.birthPlace = ''
+  ind.birthDescription = ''
+  ind.birthNotes = ''
+  ind.birthHijriDate = ''
+  ind.death = ''
+  ind.deathPlace = ''
+  ind.deathDescription = ''
+  ind.deathNotes = ''
+  ind.deathHijriDate = ''
+  ind.kunya = ''
+  ind.notes = ''
+  delete ind.birthPlaceId
+  delete ind.deathPlaceId
+}
 
 /**
  * Returns a new GedcomData with PII redacted for private individuals.
@@ -398,27 +426,8 @@ export function redactPrivateIndividuals(data: GedcomData): GedcomData {
 
   for (const [id, ind] of Object.entries(data.individuals)) {
     if (ind.isPrivate) {
-      const redactedInd: Individual = {
-        ...ind,
-        name: PRIVATE_PLACEHOLDER,
-        givenName: PRIVATE_PLACEHOLDER,
-        surname: '',
-        birth: '',
-        birthPlace: '',
-        birthDescription: '',
-        birthNotes: '',
-        birthHijriDate: '',
-        death: '',
-        deathPlace: '',
-        deathDescription: '',
-        deathNotes: '',
-        deathHijriDate: '',
-        kunya: '',
-        notes: '',
-      }
-      // Remove placeId fields from redacted individuals
-      delete redactedInd.birthPlaceId
-      delete redactedInd.deathPlaceId
+      const redactedInd: Individual = { ...ind }
+      blankPrivatePerson(redactedInd)
       redacted[id] = redactedInd
     } else {
       redacted[id] = ind

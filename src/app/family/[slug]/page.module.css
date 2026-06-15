@@ -1,0 +1,18 @@
+/*
+ * Visually-hidden-but-crawlable container for the server-rendered public text
+ * (family name, description, stats, names list). Kept in the accessibility tree
+ * and the DOM (so search engines and screen readers read it) while the
+ * interactive canvas below is the sighted human view. NOT display:none — that
+ * would remove it from the a11y tree and weaken its crawl signal.
+ */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

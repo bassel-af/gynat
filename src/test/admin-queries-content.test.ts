@@ -32,9 +32,9 @@ describe('getContentMetrics', () => {
 
   test('joins individual counts onto each workspace tree and sorts by people desc', async () => {
     mockWorkspaceFindMany.mockResolvedValue([
-      { id: 'w-small', nameAr: 'صغيرة', familyTree: { id: 't-small' } },
-      { id: 'w-big', nameAr: 'كبيرة', familyTree: { id: 't-big' } },
-      { id: 'w-mid', nameAr: 'وسطى', familyTree: { id: 't-mid' } },
+      { id: 'w-small', nameAr: 'صغيرة', familyTrees: [{ id: 't-small' }] },
+      { id: 'w-big', nameAr: 'كبيرة', familyTrees: [{ id: 't-big' }] },
+      { id: 'w-mid', nameAr: 'وسطى', familyTrees: [{ id: 't-mid' }] },
     ]);
     mockIndividualGroupBy.mockResolvedValue([
       { treeId: 't-big', _count: { _all: 100 } },
@@ -55,8 +55,8 @@ describe('getContentMetrics', () => {
 
   test('workspace without a familyTree reports 0 people', async () => {
     mockWorkspaceFindMany.mockResolvedValue([
-      { id: 'w-none', nameAr: 'بلا شجرة', familyTree: null },
-      { id: 'w-has', nameAr: 'لها شجرة', familyTree: { id: 't-has' } },
+      { id: 'w-none', nameAr: 'بلا شجرة', familyTrees: [] },
+      { id: 'w-has', nameAr: 'لها شجرة', familyTrees: [{ id: 't-has' }] },
     ]);
     mockIndividualGroupBy.mockResolvedValue([{ treeId: 't-has', _count: { _all: 3 } }]);
 
@@ -68,7 +68,7 @@ describe('getContentMetrics', () => {
 
   test('workspace with a tree but no matching group entry reports 0 people', async () => {
     mockWorkspaceFindMany.mockResolvedValue([
-      { id: 'w-empty', nameAr: 'فارغة', familyTree: { id: 't-empty' } },
+      { id: 'w-empty', nameAr: 'فارغة', familyTrees: [{ id: 't-empty' }] },
     ]);
     // groupBy omits trees with zero rows entirely.
     mockIndividualGroupBy.mockResolvedValue([]);
@@ -81,9 +81,9 @@ describe('getContentMetrics', () => {
 
   test('counts every empty workspace and sums totalPeople across all', async () => {
     mockWorkspaceFindMany.mockResolvedValue([
-      { id: 'a', nameAr: 'أ', familyTree: { id: 'ta' } },
-      { id: 'b', nameAr: 'ب', familyTree: { id: 'tb' } },
-      { id: 'c', nameAr: 'ج', familyTree: null },
+      { id: 'a', nameAr: 'أ', familyTrees: [{ id: 'ta' }] },
+      { id: 'b', nameAr: 'ب', familyTrees: [{ id: 'tb' }] },
+      { id: 'c', nameAr: 'ج', familyTrees: [] },
     ]);
     mockIndividualGroupBy.mockResolvedValue([{ treeId: 'ta', _count: { _all: 7 } }]);
 

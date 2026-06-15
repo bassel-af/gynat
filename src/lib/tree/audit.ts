@@ -303,6 +303,15 @@ export function buildAuditDescription(
     case 'import':
       base = `استيراد بيانات GEDCOM`;
       break;
+    case 'publish':
+      base = `نشر الشجرة${name}`;
+      break;
+    case 'unpublish':
+      base = `إلغاء نشر الشجرة${name}`;
+      break;
+    case 'change_visibility':
+      base = `تغيير مستوى ظهور الشجرة${name}`;
+      break;
     default:
       base = `${action} ${label}${name}`;
   }

@@ -78,6 +78,7 @@ vi.mock('@/lib/db', () => ({
     },
     familyTree: {
       findUnique: (...args: unknown[]) => mockFamilyTreeFindUnique(...args),
+      findFirst: (...args: unknown[]) => mockFamilyTreeFindUnique(...args),
       update: (...args: unknown[]) => mockFamilyTreeUpdate(...args),
     },
     individual: {

@@ -53,8 +53,8 @@ async function main(): Promise<void> {
       // the app's singleton prisma client bound to the Next.js runtime
       // environment. Pull the tree directly via this script's prisma.
       void getTreeByWorkspaceId; // silence unused import — library API reference
-      const tree = await prisma.familyTree.findUnique({
-        where: { workspaceId: ws.id },
+      const tree = await prisma.familyTree.findFirst({
+        where: { workspaceId: ws.id, kind: 'main' },
         include: {
           individuals: {
             include: {

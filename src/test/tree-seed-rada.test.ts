@@ -127,6 +127,7 @@ describe('seedTreeFromGedcomData — rada\'a seeding', () => {
       return fn({
         familyTree: {
           findUnique: mockFamilyTreeFindUnique,
+          findFirst: mockFamilyTreeFindUnique,
           create: mockFamilyTreeCreate,
         },
         individual: {

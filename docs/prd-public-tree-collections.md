@@ -277,3 +277,22 @@ A planning team (software architect, security engineer, frontend designer) turne
 - The public address is **always auto-generated and unique — the user never types or chooses it.** *Why:* avoids name-squatting, collisions, abusive/inappropriate slugs, and "name taken" friction.
 - **Single address format for all public levels:** one auto-generated, **unguessable random code** (~22 lowercase letters/numbers, no dashes) is used for BOTH "public by link" and "findable in Google" — there is no separate readable slug. *Why one format:* the address must stay identical when a tree switches between the two levels (the owner may change their mind), and a link-only tree's only protection is that its address can't be guessed — so the shared format must be the unguessable one. A searchable tree doesn't need a readable address: Google discovers it via the sitemap + the page's text (family name + names list), not the URL slug. (An earlier plan to derive a readable family-name slug for searchable trees was dropped — it added complexity, changed the address on a level switch, and degraded to a generic `tree-xxxx` for Arabic-only names.)
 - **The address is stable across a private round-trip:** going private only **stops serving** the public page (the link shows "not available"); it does **not** discard the address. Re-publishing reuses the SAME address, so a Google-listed tree keeps its ranking and previously-shared links keep working. Permanently revoking a leaked link would be a separate, explicit "new link" action (future), not an automatic side effect of toggling private.
+
+---
+
+## 8. Deferred follow-ups (post-v1)
+
+### 8.1 Active search-engine submission & removal
+
+The public tree page already sets the correct per-visibility signal: a "findable in Google" (`public_listed`) tree allows indexing; a by-link or private tree emits `noindex` (tells search engines not to list it). What is **not yet wired** (deferred):
+
+- **Active submission.** `public_listed` trees are NOT added to the sitemap (the sitemap is a static list of marketing pages), so we don't proactively tell search engines about a newly-searchable tree — discovery currently relies on the shared link being crawled.
+- **Active removal / re-crawl.** Downgrading to by-link or going private flips the page to `noindex`, but we don't actively ping search engines to re-crawl/remove — so removal happens only on the engine's own re-crawl schedule (days–weeks).
+
+**Follow-up:** (a) generate the sitemap from a DB query of `public_listed` trees; (b) on visibility changes (publish-to-search, downgrade, go-private) actively notify search engines to expedite (re)indexing and removal — the project already documents IndexNow (`docs/indexnow.md`).
+
+*Why deferred:* the core publish/visibility behavior and the correct index/noindex signals are in place; this only improves the **speed and reliability** of getting into and out of search, not correctness. The honest reversibility limits in §1.6 hold regardless (removal is never instant/guaranteed).
+
+### 8.2 Public report page
+
+The report **endpoint** exists (`POST /api/family/[slug]/report` — public, no-account, rate-limited → notifies the workspace admins) and a `ReportForm` component is built, but there is **no public report page** wiring them together yet. So the "request permanent removal" link in the make-private dialog (and any "report this tree" affordance on the public viewer) currently has no destination. **Follow-up:** add a public, no-account report page (e.g. `/family/[slug]/report`) that renders `ReportForm` and posts to the endpoint, then point the make-private dialog + the public viewer footer at it. *Why deferred:* the endpoint and form already exist and the removal action is admin-driven; wiring the page is a small, self-contained follow-up. (See §1.5 / §7.7 for the report path.)

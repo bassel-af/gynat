@@ -14,6 +14,8 @@ services:
           # Restrict CORS to known origins. Add your production domain here when deployed.
           origins:
             - "http://localhost:4000"
+            - "https://tree.local"
+            - "http://tree.local"
           methods:
             - GET
             - POST

@@ -225,11 +225,11 @@ export async function getEngagementMetrics(): Promise<EngagementMetrics> {
   // `_count` with nested `where`).
   const workspaces = treeIds.length
     ? await prisma.workspace.findMany({
-        where: { familyTree: { id: { in: treeIds } } },
+        where: { familyTrees: { some: { id: { in: treeIds } } } },
         select: {
           id: true,
           nameAr: true,
-          familyTree: { select: { id: true } },
+          familyTrees: { select: { id: true } },
           _count: { select: { memberships: true } },
         },
       })
@@ -242,11 +242,11 @@ export async function getEngagementMetrics(): Promise<EngagementMetrics> {
   for (const w of workspaces as Array<{
     id: string;
     nameAr: string;
-    familyTree: { id: string } | null;
+    familyTrees: { id: string }[];
     _count: { memberships: number };
   }>) {
-    if (w.familyTree) {
-      treeToWorkspace.set(w.familyTree.id, {
+    for (const t of w.familyTrees) {
+      treeToWorkspace.set(t.id, {
         id: w.id,
         nameAr: w.nameAr,
         memberCount: w._count.memberships,
@@ -317,7 +317,7 @@ export async function getContentMetrics(): Promise<ContentMetrics> {
       select: {
         id: true,
         nameAr: true,
-        familyTree: { select: { id: true } },
+        familyTrees: { select: { id: true } },
       },
     }),
     prisma.individual.groupBy({
@@ -338,13 +338,14 @@ export async function getContentMetrics(): Promise<ContentMetrics> {
   const workspacesTyped = workspaces as Array<{
     id: string;
     nameAr: string;
-    familyTree: { id: string } | null;
+    familyTrees: { id: string }[];
   }>;
   const rows: WorkspaceContentRow[] = workspacesTyped
     .map((w) => ({
       workspaceId: w.id,
       name: w.nameAr,
-      people: w.familyTree ? countByTree.get(w.familyTree.id) ?? 0 : 0,
+      // Sum across all of the workspace's trees (multi-tree foundation).
+      people: w.familyTrees.reduce((sum, t) => sum + (countByTree.get(t.id) ?? 0), 0),
     }))
     .sort((a, b) => b.people - a.people || a.name.localeCompare(b.name, 'ar'));
 

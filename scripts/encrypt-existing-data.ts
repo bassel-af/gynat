@@ -276,9 +276,9 @@ async function migrateWorkspace(
     console.log(`   workspace key: GENERATED + wrapped + saved`);
   }
 
-  // Step 2: find the tree for this workspace (if any)
-  const tree = await prisma.familyTree.findUnique({
-    where: { workspaceId },
+  // Step 2: find the main tree for this workspace (if any)
+  const tree = await prisma.familyTree.findFirst({
+    where: { workspaceId, kind: 'main' },
     select: { id: true },
   });
   if (!tree) {
