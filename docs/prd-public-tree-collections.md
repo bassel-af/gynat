@@ -3,7 +3,7 @@
 **Status**: Design agreed (decisions captured) — not yet planned for implementation
 **Audience**: Human developers, AI coding assistants
 **Created**: 2026-06-15
-**Revised**: 2026-06-15 — folded in decisions from a scenario gap review (§1.3, §1.7, §1.10, §1.11, §2.10); added build sequencing (§5)
+**Revised**: 2026-06-15 — folded in decisions from a scenario gap review (§1.3, §1.7, §1.10, §1.11, §2.10); added build sequencing (§5); added implementation-planning decisions from the architect/security/designer team review (§7)
 
 This document captures the **decisions** for two related features — Public Tree and Collections — together with the **reasoning** behind each one, so future work understands not just *what* we chose but *why*. It deliberately stops short of technical implementation (schema, endpoints, components); that comes in planning.
 
@@ -196,8 +196,10 @@ Concretely: a public collection can only contain public trees; a borrowed privat
 - **Collection publishing's private-tree handling + warning** — build last (§2.10). *Why later:* the core collection experience works without it; it's a refinement on the publish step.
 
 **Consciously set aside (for now):**
-- **Checkpoint-vs-rule for ordinary living people (scenario gap 1)** — we have not pinned down whether an ordinary living person is excluded, blanked, or shown-with-consent at the checkpoint. Left open intentionally.
-- **Re-review of living people added *after* a tree is already public (scenario gap 3)** — not addressed yet; new living people added post-publish currently wouldn't re-trigger the checkpoint.
+- **Re-review of living people added *after* a tree is already public (scenario gap 3)** — still open; new living people added post-publish do not currently re-trigger the checkpoint. Security recommends at minimum audit-logging additions to an already-public tree; a lightweight re-confirmation prompt is a candidate refinement.
+
+**Resolved since (see §7):**
+- **Ordinary living people (scenario gap 1)** — resolved in §7.2: ordinary living people ARE shown (in the checkpoint and on the public view), with their exact birth date hidden; the publisher is accountable. Not excluded or blanked.
 
 ---
 
@@ -224,3 +226,45 @@ Concretely: a public collection can only contain public trees; a borrowed privat
 ## 6. Implementation note (dependency status, not design)
 
 - **Workspace join-code:** the back-end capability exists (generate a code, join by code), but there is **no user interface for it yet** — members are currently added by email invitation. Surfacing it (a button to generate a code, a place to enter one) is a small follow-up, relevant to the teacher-and-students flow in §2.8. (Not to be confused with the "create share code" button in a workspace, which shares tree *branches*, a different feature.)
+
+---
+
+## 7. Implementation-planning decisions (team review — 2026-06-15)
+
+A planning team (software architect, security engineer, frontend designer) turned §1 into a concrete v1 plan. The decisions below are now binding for Public Tree v1; they **refine, not replace,** the product decisions above.
+
+### 7.1 The public view is a separate, deny-by-default path
+- Public serving is its own route and its own additive composition: it starts from nothing and includes only explicitly-published, safe data. It never reuses the members' serving path or its cross-workspace data merge. *Why:* this is the first anonymous, internet-facing surface; a separate locked-down path (rather than the member view behind a flag) means data can't leak through a mis-set flag or a future edit.
+- A **single public redactor** is the one filter for BOTH the public data feed and the readable pages (§7.6), backed by automated "nothing leaks" tests (including a structural test that the public route cannot even import the member merge). *Why:* prevents the two public surfaces from drifting and leaking different things.
+
+### 7.2 What a stranger sees of a living person (resolves §4 gap 1)
+- Living people appear (name + how they connect), but their **exact birth date is hidden**.
+- Anyone **born more than 130 years ago is treated as deceased** and shown in full.
+- **One single rule** decides who is "living," used identically by the publish checkpoint and the public view, so they can never disagree.
+- *Why:* the owner chose rules-and-accountability over auto-hiding, but a full birth date is the single most abusable detail, so it's hidden by default while the person otherwise appears.
+
+### 7.3 Life story (سيرة) and notes are shown in full
+- A person's biography and notes are shown publicly **in full, for living and deceased alike** (no trimming). *Why:* a biography exists because someone deliberately wrote it to be read — unlike a birth date, its presence signals intent to share. Responsibility sits with the publisher (the rules + the publish checkpoint), consistent with §1.4.
+
+### 7.4 An existing privacy setting must be fixed
+- The "hide birth date" workspace option is currently applied only in the browser, so the real date is still sent to the client. Before public launch it must be enforced **server-side**. *Why:* harmless for members, but a real data leak on a public page.
+
+### 7.5 Borrowed branches in v1
+- Borrowed branches **do** appear on public trees in v1, but only if the family they came from is **also public**; otherwise they're withheld. The public privacy rules (hidden birth dates for living people, etc.) apply **uniformly** to borrowed people too (compose first, then redact once over the final set). *Why:* borrowing is core to the product (and to Collections later); withholding it would gut the value. The source-must-be-public rule (the owner's own §1.8 decision) keeps private families safe.
+
+### 7.6 Readable pages for search
+- Real search ranking needs plain, **server-rendered readable pages** (one per public person, plus a family overview), since the interactive tree can't be read by search engines. They reuse the same public redactor. Link-only trees stay out of search; only "findable in Google" trees enter the sitemap.
+
+### 7.7 Link shape, abuse, and the report path
+- **Link-only** trees use a long, **unguessable** link (can't be discovered by guessing); **findable-in-Google** trees use a clean, readable address. The publish **type-to-confirm phrase** should be something the admin recognizes (e.g., the family name / chosen public title), independent of the actual link.
+- Public routes get their own traffic throttling (today's limits only cover logged-in users) plus heavy caching to blunt scrapers.
+- The **report path** is a public, no-account page reachable from every public tree and the make-private box; reports are rate-limited and an admin reviews before any takedown (no automatic takedown from a report).
+
+### 7.8 Make-private tone
+- The "make private" (un-publish) confirmation is **calm and matter-of-fact**, honestly noting that copies already in others' collections remain and that search engines/archives may retain copies, with the "request permanent removal" option clearly visible.
+
+### 7.9 Multi-tree foundation laid now
+- The data model will allow **more than one tree per workspace from day one** (even though v1 uses only the main tree), so Collections drop in later without a rebuild — per §5.
+
+### 7.10 Next step before building: static design mockups
+- The designer will produce **static, non-functional mockups** of the key screens (public viewer, publish flow + checkpoint, make-private dialog, readable person/family pages) for the owner to review **before any implementation** — so gaps surface early and are cheap to reverse.
