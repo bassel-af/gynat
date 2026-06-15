@@ -81,7 +81,7 @@ Anyone (including non-users) can request that a public tree exposing them be tak
 
 **Collections are never search-indexed.** Only public *trees* are ever eligible for search listing (under the staged model above). *Why:* trees are the primary content worth surfacing; collection pages are curation wrappers that don't need their own search presence, and excluding them keeps the indexable surface small and easy to reason about.
 
-**Known requirement for real discoverability:** the interactive, draggable tree view is essentially invisible to search engines (it's rendered by in-browser JavaScript). For a public tree to genuinely appear in and benefit from search, it needs plain, server-rendered readable pages (for example, a readable page per public person, the way large genealogy sites do it). This connects to `docs/prd-seo.md` and must be addressed in planning as part of the indexable surface.
+**Known requirement for real discoverability:** the interactive, draggable tree view is essentially invisible to search engines (it's rendered by in-browser JavaScript). For a public tree to genuinely appear in and benefit from search, its text must be delivered in a crawlable form. **Resolved in §7.6:** rather than separate readable pages, the public tree page *itself* server-renders its text (family name, description, stats, and the public names list); there are no per-person pages. This connects to `docs/prd-seo.md`.
 
 ### 1.8 Borrowed branches from other families
 We already let a family display a branch borrowed from another family's tree. This creates a leak risk: Family B borrows a private branch from Family A, then B makes B's tree public — exposing A's private people.
@@ -190,7 +190,7 @@ Concretely: a public collection can only contain public trees; a borrowed privat
 ## 4. Deferred / later (with why)
 
 - **Platform-admin approval for search listing** — later stage (§1.7). *Why later:* operational overhead not justified until volume grows; ship the capability first.
-- **Server-rendered readable pages for true search discoverability** — required for indexing to actually work (§1.7); scope to be set in planning. *Why flagged:* the interactive canvas alone won't rank.
+- **Separate readable per-person / family pages** — DROPPED in favor of the lighter approach in §7.6 (index the public tree page itself, with the public names list server-rendered into its HTML). *Why:* it avoids exposing living people as individual search results and reduces scope.
 - **Published-snapshot / versioning of public trees** — future; v1 serves the live (redacted) tree with caching. *Why later:* the publishing checkpoint and rules make live serving safe enough; snapshots add control we don't yet need.
 - **Per-collection granular viewing (separate viewer lists)** — not planned; separate workspaces cover it (§2.8).
 - **Collection publishing's private-tree handling + warning** — build last (§2.10). *Why later:* the core collection experience works without it; it's a refinement on the publish step.
@@ -252,8 +252,11 @@ A planning team (software architect, security engineer, frontend designer) turne
 ### 7.5 Borrowed branches in v1
 - Borrowed branches **do** appear on public trees in v1, but only if the family they came from is **also public**; otherwise they're withheld. The public privacy rules (hidden birth dates for living people, etc.) apply **uniformly** to borrowed people too (compose first, then redact once over the final set). *Why:* borrowing is core to the product (and to Collections later); withholding it would gut the value. The source-must-be-public rule (the owner's own §1.8 decision) keeps private families safe.
 
-### 7.6 Readable pages for search
-- Real search ranking needs plain, **server-rendered readable pages** (one per public person, plus a family overview), since the interactive tree can't be read by search engines. They reuse the same public redactor. Link-only trees stay out of search; only "findable in Google" trees enter the sitemap.
+### 7.6 Search indexing uses the tree page itself — no separate pages (refines §1.7)
+- There are **no separate per-person pages and no separate family overview page** (the earlier "readable pages" idea is dropped). The **indexable surface is the public tree page itself.**
+- Because the interactive canvas is drawn by in-browser code search engines can't read, the tree page must **server-render its text into the initial HTML**: the family name (as the heading), the description, the stats, and — crucially — the **public people's names list** (today that side-panel list is client-rendered, so server-rendering it is the one real build item). The interactive canvas then hydrates on top of that same page: **one URL** that is both the human interactive view and the crawlable content. Link-only trees stay out of search; only "findable in Google" trees enter the sitemap.
+- **Honest limit:** the page can rank for the family name, description, and the names in the server-rendered list — but there are **no individual person results** (each person is just a line on one shared page, so single-name ranking is weaker, deep relational queries won't surface, and very large trees dilute per-name signal; the list may later be capped/prioritized — an SEO/product call).
+- **Privacy upside (why this is acceptable, even preferable):** with no per-person pages, a living person never becomes their own Google-rankable result — at most a name in a list on one page, with their birth date already hidden. This is **strictly safer** than per-person pages and fits the §1.6/§1.7 "minimize the indexable surface" posture. Page metadata + JSON-LD is the SEO specialist's brief.
 
 ### 7.7 Link shape, abuse, and the report path
 - **Link-only** trees use a long, **unguessable** link (can't be discovered by guessing); **findable-in-Google** trees use a clean, readable address. The publish **type-to-confirm phrase** should be something the admin recognizes (e.g., the family name / chosen public title), independent of the actual link.
