@@ -150,8 +150,7 @@ The app wraps the entire application in `<TreeProvider>` via `src/app/providers.
 
 - **Root URL** (`/`) redirects authenticated users to `/workspaces`, shows landing page otherwise
 - **Legacy redirects** (`next.config.ts`): `/saeed`, `/sharbek`, `/al-dalati`, `/al-dabbagh` permanently redirect to `/workspaces/{slug}/tree` — these were old static GEDCOM-based family routes
-- **Family config** (`src/config/families.ts`): `FamilyConfig` entries (slug, rootId, displayName, gedcomFile) used for seeding workspaces and the `/test` browser test route
-- The `test` family config uses `test-family.ged` (small fixture) — used by the `/test` browser test route
+- **Family config** (`src/config/families.ts`): `FamilyConfig` entries (slug, rootId, displayName, gedcomFile) used for seeding workspaces. The `test` family (small `test-family.ged` fixture) seeds a lightweight workspace at `/workspaces/test/tree` for browser testing
 
 ### Data Flow
 
@@ -453,7 +452,7 @@ Run `pnpm test` after logic changes (skip for trivial changes like print stateme
 
 Check the browser when you have done work related to the frontend. It's better to use the default browser. Do not specify a browser.
 
-**IMPORTANT: For browser/Playwright testing, ALWAYS use the test route: `http://localhost:4000/test?only=canvas`. See `docs/testing.md` for all query parameters.**
+**IMPORTANT: For browser/Playwright testing, the tree is database-backed — test the real tree at `http://localhost:4000/workspaces/<slug>/tree` with a logged-in session (seeding creates a small `test` family at `/workspaces/test/tree`). For no-auth visual checks, use the prod-guarded preview routes (e.g. `/design-preview`). The old `/test?only=canvas` route and the `?only=canvas`/`?no-sidebar`/`?no-minimap`/`?no-controls` params were removed when the tree moved to the database. See `docs/testing.md`.**
 
 **IMPORTANT: After implementing a new feature, you MUST perform a complete end-to-end test using real infrastructure (GoTrue, Kong, PostgreSQL, SMTP).** Unit tests with mocks are not sufficient — they can pass while the actual flow is broken (e.g., misconfigured GoTrue URL paths, Kong routing issues, missing DB sync). For auth-related features, this means: create a real test user via the GoTrue admin API, exercise the full flow through Kong and the Next.js app, verify the result in the database, and clean up the test user afterward. For features involving email (email change, password reset, invitations), send a real email and verify the link works. Do not assume a feature is fixed without e2e verification against the running services.
 

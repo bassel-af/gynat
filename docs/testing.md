@@ -1,24 +1,13 @@
 # Testing
 
-## Test Mode for Browser/Playwright Testing
+## Browser / Playwright Testing
 
-**ALWAYS use the test family route when testing in the browser with Playwright/MCP.**
+The tree is now **database-backed** (it is no longer loaded from a GEDCOM file at runtime). The old `/test` route and the `?only=canvas` / `?no-sidebar` / `?no-minimap` / `?no-controls` query params have been **removed** — do not use them.
 
-Default test URL: `http://localhost:4000/test?only=canvas`
+To test in the browser:
 
-The `/test` route loads `/public/test-family.ged` (a small test dataset) instead of production data. This is configured as a family entry in `src/config/families.ts`.
-
-### Query Parameters
-
-These query parameters can be appended to any family route to control UI visibility:
-
-| Parameter | Effect |
-|-----------|--------|
-| `?only=canvas` | Show only tree canvas (hides sidebar, minimap, controls) |
-| `?no-sidebar` | Hide sidebar only |
-| `?no-minimap` | Hide minimap only |
-| `?no-controls` | Hide zoom/pan controls only |
-| `?playground` | Load the dev playground component |
+- **The real tree (requires a logged-in session):** `http://localhost:4000/workspaces/<slug>/tree`. Seeding creates a workspace per configured family (`src/config/families.ts`), including a small **`test`** family (from `test-family.ged`) at `http://localhost:4000/workspaces/test/tree` for a lightweight dataset.
+- **No-auth visual / component checks (dev-only, prod-guarded):** self-contained preview routes that don't require login and `notFound()` in production — e.g. `/design-preview` (design system), and feature harnesses under `/public-tree-*`. They render real components with static fixtures.
 
 ## Email testing with Mailpit
 
