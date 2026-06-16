@@ -305,6 +305,8 @@ The GEDCOM file (`public/saeed-family.ged`):
 - `GET /api/workspaces/[id]/tree/export` — GEDCOM export (5.5.1 or 7.0 format via `?version=` query param)
 - `POST /api/workspaces/[id]/tree/import` — GEDCOM import (empty trees only, multipart form data)
 - `GET /api/workspaces/[id]/tree/audit-log` — audit log (admin-only, `enableAuditLog` toggle gate, paginated max 50/default 20, filterable by action/entityType/entityId/userId, rate-limited 60/min)
+- `GET /api/workspaces/[id]/tree/publish-preview` — admin-only Public Tree publish data: living-people checkpoint, withheld borrowed branches, confirmation phrase, current level, slug, reuse opt-in
+- `PATCH /api/workspaces/[id]/tree/visibility` — admin-only set visibility (`private`/`public_link`/`public_listed`); requires the type-to-confirm phrase on first publish; keeps the slug across private round-trips
 
 **Rada'a API Routes** (`src/app/api/workspaces/[id]/tree/rada-families/`):
 - `POST /api/workspaces/[id]/tree/rada-families` — create rada'a family (milk kinship link)
@@ -365,6 +367,7 @@ The GEDCOM file (`public/saeed-family.ged`):
 - `seed-helpers.ts` — helpers for seeding tree data from GEDCOM
 - `schemas.ts` — Zod validation schemas for tree API requests
 - `branch-pointer-merge.ts` — `extractPointedSubtree()`, `mergePointedSubtree()`, `detectOrphanedChildren()`, stitching helpers (child/sibling/spouse/parent)
+- **Public Tree (`src/lib/tree/`)** — `public-serve.ts` (the one serving layer: `loadPublicTreeBySlug`, `buildPublicTreePayload`, `buildPublicNamesList`, withheld-branches; deny-by-default, structurally barred from the member merge), `public-visibility.ts` (`redactForPublic` — the single public redactor), `public-compose.ts` (compose home + source-public borrowed branches), `birth-date-privacy.ts` (130-yr living rule, hide living birth dates), `public-slug.ts` (auto-generated unguessable code), `going-private.ts` (unpublish, converts live links to frozen copies)
 - `branch-pointer-deep-copy.ts` — `prepareDeepCopy()` (pure, new UUIDs + ID remapping) and `persistDeepCopy()` (DB writes for individuals, families, familyChildren, stitchFamily)
 - `branch-pointer-schemas.ts` — Zod schemas for redeem token, share token creation
 - `branch-pointer-queries.ts` — `getActivePointersForWorkspace()` with source workspace name join

@@ -203,6 +203,20 @@ GEDCOM export fetches source workspace keys in parallel and decrypts each merged
 
 ---
 
+## 5b. Public Tree (v1)
+
+Lets a workspace admin publish the main tree publicly. Three visibility levels (`private` / `public_link` / `public_listed`); only `public_listed` is search-indexable.
+
+- **Publish flow** — `PATCH .../tree/visibility` sets the level; first publish requires a type-to-confirm phrase after a checkpoint listing all living people (`GET .../tree/publish-preview`). "Living" = not deceased and not born >130 yrs ago (`birth-date-privacy.ts`), used identically by the checkpoint and the public view.
+- **Public URL** — a separate `/family/[slug]` page; the slug is an auto-generated unguessable code (`public-slug.ts`), reused across private↔public round-trips so links/rankings survive.
+- **Serving** — `public-serve.ts` is the single, deny-by-default serving layer (separate from the member path, structurally barred from importing the member merge). It composes home + borrowed branches whose source is itself public (`public-compose.ts`), then redacts once via `redactForPublic` (`public-visibility.ts`) — the one filter for both the JSON feed and the SSR names list. Unknown/private slug → 404 (no existence leak).
+- **SEO** — the page server-renders the family name + crawlable names list; `noindex` unless `public_listed`. No per-person pages.
+- **Make-private** — `going-private.ts` stops serving and converts any live links from other collections into frozen copies; the slug is kept.
+- **Report path** — `/family/[slug]/report` (public, no account) → `POST /api/family/[slug]/report`: rate-limited, records a `public_tree_report` notification for admins, and emails `SITE_CONTACT_EMAIL` (`templates/report.ts`, best-effort). Never auto-takes-down — handled manually. Linked from the viewer footer and the make-private dialog.
+- **UI** — components in `src/components/public-tree/` (`PublicTreeViewer`, `PublishFlow`/`PublishCheckpoint`/`ManagePublicPanel`, `MakePrivateDialog`, `ReportForm`, `VisibilityLadder`, etc.); the viewer reuses the real `FamilyTree`/`Sidebar` with `canEdit={false}`.
+
+---
+
 ## 6. Encryption
 
 Two layers, defense in depth.
