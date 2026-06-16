@@ -101,7 +101,7 @@ export function ManagePublicPanel({
       className={clsx(styles.panel, className)}
       role="dialog"
       aria-modal="true"
-      aria-label="إدارة العرض العامّ"
+      aria-label="إدارة العرض العام"
       onClick={(e) => e.stopPropagation()}
     >
       <button type="button" className={styles.close} onClick={onClose} aria-label="إغلاق">
@@ -113,7 +113,7 @@ export function ManagePublicPanel({
       <header className={styles.head}>
         <div className={styles.statusRow}>
           <span className={styles.statusDot} aria-hidden="true" />
-          <span className={styles.statusText}>هذه الشجرة عامّة</span>
+          <span className={styles.statusText}>هذه الشجرة عامة</span>
           <span className={clsx(styles.statusBadge, { [styles.statusBadgeSearch]: currentLevel === 'search' })}>
             {LEVEL_LABEL[currentLevel]}
           </span>
@@ -122,7 +122,7 @@ export function ManagePublicPanel({
 
       {/* The link — the primary reason the admin re-opened the dialog. */}
       <div className={styles.linkRow}>
-        <span className={styles.linkLabel}>الرابط العامّ</span>
+        <span className={styles.linkLabel}>الرابط العام</span>
         <div className={styles.linkBox}>
           <code className={styles.linkValue} dir="ltr">
             {shareUrl}
@@ -184,7 +184,7 @@ export function ManagePublicPanel({
 
       <footer className={styles.footer}>
         <button type="button" className={styles.doneBtn} onClick={onClose}>
-          تمّ
+          تم
         </button>
       </footer>
     </div>

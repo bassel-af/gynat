@@ -50,15 +50,15 @@ export function MakePrivateDialog({
         </div>
 
         <h3 id="make-private-title" className={styles.title}>
-          إيقاف العرض العامّ
+          إيقاف العرض العام
         </h3>
         <p className={styles.lead}>
-          ستتوقّف الشجرة عن الظهور للعموم فوراً، وسنطلب من محرّكات البحث إزالتها.
+          ستتوقف الشجرة عن الظهور للعموم فورا، وسنطلب من محركات البحث إزالتها.
         </p>
 
         <div className={styles.honestBlock}>
-          لكن إذا كانت أجزاءٌ من شجرتك قد أُضيفت إلى مجموعات عائلاتٍ أخرى، فستبقى لديهم كنسخةٍ محفوظة،
-          ولن يختفي تلقائيّاً ما سبق أن حفظته محرّكاتُ البحث أو أرشيف الإنترنت.
+          لكن إذا كانت أجزاء من شجرتك قد أضيفت إلى مجموعات عائلات أخرى، فستبقى لديهم كنسخة محفوظة،
+          ولن يختفي تلقائيا ما سبق أن حفظته محركات البحث أو أرشيف الإنترنت.
         </div>
 
         {reportHref && (
@@ -75,9 +75,9 @@ export function MakePrivateDialog({
               </svg>
             </span>
             <span className={styles.reportText}>
-              <span className={styles.reportTitle}>طلب إزالةٍ نهائيّة</span>
+              <span className={styles.reportTitle}>طلب إزالة نهائية</span>
               <span className={styles.reportSub}>
-                إن كانت هناك معلوماتٌ يجب إزالتها من كلّ مكانٍ لأجل الخصوصيّة
+                إن كانت هناك معلومات يجب إزالتها من كل مكان لأجل الخصوصية
               </span>
             </span>
             <span className={styles.reportArrow} aria-hidden="true">
@@ -88,10 +88,10 @@ export function MakePrivateDialog({
 
         <div className={styles.actions}>
           <button type="button" className={styles.confirm} onClick={onConfirm} disabled={loading}>
-            {loading ? 'جارٍ الإيقاف…' : 'إيقاف العرض'}
+            {loading ? 'جار الإيقاف…' : 'إيقاف العرض'}
           </button>
           <button type="button" className={styles.cancel} onClick={onClose} disabled={loading}>
-            تراجُع
+            تراجع
           </button>
         </div>
       </div>

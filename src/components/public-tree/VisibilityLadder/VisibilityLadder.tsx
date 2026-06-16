@@ -31,18 +31,18 @@ interface LevelDef {
 const LEVELS: LevelDef[] = [
   {
     level: 'private',
-    label: 'خاصّة — للأعضاء فقط',
-    desc: 'لا يراها إلّا مَن تدعوهم إلى مساحة العائلة. هذا هو الوضع الافتراضيّ.',
+    label: 'خاصة — للأعضاء فقط',
+    desc: 'لا يراها إلا من تدعوهم إلى مساحة العائلة. هذا هو الوضع الافتراضي.',
   },
   {
     level: 'link',
-    label: 'عامّة عبر الرابط',
-    desc: 'يستطيع مَن يملك الرابط مشاهدتها، ولا تظهر في نتائج البحث. خطوةٌ أولى آمنة.',
+    label: 'عامة عبر الرابط',
+    desc: 'يستطيع من يملك الرابط مشاهدتها، ولا تظهر في نتائج البحث. خطوة أولى آمنة.',
   },
   {
     level: 'search',
-    label: 'عامّة وتظهر في البحث',
-    desc: 'قد تظهر شجرة العائلة في نتائج Google. قرارٌ يصعب التراجع عنه تماماً — يمرّ بمراجعةٍ وتنبيه.',
+    label: 'عامة وتظهر في البحث',
+    desc: 'قد تظهر شجرة العائلة في نتائج Google. قرار يصعب التراجع عنه تماما — يمر بمراجعة وتنبيه.',
     further: true,
   },
 ];
@@ -68,7 +68,7 @@ export function VisibilityLadder({
     <div className={clsx(styles.panel, className)}>
       <div className={styles.header}>
         <div className={styles.kicker}>النشر والظهور · للمسؤول فقط</div>
-        <h3 className={styles.title}>مَن يستطيع رؤية شجرة العائلة؟</h3>
+        <h3 className={styles.title}>من يستطيع رؤية شجرة العائلة؟</h3>
       </div>
 
       <div className={styles.ladder} role="radiogroup" aria-label="مستوى الظهور">
@@ -91,9 +91,9 @@ export function VisibilityLadder({
                 <span className={styles.label}>
                   {def.label}
                   {def.level === 'private' && active && (
-                    <span className={styles.currentTag}>الحالة الحاليّة</span>
+                    <span className={styles.currentTag}>الحالة الحالية</span>
                   )}
-                  {def.further && <span className={styles.furtherTag}>خطوةٌ أبعد</span>}
+                  {def.further && <span className={styles.furtherTag}>خطوة أبعد</span>}
                 </span>
                 <span className={styles.desc}>{def.desc}</span>
               </span>
@@ -119,11 +119,11 @@ export function VisibilityLadder({
         </span>
         <span className={styles.reuseText}>
           <span className={styles.reuseLabel}>
-            السماح للآخرين بضمّ هذه الشجرة إلى مجموعاتهم
-            <span className={styles.seamTag}>يُفعَّل مع ميزة المجموعات لاحقاً</span>
+            السماح للآخرين بضم هذه الشجرة إلى مجموعاتهم
+            <span className={styles.seamTag}>يفعل مع ميزة المجموعات لاحقا</span>
           </span>
           <span className={styles.reuseHint}>
-            (غير مفعّل افتراضيّاً) — «أن يُشاهَد» شيء، و«أن يُعاد استخدامه» في موادّ الآخرين شيءٌ آخر.
+            (غير مفعل افتراضيا) — «أن يشاهد» شيء، و«أن يعاد استخدامه» في مواد الآخرين شيء آخر.
           </span>
         </span>
       </label>

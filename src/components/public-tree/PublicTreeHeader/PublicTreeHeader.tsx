@@ -8,7 +8,7 @@ import styles from './PublicTreeHeader.module.css';
 export interface PublicTreeHeaderProps {
   /** Family / tree display name (e.g. "عائلة السعيد"). */
   familyName: string;
-  /** Optional one-line subtitle (e.g. "حلب · ٦ أجيال موثّقة"). */
+  /** Optional one-line subtitle (e.g. "حلب · ٦ أجيال موثقة"). */
   subtitle?: string;
   /** Currently selected calendar preference. Controlled. */
   calendar: CalendarPreference;

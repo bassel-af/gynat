@@ -128,30 +128,30 @@ export function PublishCheckpoint({
               </svg>
             </div>
             <h2 id="checkpoint-title" className={styles.zeroTitle}>
-              جاهزةٌ للنشر
+              جاهزة للنشر
             </h2>
             <p className={styles.zeroLead}>
-              لا يوجد أفرادٌ أحياء سيظهرون للعموم في هذه الشجرة — جميع مَن فيها متوفّون.
-              لم يبقَ سوى تأكيدُ النشر.
+              لا يوجد أفراد أحياء سيظهرون للعموم في هذه الشجرة — جميع من فيها متوفون.
+              لم يبق سوى تأكيد النشر.
             </p>
           </div>
         ) : (
           <>
             <div className={styles.head}>
-              <div className={styles.kicker}>مراجعةٌ قبل النشر</div>
+              <div className={styles.kicker}>مراجعة قبل النشر</div>
               <h2 id="checkpoint-title" className={styles.title}>
                 الأشخاص الأحياء في الشجرة
               </h2>
               <p className={styles.lead}>
-                هؤلاء أكثر مَن قد يتأثّر بالنشر. راجِعهم قبل المتابعة — وإن وجدتَ خطأً، صحِّحه الآن:
-                ضَع علامة «متوفّى»، أو «خاصّ» على مَن لا تريد عرضه.
+                هؤلاء أكثر من قد يتأثر بالنشر. راجعهم قبل المتابعة — وإن وجدت خطأ، صححه الآن:
+                ضع علامة «متوفى»، أو «خاص» على من لا تريد عرضه.
               </p>
             </div>
 
             <div className={styles.count}>
               <span className={styles.countNum}>{remainingCount}</span>
               <span className={styles.countText}>
-                سيُعرض {remainingCount} فرداً حيّاً للعموم (بأسمائهم وصِلاتهم، دون تاريخ ميلادهم الدقيق).
+                سيعرض {remainingCount} فردا حيا للعموم (بأسمائهم وصلاتهم، دون تاريخ ميلادهم الدقيق).
               </span>
             </div>
 
@@ -162,7 +162,7 @@ export function PublishCheckpoint({
                   <path d="M20 20L16.5 16.5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
                 </svg>
                 <input
-                  placeholder="ابحث عن اسمٍ للوصول إليه بسرعة…"
+                  placeholder="ابحث عن اسم للوصول إليه بسرعة…"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   aria-label="بحث عن شخص"
@@ -178,7 +178,7 @@ export function PublishCheckpoint({
                       <span className={styles.groupIcon} aria-hidden="true">
                         ⚑
                       </span>
-                      يحتاجون انتباهاً — بلا تاريخ ميلاد
+                      يحتاجون انتباها — بلا تاريخ ميلاد
                     </div>
                     <span className={styles.groupCount}>{filteredAttention.length} أفراد</span>
                   </div>
@@ -250,7 +250,7 @@ export function PublishCheckpoint({
             disabled={!canPublish}
             onClick={onPublish}
           >
-            {loading ? 'جارٍ النشر…' : 'نشر الشجرة'}
+            {loading ? 'جار النشر…' : 'نشر الشجرة'}
           </button>
           <button type="button" className={styles.cancel} onClick={onClose} disabled={loading}>
             إلغاء
@@ -258,7 +258,7 @@ export function PublishCheckpoint({
           {!phraseMatches && (
             <span className={styles.hint}>
               <span className={styles.hintDot} />
-              الزرّ يبقى مُعطّلاً حتّى تكتب اسم العائلة
+              الزر يبقى معطلا حتى تكتب اسم العائلة
             </span>
           )}
         </div>
@@ -289,10 +289,10 @@ function PersonChip({
       </div>
       <div className={styles.chipActions}>
         <button type="button" className={styles.miniBtn} onClick={() => onMarkDeceased?.(person.id)}>
-          متوفّى
+          متوفى
         </button>
         <button type="button" className={styles.miniBtn} onClick={() => onMarkPrivate?.(person.id)}>
-          خاصّ
+          خاص
         </button>
       </div>
     </div>

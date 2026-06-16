@@ -25,17 +25,17 @@ export interface ReportFormProps {
 }
 
 const REASONS = [
-  'ظهور بيانات شخصٍ حيّ دون موافقته',
-  'معلوماتٌ غير صحيحة',
+  'ظهور بيانات شخص حي دون موافقته',
+  'معلومات غير صحيحة',
   'محتوى مسيء',
-  'سببٌ آخر',
+  'سبب آخر',
 ] as const;
 
 /** Compose the form fields into the single `reason` the endpoint expects. */
 function composeReason(category: string, person: string, details: string): string {
   return [
     category.trim(),
-    person.trim() ? `الفرد المتأثّر: ${person.trim()}` : '',
+    person.trim() ? `الفرد المتأثر: ${person.trim()}` : '',
     details.trim(),
   ]
     .filter(Boolean)
@@ -64,10 +64,10 @@ export function ReportForm({
     return (
       <div className={clsx(styles.form, className)}>
         <div className={styles.head}>
-          <h2 className={styles.title}>تمّ استلام بلاغك</h2>
+          <h2 className={styles.title}>تم استلام بلاغك</h2>
           <p className={styles.sub}>
-            شكراً لك. سيراجع المشرفون بلاغك ويتّخذون الإجراء المناسب. إن تركت وسيلة
-            تواصلٍ فقد نعود إليك.
+            شكرا لك. سيراجع المشرفون بلاغك ويتخذون الإجراء المناسب. إن تركت وسيلة
+            تواصل فقد نعود إليك.
           </p>
         </div>
       </div>
@@ -99,7 +99,7 @@ export function ReportForm({
       <div className={styles.head}>
         <h2 className={styles.title}>الإبلاغ عن محتوى</h2>
         <p className={styles.sub}>
-          إن ظهرت بياناتُك أو بيانات أحد أقاربك في شجرةٍ عامّة دون موافقة، أخبِرنا وسنراجع الأمر.
+          إن ظهرت بياناتك أو بيانات أحد أقاربك في شجرة عامة دون موافقة، أخبرنا وسنراجع الأمر.
           لا حاجة لتسجيل الدخول.
         </p>
       </div>
@@ -107,7 +107,7 @@ export function ReportForm({
       <div className={styles.body}>
         <div className={styles.row}>
           <label className={styles.label} htmlFor="report-reason">
-            ما الذي تُبلِغ عنه؟
+            ما الذي تبلغ عنه؟
           </label>
           <select
             id="report-reason"
@@ -129,7 +129,7 @@ export function ReportForm({
 
         <div className={styles.row}>
           <label className={styles.label} htmlFor="report-person">
-            مَن الفرد المتأثّر؟
+            من الفرد المتأثر؟
           </label>
           <input
             id="report-person"
@@ -144,13 +144,13 @@ export function ReportForm({
 
         <div className={styles.row}>
           <label className={styles.label} htmlFor="report-contact">
-            وسيلة تواصلٍ (اختياريّة)
+            وسيلة تواصل (اختيارية)
           </label>
           <input
             id="report-contact"
             name="contact"
             className={styles.input}
-            placeholder="بريدٌ إلكترونيّ لنردّ عليك"
+            placeholder="بريد إلكتروني لنرد عليك"
             autoComplete="off"
             maxLength={200}
             disabled={submitting}
@@ -159,7 +159,7 @@ export function ReportForm({
 
         <div className={styles.row}>
           <label className={styles.label} htmlFor="report-details">
-            تفاصيل إضافيّة
+            تفاصيل إضافية
           </label>
           <textarea
             id="report-details"
@@ -180,7 +180,7 @@ export function ReportForm({
 
         <div className={styles.actions}>
           <button type="submit" className={styles.submit} disabled={submitting}>
-            {submitting ? 'جارٍ الإرسال…' : 'إرسال البلاغ'}
+            {submitting ? 'جار الإرسال…' : 'إرسال البلاغ'}
           </button>
           {onCancel && (
             <button

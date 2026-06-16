@@ -132,7 +132,7 @@ export function PublishFlow({
     const level: Exclude<VisibilityLevel, 'private'> = pendingLevel === 'search' ? 'search' : 'link';
     const ok = await runAction(
       onPublishConfirm && (() => onPublishConfirm(level, familyName)),
-      'تعذّر نشر الشجرة',
+      'تعذر نشر الشجرة',
     );
     if (!ok) return; // stay on checkpoint
     setPublishedLevel(level);
@@ -140,7 +140,7 @@ export function PublishFlow({
   };
 
   const handleMakePrivate = async () => {
-    const ok = await runAction(onMakePrivateConfirm, 'تعذّر جعل الشجرة خاصّة');
+    const ok = await runAction(onMakePrivateConfirm, 'تعذر جعل الشجرة خاصة');
     if (!ok) return;
     onClose();
   };
@@ -153,7 +153,7 @@ export function PublishFlow({
   const applyManageChange = async (level: Exclude<VisibilityLevel, 'private'>) => {
     const ok = await runAction(
       onChangeVisibility && (() => onChangeVisibility(level)),
-      'تعذّر تحديث الإعدادات',
+      'تعذر تحديث الإعدادات',
     );
     if (!ok) return;
     setPendingLevel(level);

@@ -33,13 +33,13 @@ export default function ReportPageClient({ slug, familyName }: ReportPageClientP
       });
       if (!res.ok) {
         if (res.status === 429) {
-          throw new Error('لقد أرسلت بلاغاتٍ كثيرة. الرجاء المحاولة بعد قليل.');
+          throw new Error('لقد أرسلت بلاغات كثيرة. الرجاء المحاولة بعد قليل.');
         }
-        throw new Error('تعذّر إرسال البلاغ. الرجاء المحاولة مرّةً أخرى.');
+        throw new Error('تعذر إرسال البلاغ. الرجاء المحاولة مرة أخرى.');
       }
       setSubmitted(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'تعذّر إرسال البلاغ.');
+      setError(e instanceof Error ? e.message : 'تعذر إرسال البلاغ.');
     } finally {
       setSubmitting(false);
     }

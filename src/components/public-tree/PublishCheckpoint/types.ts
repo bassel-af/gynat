@@ -12,7 +12,7 @@ export interface CheckpointPerson {
   id: string;
   name: string;
   gender: 'male' | 'female';
-  /** Short meta line under the name (e.g. "وُلد ١٩٧٢" or an attention reason). */
+  /** Short meta line under the name (e.g. "ولد ١٩٧٢" or an attention reason). */
   meta: string;
   /** True when the person has no birth date AND no deceased mark. */
   needsAttention?: boolean;

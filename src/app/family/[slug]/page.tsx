@@ -55,7 +55,7 @@ export default async function PublicFamilyTreePage({ params }: PageParams) {
       <section className={styles.srOnly} aria-hidden="false">
         <h1>{familyName}</h1>
         <p>شجرة عائلة {familyName}</p>
-        <p>{payload.names.length} شخصًا موثّقًا</p>
+        <p>{payload.names.length} شخصا موثقا</p>
         <nav aria-label="أفراد العائلة">
           <ul>
             {payload.names.map((p) => (
@@ -69,7 +69,7 @@ export default async function PublicFamilyTreePage({ params }: PageParams) {
       <PublicTreePageClient
         data={payload.data}
         familyName={familyName}
-        subtitle={`${payload.names.length} شخصًا موثّقًا`}
+        subtitle={`${payload.names.length} شخصا موثقا`}
         reportHref={`/family/${slug}/report`}
       />
     </>

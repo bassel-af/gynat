@@ -56,7 +56,7 @@ export function PublicGrowthCTA({
         </button>
       )}
       <span className={styles.eyebrow}>أنشئ شجرتك</span>
-      <p className={styles.line}>وثّق نسب عائلتك واحفظ أسماء أجدادك</p>
+      <p className={styles.line}>وثق نسب عائلتك واحفظ أسماء أجدادك</p>
       <div className={styles.actions}>
         <Link href={startHref} className={styles.primary}>
           ابدأ شجرة عائلتك

@@ -17,12 +17,12 @@ export interface PublishSuccessProps {
 
 const LEVEL_COPY: Record<Exclude<VisibilityLevel, 'private'>, { title: string; note: string }> = {
   link: {
-    title: 'أصبحت شجرتك متاحةً عبر الرابط',
-    note: 'يستطيع مَن يملك هذا الرابط مشاهدتها. لا تظهر في نتائج البحث.',
+    title: 'أصبحت شجرتك متاحة عبر الرابط',
+    note: 'يستطيع من يملك هذا الرابط مشاهدتها. لا تظهر في نتائج البحث.',
   },
   search: {
-    title: 'نُشِرت شجرتك وقد تظهر في البحث',
-    note: 'شارِك الرابط الآن. قد تبدأ بالظهور في نتائج Google خلال الأيّام القادمة.',
+    title: 'نشرت شجرتك وقد تظهر في البحث',
+    note: 'شارك الرابط الآن. قد تبدأ بالظهور في نتائج Google خلال الأيام القادمة.',
   },
 };
 
@@ -61,7 +61,7 @@ export function PublishSuccess({ level, shareUrl, onDone, className }: PublishSu
       <p className={styles.note}>{copy.note}</p>
 
       <div className={styles.linkRow}>
-        <span className={styles.linkLabel}>الرابط العامّ</span>
+        <span className={styles.linkLabel}>الرابط العام</span>
         <div className={styles.linkBox}>
           <code className={styles.linkValue} dir="ltr">
             {shareUrl}
@@ -74,7 +74,7 @@ export function PublishSuccess({ level, shareUrl, onDone, className }: PublishSu
 
       <div className={styles.actions}>
         <button type="button" className={styles.primary} onClick={onDone}>
-          تمّ
+          تم
         </button>
       </div>
     </div>

@@ -86,7 +86,7 @@ export const SAMPLE_PUBLIC_TREE: GedcomData = {
       givenName: 'يوسف',
       surname: 'السعيد',
       sex: 'M',
-      kunya: 'أبو محمّد',
+      kunya: 'أبو محمد',
       // living — server cleared birth fields
       isDeceased: false,
       familyAsChild: 'f2',
