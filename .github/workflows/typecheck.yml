@@ -1,0 +1,32 @@
+name: Typecheck
+
+# Guards against TypeScript type drift across the whole project — including
+# test files, which `pnpm test` (Vitest) transpiles WITHOUT type-checking.
+# Without this gate, broken types in src/test/** stay invisible until someone
+# manually runs `tsc`, and silently accumulate over time.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      # `pnpm install` runs the `postinstall` script (prisma generate), which
+      # produces the generated Prisma client that the type-checker depends on.
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm typecheck
