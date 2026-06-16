@@ -293,6 +293,13 @@ The public tree page already sets the correct per-visibility signal: a "findable
 
 *Why deferred:* the core publish/visibility behavior and the correct index/noindex signals are in place; this only improves the **speed and reliability** of getting into and out of search, not correctness. The honest reversibility limits in §1.6 hold regardless (removal is never instant/guaranteed).
 
-### 8.2 Public report page
+### 8.2 Public report page — ✅ DONE (2026-06-16)
 
-The report **endpoint** exists (`POST /api/family/[slug]/report` — public, no-account, rate-limited → notifies the workspace admins) and a `ReportForm` component is built, but there is **no public report page** wiring them together yet. So the "request permanent removal" link in the make-private dialog (and any "report this tree" affordance on the public viewer) currently has no destination. **Follow-up:** add a public, no-account report page (e.g. `/family/[slug]/report`) that renders `ReportForm` and posts to the endpoint, then point the make-private dialog + the public viewer footer at it. *Why deferred:* the endpoint and form already exist and the removal action is admin-driven; wiring the page is a small, self-contained follow-up. (See §1.5 / §7.7 for the report path.)
+The report **endpoint** (`POST /api/family/[slug]/report` — public, no-account, rate-limited → notifies the workspace admins) and the `ReportForm` component are now wired together by a public, no-account report page at **`/family/[slug]/report`**:
+
+- The page is deny-by-default (only a *public* tree's slug renders it; unknown/private → 404, no existence leak — mirroring the endpoint) and `noindex`.
+- `ReportForm` now collects the complaint and composes it into the `{ reason, reporterContact }` payload; a client container POSTs it (plain `fetch`, no auth) and shows busy / error / thank-you states.
+- The make-private dialog's "request permanent removal" link now points at `/family/<slug>/report` (threaded through `PublishFlow` → `PublishFlowContainer`), and the public viewer carries a discreet "الإبلاغ عن هذه الشجرة" footer link to the same page.
+- **On submit, the report is emailed to the platform inbox (`contact@gynat.com`)** — a branded RTL email (modeled on the invitation email) containing the family name, the complaint, the reporter's optional contact, a link to view the public tree, and a technical reference (public slug + tree/workspace IDs) for locating it in the backend. Mail is best-effort: a delivery failure never fails the report. A `public_tree_report` notification is still recorded against the workspace admins as a durable trail.
+
+**Decision (2026-06-16):** there is **deliberately no admin-facing review UI or in-app takedown button.** Reports are reviewed and handled **manually in the backend** by the platform owner, prompted by the `contact@gynat.com` email. The removal action stays admin-driven — a report never auto-takes-down (§1.5, §7.7). (The backend `POST /api/admin/takedown` global-takedown capability remains the manual escape hatch; §1.11.)

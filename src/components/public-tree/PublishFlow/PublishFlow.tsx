@@ -39,6 +39,8 @@ export interface PublishFlowProps {
   onChangeVisibility?: (level: Exclude<VisibilityLevel, 'private'>) => Promise<void>;
   /** Real make-private action. When omitted, the dialog just closes (static demo). */
   onMakePrivateConfirm?: () => Promise<void>;
+  /** Where the make-private dialog's "request permanent removal" link points. */
+  reportHref?: string;
 }
 
 type Step = 'manage' | 'choose' | 'checkpoint' | 'success' | 'makePrivate';
@@ -68,6 +70,7 @@ export function PublishFlow({
   onPublishConfirm,
   onChangeVisibility,
   onMakePrivateConfirm,
+  reportHref,
 }: PublishFlowProps) {
   const [step, setStep] = useState<Step>(() => initialStep(currentLevel));
   // The level the admin is selecting in the ladder (starts at current).
@@ -195,6 +198,7 @@ export function PublishFlow({
         isOpen
         onClose={() => setStep(initialStep(currentLevel))}
         onConfirm={handleMakePrivate}
+        reportHref={reportHref}
       />
     );
   }

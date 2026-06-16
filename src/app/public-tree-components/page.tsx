@@ -180,6 +180,7 @@ export default function PublicTreeComponentsPage() {
             isOpen={makePrivateOpen}
             onClose={() => setMakePrivateOpen(false)}
             onConfirm={() => setMakePrivateOpen(false)}
+            reportHref="/family/al-saeed/report"
           />
         </Section>
 

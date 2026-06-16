@@ -8,6 +8,9 @@ import {
   clientIpKey,
 } from '@/lib/api/rate-limit'
 import { loadPublicTreeBySlug } from '@/lib/tree/public-serve'
+import { sendEmail } from '@/lib/email/transport'
+import { buildReportEmail } from '@/lib/email/templates/report'
+import { SITE_CONTACT_EMAIL } from '@/lib/site'
 
 type RouteParams = { params: Promise<{ slug: string }> }
 
@@ -32,7 +35,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
-  // Notify the workspace admins (they own the unpublish action, PRD §1.9).
+  const familyName = record.nameAr || record.workspaceNameAr
+
+  // Record the report against the workspace admins (a durable trail, PRD §1.9).
   const admins = await prisma.workspaceMembership.findMany({
     where: { workspaceId: record.workspaceId, role: 'workspace_admin' },
     select: { userId: true },
@@ -51,6 +56,24 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         },
       })),
     })
+  }
+
+  // Email the platform inbox so a human can review and act manually in the
+  // backend (PRD §8.2). Best-effort: a mail failure must never fail the report.
+  try {
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:4000'
+    const email = buildReportEmail({
+      familyName,
+      reason: parsed.data.reason,
+      reporterContact: parsed.data.reporterContact ?? null,
+      publicUrl: `${siteUrl}/family/${record.publicSlug}`,
+      publicSlug: record.publicSlug,
+      treeId: record.treeId,
+      workspaceId: record.workspaceId,
+    })
+    await sendEmail({ to: SITE_CONTACT_EMAIL, ...email })
+  } catch (error) {
+    console.error('Failed to send public-tree report email:', error)
   }
 
   // Always return a neutral success — don't reveal admin count or processing.

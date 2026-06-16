@@ -29,7 +29,7 @@ export function MakePrivateDialog({
   isOpen,
   onClose,
   onConfirm,
-  reportHref = '/report',
+  reportHref,
   loading = false,
   className,
 }: MakePrivateDialogProps) {
@@ -61,28 +61,30 @@ export function MakePrivateDialog({
           ولن يختفي تلقائيّاً ما سبق أن حفظته محرّكاتُ البحث أو أرشيف الإنترنت.
         </div>
 
-        <Link href={reportHref} className={styles.reportLink}>
-          <span className={styles.reportIcon} aria-hidden="true">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M4 4v16M4 5h12l-2 4 2 4H4"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </span>
-          <span className={styles.reportText}>
-            <span className={styles.reportTitle}>طلب إزالةٍ نهائيّة</span>
-            <span className={styles.reportSub}>
-              إن كانت هناك معلوماتٌ يجب إزالتها من كلّ مكانٍ لأجل الخصوصيّة
+        {reportHref && (
+          <Link href={reportHref} className={styles.reportLink}>
+            <span className={styles.reportIcon} aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M4 4v16M4 5h12l-2 4 2 4H4"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
             </span>
-          </span>
-          <span className={styles.reportArrow} aria-hidden="true">
-            ←
-          </span>
-        </Link>
+            <span className={styles.reportText}>
+              <span className={styles.reportTitle}>طلب إزالةٍ نهائيّة</span>
+              <span className={styles.reportSub}>
+                إن كانت هناك معلوماتٌ يجب إزالتها من كلّ مكانٍ لأجل الخصوصيّة
+              </span>
+            </span>
+            <span className={styles.reportArrow} aria-hidden="true">
+              ←
+            </span>
+          </Link>
+        )}
 
         <div className={styles.actions}>
           <button type="button" className={styles.confirm} onClick={onConfirm} disabled={loading}>

@@ -70,6 +70,7 @@ export default async function PublicFamilyTreePage({ params }: PageParams) {
         data={payload.data}
         familyName={familyName}
         subtitle={`${payload.names.length} شخصًا موثّقًا`}
+        reportHref={`/family/${slug}/report`}
       />
     </>
   );

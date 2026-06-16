@@ -1,6 +1,7 @@
 import { AcknowledgmentModal } from '@/components/AcknowledgmentModal/AcknowledgmentModal';
 import { FigureCluster } from '@/components/heritage/FigureCluster';
 import LandingRedirector from './LandingRedirector';
+import { SITE_CONTACT_EMAIL } from '@/lib/site';
 import styles from './page.module.css';
 
 const faqItems = [
@@ -145,7 +146,7 @@ export default function Home() {
 
         <footer className={styles.footer}>
           <div>
-            <a href="mailto:contact@gynat.com">contact@gynat.com</a>
+            <a href={`mailto:${SITE_CONTACT_EMAIL}`}>{SITE_CONTACT_EMAIL}</a>
           </div>
           <div className={styles.footerMobileLink}>
             <a href="/islamic-gedcom">مرجع GEDCOM الإسلامي</a>
@@ -314,7 +315,7 @@ export default function Home() {
             <a href="/islamic-gedcom" className={styles.siteFooterLink}>مرجع GEDCOM الإسلامي</a>
             <a href="/auth/login" className={styles.siteFooterLink}>تسجيل الدخول</a>
             <a href="/auth/signup" className={styles.siteFooterLink}>إنشاء حساب</a>
-            <a href="mailto:contact@gynat.com" className={styles.siteFooterLink}>contact@gynat.com</a>
+            <a href={`mailto:${SITE_CONTACT_EMAIL}`} className={styles.siteFooterLink}>{SITE_CONTACT_EMAIL}</a>
           </nav>
           <p className={styles.siteFooterBrand}>جينات — لتوثيق شجرة العائلة والأنساب</p>
         </div>

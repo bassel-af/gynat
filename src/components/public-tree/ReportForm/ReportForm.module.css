@@ -104,6 +104,10 @@
   box-shadow: 0 0 0 3px rgba(200, 168, 101, 0.1);
 }
 
+.alertSlot {
+  margin-bottom: var(--space-7);
+}
+
 .actions {
   display: flex;
   gap: var(--space-4);

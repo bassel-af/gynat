@@ -55,6 +55,48 @@
   }
 }
 
+/* Report affordance — a small, discreet glass pill, bottom-center so it clears
+   the zoom controls (bottom-left) and the growth CTA (bottom-right). Quiet at
+   rest so it never disturbs the tree; legible enough for someone who needs it. */
+.reportLink {
+  position: absolute;
+  bottom: var(--space-4);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--heritage-font-body);
+  font-size: var(--font-size-xs);
+  color: var(--heritage-text-muted);
+  text-decoration: none;
+  padding: var(--space-2) var(--space-5);
+  border-radius: var(--heritage-radius-pill);
+  background: var(--heritage-glass-bg);
+  border: 1px solid var(--heritage-glass-border);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: color var(--transition-base), background var(--transition-base),
+    border-color var(--transition-base);
+}
+
+.reportIcon {
+  color: var(--heritage-gold);
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.reportLink:hover {
+  color: var(--heritage-parchment);
+  background: var(--heritage-glass-bg-strong);
+  border-color: var(--heritage-gold);
+}
+
+.reportLink:hover .reportIcon {
+  opacity: 1;
+}
+
 /* Desktop shows the docked card; mobile shows the slim bar. */
 .ctaMobile {
   display: none;
@@ -77,6 +119,12 @@
     left: var(--space-5);
     right: var(--space-5);
     width: auto;
+  }
+
+  /* While the growth bar is shown, lift the report pill clear above it so the
+     two never overlap. Once the visitor dismisses the bar, it drops back down. */
+  .reportLinkAboveCta {
+    bottom: calc(var(--space-7) + 72px);
   }
 }
 

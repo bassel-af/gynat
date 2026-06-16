@@ -92,6 +92,9 @@ export function PublishFlowContainer({
   const shareUrl = effectiveSlug
     ? `${window.location.origin}/family/${effectiveSlug}`
     : '';
+  // The public, no-account report page for this tree (PRD §8.2) — surfaced from
+  // the make-private dialog's "request permanent removal" link.
+  const reportHref = effectiveSlug ? `/family/${effectiveSlug}/report` : undefined;
 
   return (
     <PublishFlow
@@ -101,6 +104,7 @@ export function PublishFlowContainer({
       currentLevel={preview.currentLevel}
       checkpointData={preview.checkpoint}
       shareUrl={shareUrl}
+      reportHref={reportHref}
       onPublishConfirm={async (level, confirmationPhrase) => {
         const body = await patchVisibility(level, confirmationPhrase);
         if (body?.data?.publicSlug) setPublishedSlug(body.data.publicSlug);

@@ -15,7 +15,13 @@ vi.mock('@/lib/tree/public-serve', () => ({
   loadPublicTreeBySlug: (...a: unknown[]) => mockLoadPublicTreeBySlug(...a),
 }));
 
+const mockSendEmail = vi.fn().mockResolvedValue({});
+vi.mock('@/lib/email/transport', () => ({
+  sendEmail: (...a: unknown[]) => mockSendEmail(...a),
+}));
+
 import { POST } from '@/app/api/family/[slug]/report/route';
+import { publicReportLimiter } from '@/lib/api/rate-limit';
 
 function req(body: unknown) {
   return new Request('http://localhost/api/family/al-saeed/report', {
@@ -31,11 +37,15 @@ const RECORD = {
   workspaceId: 'ws-1',
   publicSlug: 'al-saeed',
   visibility: 'public_listed',
+  nameAr: 'السعيد',
+  workspaceNameAr: 'عائلة السعيد',
 };
 
 beforeEach(() => {
   vi.clearAllMocks();
+  publicReportLimiter.reset();
   mockNotificationCreateMany.mockResolvedValue({});
+  mockSendEmail.mockResolvedValue({});
   mockLoadPublicTreeBySlug.mockResolvedValue(RECORD);
   mockMembershipFindMany.mockResolvedValue([{ userId: 'admin-1' }, { userId: 'admin-2' }]);
 });
@@ -71,5 +81,41 @@ describe('POST report', () => {
     const res = await POST(req({ reason: 'valid reason here' }), { params });
     expect(res.status).toBe(201);
     expect(mockNotificationCreateMany).not.toHaveBeenCalled();
+  });
+
+  test('emails the platform inbox with the report details', async () => {
+    const res = await POST(
+      req({ reason: 'this exposes a living person', reporterContact: 'me@example.com' }),
+      { params },
+    );
+    expect(res.status).toBe(201);
+    expect(mockSendEmail).toHaveBeenCalledTimes(1);
+    const arg = mockSendEmail.mock.calls[0][0];
+    expect(arg.to).toBe('contact@gynat.com');
+    expect(arg.subject).toContain('السعيد');
+    expect(arg.html).toContain('this exposes a living person');
+    expect(arg.html).toContain('me@example.com');
+    // Includes the backend reference for manual handling.
+    expect(arg.text).toContain('al-saeed');
+  });
+
+  test('emails the inbox even when the tree has no admins', async () => {
+    mockMembershipFindMany.mockResolvedValue([]);
+    const res = await POST(req({ reason: 'valid reason here' }), { params });
+    expect(res.status).toBe(201);
+    expect(mockSendEmail).toHaveBeenCalledTimes(1);
+  });
+
+  test('a mail failure never fails the report (best-effort)', async () => {
+    mockSendEmail.mockRejectedValue(new Error('SMTP down'));
+    const res = await POST(req({ reason: 'valid reason here' }), { params });
+    expect(res.status).toBe(201);
+  });
+
+  test('does not email when the tree is not public/known', async () => {
+    mockLoadPublicTreeBySlug.mockResolvedValue(null);
+    const res = await POST(req({ reason: 'this exposes me' }), { params });
+    expect(res.status).toBe(404);
+    expect(mockSendEmail).not.toHaveBeenCalled();
   });
 });

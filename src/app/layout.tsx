@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Noto_Sans_Arabic, Reem_Kufi, IBM_Plex_Sans_Arabic, Aref_Ruqaa } from 'next/font/google';
 import Script from 'next/script';
 import { GlobalProviders } from './global-providers';
+import { SITE_CONTACT_EMAIL } from '@/lib/site';
 import './globals.css';
 
 const notoSansArabic = Noto_Sans_Arabic({
@@ -106,7 +107,7 @@ const organizationSchema = {
   inLanguage: 'ar',
   contactPoint: {
     '@type': 'ContactPoint',
-    email: 'contact@gynat.com',
+    email: SITE_CONTACT_EMAIL,
     contactType: 'customer support',
     availableLanguage: ['Arabic', 'English'],
   },
