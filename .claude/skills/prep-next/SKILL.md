@@ -112,7 +112,7 @@ On user confirmation:
 git add <specific files> && git commit -m "<message>" && git push
 ```
 
-Use specific file paths, not `git add .` (never blanket-stage). Do **not** use `--no-verify`. End the commit message with the `Co-Authored-By:` trailer the harness mandates for this repo; add no other author metadata.
+Use specific file paths, not `git add .` (never blanket-stage). Do **not** use `--no-verify`. Never add `Co-Authored-By` to the commit message.
 
 If a pre-commit hook fails, fix the underlying issue, re-stage, and create a NEW commit. Do not amend.
 

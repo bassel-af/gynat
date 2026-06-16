@@ -1,9 +1,9 @@
 # Product Requirements Document — Public Tree & Collections
 
-**Status**: Design agreed (decisions captured) — not yet planned for implementation
+**Status**: **Public Tree v1 — ✅ shipped (2026-06-16).** **Collections — ▶ next up: implementation planning starts now.** Design decisions for both captured below.
 **Audience**: Human developers, AI coding assistants
 **Created**: 2026-06-15
-**Revised**: 2026-06-15 — folded in decisions from a scenario gap review (§1.3, §1.7, §1.10, §1.11, §2.10); added build sequencing (§5); added implementation-planning decisions from the architect/security/designer team review (§7); added the public URL scheme (§7.11, later simplified to a single unguessable code for all public levels + a stable address across private round-trips)
+**Revised**: 2026-06-16 — Public Tree v1 shipped (visibility levels, public viewer, publish checkpoint, borrowed-branch protection, make-private + report path, public URL scheme); Collections is now the active next feature. Earlier revisions (2026-06-15): folded in scenario-gap decisions (§1.3, §1.7, §1.10, §1.11, §2.10); added build sequencing (§5); added architect/security/designer implementation decisions (§7); added the public URL scheme (§7.11, later simplified to a single unguessable code for all public levels + a stable address across private round-trips)
 
 This document captures the **decisions** for two related features — Public Tree and Collections — together with the **reasoning** behind each one, so future work understands not just *what* we chose but *why*. It deliberately stops short of technical implementation (schema, endpoints, components); that comes in planning.
 
@@ -218,8 +218,8 @@ Concretely: a public collection can only contain public trees; a borrowed privat
 - The **reuse opt-in** (§1.10) and the **going-private / report-and-takedown machinery** (§1.11) should be shaped early so Collections plug in rather than forcing a redo.
 
 **Rough order:**
-1. **Public Tree** — visibility levels, read-only public view, publish checkpoint, borrowed-branch protection, make-private + report. *Within-phase follow-ons:* server-rendered readable pages for real search ranking (§1.7), and platform-admin approval for search (§1.7).
-2. **Collections** — turn-on setting, extra trees, nesting, link/copy items, members-as-viewers (plus surfacing the join-code, §6), with "publish only public trees + warn" (§2.10) built last.
+1. **Public Tree** — ✅ **DONE (2026-06-16).** Shipped: the three visibility levels, the read-only public viewer at a separate auto-generated public URL (§7.11), the publish checkpoint (show-all-living + type-to-confirm, §1.3), borrowed-branch protection (§7.5), server-rendered public names list for search (§7.6), and the make-private + public report path (§8.2). *Deferred follow-ons (still open):* active sitemap submission / IndexNow removal (§8.1) and platform-admin approval for search listing (§1.7).
+2. **Collections** — ▶ **NEXT (active).** Turn-on setting, extra trees per workspace, nesting, link/copy items, members-as-viewers (plus surfacing the join-code, §6), with "publish only public trees + warn" (§2.10) built last. The multi-tree foundation was laid during Public Tree v1 (§7.9), so this slots on without a rebuild.
 
 ---
 

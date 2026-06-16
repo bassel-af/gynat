@@ -312,6 +312,10 @@ The GEDCOM file (`public/saeed-family.ged`):
 - `POST /api/workspaces/[id]/tree/rada-families/[radaFamilyId]/children` — add child to rada'a family
 - `DELETE /api/workspaces/[id]/tree/rada-families/[radaFamilyId]/children/[individualId]` — remove child from rada'a family
 
+**Public Tree API Routes** (`src/app/api/family/[slug]/`) — anonymous, deny-by-default public surface, separate from the member tree path:
+- `GET /api/family/[slug]/tree` — public (redacted) tree data for a published tree (404 if unknown/private)
+- `POST /api/family/[slug]/report` — public, no-account report; rate-limited per IP; records a `public_tree_report` notification for workspace admins AND emails `SITE_CONTACT_EMAIL` (best-effort, never blocks/fails the report) for manual admin review. Never auto-takes-down
+
 **Places API Route** (`src/app/api/workspaces/[id]/places/`):
 - `GET /api/workspaces/[id]/places?q=...` — search places (global seed + workspace custom)
 - `POST /api/workspaces/[id]/places` — create custom place for workspace
@@ -385,6 +389,10 @@ The GEDCOM file (`public/saeed-family.ged`):
 **Email** (`src/lib/email/`):
 - `transport.ts` — Nodemailer with Gmail SMTP
 - `templates/invite.ts` — Arabic RTL invitation email (HTML-escaped dynamic values, URL-validated links, header-injection-safe subjects)
+- `templates/report.ts` — Arabic RTL public-tree report alert (same obsidian/gold branding as invite); sent to `SITE_CONTACT_EMAIL` on a public-tree report, with the complaint, reporter contact, view-tree link, and slug/tree/workspace IDs for manual handling
+
+**Site** (`src/lib/site.ts`):
+- `SITE_CONTACT_EMAIL` — single source for the public contact / support address (also where public-tree reports are emailed); used by layout metadata, the landing footer, and the report route
 
 **Workspace utilities** (`src/lib/workspace/`):
 - `join-code.ts` — `crypto.randomBytes()` with 8 random characters (A-Z0-9), format: `SLUG_PREFIX-XXXXXXXX`
@@ -408,6 +416,8 @@ The GEDCOM file (`public/saeed-family.ged`):
 - `/invite/[id]` — invitation acceptance page
 - `/policy` — public policy page (Arabic only)
 - `/islamic-gedcom` — public reference page (مرجع GEDCOM الإسلامي): `@#DHIJRI@` calendar escape for Hijri dates, MARC/MARR/DIV Islamic marriage mappings, `_UMM_WALAD` (أم ولد flag on FAM), rada'a extensions (`_RADA_FAM`, `_RADA_WIFE`, `_RADA_HUSB`, `_RADA_CHIL`, `_RADA_FAMC`), `_KUNYA` (الكنية)
+- `/family/[slug]` — public, no-login read-only tree viewer for a published tree (Public Tree v1); deny-by-default (private/unknown slug → 404), SSR-crawlable names list, `noindex` unless `public_listed`; carries a discreet "report this tree" link (`PublicTreeViewer`)
+- `/family/[slug]/report` — public, no-account report page (`ReportPageClient` → `ReportForm`); deny-by-default; POSTs to the report endpoint. Linked from the viewer footer + the make-private dialog's "request permanent removal" link
 - `/auth/forgot-password` — password reset via Supabase Auth
 
 **Environment Variables** (see `.env.example`):
@@ -442,6 +452,9 @@ The GEDCOM file (`public/saeed-family.ged`):
 - JSX: `preserve` (Next.js handles transformation)
 - Module resolution: `bundler` mode
 - Next.js plugin enabled for enhanced type checking
+
+## Git commits
+Never add `Co-Authored-By` to commit messages.
 
 ## After editing files
 Do not run pnpm commands unless I ask to. pnpm dev is already running — do not start it.
