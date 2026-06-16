@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api/client';
-import { createClient } from '@/lib/supabase/client';
 import styles from './UserNav.module.css';
 
 interface UserProfile {
@@ -49,12 +48,6 @@ export function UserNav() {
     return () => window.removeEventListener('profile:updated', handleProfileUpdated);
   }, []);
 
-  async function handleLogout() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    window.location.href = '/auth/login';
-  }
-
   if (!loaded) return null;
 
   return (
@@ -73,48 +66,8 @@ export function UserNav() {
               {(profile.displayName || '?').charAt(0).toUpperCase()}
             </span>
           )}
-          <span className={styles.profileName}>{profile.displayName}</span>
         </Link>
       )}
-      <button
-        onClick={handleLogout}
-        className={styles.logoutButton}
-        aria-label="تسجيل الخروج"
-      >
-        <svg
-          className={styles.logoutIcon}
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          aria-hidden="true"
-        >
-          <path
-            d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M10 17l-5-5 5-5"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M15 12H5"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-        <span className={styles.logoutTooltip} role="tooltip" aria-hidden="true">
-          تسجيل الخروج
-        </span>
-      </button>
     </div>
   );
 }
