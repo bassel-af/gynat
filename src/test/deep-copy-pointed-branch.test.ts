@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'vitest';
 import type { GedcomData, Individual, Family } from '@/lib/gedcom/types';
-import { prepareDeepCopy, type DeepCopyResult } from '@/lib/tree/branch-pointer-deep-copy';
+import { prepareDeepCopy } from '@/lib/tree/branch-pointer-deep-copy';
 
 // ---------------------------------------------------------------------------
 // Fixture builder helpers
@@ -29,6 +29,7 @@ function makeIndividual(overrides: Partial<Individual> & { id: string }): Indivi
     isDeceased: false,
     isPrivate: false,
     familiesAsSpouse: [],
+    kunya: '',
     familyAsChild: null,
     ...overrides,
   };

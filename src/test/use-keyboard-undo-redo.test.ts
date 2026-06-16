@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useKeyboardUndoRedo } from '@/hooks/useKeyboardUndoRedo';
 
@@ -34,12 +34,12 @@ function fireKey(opts: {
 }
 
 describe('useKeyboardUndoRedo', () => {
-  let onUndo: ReturnType<typeof vi.fn>;
-  let onRedo: ReturnType<typeof vi.fn>;
+  let onUndo: Mock<() => void>;
+  let onRedo: Mock<() => void>;
 
   beforeEach(() => {
-    onUndo = vi.fn();
-    onRedo = vi.fn();
+    onUndo = vi.fn<() => void>();
+    onRedo = vi.fn<() => void>();
   });
 
   afterEach(() => {

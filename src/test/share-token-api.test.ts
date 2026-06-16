@@ -90,12 +90,6 @@ function makeGetRequest(url: string) {
   });
 }
 
-function makeDeleteRequest(url: string) {
-  return new NextRequest(url, {
-    method: 'DELETE',
-    headers: { authorization: 'Bearer valid-token' },
-  });
-}
 
 function mockAuth() {
   mockGetUser.mockResolvedValue({ data: { user: fakeUser }, error: null });
@@ -128,14 +122,6 @@ function mockShareableWorkspace() {
   });
 }
 
-function mockNoSharingWorkspace() {
-  mockWorkspaceFindUnique.mockResolvedValue({
-    id: wsId,
-    slug: 'al-saeed',
-    nameAr: 'آل السعيد',
-    branchSharingPolicy: 'none',
-  });
-}
 
 const routeParams = { params: Promise.resolve({ id: wsId }) };
 

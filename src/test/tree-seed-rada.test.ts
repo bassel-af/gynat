@@ -1,5 +1,5 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest'
-import type { GedcomData, Individual, Family, FamilyEvent, RadaFamily } from '@/lib/gedcom/types'
+import type { GedcomData, Individual, RadaFamily } from '@/lib/gedcom/types'
 import type { PrismaLike } from '@/lib/tree/seed-helpers'
 import { seedTreeFromGedcomData } from '@/lib/tree/seed-helpers'
 import { generateWorkspaceKey, wrapKey, decryptFieldNullable } from '@/lib/crypto/workspace-encryption'
@@ -22,7 +22,6 @@ function dec(value: unknown): string | null {
 // Helpers
 // ---------------------------------------------------------------------------
 
-const emptyEvent: FamilyEvent = { date: '', hijriDate: '', place: '', description: '', notes: '' }
 
 function makeTestIndividual(overrides: Partial<Individual> & { id: string }): Individual {
   return {
@@ -45,24 +44,12 @@ function makeTestIndividual(overrides: Partial<Individual> & { id: string }): In
     isDeceased: false,
     isPrivate: false,
     familiesAsSpouse: [],
+    kunya: '',
     familyAsChild: null,
     ...overrides,
   }
 }
 
-function makeTestFamily(overrides: Partial<Family> & { id: string }): Family {
-  return {
-    type: 'FAM',
-    husband: null,
-    wife: null,
-    children: [],
-    marriageContract: emptyEvent,
-    marriage: emptyEvent,
-    divorce: emptyEvent,
-    isDivorced: false,
-    ...overrides,
-  }
-}
 
 function makeTestRadaFamily(overrides: Partial<RadaFamily> & { id: string }): RadaFamily {
   return {

@@ -44,6 +44,7 @@ function makeIndividual(overrides: Partial<Individual> = {}): Individual {
     isDeceased: false,
     isPrivate: false,
     familiesAsSpouse: [],
+    kunya: '',
     familyAsChild: null,
     ...overrides,
   };
@@ -71,6 +72,7 @@ function makeFormData(overrides: Partial<IndividualFormData> = {}): IndividualFo
     deathDescription: '',
     deathNotes: '',
     deathHijriDate: '',
+    kunya: '',
     isDeceased: false,
     isPrivate: false,
     notes: '',

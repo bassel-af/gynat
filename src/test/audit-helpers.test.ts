@@ -1,4 +1,4 @@
-import { describe, test, expect } from 'vitest';
+import { describe, test, expect, beforeAll } from 'vitest';
 
 // ============================================================================
 // Tests for src/lib/tree/audit.ts — snapshot extraction + description builder

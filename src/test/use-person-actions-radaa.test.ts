@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import type { Individual, GedcomData, FamilyEvent } from '@/lib/gedcom/types';
+import type { Individual, GedcomData } from '@/lib/gedcom/types';
 
 // Mock apiFetch
 vi.mock('@/lib/api/client', () => ({
@@ -38,6 +38,7 @@ function makeIndividual(overrides: Partial<Individual> = {}): Individual {
     isDeceased: false,
     isPrivate: false,
     familiesAsSpouse: [],
+    kunya: '',
     familyAsChild: null,
     ...overrides,
   };

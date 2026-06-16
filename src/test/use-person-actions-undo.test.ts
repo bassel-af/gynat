@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import type { Individual, GedcomData, Family, FamilyEvent } from '@/lib/gedcom/types';
 import type { IndividualFormData } from '@/components/tree/IndividualForm/IndividualForm';
@@ -75,6 +75,7 @@ function makeFormData(overrides: Partial<IndividualFormData> = {}): IndividualFo
     deathDescription: '',
     deathNotes: '',
     deathHijriDate: '',
+    kunya: '',
     isDeceased: false,
     isPrivate: false,
     notes: '',
@@ -83,13 +84,13 @@ function makeFormData(overrides: Partial<IndividualFormData> = {}): IndividualFo
 }
 
 describe('usePersonActions — undo integration', () => {
-  let refreshTree: ReturnType<typeof vi.fn>;
-  let onPushUndo: ReturnType<typeof vi.fn>;
+  let refreshTree: Mock<() => Promise<void>>;
+  let onPushUndo: Mock<(entry: UndoEntry) => void>;
 
   beforeEach(() => {
     mockApiFetch.mockReset();
-    refreshTree = vi.fn().mockResolvedValue(undefined);
-    onPushUndo = vi.fn();
+    refreshTree = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+    onPushUndo = vi.fn<(entry: UndoEntry) => void>();
   });
 
   it('handleEditSubmit pushes undo entry with "تعديل: <name>" label after refresh success', async () => {

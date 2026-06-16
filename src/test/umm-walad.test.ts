@@ -135,7 +135,8 @@ describe('updateFamilySchema validates isUmmWalad with MARC/MARR mutual exclusio
 // ============================================================================
 describe('dbTreeToGedcomData maps isUmmWalad', () => {
   test('maps isUmmWalad from DB family to GedcomData family', () => {
-    const dbTree: DbTree = {
+    // Plaintext-string fixture; the decrypt adapter passes it through unchanged.
+    const dbTree = {
       id: 'tree1',
       workspaceId: 'ws1',
       individuals: [
@@ -146,7 +147,7 @@ describe('dbTreeToGedcomData maps isUmmWalad', () => {
           birthDescription: null, birthNotes: null, birthHijriDate: null,
           deathDate: null, deathPlace: null, deathPlaceId: null,
           deathDescription: null, deathNotes: null, deathHijriDate: null,
-          notes: null, isDeceased: false, isPrivate: false,
+          notes: null, isDeceased: false, isPrivate: false, kunya: '',
           createdById: null, updatedAt: new Date(), createdAt: new Date(),
         },
       ],
@@ -168,7 +169,7 @@ describe('dbTreeToGedcomData maps isUmmWalad', () => {
           isUmmWalad: true,
         },
       ],
-    };
+    } as unknown as DbTree;
 
     const result = dbTreeToGedcomData(dbTree, TEST_WORKSPACE_KEY);
     expect(result.families['fam1'].isUmmWalad).toBe(true);
@@ -237,7 +238,6 @@ describe('buildFamilyEventInitialData includes isUmmWalad', () => {
 describe('branch pointer synthetic families have isUmmWalad false', () => {
   test('makeSyntheticFamily in mergePointedSubtree sets isUmmWalad false', async () => {
     const { mergePointedSubtree } = await import('@/lib/tree/branch-pointer-merge');
-    const emptyEvent: FamilyEvent = { date: '', hijriDate: '', place: '', description: '', notes: '' };
 
     const target = {
       individuals: {
@@ -245,7 +245,7 @@ describe('branch pointer synthetic families have isUmmWalad false', () => {
           id: 'anchor', type: 'INDI' as const, name: 'Anchor', givenName: 'Anchor', surname: '',
           sex: 'M' as const, birth: '', birthPlace: '', birthDescription: '', birthNotes: '', birthHijriDate: '',
           death: '', deathPlace: '', deathDescription: '', deathNotes: '', deathHijriDate: '',
-          notes: '', isDeceased: false, isPrivate: false,
+          notes: '', isDeceased: false, isPrivate: false, kunya: '',
           familiesAsSpouse: [], familyAsChild: null,
         },
       },
@@ -258,7 +258,7 @@ describe('branch pointer synthetic families have isUmmWalad false', () => {
           id: 'pointed-root', type: 'INDI' as const, name: 'Pointed', givenName: 'Pointed', surname: '',
           sex: 'M' as const, birth: '', birthPlace: '', birthDescription: '', birthNotes: '', birthHijriDate: '',
           death: '', deathPlace: '', deathDescription: '', deathNotes: '', deathHijriDate: '',
-          notes: '', isDeceased: false, isPrivate: false,
+          notes: '', isDeceased: false, isPrivate: false, kunya: '',
           familiesAsSpouse: [], familyAsChild: null,
         },
       },
@@ -280,7 +280,6 @@ describe('branch pointer synthetic families have isUmmWalad false', () => {
 
   test('prepareDeepCopy stitch family has isUmmWalad false', async () => {
     const { prepareDeepCopy } = await import('@/lib/tree/branch-pointer-deep-copy');
-    const emptyEvent: FamilyEvent = { date: '', hijriDate: '', place: '', description: '', notes: '' };
 
     const pointed = {
       individuals: {
@@ -288,7 +287,7 @@ describe('branch pointer synthetic families have isUmmWalad false', () => {
           id: 'root', type: 'INDI' as const, name: 'Root', givenName: 'Root', surname: '',
           sex: 'M' as const, birth: '', birthPlace: '', birthDescription: '', birthNotes: '', birthHijriDate: '',
           death: '', deathPlace: '', deathDescription: '', deathNotes: '', deathHijriDate: '',
-          notes: '', isDeceased: false, isPrivate: false,
+          notes: '', isDeceased: false, isPrivate: false, kunya: '',
           familiesAsSpouse: [], familyAsChild: null,
         },
       },
@@ -320,7 +319,7 @@ describe('prepareDeepCopy preserves isUmmWalad on copied families', () => {
           id: 'p1', type: 'INDI' as const, name: 'P1', givenName: 'P1', surname: '',
           sex: 'M' as const, birth: '', birthPlace: '', birthDescription: '', birthNotes: '', birthHijriDate: '',
           death: '', deathPlace: '', deathDescription: '', deathNotes: '', deathHijriDate: '',
-          notes: '', isDeceased: false, isPrivate: false,
+          notes: '', isDeceased: false, isPrivate: false, kunya: '',
           familiesAsSpouse: ['f1'], familyAsChild: null,
         },
       },

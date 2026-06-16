@@ -64,7 +64,7 @@ describe('requireTreeEditor', () => {
 
     // Should NOT be an error response
     expect(result).not.toBeInstanceOf(Response);
-    expect((result as { user: unknown; membership: unknown }).membership.role).toBe('workspace_admin');
+    expect((result as { user: unknown; membership: { role: string } }).membership.role).toBe('workspace_admin');
   });
 
   test('workspace_member with tree_editor permission passes', async () => {
@@ -80,7 +80,7 @@ describe('requireTreeEditor', () => {
     const result = await requireTreeEditor(makeRequest(), wsId);
 
     expect(result).not.toBeInstanceOf(Response);
-    expect((result as { user: unknown; membership: unknown }).membership.role).toBe('workspace_member');
+    expect((result as { user: unknown; membership: { role: string } }).membership.role).toBe('workspace_member');
   });
 
   test('workspace_member without tree_editor permission gets 403', async () => {

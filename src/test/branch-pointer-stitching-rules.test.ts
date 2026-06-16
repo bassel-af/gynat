@@ -28,6 +28,7 @@ function makeIndividual(overrides: Partial<Individual> & { id: string }): Indivi
     isDeceased: false,
     isPrivate: false,
     familiesAsSpouse: [],
+    kunya: '',
     familyAsChild: null,
     ...overrides,
   };
@@ -55,24 +56,6 @@ describe('detectOrphanedChildren', () => {
   test('returns hasOrphans: true when children lack a parent of the given sex', async () => {
     const { detectOrphanedChildren } = await import('@/lib/tree/branch-pointer-merge');
 
-    // Subtree: selectedPerson (male) married to wife, with 2 children.
-    // The family has no husband (father) — children are orphaned w.r.t. 'M'.
-    const subtree: GedcomData = {
-      individuals: {
-        selected: makeIndividual({ id: 'selected', sex: 'M', familiesAsSpouse: ['fam1'] }),
-        wife: makeIndividual({ id: 'wife', sex: 'F', familiesAsSpouse: ['fam1'] }),
-        child1: makeIndividual({ id: 'child1', givenName: 'أحمد', familyAsChild: 'fam1' }),
-        child2: makeIndividual({ id: 'child2', givenName: 'فاطمة', familyAsChild: 'fam1' }),
-      },
-      families: {
-        fam1: makeFamily({
-          id: 'fam1',
-          husband: 'selected',
-          wife: 'wife',
-          children: ['child1', 'child2'],
-        }),
-      },
-    };
 
     // anchorSex is 'M' — check if children lack a father-figure
     // The family already has 'selected' as husband, but anchorSex represents the

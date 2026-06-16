@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { UndoStackProvider, useUndoStack } from '@/context/UndoStackContext';
 import type { UndoEntry } from '@/lib/undo/types';
 
-function makeEntry(label: string, workspaceId = 'ws-1', undo = vi.fn(), redo = vi.fn()): UndoEntry {
+function makeEntry(label: string, workspaceId = 'ws-1', undo: () => Promise<void> = vi.fn<() => Promise<void>>(), redo: () => Promise<void> = vi.fn<() => Promise<void>>()): UndoEntry {
   return { label, workspaceId, undo, redo };
 }
 

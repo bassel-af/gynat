@@ -39,7 +39,7 @@ afterEach(() => {
 function flattenedArgs(): string {
   return consoleSpy.mock.calls
     .flat()
-    .map((a) => {
+    .map((a: unknown) => {
       if (a instanceof Error) return a.message + ' ' + (a.stack ?? '');
       if (typeof a === 'string') return a;
       try {

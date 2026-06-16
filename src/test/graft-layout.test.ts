@@ -4,7 +4,6 @@ import {
   NODE_WIDTH,
   NODE_HEIGHT,
   SPOUSE_WIDTH,
-  HORIZONTAL_GAP,
   VERTICAL_GAP,
   GRAFT_HORIZONTAL_PADDING,
 } from '@/components/tree/FamilyTree/layout';
@@ -144,8 +143,8 @@ describe('getLayoutedElements with graft descriptors', () => {
     }]);
 
     const result = getLayoutedElements(nodes, edges, grafts);
-    const graftNodes = result.nodes.filter((n) => n.id.startsWith('graft-'));
 
+    const graftNodes = result.nodes.filter((n) => n.id.startsWith('graft-'));
     for (const node of graftNodes) {
       expect((node.data as Record<string, unknown>).isInLawExpansion).toBe(true);
     }
@@ -225,11 +224,8 @@ describe('getLayoutedElements with graft descriptors', () => {
     // child2 should not overlap with any graft nodes
 
     // Get rightmost edge of child1's graft envelope
-    const graftNodes = result.nodes.filter((n) => n.id.startsWith('graft-'));
     const child1X = child1.position.x;
     const child1SpouseWidth = NODE_WIDTH + SPOUSE_WIDTH;
-    const allGraftRightEdges = graftNodes.map((n) => n.position.x + NODE_WIDTH);
-    const rightEdge = Math.max(child1X + child1SpouseWidth, ...allGraftRightEdges);
 
     // child2 should not overlap with child1's base card + spouse area
     expect(child2.position.x).toBeGreaterThanOrEqual(child1X + child1SpouseWidth);

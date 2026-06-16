@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { FamilyEventForm } from '@/components/tree/FamilyEventForm/FamilyEventForm';
 import { IndividualForm } from '@/components/tree/IndividualForm/IndividualForm';
 

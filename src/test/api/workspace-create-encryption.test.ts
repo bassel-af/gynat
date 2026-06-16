@@ -103,7 +103,7 @@ describe('POST /api/workspaces — Phase 10b encryption key generation', () => {
     mockTransaction.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => {
       const fakeTx = {
         workspace: {
-          create: vi.fn(async ({ data }: { data: { encryptedKey?: Buffer } }) => {
+          create: vi.fn(async ({ data }: { data: { encryptedKey?: Buffer; slug?: string } }) => {
             capturedEncryptedKey = data.encryptedKey ?? null;
             return {
               id: 'ws-uuid-new',
@@ -146,7 +146,7 @@ describe('POST /api/workspaces — Phase 10b encryption key generation', () => {
     mockTransaction.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => {
       const fakeTx = {
         workspace: {
-          create: vi.fn(async ({ data }: { data: { encryptedKey?: Buffer } }) => {
+          create: vi.fn(async ({ data }: { data: { encryptedKey?: Buffer; slug?: string } }) => {
             if (data.encryptedKey) captured.push(data.encryptedKey);
             return {
               id: 'ws-' + captured.length,

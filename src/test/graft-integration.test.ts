@@ -1,7 +1,7 @@
 import { describe, test, expect } from 'vitest';
 import type { GedcomData, Individual, Family } from '@/lib/gedcom/types';
 import { computeGraftDescriptors } from '@/lib/gedcom/graph';
-import { getLayoutedElements, NODE_WIDTH, SPOUSE_WIDTH } from '@/components/tree/FamilyTree/layout';
+import { getLayoutedElements } from '@/components/tree/FamilyTree/layout';
 import type { Node, Edge } from '@xyflow/react';
 
 // ---------------------------------------------------------------------------
@@ -29,6 +29,7 @@ function makeIndividual(overrides: Partial<Individual> & { id: string }): Indivi
     isDeceased: false,
     isPrivate: false,
     familiesAsSpouse: [],
+    kunya: '',
     familyAsChild: null,
     ...overrides,
   };

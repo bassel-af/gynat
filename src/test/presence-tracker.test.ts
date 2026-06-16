@@ -264,7 +264,6 @@ describe('trackPresence — Pt 4: LRU at cap (Gap B)', () => {
   test('inserting exactly N entries does NOT evict any', async () => {
     // Use a smaller working cap by inserting cap many users but checking
     // the (cap)th user's entry survives.
-    const cap = PRESENCE_LRU_CAP;
     // For tractability we test a representative slice, but we need real
     // behavior at cap. Instead of inserting 50_000 (slow), we exploit the
     // fact that the eviction trigger is `size > cap` — so we insert 5

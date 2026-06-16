@@ -27,6 +27,7 @@ function makeIndividual(overrides: Partial<Individual> & { id: string }): Indivi
     isDeceased: false,
     isPrivate: false,
     familiesAsSpouse: [],
+    kunya: '',
     familyAsChild: null,
     ...overrides,
   };

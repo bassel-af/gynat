@@ -27,6 +27,7 @@ function makeIndividual(overrides: Partial<Individual> & { id: string }): Indivi
     isDeceased: false,
     isPrivate: false,
     familiesAsSpouse: [],
+    kunya: '',
     familyAsChild: null,
     ...overrides,
   };
@@ -111,6 +112,7 @@ function buildFixture(): GedcomData {
       name: 'Child1',
       sex: 'M',
       familiesAsSpouse: [],
+      kunya: '',
       familyAsChild: '@F_FATHER@',
     }),
     '@CHILD2@': makeIndividual({
@@ -118,6 +120,7 @@ function buildFixture(): GedcomData {
       name: 'Child2',
       sex: 'F',
       familiesAsSpouse: [],
+      kunya: '',
       familyAsChild: '@F_FATHER@',
     }),
     '@COUSIN@': makeIndividual({
@@ -125,6 +128,7 @@ function buildFixture(): GedcomData {
       name: 'Cousin',
       sex: 'M',
       familiesAsSpouse: [],
+      kunya: '',
       familyAsChild: '@F_UNCLE@',
     }),
     // Outside the subtree
@@ -140,6 +144,7 @@ function buildFixture(): GedcomData {
       name: 'Stepchild',
       sex: 'M',
       familiesAsSpouse: [],
+      kunya: '',
       familyAsChild: '@F_OUTSIDE@',
     }),
   };
@@ -355,6 +360,7 @@ describe('extractSubtree', () => {
         id: '@OTHER@',
         sex: 'M',
         familiesAsSpouse: [],
+        kunya: '',
       }),
     };
 

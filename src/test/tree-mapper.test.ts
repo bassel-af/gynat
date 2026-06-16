@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { dbTreeToGedcomData, redactPrivateIndividuals } from '@/lib/tree/mapper'
-import type { DbTree, DbIndividual, DbFamily } from '@/lib/tree/mapper'
+import type { DbTree, DbIndividual, DbFamily, DecryptedIndividual, DecryptedFamily } from '@/lib/tree/mapper'
 import type { GedcomData } from '@/lib/gedcom/types'
 import { generateWorkspaceKey } from '@/lib/crypto/workspace-encryption'
 
@@ -14,7 +14,7 @@ const TEST_WORKSPACE_KEY: Buffer = generateWorkspaceKey()
 // Helper: build minimal DB-shaped objects that mirror Prisma query results
 // ---------------------------------------------------------------------------
 
-function makeIndividual(overrides: Partial<DbIndividual> & { id: string; treeId: string }): DbIndividual {
+function makeIndividual(overrides: Partial<DecryptedIndividual> & { id: string; treeId: string }): DbIndividual {
   return {
     gedcomId: null,
     givenName: null,
@@ -41,10 +41,10 @@ function makeIndividual(overrides: Partial<DbIndividual> & { id: string; treeId:
     updatedAt: new Date(),
     createdAt: new Date(),
     ...overrides,
-  }
+  } as unknown as DbIndividual
 }
 
-function makeFamily(overrides: Partial<DbFamily> & { id: string; treeId: string }): DbFamily {
+function makeFamily(overrides: Partial<DecryptedFamily> & { id: string; treeId: string }): DbFamily {
   return {
     gedcomId: null,
     husbandId: null,
@@ -71,7 +71,7 @@ function makeFamily(overrides: Partial<DbFamily> & { id: string; treeId: string 
     divorceDescription: null,
     divorceNotes: null,
     ...overrides,
-  }
+  } as unknown as DbFamily
 }
 
 // ---------------------------------------------------------------------------

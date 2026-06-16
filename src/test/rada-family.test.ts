@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { dbTreeToGedcomData, redactPrivateIndividuals, mapRadaFamily } from '@/lib/tree/mapper'
-import type { DbTree, DbIndividual, DbFamily, DecryptedRadaFamily } from '@/lib/tree/mapper'
-import type { GedcomData, RadaFamily } from '@/lib/gedcom/types'
+import type { DbTree, DbIndividual, DecryptedIndividual, DecryptedRadaFamily } from '@/lib/tree/mapper'
+import type { GedcomData } from '@/lib/gedcom/types'
 import { getRadaRelationships } from '@/lib/gedcom/relationships'
 import { generateWorkspaceKey } from '@/lib/crypto/workspace-encryption'
 
@@ -11,7 +11,7 @@ const TEST_WORKSPACE_KEY: Buffer = generateWorkspaceKey()
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeIndividual(overrides: Partial<DbIndividual> & { id: string; treeId: string }): DbIndividual {
+function makeIndividual(overrides: Partial<DecryptedIndividual> & { id: string; treeId: string }): DbIndividual {
   return {
     gedcomId: null,
     givenName: null,
@@ -33,42 +33,14 @@ function makeIndividual(overrides: Partial<DbIndividual> & { id: string; treeId:
     notes: null,
     isDeceased: false,
     isPrivate: false,
+    kunya: null,
     createdById: null,
     updatedAt: new Date(),
     createdAt: new Date(),
     ...overrides,
-  }
+  } as unknown as DbIndividual
 }
 
-function makeFamily(overrides: Partial<DbFamily> & { id: string; treeId: string }): DbFamily {
-  return {
-    gedcomId: null,
-    husbandId: null,
-    wifeId: null,
-    children: [],
-    marriageContractDate: null,
-    marriageContractHijriDate: null,
-    marriageContractPlace: null,
-    marriageContractPlaceId: null,
-    marriageContractDescription: null,
-    marriageContractNotes: null,
-    marriageDate: null,
-    marriageHijriDate: null,
-    marriagePlace: null,
-    marriagePlaceId: null,
-    marriageDescription: null,
-    marriageNotes: null,
-    isUmmWalad: false,
-    isDivorced: false,
-    divorceDate: null,
-    divorceHijriDate: null,
-    divorcePlace: null,
-    divorcePlaceId: null,
-    divorceDescription: null,
-    divorceNotes: null,
-    ...overrides,
-  }
-}
 
 const TREE_ID = 'tree-001'
 const WORKSPACE_ID = 'ws-001'
@@ -89,21 +61,21 @@ function makeGedcomDataWithRada(): GedcomData {
         id: 'father-a', type: 'INDI', name: 'Father A', givenName: 'Father', surname: 'A',
         sex: 'M', birth: '', birthPlace: '', birthDescription: '', birthNotes: '',
         birthHijriDate: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '',
-        deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false,
+        deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false, kunya: '',
         familiesAsSpouse: ['fam-1'], familyAsChild: null,
       },
       'mother-a': {
         id: 'mother-a', type: 'INDI', name: 'Mother A', givenName: 'Mother', surname: 'A',
         sex: 'F', birth: '', birthPlace: '', birthDescription: '', birthNotes: '',
         birthHijriDate: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '',
-        deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false,
+        deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false, kunya: '',
         familiesAsSpouse: ['fam-1'], familyAsChild: null,
       },
       'child-a': {
         id: 'child-a', type: 'INDI', name: 'Child A', givenName: 'Child', surname: 'A',
         sex: 'M', birth: '', birthPlace: '', birthDescription: '', birthNotes: '',
         birthHijriDate: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '',
-        deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false,
+        deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false, kunya: '',
         familiesAsSpouse: [], familyAsChild: 'fam-1',
         radaFamiliesAsChild: ['rf-1'],
       },
@@ -111,21 +83,21 @@ function makeGedcomDataWithRada(): GedcomData {
         id: 'foster-father', type: 'INDI', name: 'Foster Father', givenName: 'Foster', surname: 'Father',
         sex: 'M', birth: '', birthPlace: '', birthDescription: '', birthNotes: '',
         birthHijriDate: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '',
-        deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false,
+        deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false, kunya: '',
         familiesAsSpouse: [], familyAsChild: null,
       },
       'foster-mother': {
         id: 'foster-mother', type: 'INDI', name: 'Foster Mother', givenName: 'Foster', surname: 'Mother',
         sex: 'F', birth: '', birthPlace: '', birthDescription: '', birthNotes: '',
         birthHijriDate: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '',
-        deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false,
+        deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false, kunya: '',
         familiesAsSpouse: ['fam-2'], familyAsChild: null,
       },
       'foster-child': {
         id: 'foster-child', type: 'INDI', name: 'Foster Child', givenName: 'Foster', surname: 'Child',
         sex: 'M', birth: '', birthPlace: '', birthDescription: '', birthNotes: '',
         birthHijriDate: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '',
-        deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false,
+        deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false, kunya: '',
         familiesAsSpouse: [], familyAsChild: null,
         radaFamiliesAsChild: ['rf-1'],
       },
@@ -133,7 +105,7 @@ function makeGedcomDataWithRada(): GedcomData {
         id: 'bio-child', type: 'INDI', name: 'Bio Child', givenName: 'Bio', surname: 'Child',
         sex: 'F', birth: '', birthPlace: '', birthDescription: '', birthNotes: '',
         birthHijriDate: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '',
-        deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false,
+        deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false, kunya: '',
         familiesAsSpouse: [], familyAsChild: 'fam-2',
       },
     },
@@ -367,7 +339,7 @@ describe('redactPrivateIndividuals with rada families', () => {
           id: 'ind-1', type: 'INDI', name: 'Public', givenName: 'Public', surname: '',
           sex: 'M', birth: '', birthPlace: '', birthDescription: '', birthNotes: '',
           birthHijriDate: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '',
-          deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false,
+          deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false, kunya: '',
           familiesAsSpouse: [], familyAsChild: null,
           radaFamiliesAsChild: ['rf-1'],
         },
@@ -375,7 +347,7 @@ describe('redactPrivateIndividuals with rada families', () => {
           id: 'ind-2', type: 'INDI', name: 'Private Person', givenName: 'Private', surname: 'Person',
           sex: 'F', birth: '1990', birthPlace: 'City', birthDescription: 'desc', birthNotes: 'notes',
           birthHijriDate: '1410', death: '', deathPlace: '', deathDescription: '', deathNotes: '',
-          deathHijriDate: '', notes: 'secret', isDeceased: false, isPrivate: true,
+          deathHijriDate: '', notes: 'secret', isDeceased: false, isPrivate: true, kunya: '',
           familiesAsSpouse: [], familyAsChild: null,
         },
       },
@@ -465,7 +437,7 @@ describe('getRadaRelationships', () => {
           id: 'ind-1', type: 'INDI', name: 'Solo', givenName: 'Solo', surname: '',
           sex: 'M', birth: '', birthPlace: '', birthDescription: '', birthNotes: '',
           birthHijriDate: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '',
-          deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false,
+          deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false, kunya: '',
           familiesAsSpouse: [], familyAsChild: null,
         },
       },
@@ -517,14 +489,14 @@ describe('getRadaRelationships', () => {
       id: 'woman-w', type: 'INDI', name: 'Woman W', givenName: 'Woman', surname: 'W',
       sex: 'F', birth: '', birthPlace: '', birthDescription: '', birthNotes: '',
       birthHijriDate: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '',
-      deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false,
+      deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false, kunya: '',
       familiesAsSpouse: [], familyAsChild: null,
     }
     const X: GedcomData['individuals'][string] = {
       id: 'child-x', type: 'INDI', name: 'Child X', givenName: 'Child', surname: 'X',
       sex: 'M', birth: '', birthPlace: '', birthDescription: '', birthNotes: '',
       birthHijriDate: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '',
-      deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false,
+      deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false, kunya: '',
       familiesAsSpouse: [], familyAsChild: null,
       radaFamiliesAsChild: ['rf-a'],
     }
@@ -532,7 +504,7 @@ describe('getRadaRelationships', () => {
       id: 'child-y', type: 'INDI', name: 'Child Y', givenName: 'Child', surname: 'Y',
       sex: 'F', birth: '', birthPlace: '', birthDescription: '', birthNotes: '',
       birthHijriDate: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '',
-      deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false,
+      deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false, kunya: '',
       familiesAsSpouse: [], familyAsChild: null,
       radaFamiliesAsChild: ['rf-b'],
     }

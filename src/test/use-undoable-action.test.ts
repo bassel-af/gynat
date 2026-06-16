@@ -1,19 +1,20 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useUndoableAction } from '@/hooks/useUndoableAction';
 import type { Inverse } from '@/lib/tree/undo-builders';
+import type { UndoEntry } from '@/lib/undo/types';
 
 interface StackApi {
-  push: ReturnType<typeof vi.fn>;
+  push: Mock<(entry: UndoEntry) => void>;
 }
 
 describe('useUndoableAction', () => {
   let stack: StackApi;
-  let refresh: ReturnType<typeof vi.fn>;
+  let refresh: Mock<() => Promise<void>>;
 
   beforeEach(() => {
-    stack = { push: vi.fn() };
-    refresh = vi.fn().mockResolvedValue(undefined);
+    stack = { push: vi.fn<(entry: UndoEntry) => void>() };
+    refresh = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
   });
 
   function makeInverse(): Inverse {

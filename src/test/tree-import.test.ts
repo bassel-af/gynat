@@ -189,14 +189,6 @@ function mockEmptyTree() {
   mockIndividualCount.mockResolvedValue(0)
 }
 
-function mockNoTree() {
-  mockFamilyTreeFindUnique.mockResolvedValue(null)
-  mockFamilyTreeCreate.mockResolvedValue({
-    id: treeId,
-    workspaceId: wsId,
-  })
-  mockIndividualCount.mockResolvedValue(0)
-}
 
 function mockNonEmptyTree() {
   mockFamilyTreeFindUnique.mockResolvedValue({

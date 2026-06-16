@@ -164,7 +164,7 @@ describe('seedTreeFromGedcomData', () => {
           notes: '',
           isDeceased: false,
           isPrivate: false,
-          familiesAsSpouse: ['@F1@'],
+          kunya: '',          familiesAsSpouse: ['@F1@'],
           familyAsChild: null,
         },
         '@I2@': {
@@ -187,7 +187,7 @@ describe('seedTreeFromGedcomData', () => {
           notes: '',
           isDeceased: false,
           isPrivate: false,
-          familiesAsSpouse: ['@F1@'],
+          kunya: '',          familiesAsSpouse: ['@F1@'],
           familyAsChild: null,
         },
         '@I3@': {
@@ -210,7 +210,7 @@ describe('seedTreeFromGedcomData', () => {
           notes: '',
           isDeceased: false,
           isPrivate: false,
-          familiesAsSpouse: [],
+          kunya: '',          familiesAsSpouse: [],
           familyAsChild: '@F1@',
         },
       },
@@ -263,17 +263,17 @@ describe('seedTreeFromGedcomData', () => {
       individuals: {
         '@I1@': {
           id: '@I1@', type: 'INDI', name: 'Father', givenName: 'Father', surname: '',
-          sex: 'M', birth: '', birthPlace: '', birthDescription: '', birthNotes: '', birthHijriDate: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '', deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false,
+          sex: 'M', birth: '', birthPlace: '', birthDescription: '', birthNotes: '', birthHijriDate: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '', deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false, kunya: '',
           familiesAsSpouse: ['@F1@'], familyAsChild: null,
         },
         '@I2@': {
           id: '@I2@', type: 'INDI', name: 'Mother', givenName: 'Mother', surname: '',
-          sex: 'F', birth: '', birthPlace: '', birthDescription: '', birthNotes: '', birthHijriDate: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '', deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false,
+          sex: 'F', birth: '', birthPlace: '', birthDescription: '', birthNotes: '', birthHijriDate: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '', deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false, kunya: '',
           familiesAsSpouse: ['@F1@'], familyAsChild: null,
         },
         '@I3@': {
           id: '@I3@', type: 'INDI', name: 'Child', givenName: 'Child', surname: '',
-          sex: 'M', birth: '', birthPlace: '', birthDescription: '', birthNotes: '', birthHijriDate: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '', deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false,
+          sex: 'M', birth: '', birthPlace: '', birthDescription: '', birthNotes: '', birthHijriDate: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '', deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false, kunya: '',
           familiesAsSpouse: [], familyAsChild: '@F1@',
         },
       },
@@ -315,7 +315,7 @@ describe('seedTreeFromGedcomData', () => {
       individuals: {
         '@I1@': {
           id: '@I1@', type: 'INDI', name: 'Unknown Person', givenName: 'Unknown Person', surname: '',
-          sex: null, birth: '', birthPlace: '', birthDescription: '', birthNotes: '', birthHijriDate: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '', deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false,
+          sex: null, birth: '', birthPlace: '', birthDescription: '', birthNotes: '', birthHijriDate: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '', deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false, kunya: '',
           familiesAsSpouse: [], familyAsChild: null,
         },
       },
@@ -375,7 +375,7 @@ describe('seedTreeFromGedcomData', () => {
       individuals: {
         '@I1@': {
           id: '@I1@', type: 'INDI', name: 'Ahmad', givenName: 'Ahmad', surname: '',
-          sex: 'M', birth: '', birthPlace: '', birthDescription: '', birthNotes: '', birthHijriDate: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '', deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false,
+          sex: 'M', birth: '', birthPlace: '', birthDescription: '', birthNotes: '', birthHijriDate: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '', deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false, kunya: '',
           familiesAsSpouse: [], familyAsChild: null,
         },
       },
@@ -403,27 +403,27 @@ describe('seedTreeFromGedcomData', () => {
       individuals: {
         '@I1@': {
           id: '@I1@', type: 'INDI', name: 'Grandfather', givenName: 'Grandfather', surname: '',
-          sex: 'M', birth: '', birthPlace: '', birthDescription: '', birthNotes: '', birthHijriDate: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '', deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false,
+          sex: 'M', birth: '', birthPlace: '', birthDescription: '', birthNotes: '', birthHijriDate: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '', deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false, kunya: '',
           familiesAsSpouse: ['@F1@', '@F2@'], familyAsChild: null,
         },
         '@I2@': {
           id: '@I2@', type: 'INDI', name: 'Wife One', givenName: 'Wife One', surname: '',
-          sex: 'F', birth: '', birthPlace: '', birthDescription: '', birthNotes: '', birthHijriDate: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '', deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false,
+          sex: 'F', birth: '', birthPlace: '', birthDescription: '', birthNotes: '', birthHijriDate: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '', deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false, kunya: '',
           familiesAsSpouse: ['@F1@'], familyAsChild: null,
         },
         '@I3@': {
           id: '@I3@', type: 'INDI', name: 'Wife Two', givenName: 'Wife Two', surname: '',
-          sex: 'F', birth: '', birthPlace: '', birthDescription: '', birthNotes: '', birthHijriDate: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '', deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false,
+          sex: 'F', birth: '', birthPlace: '', birthDescription: '', birthNotes: '', birthHijriDate: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '', deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false, kunya: '',
           familiesAsSpouse: ['@F2@'], familyAsChild: null,
         },
         '@I4@': {
           id: '@I4@', type: 'INDI', name: 'Child A', givenName: 'Child A', surname: '',
-          sex: 'M', birth: '', birthPlace: '', birthDescription: '', birthNotes: '', birthHijriDate: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '', deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false,
+          sex: 'M', birth: '', birthPlace: '', birthDescription: '', birthNotes: '', birthHijriDate: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '', deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false, kunya: '',
           familiesAsSpouse: [], familyAsChild: '@F1@',
         },
         '@I5@': {
           id: '@I5@', type: 'INDI', name: 'Child B', givenName: 'Child B', surname: '',
-          sex: 'F', birth: '', birthPlace: '', birthDescription: '', birthNotes: '', birthHijriDate: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '', deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false,
+          sex: 'F', birth: '', birthPlace: '', birthDescription: '', birthNotes: '', birthHijriDate: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '', deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false, kunya: '',
           familiesAsSpouse: [], familyAsChild: '@F2@',
         },
       },
@@ -476,7 +476,7 @@ describe('seedTreeFromGedcomData', () => {
       individuals: {
         '@I1@': {
           id: '@I1@', type: 'INDI', name: 'Test', givenName: 'Test', surname: '',
-          sex: 'M', birth: '', birthPlace: '', birthDescription: '', birthNotes: '', birthHijriDate: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '', deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false,
+          sex: 'M', birth: '', birthPlace: '', birthDescription: '', birthNotes: '', birthHijriDate: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '', deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false, kunya: '',
           familiesAsSpouse: [], familyAsChild: null,
         },
       },
@@ -500,7 +500,7 @@ describe('seedTreeFromGedcomData', () => {
       individuals: {
         '@I1@': {
           id: '@I1@', type: 'INDI', name: 'Ahmad', givenName: 'Ahmad', surname: '',
-          sex: 'M', birth: '', birthPlace: '', birthDescription: 'Natural birth', birthNotes: '', birthHijriDate: '', death: '2020', deathPlace: '', deathDescription: 'Heart attack', deathNotes: '', deathHijriDate: '', notes: '', isDeceased: true, isPrivate: false,
+          sex: 'M', birth: '', birthPlace: '', birthDescription: 'Natural birth', birthNotes: '', birthHijriDate: '', death: '2020', deathPlace: '', deathDescription: 'Heart attack', deathNotes: '', deathHijriDate: '', notes: '', isDeceased: true, isPrivate: false, kunya: '',
           familiesAsSpouse: [], familyAsChild: null,
         },
       },
@@ -527,7 +527,7 @@ describe('seedTreeFromGedcomData', () => {
       individuals: {
         '@I1@': {
           id: '@I1@', type: 'INDI', name: 'Ahmad', givenName: 'Ahmad', surname: '',
-          sex: 'M', birth: '', birthPlace: '', birthDescription: '', birthNotes: '', birthHijriDate: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '', deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false,
+          sex: 'M', birth: '', birthPlace: '', birthDescription: '', birthNotes: '', birthHijriDate: '', death: '', deathPlace: '', deathDescription: '', deathNotes: '', deathHijriDate: '', notes: '', isDeceased: false, isPrivate: false, kunya: '',
           familiesAsSpouse: [], familyAsChild: null,
         },
       },

@@ -1,20 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { act, render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 
 // Mock apiFetch
 const mockApiFetch = vi.fn();
 vi.mock('@/lib/api/client', () => ({
   apiFetch: (...args: unknown[]) => mockApiFetch(...args),
-}));
-
-// Mock Supabase client
-const mockSignOut = vi.fn();
-vi.mock('@/lib/supabase/client', () => ({
-  createClient: () => ({
-    auth: {
-      signOut: mockSignOut,
-    },
-  }),
 }));
 
 // Mock next/link
@@ -26,17 +16,37 @@ vi.mock('next/link', () => ({
 
 import { UserNav } from '@/components/ui/UserNav';
 
+// The tree top bar shows only the avatar (linking to the profile). The display
+// name and the sign-out button were intentionally removed from this component.
 describe('UserNav', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Reset window.location
-    Object.defineProperty(window, 'location', {
-      writable: true,
-      value: { href: '' },
-    });
   });
 
-  it('renders user info after successful API fetch', async () => {
+  it('renders the avatar + profile link after successful API fetch', async () => {
+    mockApiFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: { displayName: 'باسل', avatarUrl: null },
+      }),
+    });
+
+    render(<UserNav />);
+
+    // Fallback avatar shows the first letter of the display name
+    await waitFor(() => {
+      expect(screen.getByText('ب')).toBeInTheDocument();
+    });
+
+    // The avatar links to the profile page
+    const profileLink = screen.getByTitle('الملف الشخصي');
+    expect(profileLink).toHaveAttribute('href', '/profile');
+
+    // The display name itself is NOT rendered (avatar only)
+    expect(screen.queryByText('باسل')).not.toBeInTheDocument();
+  });
+
+  it('does NOT render a sign-out button', async () => {
     mockApiFetch.mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -47,15 +57,10 @@ describe('UserNav', () => {
     render(<UserNav />);
 
     await waitFor(() => {
-      expect(screen.getByText('باسل')).toBeInTheDocument();
+      expect(screen.getByTitle('الملف الشخصي')).toBeInTheDocument();
     });
 
-    // Should show fallback avatar (first letter)
-    expect(screen.getByText('ب')).toBeInTheDocument();
-
-    // Should have a link to profile
-    const profileLink = screen.getByTitle('الملف الشخصي');
-    expect(profileLink).toHaveAttribute('href', '/profile');
+    expect(screen.queryByLabelText('تسجيل الخروج')).not.toBeInTheDocument();
   });
 
   it('renders avatar image when avatarUrl is provided', async () => {
@@ -75,31 +80,7 @@ describe('UserNav', () => {
     });
   });
 
-  it('calls signOut and redirects on logout click', async () => {
-    mockApiFetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        data: { displayName: 'باسل', avatarUrl: null },
-      }),
-    });
-    mockSignOut.mockResolvedValue({});
-
-    render(<UserNav />);
-
-    await waitFor(() => {
-      expect(screen.getByText('باسل')).toBeInTheDocument();
-    });
-
-    const logoutButton = screen.getByLabelText('تسجيل الخروج');
-    fireEvent.click(logoutButton);
-
-    await waitFor(() => {
-      expect(mockSignOut).toHaveBeenCalled();
-      expect(window.location.href).toBe('/auth/login');
-    });
-  });
-
-  it('shows only logout button when API fetch fails', async () => {
+  it('renders no profile link when API fetch fails', async () => {
     mockApiFetch.mockResolvedValue({
       ok: false,
       json: async () => ({ error: 'Unauthorized' }),
@@ -108,14 +89,14 @@ describe('UserNav', () => {
     render(<UserNav />);
 
     await waitFor(() => {
-      expect(screen.getByLabelText('تسجيل الخروج')).toBeInTheDocument();
+      expect(mockApiFetch).toHaveBeenCalled();
     });
 
-    // Should NOT show any profile link
     expect(screen.queryByTitle('الملف الشخصي')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('تسجيل الخروج')).not.toBeInTheDocument();
   });
 
-  it('updates displayName in response to profile:updated event', async () => {
+  it('updates the avatar in response to profile:updated event', async () => {
     mockApiFetch.mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -126,7 +107,7 @@ describe('UserNav', () => {
     render(<UserNav />);
 
     await waitFor(() => {
-      expect(screen.getByText('باسل')).toBeInTheDocument();
+      expect(screen.getByText('ب')).toBeInTheDocument();
     });
 
     act(() => {
@@ -137,10 +118,11 @@ describe('UserNav', () => {
       );
     });
 
+    // Fallback avatar letter updates to the new name's first letter
     await waitFor(() => {
-      expect(screen.getByText('أحمد')).toBeInTheDocument();
+      expect(screen.getByText('أ')).toBeInTheDocument();
     });
-    expect(screen.queryByText('باسل')).not.toBeInTheDocument();
+    expect(screen.queryByText('ب')).not.toBeInTheDocument();
   });
 
   it('renders nothing while loading', () => {

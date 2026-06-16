@@ -1,4 +1,4 @@
-import { describe, test, expect } from 'vitest';
+import { describe, test, expect, beforeAll } from 'vitest';
 
 // These tests will fail until the schemas module is created
 // at src/lib/tree/audit-log-schemas.ts

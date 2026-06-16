@@ -124,7 +124,6 @@ describe('POST /api/invitations/[id]/accept — unknown error handling', () => {
       invitedById: 'other-user',
       individualId: null,
       createdAt: new Date(),
-      updatedAt: new Date(),
     });
 
     // No existing membership

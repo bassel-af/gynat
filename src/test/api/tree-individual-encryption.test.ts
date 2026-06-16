@@ -8,7 +8,6 @@ import { describe, test, expect, vi, beforeEach } from 'vitest';
 import {
   generateWorkspaceKey,
   wrapKey,
-  encryptFieldNullable,
 } from '@/lib/crypto/workspace-encryption';
 import { getMasterKey } from '@/lib/crypto/master-key';
 

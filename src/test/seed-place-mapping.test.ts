@@ -39,6 +39,7 @@ function makeIndividual(overrides?: Partial<Individual>): Individual {
     isDeceased: false,
     isPrivate: false,
     familiesAsSpouse: [],
+    kunya: '',
     familyAsChild: null,
     ...overrides,
   }
