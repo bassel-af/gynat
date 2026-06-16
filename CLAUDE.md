@@ -29,7 +29,7 @@ This project uses **pnpm** as the package manager (version 10.28.0).
 - `pnpm dev` - Start development server (Next.js with Turbopack, port 4000)
 - `pnpm build` - Build for production
 - `pnpm start` - Run production build
-- `pnpm lint` - Run ESLint
+- `pnpm typecheck` - Type-check the whole project (`tsc --noEmit`); also gated in CI (`.github/workflows/typecheck.yml`)
 - `pnpm test` - Run tests once
 - `pnpm test src/test/display.test.ts` - Run a single test file
 - `pnpm test:watch` - Run tests in watch mode

@@ -9,7 +9,7 @@ You are closing out a chunk that the user just finished and setting up so the ne
 
 ## Operating principles
 
-1. **Verify before declaring done.** A chunk is not finished until lint, type-check, and the relevant tests pass. If any are red, halt and surface the failure — do not paper over it with a doc update.
+1. **Verify before declaring done.** A chunk is not finished until type-check and the relevant tests pass. If any are red, halt and surface the failure — do not paper over it with a doc update.
 2. **Doc updates only reflect what actually shipped.** Do not promise future work in past-tense. Do not invent context.
 3. **Memory captures lessons, not narrative.** Only write a memory if it answers "what would a future session need to know that isn't obvious from the code or git log?" Reversals, corrections, validated non-obvious approaches, gotchas. Not chunk summaries — those live in git.
 4. **Translate to plain language for the user.** The user is the solo non-technical owner (memory `user_non_technical`). The final summary uses business framing, not code identifiers (memory `feedback_plain_language_questions`). The commit message is the only place engineering language is appropriate.
@@ -40,8 +40,7 @@ Do not perform the simplify pass inside `/prep-next` — it's a deliberate user-
 
 Run the still-needed checks in parallel where possible, foreground (need the results):
 
-- `pnpm lint`
-- `npx tsc --noEmit` — type-check. **Do NOT use `pnpm build`** for this: `pnpm dev` is always running on port 4000, and a build corrupts `.next/` and breaks the dev server (memories `feedback_type_check_locally`, `feedback_no_build_while_dev_running`).
+- `npx tsc --noEmit` — type-check (also runs as `pnpm typecheck`, and is gated in CI via `.github/workflows/typecheck.yml`). **Do NOT use `pnpm build`** for this: `pnpm dev` is always running on port 4000, and a build corrupts `.next/` and breaks the dev server (memories `feedback_type_check_locally`, `feedback_no_build_while_dev_running`).
 - `pnpm test` (vitest)
 - `pnpm test:e2e` (vitest e2e config) — if the chunk touched anything those e2e tests cover.
 
