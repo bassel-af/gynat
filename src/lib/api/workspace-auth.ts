@@ -82,6 +82,58 @@ export async function requireTreeEditor(
 }
 
 /**
+ * Authenticates the user and verifies collection-editing permission.
+ * Allows workspace admins (implicit) or members with collection_editor.
+ * Mirrors requireTreeEditor. Collection VISIBILITY changes stay admin-only —
+ * gate those with requireWorkspaceAdmin, not this helper.
+ */
+export async function requireCollectionEditor(
+  request: NextRequest,
+  workspaceId: string,
+): Promise<WorkspaceAuthResult | NextResponse> {
+  const result = await requireWorkspaceMember(request, workspaceId);
+
+  if (result instanceof NextResponse) {
+    return result;
+  }
+
+  if (
+    result.membership.role === 'workspace_admin' ||
+    result.membership.permissions.includes('collection_editor')
+  ) {
+    return result;
+  }
+
+  return NextResponse.json(
+    { error: 'ليس لديك صلاحية تعديل المجموعات' },
+    { status: 403 },
+  );
+}
+
+/**
+ * Feature gate: returns a 404 NextResponse when the workspace has
+ * `enableCollections` off (deny-by-default — collections must be invisible,
+ * not "403 forbidden", when the feature is disabled), or null to proceed.
+ * Route handlers call this FIRST, before the auth guard: when collections are
+ * off the route behaves as if it doesn't exist — even a non-member gets 404,
+ * never a 403 that would reveal the workspace.
+ */
+export async function requireCollectionsEnabled(
+  workspaceId: string,
+): Promise<NextResponse | null> {
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: workspaceId },
+    select: { enableCollections: true },
+  });
+
+  if (!workspace || !workspace.enableCollections) {
+    return NextResponse.json({ error: 'غير موجود' }, { status: 404 });
+  }
+
+  return null;
+}
+
+/**
  * Type guard to check if the result is an error response.
  */
 export function isErrorResponse(

@@ -233,7 +233,7 @@ The GEDCOM file (`public/saeed-family.ged`):
 - Secrets in `docker/.env` (gitignored) — all security-sensitive vars use `:?` syntax (Docker fails to start if missing)
 
 **Prisma** (`prisma/schema.prisma`):
-- 22 models: User, Workspace, WorkspaceMembership, WorkspaceInvitation, UserTreeLink, FamilyTree, Individual, Family, FamilyChild, RadaFamily, RadaFamilyChild, TreeEditLog, BranchShareToken, BranchPointer, Post, Album, AlbumMedia, Event, EventRsvp, Notification, Place, PlatformStat
+- 26 models: User, Workspace, WorkspaceMembership, WorkspaceInvitation, UserTreeLink, FamilyTree, Individual, Family, FamilyChild, RadaFamily, RadaFamilyChild, TreeEditLog, BranchShareToken, BranchPointer, CopyProvenance, Collection, CollectionItem, Post, Album, AlbumMedia, Event, EventRsvp, Notification, Place, PlatformStat, AdminAccessLog
 - `BranchShareToken` — SHA-256 hashed token with root individual, depth limit, target workspace scope, revoke flag
 - `BranchPointer` — links source subtree to target workspace anchor; status (`active`/`revoked`/`broken`), relationship type, `linkChildrenToAnchor` flag, `shareTokenId` FK
 - `FamilyTree` has `lastModifiedAt` timestamp (updated on every tree mutation, used for ETag caching)
@@ -241,7 +241,9 @@ The GEDCOM file (`public/saeed-family.ged`):
 - `PlatformStat` is a single-row settings table (`CHECK (id = 1)`) holding `peakConcurrentUsers` + `peakRecordedAt` for live-presence peak record
 - `Individual` has `birthHijriDate`, `deathHijriDate`, `birthNotes`, `deathNotes`, `birthDescription`, `deathDescription`, `kunya`
 - `Family` has marriage contract (MARC), marriage (MARR), and divorce (DIV) event fields: `{type}Date`, `{type}HijriDate`, `{type}Place`, `{type}Description`, `{type}Notes`, plus `isDivorced`
-- `Workspace` has `enableAuditLog` (Boolean, default false) and `enableVersionControl` (Boolean, default false) toggles
+- `Workspace` has `enableAuditLog`, `enableVersionControl`, and `enableCollections` (all Boolean, default false) toggles; `ContentPermission` enum includes `collection_editor`
+- `FamilyTree` has `kind` (`TreeKind { main extra }`; one `main` per workspace via a partial unique index, unlimited `extra` trees that exist only inside Collections)
+- **Collections** (`docs/prd-public-tree-collections.md` §2): `Collection` (workspaceId, plaintext `titleAr`/`descriptionAr`, `visibility` reuses `TreeVisibility`, `publicSlug`, `allowReuse`) and `CollectionItem` (kind `tree`|`collection` via `CollectionItemKind`, `linkMode` via `ItemLinkMode { linked copied }`, exactly-one source binding — `treeId` | `branchPointerId` | `childCollectionId` — enforced by a CHECK; `@@unique([collectionId, treeId])` + `@@unique([collectionId, childCollectionId])` block duplicate sources)
 - `TreeEditLog` has `snapshotBefore` (Json?), `snapshotAfter` (Json?), `description` (VarChar 500) for full before/after audit snapshots; indexed on `[treeId, entityType, entityId]`
 - Prisma v7 uses driver adapters — client instantiation requires `PrismaPg` from `@prisma/adapter-pg`
 - **Prisma v7 limitation**: `_count` with `where` filters inside `include` is NOT supported with driver adapters. Use separate `groupBy` queries instead.
@@ -269,7 +271,7 @@ The GEDCOM file (`public/saeed-family.ged`):
 
 **API Utilities**:
 - Auth guard: `src/lib/api/auth.ts` — `getAuthenticatedUser(request)` parses Bearer token, verifies via Supabase
-- Workspace guards: `src/lib/api/workspace-auth.ts` — `requireWorkspaceMember()`, `requireWorkspaceAdmin()`, `requireTreeEditor()`
+- Workspace guards: `src/lib/api/workspace-auth.ts` — `requireWorkspaceMember()`, `requireWorkspaceAdmin()`, `requireTreeEditor()`, `requireCollectionEditor()` (admin or `collection_editor`), `requireCollectionsEnabled()` (deny-by-default 404 when `enableCollections` off; called FIRST, before the auth guard)
 - Request helpers: `src/lib/api/route-helpers.ts` — `parseValidatedBody(request, zodSchema)` parses JSON + validates with Zod in one call; `isParseError()` type guard. Used by all mutable API routes to eliminate boilerplate.
 - Rate limiting: `src/lib/api/rate-limit.ts` — in-memory `RateLimiter` class with pre-configured instances per endpoint (single-process; needs Redis before horizontal scaling)
 - Client fetch: `src/lib/api/client.ts` — `apiFetch(path, options)` auto-attaches Bearer token
@@ -318,6 +320,11 @@ The GEDCOM file (`public/saeed-family.ged`):
 - `GET /api/family/[slug]/tree` — public (redacted) tree data for a published tree (404 if unknown/private)
 - `POST /api/family/[slug]/report` — public, no-account report; rate-limited per IP; records a `public_tree_report` notification for workspace admins AND emails `SITE_CONTACT_EMAIL` (best-effort, never blocks/fails the report) for manual admin review. Never auto-takes-down
 
+**Collections API Routes** (`src/app/api/workspaces/[id]/`) — all gated by `requireCollectionsEnabled` (404 when off) then the auth guard; Chunk 1 (own-content) only — add-by-link + public serving are Chunks 2–3:
+- `POST/GET /collections`, `GET/PATCH/DELETE /collections/[collectionId]` — collection CRUD; GET detail shapes each item with a derived source label + LIVE effective visibility
+- `POST /collections/[collectionId]/items`, `PATCH/DELETE .../items/[itemId]` — add/edit/remove items (own main/extra tree → linked, or copied = deep-copy into a new extra tree; or nested collection with in-transaction cycle guard); duplicate-source adds → 409 (in-tx pre-check + DB unique index P2002 backstop); `linkInput` (add-by-link) → 501 (Chunk 2)
+- `POST/GET /extra-trees`, `PATCH/DELETE /extra-trees/[treeId]`, `POST /extra-trees/[treeId]/duplicate` — extra-tree CRUD (cap 50) + duplicate any tree (main/extra) into a frozen extra-tree snapshot named `«{name} (نسخة)»`, writing `CopyProvenance`
+
 **Places API Route** (`src/app/api/workspaces/[id]/places/`):
 - `GET /api/workspaces/[id]/places?q=...` — search places (global seed + workspace custom)
 - `POST /api/workspaces/[id]/places` — create custom place for workspace
@@ -360,6 +367,11 @@ The GEDCOM file (`public/saeed-family.ged`):
 - `src/middleware.ts` — calls `trackPresence` after `if (!user) redirect`, skipping `/admin/*` (owner self-exclusion)
 - `src/lib/api/auth.ts` — `getAuthenticatedUser` calls `trackPresence` after successful Bearer auth (covers API-only callers that bypass middleware's `updateSession`)
 - Both call sites are `void trackPresence(...)` — fire-and-forget, never block the response
+
+**Collections Library** (`src/lib/collections/`):
+- `queries.ts` — collection/item/extra-tree CRUD; pure recursion guards (`detectCollectionCycle` + DB wrapper, `MAX_NESTING_DEPTH`, `MAX_ITEMS`); `resolveEffectiveVisibility` (LIVE, deny-by-default), `shapeCollectionItem`, `peopleCountByTree` (shared Prisma-v7 groupBy workaround), `itemExistsInCollection` (in-tx dedupe), `filterTopLevelCollections`
+- `schemas.ts` — Zod request schemas; `copy.ts` — `copyTreeIntoNewExtraTree` (atomic deep-copy of an own tree into a new extra tree, re-encrypts under same key + writes `CopyProvenance`); `api.ts` — client `apiFetch` wrappers + DB→UI visibility mapping; `useWorkspaceResolver.ts` — slug→id + `enableCollections` resolver hook
+- Components in `src/components/collections/` (CollectionsResolved, CollectionsPageShell, CollectionsList, CollectionDetail, TreesArea, AddItemFlow, CollectionVisibilityModal, CollectionBadges, EnableCollectionsSetting, JoinCodePanel); modal action buttons use the shared `@/components/ui/Button`
 
 **Tree Library** (`src/lib/tree/`):
 - `queries.ts` — database query helpers for tree CRUD; `touchTreeTimestamp(treeId)` updates `FamilyTree.lastModifiedAt` (called by all mutation routes for ETag invalidation)
@@ -416,6 +428,8 @@ The GEDCOM file (`public/saeed-family.ged`):
 - `/workspaces/[slug]` — workspace detail with members, invite modal, tree link
 - `/workspaces/[slug]/tree` — database-backed tree view with edit controls (add/edit individual, add child/spouse/parent, move child, edit family events, delete)
 - `/workspaces/[slug]/tree/audit` — audit log page (admin-only, requires `enableAuditLog`): browsable edit history with filtering, pagination, expandable before/after diff viewer
+- `/workspaces/[slug]/trees` — extra-trees management (requires `enableCollections`): the locked main tree + lightweight extra trees, with create/rename/delete/duplicate (collections feature off by default; toggle + join-code panel live in the `/workspaces/[slug]` settings page)
+- `/workspaces/[slug]/collections` + `/workspaces/[slug]/collections/[collectionId]` — collections list + detail (requires `enableCollections`): create collections, add own trees/branches as items, nest collections; add-by-link + make-public shown coming-soon (Chunks 2–3)
 - `/invite/[id]` — invitation acceptance page
 - `/policy` — public policy page (Arabic only)
 - `/islamic-gedcom` — public reference page (مرجع GEDCOM الإسلامي): `@#DHIJRI@` calendar escape for Hijri dates, MARC/MARR/DIV Islamic marriage mappings, `_UMM_WALAD` (أم ولد flag on FAM), rada'a extensions (`_RADA_FAM`, `_RADA_WIFE`, `_RADA_HUSB`, `_RADA_CHIL`, `_RADA_FAMC`), `_KUNYA` (الكنية)

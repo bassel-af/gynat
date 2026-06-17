@@ -1,6 +1,6 @@
 # Product Requirements Document — Public Tree & Collections
 
-**Status**: **Public Tree v1 — ✅ shipped (2026-06-16).** **Collections — ▶ next up: implementation planning starts now.** Design decisions for both captured below.
+**Status**: **Public Tree v1 — ✅ shipped (2026-06-16).** **Collections — Chunk 1 ✅ shipped (2026-06-17); Chunks 2–3 remaining.** Design decisions for both captured below.
 **Audience**: Human developers, AI coding assistants
 **Created**: 2026-06-15
 **Revised**: 2026-06-16 — Public Tree v1 shipped (visibility levels, public viewer, publish checkpoint, borrowed-branch protection, make-private + report path, public URL scheme); Collections is now the active next feature. Earlier revisions (2026-06-15): folded in scenario-gap decisions (§1.3, §1.7, §1.10, §1.11, §2.10); added build sequencing (§5); added architect/security/designer implementation decisions (§7); added the public URL scheme (§7.11, later simplified to a single unguessable code for all public levels + a stable address across private round-trips)
@@ -219,7 +219,10 @@ Concretely: a public collection can only contain public trees; a borrowed privat
 
 **Rough order:**
 1. **Public Tree** — ✅ **DONE (2026-06-16).** Shipped: the three visibility levels, the read-only public viewer at a separate auto-generated public URL (§7.11), the publish checkpoint (show-all-living + type-to-confirm, §1.3), borrowed-branch protection (§7.5), server-rendered public names list for search (§7.6), and the make-private + public report path (§8.2). *Deferred follow-ons (still open):* active sitemap submission / IndexNow removal (§8.1) and platform-admin approval for search listing (§1.7).
-2. **Collections** — ▶ **NEXT (active).** Turn-on setting, extra trees per workspace, nesting, link/copy items, members-as-viewers (plus surfacing the join-code, §6), with "publish only public trees + warn" (§2.10) built last. The multi-tree foundation was laid during Public Tree v1 (§7.9), so this slots on without a rebuild.
+2. **Collections** — partially shipped, built in chunks:
+   - **Chunk 1 — ✅ DONE (2026-06-17).** The foundation + own-content flows: the off-by-default `enableCollections` workspace toggle + new `collection_editor` content role; the `Collection` + `CollectionItem` data model (extra trees reuse `FamilyTree(kind='extra')`); extra-tree CRUD + a "duplicate tree" action (frozen snapshot, `«{name} (نسخة)»`); collection CRUD; adding the workspace's **own** main/extra trees as items (always a live link — the link/copy choice is reserved for borrowed content) and nesting collections with cycle/depth guards; the members-as-viewers join-code panel; the read-only public viewer plumbing stays private (collections never published in Chunk 1). Duplicate-source adds are blocked both in the picker and by a DB unique index (`@@unique` on `(collectionId, treeId)` and `(collectionId, childCollectionId)`). Security-reviewed (cross-tenant IDOR + TOCTOU caught and fixed). *Not yet wired (deferred, shown coming-soon):* the "عبر رابط" add-by-link tab and the make-public visibility ladder.
+   - **Chunk 2 — NEXT.** Cross-workspace add-by-link (borrowed public trees / privately-shared branches) reusing the share-token + deep-copy machinery, with the live `allowReuse` reuse-gate; standalone extra-tree publishing (home-only serve, §7 correction).
+   - **Chunk 3 — LAST (§2.10).** Public collection serving: its own deny-by-default route, recursive withholding of private/private-sourced items, the serve-time reuse/visibility re-check, the publish-preview "what's withheld" warning, and going-private freeze-repoint.
 
 ---
 

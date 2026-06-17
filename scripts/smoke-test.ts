@@ -49,6 +49,14 @@ const ENDPOINTS: Endpoint[] = [
   { method: 'GET', path: '/family/__smoke_unknown__', label: 'Public tree page (unknown → 404)', allowUnauth: true },
   // Admin global takedown — anon must be rejected (401) at the gate, not 500.
   { method: 'POST', path: '/api/admin/takedown', label: 'Admin takedown (anon → 401)', allowUnauth: true },
+
+  // Collections routes — anon hitting an unknown workspace must load the route
+  // and return 401/404 at the gate, NOT 500 (catches stale Prisma client /
+  // missing import / broken query in the new route modules).
+  { method: 'GET', path: '/api/workspaces/00000000-0000-4000-a000-000000000000/extra-trees', label: 'Extra-trees list (anon → 401/404)', allowUnauth: true },
+  { method: 'GET', path: '/api/workspaces/00000000-0000-4000-a000-000000000000/collections', label: 'Collections list (anon → 401/404)', allowUnauth: true },
+  { method: 'GET', path: '/api/workspaces/00000000-0000-4000-a000-000000000000/collections/00000000-0000-4000-a000-000000000001', label: 'Collection detail (anon → 401/404)', allowUnauth: true },
+  { method: 'POST', path: '/api/workspaces/00000000-0000-4000-a000-000000000000/extra-trees/00000000-0000-4000-a000-000000000001/duplicate', label: 'Duplicate tree (anon → 401/404)', allowUnauth: true },
 ];
 
 async function runSmokeTest() {

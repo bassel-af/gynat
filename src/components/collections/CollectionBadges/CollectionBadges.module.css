@@ -1,0 +1,56 @@
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  padding: 3px 10px;
+  border-radius: var(--heritage-radius-pill);
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.chip iconify-icon {
+  flex-shrink: 0;
+}
+
+/* Visibility — private (muted), link (emerald), search (gold) */
+.private {
+  color: var(--heritage-text-muted);
+  background: rgba(232, 223, 200, 0.05);
+  border: 1px solid rgba(232, 223, 200, 0.14);
+}
+
+.link {
+  color: var(--heritage-emerald-glow);
+  background: rgba(46, 152, 118, 0.1);
+  border: 1px solid rgba(46, 152, 118, 0.28);
+}
+
+.search {
+  color: var(--heritage-gold-bright);
+  background: rgba(200, 168, 101, 0.12);
+  border: 1px solid rgba(200, 168, 101, 0.3);
+}
+
+/* Link mode — linked (emerald, live) vs copied (cool/neutral, frozen) */
+.linked {
+  color: var(--heritage-emerald-glow);
+  background: rgba(46, 152, 118, 0.1);
+  border: 1px solid rgba(46, 152, 118, 0.28);
+}
+
+.copied {
+  color: #9bb4d6;
+  background: rgba(120, 150, 200, 0.1);
+  border: 1px solid rgba(120, 150, 200, 0.26);
+}
+
+/* Withheld — warm warning */
+.withheld {
+  color: #f0b98b;
+  background: rgba(232, 92, 51, 0.1);
+  border: 1px solid rgba(232, 161, 92, 0.32);
+}

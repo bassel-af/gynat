@@ -17,6 +17,7 @@ const updateWorkspaceSchema = z.object({
   enableKunya: z.boolean().optional(),
   enableAuditLog: z.boolean().optional(),
   enableVersionControl: z.boolean().optional(),
+  enableCollections: z.boolean().optional(),
   enableTreeExport: z.boolean().optional(),
   allowMemberExport: z.boolean().optional(),
   hideBirthDateForFemale: z.boolean().optional(),

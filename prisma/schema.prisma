@@ -46,6 +46,8 @@ model User {
   createdShareTokens   BranchShareToken[]
   createdPointers      BranchPointer[]
   publishedTrees       FamilyTree[]          @relation("TreePublisher")
+  createdCollections   Collection[]          @relation("CollectionCreator")
+  publishedCollections Collection[]          @relation("CollectionPublisher")
 
   @@index([lastActiveAt])
   @@map("users")
@@ -75,6 +77,7 @@ model Workspace {
   enableKunya          Boolean              @default(false) @map("enable_kunya")
   enableAuditLog       Boolean              @default(false) @map("enable_audit_log")
   enableVersionControl Boolean              @default(false) @map("enable_version_control")
+  enableCollections    Boolean              @default(false) @map("enable_collections")
   enableTreeExport     Boolean              @default(true)  @map("enable_tree_export")
   allowMemberExport    Boolean              @default(false) @map("allow_member_export")
   hideBirthDateForFemale Boolean             @default(false) @map("hide_birth_date_for_female")
@@ -101,6 +104,7 @@ model Workspace {
   incomingPointers        BranchPointer[]       @relation("PointerTarget")
   adminAccessLogs         AdminAccessLog[]
   lastActiveUsers         User[]                @relation("UserLastActiveWorkspace")
+  collections             Collection[]
 
   @@map("workspaces")
 }
@@ -119,6 +123,7 @@ enum ContentPermission {
   news_editor
   album_editor
   event_editor
+  collection_editor
 }
 
 model WorkspaceMembership {
@@ -252,6 +257,7 @@ model FamilyTree {
   families     Family[]
   radaFamilies RadaFamily[]
   editLogs     TreeEditLog[]
+  collectionItems CollectionItem[]
 
   @@index([workspaceId])
   @@map("family_trees")
@@ -323,6 +329,7 @@ model Individual {
   radaFamiliesAsFosterFather RadaFamily[]   @relation("RadaFamilyFosterFather")
   radaFamiliesAsFosterMother RadaFamily[]   @relation("RadaFamilyFosterMother")
   radaFamilyChildren         RadaFamilyChild[]
+  collectionItemsAsRoot      CollectionItem[]
 
   @@unique([treeId, gedcomId]) // gedcomId is unique within a tree
   @@map("individuals")
@@ -661,6 +668,7 @@ model BranchPointer {
   anchorIndividual    Individual  @relation("PointerAnchor", fields: [anchorIndividualId], references: [id])
   shareToken       BranchShareToken? @relation(fields: [shareTokenId], references: [id])
   createdBy        User        @relation(fields: [createdById], references: [id])
+  collectionItems  CollectionItem[]
 
   @@index([targetWorkspaceId, status])
   @@index([sourceWorkspaceId])
@@ -751,4 +759,85 @@ model PlatformStat {
   peakRecordedAt      DateTime? @map("peak_recorded_at")
 
   @@map("platform_stats")
+}
+
+// =============================================================================
+// Collections — curated groupings of trees/branches (+ nested collections).
+//
+// A Collection groups CollectionItems. Each item binds to EXACTLY ONE source:
+// an own/extra tree (treeId), a borrowed branch (branchPointerId), or a nested
+// collection (childCollectionId) — enforced by a SQL CHECK constraint in the
+// migration (Prisma cannot express it). Extra trees REUSE FamilyTree(kind=extra);
+// no new tree columns. Effective visibility for public-withholding is computed
+// LIVE from the source, never stored. titleAr/descriptionAr are PLAINTEXT
+// curation labels (course/section names, not family PII) — like Post.content.
+// =============================================================================
+
+enum CollectionItemKind {
+  tree
+  collection
+}
+
+enum ItemLinkMode {
+  linked
+  copied
+}
+
+model Collection {
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId   String         @map("workspace_id") @db.Uuid
+  titleAr       String         @map("title_ar")
+  descriptionAr String?        @map("description_ar")
+  visibility    TreeVisibility @default(private)
+  publicSlug    String?        @unique @map("public_slug")
+  allowReuse    Boolean        @default(false) @map("allow_reuse")
+  publishedAt   DateTime?      @map("published_at")
+  publishedById String?        @map("published_by") @db.Uuid
+  createdById   String         @map("created_by") @db.Uuid
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  // Relations
+  workspace   Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  publishedBy User?            @relation("CollectionPublisher", fields: [publishedById], references: [id])
+  createdBy   User             @relation("CollectionCreator", fields: [createdById], references: [id])
+  items       CollectionItem[] @relation("CollectionItems")
+  parentItems CollectionItem[] @relation("ChildCollection")
+
+  @@index([workspaceId])
+  @@map("collections")
+}
+
+model CollectionItem {
+  id            String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  collectionId  String             @map("collection_id") @db.Uuid
+  kind          CollectionItemKind
+  sortOrder     Int                @default(0) @map("sort_order")
+  titleAr       String             @map("title_ar")
+  descriptionAr String?            @map("description_ar")
+  linkMode      ItemLinkMode?
+  treeId            String? @map("tree_id") @db.Uuid
+  rootIndividualId  String? @map("root_individual_id") @db.Uuid
+  branchPointerId   String? @map("branch_pointer_id") @db.Uuid
+  childCollectionId String? @map("child_collection_id") @db.Uuid
+  createdAt     DateTime           @default(now()) @map("created_at")
+
+  // Relations
+  collection      Collection     @relation("CollectionItems", fields: [collectionId], references: [id], onDelete: Cascade)
+  tree            FamilyTree?    @relation(fields: [treeId], references: [id], onDelete: Cascade)
+  branchPointer   BranchPointer? @relation(fields: [branchPointerId], references: [id], onDelete: Cascade)
+  childCollection Collection?    @relation("ChildCollection", fields: [childCollectionId], references: [id], onDelete: Cascade)
+  rootIndividual  Individual?    @relation(fields: [rootIndividualId], references: [id])
+
+  // DB-authoritative duplicate guard: the same tree (or the same nested
+  // collection) cannot be added to one collection twice. Both columns are
+  // nullable — Postgres treats NULLs as DISTINCT, so the many rows whose
+  // treeId / childCollectionId is null (pointer / cross-kind items) do NOT
+  // collide; only true same-source duplicates are blocked. The in-route
+  // pre-check is the friendly fast path; this index is the race backstop.
+  @@unique([collectionId, treeId])
+  @@unique([collectionId, childCollectionId])
+  @@index([collectionId, sortOrder])
+  @@index([childCollectionId])
+  @@map("collection_items")
 }

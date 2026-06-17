@@ -18,6 +18,8 @@ import {
 import { ShareBranchModal } from '@/components/workspace/ShareBranchModal/ShareBranchModal';
 import { ShareTokenList } from '@/components/workspace/ShareTokenList/ShareTokenList';
 import { IncomingPointerList } from '@/components/workspace/IncomingPointerList/IncomingPointerList';
+import { EnableCollectionsSetting } from '@/components/collections/EnableCollectionsSetting/EnableCollectionsSetting';
+import { JoinCodePanel } from '@/components/collections/JoinCodePanel/JoinCodePanel';
 import type { GedcomData } from '@/lib/gedcom/types';
 import styles from './workspace.module.css';
 
@@ -38,6 +40,7 @@ interface Workspace {
   enableUmmWalad?: boolean;
   enableRadaa?: boolean;
   enableKunya?: boolean;
+  enableCollections?: boolean;
   enableAuditLog?: boolean;
   enableVersionControl?: boolean;
   enableTreeExport?: boolean;
@@ -463,6 +466,19 @@ export default function WorkspaceDetailPage() {
           عرض شجرة العائلة
         </Link>
 
+        {/* Collections — enable setting + shortcuts to the new areas (§2.9) */}
+        <EnableCollectionsSetting
+          slug={slug}
+          workspaceId={workspace.id}
+          isAdmin={isAdmin}
+          enabled={workspace.enableCollections ?? false}
+          onChange={(enabled) =>
+            setWorkspace((prev) =>
+              prev ? { ...prev, enableCollections: enabled } : prev,
+            )
+          }
+        />
+
         {/* Feature Toggles */}
         <CollapsibleSection title="المميزات">
           <div className={styles.featureList}>
@@ -758,6 +774,11 @@ export default function WorkspaceDetailPage() {
             ))}
           </div>
         </CollapsibleSection>
+
+        {/* Join code — members-as-viewers for collections (§6, §2.8) */}
+        {(workspace.enableCollections ?? false) && (
+          <JoinCodePanel workspaceId={workspace.id} isAdmin={isAdmin} />
+        )}
 
         {/* Branch Sharing Section (admin only) */}
         {isAdmin && (
