@@ -38,9 +38,35 @@ describe('loadPublicTreeBySlug — deny-by-default', () => {
     expect(await loadPublicTreeBySlug('abc123xyz')).toBeNull();
   });
 
-  test('returns null for a non-main tree', async () => {
-    mockFamilyTreeFindUnique.mockResolvedValue({ ...baseTree, kind: 'extra', visibility: 'public_link' });
+  test('returns null for an extra tree when collections is OFF (fail-closed)', async () => {
+    mockFamilyTreeFindUnique.mockResolvedValue({
+      ...baseTree,
+      kind: 'extra',
+      visibility: 'public_link',
+      workspace: { ...baseTree.workspace, enableCollections: false },
+    });
     expect(await loadPublicTreeBySlug('abc123xyz')).toBeNull();
+  });
+
+  test('returns null for an extra tree when enableCollections is absent (deny-by-default)', async () => {
+    mockFamilyTreeFindUnique.mockResolvedValue({
+      ...baseTree,
+      kind: 'extra',
+      visibility: 'public_link',
+    });
+    expect(await loadPublicTreeBySlug('abc123xyz')).toBeNull();
+  });
+
+  test('returns the record for a public extra tree when collections is ON', async () => {
+    mockFamilyTreeFindUnique.mockResolvedValue({
+      ...baseTree,
+      kind: 'extra',
+      visibility: 'public_link',
+      workspace: { ...baseTree.workspace, enableCollections: true },
+    });
+    const rec = await loadPublicTreeBySlug('abc123xyz');
+    expect(rec?.visibility).toBe('public_link');
+    expect(rec?.treeId).toBe('tree-1');
   });
 
   test('returns the record for a public_link tree', async () => {

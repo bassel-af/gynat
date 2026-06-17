@@ -149,4 +149,39 @@ describe('freezeDependentPointers', () => {
     expect(result.frozen).toBe(1);
     expect(result.failed).toBe(1);
   });
+
+  // S20 (freeze decision): anchor-less collection-link pointers are EXCLUDED at
+  // the query level — the freeze is for real anchored member branches only. A
+  // collection borrow must NEVER be deep-copied or stitched into the target's
+  // MAIN tree (that would corrupt it). Safety on source-private is the serve-
+  // time reuse-gate (S11), not the freeze.
+  test('the query excludes collection-link pointers (isCollectionLink:false)', async () => {
+    mockBranchPointerFindMany.mockResolvedValue([]);
+    await freezeDependentPointers('src-ws');
+    const where = mockBranchPointerFindMany.mock.calls[0][0].where;
+    expect(where.sourceWorkspaceId).toBe('src-ws');
+    expect(where.status).toBe('active');
+    expect(where.isCollectionLink).toBe(false);
+  });
+
+  test('never deep-copies or stitches a collection-link pointer into the target main tree', async () => {
+    // Model the DB honoring the WHERE: a collection-link row is dropped, so the
+    // freeze only ever sees the anchored one (here, none).
+    const collectionLinkPointer = {
+      ...POINTER, id: 'ptr-coll', isCollectionLink: true,
+      anchorIndividualId: null, selectedIndividualId: null, relationship: null,
+    };
+    mockBranchPointerFindMany.mockImplementation((args: { where?: { isCollectionLink?: boolean } }) => {
+      const rows = [collectionLinkPointer];
+      const want = args?.where?.isCollectionLink;
+      return Promise.resolve(want === undefined ? rows : rows.filter((r) => r.isCollectionLink === want));
+    });
+
+    const result = await freezeDependentPointers('src-ws');
+    // The collection-link pointer was filtered out → nothing to freeze, and it
+    // is NEVER deep-copied, stitched, or marked broken/revoked (left untouched).
+    expect(result).toEqual({ frozen: 0, failed: 0 });
+    expect(mockPersistDeepCopy).not.toHaveBeenCalled();
+    expect(mockBranchPointerUpdate).not.toHaveBeenCalled();
+  });
 });

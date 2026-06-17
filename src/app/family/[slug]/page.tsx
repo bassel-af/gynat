@@ -20,9 +20,12 @@ export async function generateMetadata({ params }: PageParams): Promise<Metadata
   }
 
   const familyName = record.nameAr || record.workspaceNameAr;
-  // Only "findable in Google" (public_listed) trees are indexable. By-link
-  // trees are explicitly kept out of search (PRD §1.2, §7.6).
-  const indexable = record.visibility === 'public_listed';
+  // Only "findable in Google" (public_listed) MAIN trees are indexable. By-link
+  // trees are explicitly kept out of search (PRD §1.2, §7.6). An EXTRA tree
+  // (Collections, Slice B) is ALWAYS noindex regardless of its visibility level
+  // — only the main family tree is discoverable.
+  const indexable =
+    record.kind === 'main' && record.visibility === 'public_listed';
 
   return {
     title: familyName,

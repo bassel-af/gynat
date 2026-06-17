@@ -39,6 +39,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     );
   }
 
+  // Collection-link pointers are not member-tree branch links and are never
+  // surfaced in the incoming-branches list — this member copy/stitch path must
+  // refuse them (defense-in-depth; also narrows the nullable anchor below).
+  if (pointer.isCollectionLink || pointer.anchorIndividualId == null || pointer.relationship == null) {
+    return NextResponse.json({ error: 'الرابط غير موجود' }, { status: 404 });
+  }
+
   // Phase 10b: fetch source tree + source key (to decrypt) AND target key
   // (to re-encrypt before the write). Keys are workspace-scoped so we MUST
   // use the target's when persisting.

@@ -17,6 +17,8 @@ interface Endpoint {
   label: string;
   /** If true, skip this endpoint when it returns 401 (requires auth) */
   allowUnauth?: boolean;
+  /** Optional JSON body for POST/PATCH endpoints (sent with content-type: application/json). */
+  body?: unknown;
 }
 
 const ENDPOINTS: Endpoint[] = [
@@ -62,6 +64,18 @@ const ENDPOINTS: Endpoint[] = [
   // `?treeId=` selector must load the route and reject at the auth/feature gate
   // (401/404), NOT 500 — catches a broken tree-id resolver in the GET path.
   { method: 'GET', path: '/api/workspaces/00000000-0000-4000-a000-000000000000/tree?treeId=00000000-0000-4000-a000-000000000001', label: 'Tree GET with treeId selector (anon → 401/404)', allowUnauth: true },
+
+  // Extra-tree publish (Collections Chunk 3, Slice B): the visibility route now
+  // accepts an optional `treeId` body field. Anon PATCH must load the route and
+  // reject at the admin gate (401), NOT 500 — catches a broken treeId resolver
+  // or schema in the extended publish path.
+  { method: 'PATCH', path: '/api/workspaces/00000000-0000-4000-a000-000000000000/tree/visibility', label: 'Extra-tree publish visibility (anon → 401)', allowUnauth: true },
+
+  // Add-by-link (Collections Chunk 3, Slice A): the items POST route now imports
+  // the link resolver + cross-workspace deep-copy. Anon POST with a linkInput
+  // body must load the route and reject at the feature/auth gate (404/401/403),
+  // NOT 500 — catches a missing import or runtime error in the new path.
+  { method: 'POST', path: '/api/workspaces/00000000-0000-4000-a000-000000000000/collections/00000000-0000-4000-a000-000000000001/items', label: 'Add item by link (anon → 401/403/404)', allowUnauth: true, body: { kind: 'tree', linkInput: 'brsh_smoke', linkMode: 'linked', titleAr: 'دخان' } },
 ];
 
 async function runSmokeTest() {
@@ -86,6 +100,12 @@ async function runSmokeTest() {
         method: endpoint.method,
         redirect: 'follow',
         signal: AbortSignal.timeout(10000),
+        ...(endpoint.body !== undefined
+          ? {
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify(endpoint.body),
+            }
+          : {}),
       });
 
       const status = res.status;

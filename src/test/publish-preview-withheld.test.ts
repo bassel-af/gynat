@@ -73,4 +73,19 @@ describe('getWithheldBorrowedBranches', () => {
     const withheld = await getWithheldBorrowedBranches('home-ws');
     expect(withheld).toEqual([]);
   });
+
+  // S20: collection-link pointers (anchorless, isCollectionLink=true) must be
+  // excluded at the DB level — they are NOT real borrowed branches and must not
+  // be listed as withheld in the publish preview. The query has to filter them
+  // out (fail-closed) rather than rely on post-fetch logic.
+  test('excludes collection-link pointers via the query WHERE (isCollectionLink: false)', async () => {
+    mockBranchPointerFindMany.mockResolvedValue([]);
+    await getWithheldBorrowedBranches('home-ws');
+    const whereArg = mockBranchPointerFindMany.mock.calls[0][0].where;
+    expect(whereArg).toMatchObject({
+      targetWorkspaceId: 'home-ws',
+      status: 'active',
+      isCollectionLink: false,
+    });
+  });
 });

@@ -21,8 +21,10 @@ vi.mock('@/lib/db', () => ({
 }));
 
 const mockGetTreeByWorkspaceId = vi.fn();
+const mockGetOrCreateTargetTree = vi.fn();
 vi.mock('@/lib/tree/queries', () => ({
   getTreeByWorkspaceId: (...args: unknown[]) => mockGetTreeByWorkspaceId(...args),
+  getOrCreateTargetTree: (...args: unknown[]) => mockGetOrCreateTargetTree(...args),
 }));
 
 const mockGetWorkspaceKey = vi.fn();
@@ -86,6 +88,7 @@ const HOME_RECORD: PublicTreeRecord = {
   workspaceId: 'home-ws',
   workspaceNameAr: 'البيت',
   nameAr: 'شجرة البيت',
+  kind: 'main',
   visibility: 'public_listed',
   lastModifiedAt: new Date('2026-06-15'),
   publicSlug: 'home-abc123',
@@ -183,5 +186,80 @@ describe('buildPublicTreePayload borrowed-branch source gating', () => {
     mockBranchPointerFindMany.mockResolvedValue([]);
     const payload = await buildPublicTreePayload(HOME_RECORD);
     expect(Object.keys(payload.data.individuals)).toEqual(['homePerson']);
+  });
+
+  // S20: a published MAIN tree must NEVER render the workspace's collection-link
+  // pointers (anchorless, isCollectionLink=true) as public borrowed branches —
+  // that would leak ANOTHER workspace's data onto the public page. The borrowed
+  // query must exclude them at the DB level (fail-closed).
+  test('the MAIN public tree borrowed query filters out collection-link pointers (isCollectionLink: false)', async () => {
+    mockBranchPointerFindMany.mockResolvedValue([]);
+    await buildPublicTreePayload(HOME_RECORD);
+    const whereArg = mockBranchPointerFindMany.mock.calls[0][0].where;
+    expect(whereArg).toMatchObject({
+      targetWorkspaceId: 'home-ws',
+      status: 'active',
+      isCollectionLink: false,
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Extra-tree serving (Slice B): an extra tree is HOME-ONLY — it loads its own
+// tree by treeId and NEVER pulls borrowed branches, even if pointers exist.
+// ---------------------------------------------------------------------------
+
+const EXTRA_RECORD: PublicTreeRecord = {
+  ...HOME_RECORD,
+  treeId: 'extra-tree',
+  kind: 'extra',
+  nameAr: 'فرع إضافي',
+  publicSlug: 'extra-abc123',
+};
+
+describe('buildPublicTreePayload — extra tree is home-only', () => {
+  beforeEach(() => {
+    // The extra tree's own data is loaded by treeId via getOrCreateTargetTree.
+    sourceGedcomByTreeMarker.set('extra', {
+      individuals: {
+        extraPerson: makeIndividual({ id: 'extraPerson', name: 'فرد الفرع', isDeceased: true, birth: '1920' }),
+      },
+      families: {},
+    });
+    mockGetOrCreateTargetTree.mockImplementation(async (_wsId: string, treeId?: string) => {
+      if (treeId === 'extra-tree') return { _marker: 'extra' };
+      return null;
+    });
+  });
+
+  test('serves the extra tree by treeId, not the workspace main tree', async () => {
+    const payload = await buildPublicTreePayload(EXTRA_RECORD);
+    expect(Object.keys(payload.data.individuals)).toEqual(['extraPerson']);
+    // The main-tree-by-workspace loader is never used for an extra tree.
+    expect(mockGetTreeByWorkspaceId).not.toHaveBeenCalled();
+  });
+
+  test('NEVER pulls borrowed branches even when active pointers exist (home-only, fail-closed)', async () => {
+    sourceGedcomByTreeMarker.set('src', {
+      individuals: { borrowed: makeIndividual({ id: 'borrowed', name: 'مستعار', isDeceased: true, birth: '1910' }) },
+      families: {},
+    });
+    // Pointers exist and would otherwise be borrowed — but an extra tree skips them.
+    mockBranchPointerFindMany.mockResolvedValue([
+      { sourceWorkspaceId: 'src-ws', rootIndividualId: 'borrowed', depthLimit: null, includeGrafts: false },
+    ]);
+    mockFamilyTreeFindFirst.mockResolvedValue({ visibility: 'public_link' });
+
+    const payload = await buildPublicTreePayload(EXTRA_RECORD);
+
+    expect(payload.data.individuals.borrowed).toBeUndefined();
+    expect(payload.data.individuals.extraPerson).toBeDefined();
+    // S17: the served set is EXACTLY the extra tree's own people — ZERO borrowed
+    // individuals leak to anonymous visitors, even though a workspace pointer is
+    // active. (A whole-workspace borrowed-data leak is the bug this guards.)
+    expect(Object.keys(payload.data.individuals)).toEqual(['extraPerson']);
+    expect(payload.names.map((n) => n.name)).not.toContain('مستعار');
+    // The borrowed-branch query is never even reached for an extra tree.
+    expect(mockBranchPointerFindMany).not.toHaveBeenCalled();
   });
 });

@@ -111,10 +111,48 @@ async function buildItemLookups(
     }
   }
 
-  // Branch-pointer-backed items are Chunk 2; map stays empty in Chunk 1 unless
-  // such rows already exist. Left intentionally unpopulated here.
-  void pointerIds;
-  void pointers;
+  // Branch-pointer-backed (borrowed) items: each pointer's effective visibility
+  // is computed LIVE from its SOURCE workspace's main tree — never stored — so a
+  // later go-private at the source immediately withholds the item from a public
+  // collection. Deny-by-default: a missing source main tree → private.
+  if (pointerIds.length > 0) {
+    const ptrRows = await prisma.branchPointer.findMany({
+      where: { id: { in: pointerIds } },
+      select: {
+        id: true,
+        sourceWorkspaceId: true,
+        sourceWorkspace: { select: { nameAr: true } },
+      },
+    });
+
+    // Resolve each unique source workspace's main-tree visibility once.
+    const uniqueSourceWsIds = [...new Set(ptrRows.map((p) => p.sourceWorkspaceId))];
+    const visibilityByWs = new Map<string, TreeVisibility | null>();
+    await Promise.all(
+      uniqueSourceWsIds.map(async (sourceWsId) => {
+        const srcMain = await prisma.familyTree.findFirst({
+          where: { workspaceId: sourceWsId, kind: 'main' },
+          select: { visibility: true },
+        });
+        visibilityByWs.set(sourceWsId, (srcMain?.visibility as TreeVisibility) ?? null);
+      }),
+    );
+
+    for (const p of ptrRows) {
+      const sourceVisibility = visibilityByWs.get(p.sourceWorkspaceId) ?? null;
+      const isPublic =
+        sourceVisibility === 'public_link' || sourceVisibility === 'public_listed';
+      pointers.set(p.id, {
+        // The borrowed-from family name is the meaningful source chip; the root
+        // person's name lives encrypted under the SOURCE key and isn't decrypted
+        // for a member-facing summary.
+        sourceNameAr: p.sourceWorkspace.nameAr,
+        sourceVisibility,
+        isPublic,
+        peopleCount: 0,
+      });
+    }
+  }
 
   return { trees, pointers, collections };
 }

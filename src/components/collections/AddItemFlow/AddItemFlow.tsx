@@ -11,6 +11,7 @@ import {
   addItem,
   collectionUsedSourceIds,
   SOURCE_LABEL,
+  type AddItemBody,
   type CollectionItem,
   type ItemLinkMode,
   type ItemSourceLabel,
@@ -33,17 +34,20 @@ interface AddItemFlowProps {
   onAdded: () => void;
 }
 
-/** A pickable source — a tree (treeId) OR a collection (childCollectionId). */
+/** A pickable source — a tree (treeId), a collection (childCollectionId), or a
+ *  pasted link/token (linkInput, Slice B). */
 interface SourceOption {
   key: string;
   nameAr: string;
   source: ItemSourceLabel;
   visibility: Visibility;
   peopleCount?: number;
-  /** Set when this option is a tree. */
+  /** Set when this option is a tree already in this workspace. */
   treeId?: string;
   /** Set when this option is a collection (nesting). */
   collectionId?: string;
+  /** Set when this option is a pasted public link / share token (§2.5, Slice B). */
+  linkInput?: string;
   /** Blocked because it would create a loop (§2.4). */
   blocked?: boolean;
   blockedReason?: string;
@@ -76,6 +80,7 @@ export function AddItemFlow({
   const [origin, setOrigin] = useState<Origin>('mine');
   const [picked, setPicked] = useState<SourceOption | null>(null);
   const [linkMode, setLinkMode] = useState<ItemLinkMode>('linked');
+  const [linkValue, setLinkValue] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
 
@@ -169,27 +174,59 @@ export function AddItemFlow({
     setStep('details');
   }
 
+  // Advance the "via link" path: the pasted public link / share token becomes a
+  // pickable source. Unlike an own tree, link/copy genuinely matters here, so it
+  // routes through the 'mode' step (ربط مباشر vs نسخة مثبّتة) before the details.
+  function chooseLink() {
+    const value = linkValue.trim();
+    if (!value) return;
+    setPicked({
+      key: 'link',
+      nameAr: 'عنصر عبر رابط',
+      source: 'public-borrowed',
+      visibility: 'private',
+      linkInput: value,
+    });
+    setTitle('');
+    setSubmitError('');
+    setLinkMode('linked');
+    setStep('mode');
+  }
+
   async function commit() {
     if (!picked || !title.trim()) return;
     setBusy(true);
     setSubmitError('');
     try {
+      let body: AddItemBody;
       if (picked.collectionId) {
-        await addItem(workspaceId, collectionId, {
+        body = {
           kind: 'collection',
           childCollectionId: picked.collectionId,
           titleAr: title.trim(),
           descriptionAr: description.trim() || undefined,
-        });
+        };
+      } else if (picked.linkInput) {
+        body = {
+          kind: 'tree',
+          linkInput: picked.linkInput,
+          linkMode,
+          titleAr: title.trim(),
+          descriptionAr: description.trim() || undefined,
+        };
       } else if (picked.treeId) {
-        await addItem(workspaceId, collectionId, {
+        body = {
           kind: 'tree',
           treeId: picked.treeId,
           linkMode,
           titleAr: title.trim(),
           descriptionAr: description.trim() || undefined,
-        });
+        };
+      } else {
+        setBusy(false);
+        return;
       }
+      await addItem(workspaceId, collectionId, body);
       onAdded();
     } catch (e) {
       setSubmitError(e instanceof Error ? e.message : 'تعذّر إضافة العنصر');
@@ -222,10 +259,14 @@ export function AddItemFlow({
               <Button
                 variant="ghost"
                 size="md"
-                // Chunk 1 has no intermediate 'mode' step (own trees skip it),
-                // so 'details' always steps back to the picker. The 'mode'→back
-                // branch is restored alongside ModeStep when Chunk 2 lands.
-                onClick={() => setStep('pick')}
+                // Own trees skip 'mode', so their 'details' steps straight back
+                // to the picker. A by-link source DOES pass through 'mode', so
+                // 'details' steps back to it; 'mode' itself steps back to 'pick'.
+                onClick={() =>
+                  setStep(
+                    step === 'details' && picked?.linkInput ? 'mode' : 'pick',
+                  )
+                }
               >
                 رجوع
               </Button>
@@ -262,6 +303,9 @@ export function AddItemFlow({
           treeOptions={treeOptions}
           collectionOptions={collectionOptions}
           onChoose={choose}
+          linkValue={linkValue}
+          onLinkValue={setLinkValue}
+          onLinkContinue={chooseLink}
         />
       )}
 
@@ -297,6 +341,9 @@ function PickStep({
   treeOptions,
   collectionOptions,
   onChoose,
+  linkValue,
+  onLinkValue,
+  onLinkContinue,
 }: {
   origin: Origin;
   onOrigin: (o: Origin) => void;
@@ -305,6 +352,9 @@ function PickStep({
   treeOptions: SourceOption[];
   collectionOptions: SourceOption[];
   onChoose: (o: SourceOption) => void;
+  linkValue: string;
+  onLinkValue: (v: string) => void;
+  onLinkContinue: () => void;
 }) {
   return (
     <div className={styles.pickWrap}>
@@ -360,7 +410,11 @@ function PickStep({
           />
         )
       ) : (
-        <LinkTabComingSoon />
+        <LinkTab
+          value={linkValue}
+          onValue={onLinkValue}
+          onContinue={onLinkContinue}
+        />
       )}
     </div>
   );
@@ -427,25 +481,45 @@ function MineTab({
   );
 }
 
-// --- "عبر رابط": Chunk 2 — calm coming-soon placeholder ---------------------
+// --- "عبر رابط": bring a tree/branch from another family by link/token -------
 
-function LinkTabComingSoon() {
+function LinkTab({
+  value,
+  onValue,
+  onContinue,
+}: {
+  value: string;
+  onValue: (v: string) => void;
+  onContinue: () => void;
+}) {
   return (
     <div className={styles.tabBody}>
-      <div className={styles.comingSoon} role="note">
-        <span className={styles.comingSoonBadge}>
-          <iconify-icon
-            icon="material-symbols:schedule-outline"
-            width="15"
-            height="15"
-            aria-hidden="true"
-          />
-          قريباً
-        </span>
-        <p className={styles.linkIntro}>
-          لاستحضار شجرةٍ أو فرعٍ من عائلةٍ أخرى عبر رابطها العام أو رمز المشاركة.
-          هذه الخطوة قيد الإنجاز وستتوفّر قريباً.
-        </p>
+      <p className={styles.linkIntro}>
+        الصق رابط العائلة العام أو رمز المشاركة لاستحضار شجرةٍ أو فرعٍ من عائلةٍ
+        أخرى إلى مجموعتك.
+      </p>
+      <label className={modal.fieldLabel}>الرابط أو رمز المشاركة</label>
+      <input
+        type="text"
+        className={modal.input}
+        value={value}
+        onChange={(e) => onValue(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && value.trim()) onContinue();
+        }}
+        placeholder="https://… أو رمز المشاركة"
+        aria-label="الرابط أو رمز المشاركة"
+        autoFocus
+      />
+      <div className={styles.linkActions}>
+        <Button
+          variant="primary"
+          size="md"
+          onClick={onContinue}
+          disabled={!value.trim()}
+        >
+          متابعة
+        </Button>
       </div>
     </div>
   );

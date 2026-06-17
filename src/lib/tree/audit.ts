@@ -217,10 +217,11 @@ export interface BranchPointerSnapshot extends JsonObject {
   id: string;
   sourceWorkspaceId: string;
   rootIndividualId: string;
-  selectedIndividualId: string;
+  // Anchor-less (collection-link) pointers leave these three null.
+  selectedIndividualId: string | null;
   targetWorkspaceId: string;
-  anchorIndividualId: string;
-  relationship: string;
+  anchorIndividualId: string | null;
+  relationship: string | null;
   status: string;
   linkChildrenToAnchor: boolean;
   shareTokenId: string | null;
@@ -230,10 +231,10 @@ export function snapshotBranchPointer(record: {
   id: string;
   sourceWorkspaceId: string;
   rootIndividualId: string;
-  selectedIndividualId: string;
+  selectedIndividualId: string | null;
   targetWorkspaceId: string;
-  anchorIndividualId: string;
-  relationship: string;
+  anchorIndividualId: string | null;
+  relationship: string | null;
   status: string;
   linkChildrenToAnchor: boolean;
   shareTokenId?: string | null;

@@ -31,8 +31,23 @@ export interface FreezeResult {
 export async function freezeDependentPointers(
   sourceWorkspaceId: string,
 ): Promise<FreezeResult> {
+  // EXCLUDE anchor-less collection-link pointers (S20). The freeze is for REAL
+  // anchored branch pointers only — stitching a collection borrow into the
+  // target's MAIN tree would corrupt it. We leave the collection pointer
+  // completely untouched (no stitch, no mark-broken, no copy). Its safety on a
+  // source going private is the SERVE-TIME reuse-gate (S11): shapeCollectionItem
+  // re-checks LIVE source visibility deny-by-default, so a now-private source
+  // hides the borrow in every collection consumer.
+  //
+  // TODO(Chunk 4 / PRD §2.10): the full PRESERVATION path — convert a live
+  // collection link into a frozen extra-tree copy and re-point
+  // CollectionItem.branchPointerId → treeId when the source goes private/revokes
+  // — lives with collection public serving + going-private freeze-repoint. Until
+  // then the borrow stays a live link (hidden while the source is private,
+  // reappears if the source returns public). Takedown reachability is unaffected
+  // (admin/takedown + CopyProvenance query unfiltered).
   const activePointers = await prisma.branchPointer.findMany({
-    where: { sourceWorkspaceId, status: 'active' },
+    where: { sourceWorkspaceId, status: 'active', isCollectionLink: false },
   })
   if (activePointers.length === 0) return { frozen: 0, failed: 0 }
 
@@ -46,6 +61,15 @@ export async function freezeDependentPointers(
 
   for (const pointer of activePointers) {
     try {
+      // Defensive narrow: collection-link pointers are already excluded by the
+      // WHERE above, so a real anchored pointer always has a non-null
+      // anchor/relationship here. Skip (don't stitch) anything that somehow
+      // doesn't — fail-closed, never feed a null anchor to prepareDeepCopy.
+      if (pointer.anchorIndividualId == null || pointer.relationship == null) {
+        failed++
+        continue
+      }
+
       if (!sourceData || !sourceTree) {
         // Source gone — break the pointer without a copy (nothing to copy).
         await prisma.branchPointer.update({

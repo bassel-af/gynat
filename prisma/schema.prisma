@@ -648,12 +648,23 @@ model BranchPointer {
   id                  String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   sourceWorkspaceId   String                    @map("source_workspace_id") @db.Uuid
   rootIndividualId       String                    @map("root_individual_id") @db.Uuid
-  selectedIndividualId   String                    @map("selected_individual_id") @db.Uuid
+  // Collection-link pointers are ANCHOR-LESS: a borrowed branch added to a
+  // collection has no person in the target tree to stitch onto, so
+  // selectedIndividualId / anchorIndividualId / relationship are NULL for them.
+  // The DISCRIMINATOR is the explicit `isCollectionLink` flag below — NOT a null
+  // anchor (a null anchor could also be a future broken/legacy row, so inferring
+  // from it would be unsafe; S20). Redeemed (stitched) pointers set all three.
+  selectedIndividualId   String?                   @map("selected_individual_id") @db.Uuid
   depthLimit             Int?                      @map("depth_limit")
   includeGrafts          Boolean                   @default(false) @map("include_grafts")
   targetWorkspaceId      String                    @map("target_workspace_id") @db.Uuid
-  anchorIndividualId     String                    @map("anchor_individual_id") @db.Uuid
-  relationship        BranchPointerRelationship
+  anchorIndividualId     String?                   @map("anchor_individual_id") @db.Uuid
+  relationship        BranchPointerRelationship?
+  // Explicit discriminator: true for an anchor-less collection-link pointer (a
+  // collection item's borrowed branch), false for a real member-tree stitch.
+  // The ONE flag every consumer filters on, so the member merge / branch list /
+  // public-serve borrowed query never pick up a collection-link pointer.
+  isCollectionLink    Boolean                   @default(false) @map("is_collection_link")
   status              BranchPointerStatus       @default(active)
   linkChildrenToAnchor Boolean                  @default(false) @map("link_children_to_anchor")
   shareTokenId        String?                   @map("share_token_id") @db.Uuid // token used to create this pointer
@@ -664,8 +675,8 @@ model BranchPointer {
   sourceWorkspace  Workspace   @relation("PointerSource", fields: [sourceWorkspaceId], references: [id])
   targetWorkspace  Workspace   @relation("PointerTarget", fields: [targetWorkspaceId], references: [id], onDelete: Cascade)
   rootIndividual      Individual  @relation("PointerRoot", fields: [rootIndividualId], references: [id])
-  selectedIndividual  Individual  @relation("PointerSelected", fields: [selectedIndividualId], references: [id])
-  anchorIndividual    Individual  @relation("PointerAnchor", fields: [anchorIndividualId], references: [id])
+  selectedIndividual  Individual? @relation("PointerSelected", fields: [selectedIndividualId], references: [id])
+  anchorIndividual    Individual? @relation("PointerAnchor", fields: [anchorIndividualId], references: [id])
   shareToken       BranchShareToken? @relation(fields: [shareTokenId], references: [id])
   createdBy        User        @relation(fields: [createdById], references: [id])
   collectionItems  CollectionItem[]

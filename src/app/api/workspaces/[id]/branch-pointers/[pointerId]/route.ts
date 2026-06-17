@@ -26,6 +26,15 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     );
   }
 
+  // Collection-link pointers are managed only via the collections API, never the
+  // member disconnect endpoint (mirror the copy route's defense-in-depth).
+  if (pointer.isCollectionLink) {
+    return NextResponse.json(
+      { error: 'الرابط غير موجود' },
+      { status: 404 },
+    );
+  }
+
   if (pointer.status !== 'active') {
     return NextResponse.json(
       { error: 'الرابط غير نشط' },

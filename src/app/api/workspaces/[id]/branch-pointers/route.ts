@@ -25,7 +25,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   if (isErrorResponse(result)) return result;
 
   const pointers = await prisma.branchPointer.findMany({
-    where: { targetWorkspaceId: workspaceId },
+    // Collection-link pointers are NOT member-tree branch links — they belong to
+    // collection items, not the incoming-branches list. Exclude them with the
+    // same fail-closed discriminator the merge path uses.
+    where: { targetWorkspaceId: workspaceId, isCollectionLink: false },
     orderBy: { createdAt: 'desc' },
     include: {
       sourceWorkspace: {
@@ -120,11 +123,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     );
   }
 
-  // Check pointer limit
+  // Check pointer limit — collection-link pointers are not member branch links
+  // and must not consume the member branch-pointer budget (isCollectionLink:false).
   const activePointerCount = await prisma.branchPointer.count({
     where: {
       targetWorkspaceId: workspaceId,
       status: 'active',
+      isCollectionLink: false,
     },
   });
 

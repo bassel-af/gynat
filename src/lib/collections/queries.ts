@@ -293,17 +293,35 @@ export async function addItem(data: AddItemData, client: PrismaLike = prisma) {
  */
 export async function itemExistsInCollection(
   collectionId: string,
-  source: { treeId: string } | { childCollectionId: string },
+  source:
+    | { treeId: string }
+    | { childCollectionId: string }
+    | { borrowedSource: { sourceWorkspaceId: string; rootIndividualId: string } },
   client: PrismaLike = prisma,
 ): Promise<boolean> {
-  const where =
-    'treeId' in source
-      ? { collectionId, kind: 'tree' as const, treeId: source.treeId }
-      : {
-          collectionId,
-          kind: 'collection' as const,
-          childCollectionId: source.childCollectionId,
-        };
+  let where;
+  if ('treeId' in source) {
+    where = { collectionId, kind: 'tree' as const, treeId: source.treeId };
+  } else if ('childCollectionId' in source) {
+    where = {
+      collectionId,
+      kind: 'collection' as const,
+      childCollectionId: source.childCollectionId,
+    };
+  } else {
+    // Borrowed-linked items have no unique index (each add mints a distinct
+    // pointer), so dedupe by the SOURCE the pointer points at: the same source
+    // workspace + branch root can only be borrowed-linked into a collection
+    // once. Matched through the linked branchPointer relation.
+    where = {
+      collectionId,
+      kind: 'tree' as const,
+      branchPointer: {
+        sourceWorkspaceId: source.borrowedSource.sourceWorkspaceId,
+        rootIndividualId: source.borrowedSource.rootIndividualId,
+      },
+    };
+  }
   const count = await client.collectionItem.count({ where });
   return count > 0;
 }

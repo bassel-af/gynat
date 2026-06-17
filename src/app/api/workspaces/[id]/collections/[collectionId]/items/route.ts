@@ -5,7 +5,12 @@ import {
   requireCollectionsEnabled,
   isErrorResponse,
 } from '@/lib/api/workspace-auth';
-import { treeMutateLimiter, rateLimitResponse } from '@/lib/api/rate-limit';
+import {
+  treeMutateLimiter,
+  collectionLinkResolveLimiter,
+  rateLimitResponse,
+  clientIpKey,
+} from '@/lib/api/rate-limit';
 import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
 import { addItemSchema } from '@/lib/collections/schemas';
 import {
@@ -14,6 +19,12 @@ import {
   itemExistsInCollection,
 } from '@/lib/collections/queries';
 import { copyTreeIntoNewExtraTree } from '@/lib/collections/copy';
+import {
+  resolveLinkSource,
+  resolvePublicTreeRoot,
+  WHOLE_TREE_ROOT,
+} from '@/lib/collections/resolve-link';
+import { copyBorrowedBranchIntoNewExtraTree } from '@/lib/collections/copy-borrowed';
 
 type RouteParams = { params: Promise<{ id: string; collectionId: string }> };
 
@@ -127,10 +138,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ data: result.item }, { status: 201 });
   }
 
-  // ----- kind:'tree' -----
-  // The brought-in (linkInput) branch is Chunk 2.
+  // ----- kind:'tree', brought-in by link (Chunk 3 / add-by-link) -----
   if (input.linkInput != null) {
-    return NextResponse.json({ error: 'غير متاح بعد' }, { status: 501 });
+    return addByLink(request, workspaceId, collectionId, input, result.user.id);
   }
 
   // own/extra tree: treeId must be a tree in this workspace.
@@ -195,6 +205,145 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   if (!item) {
     return NextResponse.json(
       { error: 'هذه الشجرة مضافة بالفعل إلى المجموعة' },
+      { status: 409 },
+    );
+  }
+
+  return NextResponse.json({ data: item }, { status: 201 });
+}
+
+/** One generic message for an unresolvable/forbidden link — no enumeration oracle (S9). */
+const INVALID_LINK_ERROR = 'الرابط غير صالح أو غير متاح';
+
+/** Build the single generic 404 used for EVERY resolve failure (bad token, unknown/private/non-reusable slug, self-source). */
+function invalidLinkResponse(): NextResponse {
+  return NextResponse.json({ error: INVALID_LINK_ERROR }, { status: 404 });
+}
+
+/**
+ * Add-by-link: resolve a pasted public-tree URL/slug or private share code into
+ * a borrowable source, then bind it.
+ *
+ *  - `linked` → an ANCHOR-LESS branchPointer (a borrowed branch added to a
+ *    collection has NO person in the target tree to stitch onto — it's a SOURCE
+ *    DESCRIPTOR, not a stitch). `selectedIndividualId` / `anchorIndividualId` /
+ *    `relationship` are NULL, which is the discriminator that keeps it out of
+ *    the member-tree merge. Bound via `branchPointerId`. ZERO bytes copied.
+ *  - `copied` → cross-workspace TWO-KEY deep-copy into a new extra tree (decrypt
+ *    SOURCE key → re-encrypt TARGET key), bound via `treeId`. Provenance written.
+ *
+ * Deny-by-default: every resolve failure (unknown/expired token, unknown/private/
+ * non-reusable slug) AND self-source (S14) return the SAME generic 404 — no
+ * exists-but-forbidden oracle (S9).
+ */
+async function addByLink(
+  request: NextRequest,
+  workspaceId: string,
+  collectionId: string,
+  input: { linkInput?: string; linkMode: 'linked' | 'copied'; titleAr: string; descriptionAr?: string | null },
+  userId: string,
+): Promise<NextResponse> {
+  // S10: IP-key the resolve BEFORE any token/slug lookup — pasting codes against
+  // the share-token / public-slug tables is a guess surface even for an
+  // authenticated editor (the per-user limiter at the route head isn't enough).
+  const ip = clientIpKey(request);
+  const { allowed, retryAfterSeconds } = collectionLinkResolveLimiter.check(ip);
+  if (!allowed) return rateLimitResponse(retryAfterSeconds);
+
+  const source = await resolveLinkSource(input.linkInput!, workspaceId);
+  if (!source) return invalidLinkResponse();
+
+  // S14: a collection borrows from OTHER families; borrowing your own tree by
+  // link is meaningless (and would double-count) — reject same-workspace with
+  // the SAME generic 404 (no oracle).
+  if (source.sourceWorkspaceId === workspaceId) return invalidLinkResponse();
+
+  // The borrowed branch's REAL root id (a private token carries it; a public-
+  // slug whole-tree source resolves to a sentinel → look up the topmost ancestor).
+  // Needed as the pointer's `rootIndividualId` (a real FK) and for dedupe.
+  const rootIndividualId =
+    source.rootIndividualId === WHOLE_TREE_ROOT
+      ? await resolvePublicTreeRoot(source.sourceWorkspaceId)
+      : source.rootIndividualId;
+  if (!rootIndividualId) return invalidLinkResponse(); // empty/unresolvable source tree
+
+  // ----- copied: deep-copy into a new extra tree, bind treeId -----
+  if (input.linkMode === 'copied') {
+    const { newTreeId } = await copyBorrowedBranchIntoNewExtraTree({
+      addingWorkspaceId: workspaceId,
+      source,
+      nameAr: input.titleAr,
+    });
+    const item = await addItem({
+      collectionId,
+      kind: 'tree',
+      titleAr: input.titleAr,
+      descriptionAr: input.descriptionAr ?? null,
+      linkMode: 'copied',
+      treeId: newTreeId,
+    });
+    return NextResponse.json({ data: item }, { status: 201 });
+  }
+
+  // ----- linked: ANCHOR-LESS branchPointer, bind branchPointerId -----
+  // The dedupe re-check + pointer create + item insert run in ONE transaction so
+  // a concurrent identical borrow can't both pass the check and both insert.
+  const item = await prisma.$transaction(async (tx) => {
+    const txPrisma = tx as typeof prisma;
+    if (
+      await itemExistsInCollection(
+        collectionId,
+        {
+          borrowedSource: {
+            sourceWorkspaceId: source.sourceWorkspaceId,
+            rootIndividualId,
+          },
+        },
+        txPrisma,
+      )
+    ) {
+      return null;
+    }
+
+    const pointer = await txPrisma.branchPointer.create({
+      data: {
+        sourceWorkspaceId: source.sourceWorkspaceId,
+        rootIndividualId,
+        depthLimit: source.depthLimit,
+        includeGrafts: source.includeGrafts,
+        targetWorkspaceId: workspaceId,
+        // ANCHOR-LESS collection-link pointer: a collection branch has no anchor
+        // person in the target tree. `isCollectionLink: true` is the explicit
+        // discriminator that excludes it from the member-tree merge, the branch
+        // list, and the public-serve borrowed query. anchor/selected/
+        // relationship stay NULL (no stitch).
+        isCollectionLink: true,
+        selectedIndividualId: null,
+        anchorIndividualId: null,
+        relationship: null,
+        status: 'active',
+        shareTokenId: source.shareTokenId,
+        createdById: userId,
+      } as unknown as Parameters<typeof txPrisma.branchPointer.create>[0]['data'],
+    });
+
+    return addItem(
+      {
+        collectionId,
+        kind: 'tree',
+        titleAr: input.titleAr,
+        descriptionAr: input.descriptionAr ?? null,
+        linkMode: 'linked',
+        branchPointerId: pointer.id,
+        rootIndividualId,
+      },
+      txPrisma,
+    );
+  });
+
+  if (!item) {
+    return NextResponse.json(
+      { error: 'هذا الفرع مضاف بالفعل إلى المجموعة' },
       { status: 409 },
     );
   }

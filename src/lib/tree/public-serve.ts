@@ -17,7 +17,7 @@ import type { GedcomData, Individual } from '@/lib/gedcom/types'
 import { cache } from 'react'
 import { dbTreeToGedcomData, PRIVATE_PERSON_PLACEHOLDER } from '@/lib/tree/mapper'
 import { getWorkspaceKey } from '@/lib/tree/encryption'
-import { getTreeByWorkspaceId } from '@/lib/tree/queries'
+import { getTreeByWorkspaceId, getOrCreateTargetTree } from '@/lib/tree/queries'
 import { extractPointedSubtree } from '@/lib/tree/branch-pointer-merge'
 import { redactForPublic } from '@/lib/tree/public-visibility'
 import { composePublicGedcom, isSourceTreePublic } from '@/lib/tree/public-compose'
@@ -62,6 +62,9 @@ export interface PublicTreeRecord {
   workspaceId: string
   workspaceNameAr: string
   nameAr: string | null
+  /** 'main' | 'extra' — an extra tree never serves borrowed branches and is
+   * always `noindex` (Slice B). */
+  kind: 'main' | 'extra'
   visibility: 'public_link' | 'public_listed'
   lastModifiedAt: Date
   publicSlug: string
@@ -92,6 +95,7 @@ export async function loadPublicTreeBySlug(
         select: {
           nameAr: true,
           enableKunya: true,
+          enableCollections: true,
           hideBirthDateForFemale: true,
           hideBirthDateForMale: true,
         },
@@ -99,9 +103,12 @@ export async function loadPublicTreeBySlug(
     },
   })
 
-  // Deny-by-default: must exist, be the main tree, and be public.
+  // Deny-by-default: must exist and be public. The MAIN tree is always
+  // servable; an `extra` tree is servable ONLY when the workspace has
+  // Collections enabled (Slice B) — fail-closed when the flag is off/absent.
   if (!tree) return null
-  if (tree.kind !== 'main') return null
+  if (tree.kind !== 'main' && tree.kind !== 'extra') return null
+  if (tree.kind === 'extra' && !tree.workspace.enableCollections) return null
   if (tree.visibility !== 'public_link' && tree.visibility !== 'public_listed') {
     return null
   }
@@ -111,6 +118,7 @@ export async function loadPublicTreeBySlug(
     workspaceId: tree.workspaceId,
     workspaceNameAr: tree.workspace.nameAr,
     nameAr: tree.nameAr,
+    kind: tree.kind,
     visibility: tree.visibility,
     lastModifiedAt: tree.lastModifiedAt,
     publicSlug: tree.publicSlug as string,
@@ -167,7 +175,10 @@ async function loadPublicBorrowedSubtrees(
   targetWorkspaceId: string,
 ): Promise<GedcomData[]> {
   const pointers = await prisma.branchPointer.findMany({
-    where: { targetWorkspaceId, status: 'active' },
+    // S20: exclude collection-link pointers (anchorless, isCollectionLink=true).
+    // They are NOT borrowed branches; rendering them on the PUBLIC main tree
+    // would leak another workspace's data. Fail-closed filter at the DB level.
+    where: { targetWorkspaceId, status: 'active', isCollectionLink: false },
     select: {
       sourceWorkspaceId: true,
       rootIndividualId: true,
@@ -228,7 +239,9 @@ export async function getWithheldBorrowedBranches(
   targetWorkspaceId: string,
 ): Promise<WithheldBranch[]> {
   const pointers = await prisma.branchPointer.findMany({
-    where: { targetWorkspaceId, status: 'active' },
+    // S20: exclude collection-link pointers (anchorless, isCollectionLink=true)
+    // so the publish preview doesn't list bogus withheld branches for them.
+    where: { targetWorkspaceId, status: 'active', isCollectionLink: false },
     select: {
       sourceWorkspaceId: true,
       rootIndividualId: true,
@@ -272,10 +285,17 @@ export interface PublicTreePayload {
 export async function buildPublicTreePayload(
   record: PublicTreeRecord,
 ): Promise<PublicTreePayload> {
+  // HOME-ONLY for extra trees (Slice B): an `extra` tree serves only its own
+  // data (loaded by treeId) and NEVER pulls borrowed branches — borrowing is a
+  // main-tree-only capability, so we skip the pointer query entirely (fail-closed).
+  const isExtra = record.kind === 'extra'
+
   const [tree, workspaceKey, borrowed] = await Promise.all([
-    getTreeByWorkspaceId(record.workspaceId),
+    isExtra
+      ? getOrCreateTargetTree(record.workspaceId, record.treeId)
+      : getTreeByWorkspaceId(record.workspaceId),
     getWorkspaceKey(record.workspaceId),
-    loadPublicBorrowedSubtrees(record.workspaceId),
+    isExtra ? Promise.resolve([] as GedcomData[]) : loadPublicBorrowedSubtrees(record.workspaceId),
   ])
 
   const home: GedcomData = tree

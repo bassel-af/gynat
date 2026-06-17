@@ -13,6 +13,9 @@ export const visibilityPatchSchema = z.object({
   level: z.enum(['private', 'link', 'search']),
   confirmationPhrase: z.string().max(200).optional(),
   allowReuse: z.boolean().optional(),
+  // Optional: scope the publish to a single `extra` tree (Collections, Slice B).
+  // Absent → the workspace MAIN tree (backward-compatible).
+  treeId: z.string().max(200).optional(),
 })
 
 export type VisibilityPatchInput = z.infer<typeof visibilityPatchSchema>

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireWorkspaceAdmin, isErrorResponse } from '@/lib/api/workspace-auth'
 import { treeMutateLimiter, rateLimitResponse } from '@/lib/api/rate-limit'
-import { getOrCreateTree, touchTreeTimestamp } from '@/lib/tree/queries'
+import { resolveTargetTreeOr404, touchTreeTimestamp } from '@/lib/tree/queries'
 import { getWorkspaceKey } from '@/lib/tree/encryption'
 import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers'
 import { visibilityPatchSchema } from '@/lib/tree/publish-schemas'
@@ -33,7 +33,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
   const parsed = await parseValidatedBody(request, visibilityPatchSchema)
   if (isParseError(parsed)) return parsed
-  const { level, confirmationPhrase, allowReuse } = parsed.data
+  const { level, confirmationPhrase, allowReuse, treeId } = parsed.data
 
   const workspace = await prisma.workspace.findUnique({
     where: { id: workspaceId },
@@ -43,7 +43,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'Workspace not found' }, { status: 404 })
   }
 
-  const tree = await getOrCreateTree(workspaceId)
+  // Resolve the publish target: the workspace MAIN tree (treeId absent) or a
+  // single `extra` tree (Collections, Slice B). The resolver is scoped to
+  // `{ id, workspaceId, kind }`, so a foreign/unknown id fails closed → 404.
+  const tree = await resolveTargetTreeOr404(workspaceId, treeId)
+  if (isErrorResponse(tree)) return tree
   const targetVisibility = mapUiLevelToVisibility(level)
   const previousVisibility = tree.visibility
   const familyName = tree.nameAr || workspace.nameAr
@@ -99,7 +103,15 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   // Going private must not silently break dependent collections (PRD §1.11):
   // freeze every live branch pointer borrowing FROM this tree into a deep copy
   // (with provenance), then mark the pointer broken. Best-effort.
-  if (goingPrivate) {
+  //
+  // S19: `freezeDependentPointers` is WORKSPACE-scoped (it freezes every active
+  // pointer sourced from this workspace, irrespective of which tree it roots in).
+  // That is only correct when the MAIN tree goes private. Running it on an EXTRA
+  // tree's unpublish would clobber the MAIN tree's dependent pointers and
+  // silently break collections borrowing from main — so we skip it for extra
+  // trees (a precise per-tree freeze is a future refinement; skipping is the
+  // conservative, no-silent-breakage choice).
+  if (goingPrivate && tree.kind === 'main') {
     try {
       await freezeDependentPointers(workspaceId)
     } catch (e) {

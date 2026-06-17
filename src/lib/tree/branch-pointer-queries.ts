@@ -23,6 +23,11 @@ export interface ActivePointer {
 /**
  * Get all active branch pointers targeting a workspace.
  * Used by GET /tree to merge pointed subtrees.
+ *
+ * Collection-link pointers (anchor-less items — no person in the target tree to
+ * stitch onto) are EXCLUDED: they are source descriptors, not stitches, and
+ * would break `mergePointedSubtree` (which needs a real anchor/relationship).
+ * `isCollectionLink: false` is the fail-closed discriminator.
  */
 export async function getActivePointersForWorkspace(
   targetWorkspaceId: string,
@@ -31,6 +36,7 @@ export async function getActivePointersForWorkspace(
     where: {
       targetWorkspaceId,
       status: 'active',
+      isCollectionLink: false,
     },
     select: {
       id: true,
@@ -66,6 +72,9 @@ export async function getActivePointersForWorkspace(
  * Check if an individual ID is a root of an active branch pointer
  * targeting the given workspace. Used by mutation guards to reject
  * edits to pointed individuals.
+ *
+ * Collection-link pointers are EXCLUDED — they never merge into the member
+ * tree, so they must not gate edits to the member tree's people.
  */
 export async function isPointedIndividualInWorkspace(
   individualId: string,
@@ -76,6 +85,7 @@ export async function isPointedIndividualInWorkspace(
       targetWorkspaceId,
       rootIndividualId: individualId,
       status: 'active',
+      isCollectionLink: false,
     },
     select: { id: true },
   });

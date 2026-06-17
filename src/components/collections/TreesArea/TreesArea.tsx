@@ -7,12 +7,14 @@ import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { CollectionsPageShell } from '@/components/collections/CollectionsPageShell/CollectionsPageShell';
 import { VisibilityChip } from '@/components/collections/CollectionBadges/CollectionBadges';
+import { ExtraTreePublishModal } from '@/components/collections/ExtraTreePublishModal/ExtraTreePublishModal';
 import {
   listExtraTrees,
   createExtraTree,
   renameExtraTree,
   deleteExtraTree,
   duplicateTree,
+  type Visibility,
   type WorkspaceTree,
 } from '@/lib/collections/api';
 import modal from '../shared-modal.module.css';
@@ -29,7 +31,8 @@ type DialogState =
   | { kind: 'none' }
   | { kind: 'create' }
   | { kind: 'rename'; tree: WorkspaceTree }
-  | { kind: 'delete'; tree: WorkspaceTree };
+  | { kind: 'delete'; tree: WorkspaceTree }
+  | { kind: 'publish'; tree: WorkspaceTree };
 
 /**
  * Screen 2 — the workspace's trees (§0, §2.5, §2.6): one fixed main family tree
@@ -336,6 +339,17 @@ export function TreesArea({
                     >
                       إعادة التسمية
                     </button>
+                    {/* Make-public ladder for this single extra tree (Slice B). */}
+                    <button
+                      type="button"
+                      className={styles.renameBtn}
+                      onClick={() => {
+                        setActionError('');
+                        setDialog({ kind: 'publish', tree });
+                      }}
+                    >
+                      الظهور
+                    </button>
                     <button
                       type="button"
                       className={`${styles.iconBtn} ${styles.iconBtnDanger}`}
@@ -428,6 +442,24 @@ export function TreesArea({
           </p>
           {actionError && <p className={modal.errorText}>{actionError}</p>}
         </Modal>
+      )}
+
+      {/* Make-public ladder for a single extra tree (Slice B) */}
+      {dialog.kind === 'publish' && (
+        <ExtraTreePublishModal
+          workspaceId={workspaceId}
+          treeId={dialog.tree.id}
+          treeName={dialog.tree.nameAr}
+          currentLevel={dialog.tree.visibility}
+          onClose={close}
+          onChanged={(level: Visibility) => {
+            const id = dialog.tree.id;
+            setExtraTrees((prev) =>
+              prev.map((t) => (t.id === id ? { ...t, visibility: level } : t)),
+            );
+            setDialog({ kind: 'none' });
+          }}
+        />
       )}
     </CollectionsPageShell>
   );

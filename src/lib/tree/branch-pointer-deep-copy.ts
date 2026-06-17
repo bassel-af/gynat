@@ -30,7 +30,7 @@ export interface DeepCopyResult {
  * workspace is deleted. See PRD §1.11.
  */
 export interface DeepCopyProvenance {
-  reason: 'going_private' | 'token_revoked' | 'manual_copy';
+  reason: 'going_private' | 'token_revoked' | 'manual_copy' | 'collection_link_copy';
   sourceWorkspaceId: string;
   sourceTreeId: string;
   sourceRootId: string;

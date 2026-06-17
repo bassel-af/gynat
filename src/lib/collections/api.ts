@@ -398,11 +398,23 @@ export async function deleteCollection(
 
 // --- items -----------------------------------------------------------------
 
-/** Chunk-1 add-item bodies: an own/extra tree, or a nested collection. */
+/**
+ * Add-item bodies: an own/extra tree, a nested collection, or — Slice B (Chunk
+ * 3) — a tree/branch brought in "via link" (a public slug or share token). The
+ * by-link variant carries the pasted `linkInput` instead of a local `treeId`;
+ * the server resolves it (400 `INVALID_TOKEN_ERROR` when it can't).
+ */
 export type AddItemBody =
   | {
       kind: 'tree';
       treeId: string;
+      linkMode: ItemLinkMode;
+      titleAr: string;
+      descriptionAr?: string;
+    }
+  | {
+      kind: 'tree';
+      linkInput: string;
       linkMode: ItemLinkMode;
       titleAr: string;
       descriptionAr?: string;
@@ -460,5 +472,34 @@ export async function removeItem(
       `/api/workspaces/${workspaceId}/collections/${collectionId}/items/${itemId}`,
       { method: 'DELETE' },
     ),
+  );
+}
+
+// --- extra-tree publish (Slice B) ------------------------------------------
+
+/** The shape the visibility route returns after a publish/visibility change. */
+export interface TreeVisibilityResult {
+  visibility: string;
+  publicSlug: string | null;
+  allowReuse?: boolean;
+}
+
+/**
+ * Publish (or change the visibility of) a single tree via the SAME visibility
+ * route the main tree uses, scoped to `treeId` (Slice B — extra-tree publish).
+ * `confirmationPhrase` is required only when going public for the first time
+ * (the server validates it against the tree's name). Returns the new slug.
+ */
+export async function setTreeVisibility(
+  workspaceId: string,
+  treeId: string,
+  input: { level: Visibility; confirmationPhrase?: string; allowReuse?: boolean },
+): Promise<TreeVisibilityResult> {
+  return unwrap<TreeVisibilityResult>(
+    await apiFetch(`/api/workspaces/${workspaceId}/tree/visibility`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...input, treeId }),
+    }),
   );
 }

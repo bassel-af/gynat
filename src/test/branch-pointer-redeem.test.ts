@@ -320,6 +320,46 @@ describe('POST /api/workspaces/[id]/branch-pointers — redeem token', () => {
     const res = await POST(req, routeParams);
     expect(res.status).toBe(400);
   });
+
+  test('the pointer-cap count excludes collection-link pointers (they do not eat the member branch budget)', async () => {
+    mockAuth();
+    mockEditor();
+    mockValidToken();
+    mockBranchPointerCount.mockResolvedValue(0);
+    mockIndividualFindFirst.mockResolvedValue({ id: anchorId });
+    mockBranchPointerFindFirst.mockResolvedValue(null);
+    mockFamilyTreeFindUnique.mockResolvedValue({ id: 'tree-target', workspaceId: wsId });
+    mockShareTokenUpdate.mockResolvedValue({});
+    mockBranchPointerCreate.mockResolvedValue({ id: 'bp-uuid-1', status: 'active' });
+    mockTransaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) =>
+      fn({
+        branchShareToken: {
+          update: (...args: unknown[]) => mockShareTokenUpdate(...args),
+          findUnique: vi.fn().mockResolvedValue({ id: 'token-uuid-1', isRevoked: false }),
+        },
+        branchPointer: {
+          create: (...args: unknown[]) => mockBranchPointerCreate(...args),
+          findFirst: (...args: unknown[]) => mockBranchPointerFindFirst(...args),
+        },
+      }),
+    );
+
+    const { POST } = await import(
+      '@/app/api/workspaces/[id]/branch-pointers/route'
+    );
+    const req = makePostRequest(
+      `http://localhost:3000/api/workspaces/${wsId}/branch-pointers`,
+      { token: 'brsh_valid-token', anchorIndividualId: anchorId, selectedPersonId: 'src-root-uuid', relationship: 'child' },
+    );
+    await POST(req, routeParams);
+
+    // The 50-pointer member cap must not count collection-link borrows.
+    expect(mockBranchPointerCount).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ isCollectionLink: false }),
+      }),
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -471,5 +511,27 @@ describe('DELETE /api/workspaces/[id]/branch-pointers/[pointerId] — disconnect
     );
     const res = await DELETE(req, deleteRouteParams);
     expect(res.status).toBe(400);
+  });
+
+  test('returns 404 for a collection-link pointer (managed only via the collections API)', async () => {
+    mockAuth();
+    mockEditor();
+    mockBranchPointerFindUnique.mockResolvedValue({
+      id: pointerId,
+      targetWorkspaceId: wsId,
+      status: 'active',
+      isCollectionLink: true,
+    });
+
+    const { DELETE } = await import(
+      '@/app/api/workspaces/[id]/branch-pointers/[pointerId]/route'
+    );
+    const req = makeDeleteRequest(
+      `http://localhost:3000/api/workspaces/${wsId}/branch-pointers/${pointerId}`,
+    );
+    const res = await DELETE(req, deleteRouteParams);
+    expect(res.status).toBe(404);
+    // The member disconnect endpoint must not touch a collection-link pointer.
+    expect(mockBranchPointerUpdate).not.toHaveBeenCalled();
   });
 });

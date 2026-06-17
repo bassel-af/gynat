@@ -45,6 +45,15 @@ vi.mock('@/lib/db', () => ({
   },
 }));
 
+// Spy on the going-private dependent-freeze so we can assert WHEN it runs.
+// S19: the freeze is workspace-scoped, so it must run ONLY on a MAIN-tree
+// unpublish — never on an extra-tree unpublish (which would clobber main's
+// dependent pointers). Returns a benign result so the route's try/catch passes.
+const mockFreezeDependentPointers = vi.fn().mockResolvedValue({ frozen: 0, failed: 0 });
+vi.mock('@/lib/tree/going-private', () => ({
+  freezeDependentPointers: (...a: unknown[]) => mockFreezeDependentPointers(...a),
+}));
+
 import { PATCH } from '@/app/api/workspaces/[id]/tree/visibility/route';
 
 const WS = 'ws-1';
@@ -84,6 +93,7 @@ const params = Promise.resolve({ id: WS });
 beforeEach(() => {
   vi.clearAllMocks();
   mockTreeEditLogCreate.mockResolvedValue({});
+  mockFreezeDependentPointers.mockResolvedValue({ frozen: 0, failed: 0 });
   // tree: private, no slug yet
   mockFamilyTreeFindFirst.mockResolvedValue({
     id: TREE_ID,
@@ -250,5 +260,117 @@ describe('PATCH visibility — going private', () => {
     await PATCH(req({ level: 'private' }), { params });
     const logArg = mockTreeEditLogCreate.mock.calls[0][0];
     expect(logArg.data.action).toBe('unpublish');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Standalone extra-tree publish (Slice B) — optional treeId scopes the publish
+// to a single `extra` tree, reusing the SAME phrase/slug/freeze machinery.
+// ---------------------------------------------------------------------------
+
+const EXTRA_TREE_ID = 'extra-tree-9';
+
+describe('PATCH visibility — extra tree (treeId scoped)', () => {
+  test('publishes the resolved extra tree, scoping the lookup to that id', async () => {
+    adminAuth();
+    mockFamilyTreeFindFirst.mockResolvedValue({
+      id: EXTRA_TREE_ID,
+      workspaceId: WS,
+      kind: 'extra',
+      nameAr: 'فرع بني تميم',
+      visibility: 'private',
+      publicSlug: null,
+      publishedAt: null,
+      lastModifiedAt: new Date(),
+    });
+    const res = await PATCH(
+      req({ level: 'link', treeId: EXTRA_TREE_ID, confirmationPhrase: 'فرع بني تميم' }),
+      { params },
+    );
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.data.visibility).toBe('public_link');
+    expect(json.data.publicSlug).toBeTruthy();
+    // The resolver was scoped to the passed treeId (not a bare main lookup).
+    const findArg = mockFamilyTreeFindFirst.mock.calls[0][0];
+    expect(findArg.where.id).toBe(EXTRA_TREE_ID);
+    // The update targeted the extra tree row.
+    expect(mockFamilyTreeUpdate.mock.calls[0][0].where.id).toBe(EXTRA_TREE_ID);
+  });
+
+  test('confirmation phrase validates against the EXTRA tree name', async () => {
+    adminAuth();
+    mockFamilyTreeFindFirst.mockResolvedValue({
+      id: EXTRA_TREE_ID,
+      workspaceId: WS,
+      kind: 'extra',
+      nameAr: 'فرع بني تميم',
+      visibility: 'private',
+      publicSlug: null,
+      publishedAt: null,
+      lastModifiedAt: new Date(),
+    });
+    // The workspace family name would pass for the MAIN tree, but this is an
+    // extra tree — its own nameAr is the phrase, so the workspace name fails.
+    const res = await PATCH(
+      req({ level: 'link', treeId: EXTRA_TREE_ID, confirmationPhrase: 'آل السعيد' }),
+      { params },
+    );
+    expect(res.status).toBe(400);
+    expect(mockFamilyTreeUpdate).not.toHaveBeenCalled();
+  });
+
+  test('unknown/foreign treeId returns 404 without updating', async () => {
+    adminAuth();
+    // Scoped resolver finds nothing (foreign or non-existent id).
+    mockFamilyTreeFindFirst.mockResolvedValue(null);
+    const res = await PATCH(
+      req({ level: 'link', treeId: 'someone-elses-tree', confirmationPhrase: 'x' }),
+      { params },
+    );
+    expect(res.status).toBe(404);
+    expect(mockFamilyTreeUpdate).not.toHaveBeenCalled();
+  });
+
+  // S19 — the going-private dependent-freeze is WORKSPACE-scoped, so it must NOT
+  // run when an EXTRA tree is unpublished (it would clobber the MAIN tree's
+  // dependent pointers and silently break collections borrowing from main).
+  test('unpublishing an EXTRA tree does NOT run the workspace-scoped freeze', async () => {
+    adminAuth();
+    mockFamilyTreeFindFirst.mockResolvedValue({
+      id: EXTRA_TREE_ID,
+      workspaceId: WS,
+      kind: 'extra',
+      nameAr: 'فرع بني تميم',
+      visibility: 'public_link',
+      publicSlug: 'extra-slug',
+      publishedAt: new Date(),
+      lastModifiedAt: new Date(),
+    });
+    const res = await PATCH(
+      req({ level: 'private', treeId: EXTRA_TREE_ID }),
+      { params },
+    );
+    expect(res.status).toBe(200);
+    // The freeze (which freezes ALL pointers sourced from this workspace, i.e.
+    // mostly the MAIN tree's dependents) must be skipped for an extra tree.
+    expect(mockFreezeDependentPointers).not.toHaveBeenCalled();
+  });
+
+  test('unpublishing the MAIN tree still runs the freeze (unchanged)', async () => {
+    adminAuth();
+    mockFamilyTreeFindFirst.mockResolvedValue({
+      id: TREE_ID,
+      workspaceId: WS,
+      kind: 'main',
+      nameAr: null,
+      visibility: 'public_link',
+      publicSlug: 'main-slug',
+      publishedAt: new Date(),
+      lastModifiedAt: new Date(),
+    });
+    const res = await PATCH(req({ level: 'private' }), { params });
+    expect(res.status).toBe(200);
+    expect(mockFreezeDependentPointers).toHaveBeenCalledWith(WS);
   });
 });

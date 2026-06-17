@@ -3,10 +3,13 @@ import {
   detectCollectionCycle,
   resolveEffectiveVisibility,
   filterTopLevelCollections,
+  shapeCollectionItem,
   MAX_NESTING_DEPTH,
   MAX_ITEMS,
   type CollectionChildEdges,
   type EffectiveVisibilitySource,
+  type ShapeableItem,
+  type ShapeItemLookups,
 } from '@/lib/collections/queries';
 
 // detectCollectionCycle(collectionId, candidateChildId, getChildIds)
@@ -106,5 +109,45 @@ describe('filterTopLevelCollections', () => {
     const collections = [{ id: 'A' }, { id: 'B' }];
     const result = filterTopLevelCollections(collections, new Set());
     expect(result.map((c) => c.id)).toEqual(['A', 'B']);
+  });
+});
+
+// ===========================================================================
+// shapeCollectionItem — S11 serve-time reuse-gate (the ACTIVE safety when a
+// borrowed source goes private). Effective visibility is read LIVE from the
+// source pointer; a private/missing source → withheld (deny-by-default), so the
+// borrow disappears from the collection without any freeze touching the pointer.
+// ===========================================================================
+describe('shapeCollectionItem — borrowed (pointer) item visibility gate (S11)', () => {
+  const borrowedItem: ShapeableItem = {
+    id: 'item-1', kind: 'tree', titleAr: 'فرع مجلوب', descriptionAr: null,
+    linkMode: 'linked', treeId: null, branchPointerId: 'ptr-1', childCollectionId: null,
+  };
+
+  function lookups(sourceVisibility: 'private' | 'public_link' | 'public_listed' | null, isPublic: boolean): ShapeItemLookups {
+    return {
+      trees: new Map(),
+      collections: new Map(),
+      pointers: new Map([['ptr-1', { sourceNameAr: 'عائلة', sourceVisibility, isPublic, peopleCount: 3 }]]),
+    };
+  }
+
+  test('a PUBLIC source → public-borrowed, NOT withheld when published', () => {
+    const shaped = shapeCollectionItem(borrowedItem, lookups('public_listed', true));
+    expect(shaped.sourceLabel).toBe('public-borrowed');
+    expect(shaped.treeVisibility).toBe('public_listed');
+    expect(shaped.withheldWhenPublic).toBe(false);
+  });
+
+  test('a PRIVATE source → withheld when published (deny-by-default S11)', () => {
+    const shaped = shapeCollectionItem(borrowedItem, lookups('private', false));
+    expect(shaped.treeVisibility).toBe('private');
+    expect(shaped.withheldWhenPublic).toBe(true);
+  });
+
+  test('a MISSING/dangling source pointer → private (fail-closed)', () => {
+    const shaped = shapeCollectionItem(borrowedItem, { trees: new Map(), collections: new Map(), pointers: new Map() });
+    expect(shaped.treeVisibility).toBe('private');
+    expect(shaped.withheldWhenPublic).toBe(true);
   });
 });

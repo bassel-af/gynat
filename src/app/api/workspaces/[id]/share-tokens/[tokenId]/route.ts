@@ -84,9 +84,16 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     });
   }
 
-  // Step 2: Find all active pointers created from this token
+  // Step 2: Find all active pointers created from this token.
+  // EXCLUDE anchor-less collection-link pointers (S20) — same rationale as the
+  // going-private freeze: this auto-deep-copy stitches into the target's MAIN
+  // tree, which would corrupt it for a collection borrow. Leave collection-link
+  // pointers untouched; their safety is the serve-time reuse-gate (S11), which
+  // hides a now-revoked-source borrow deny-by-default.
+  // TODO(Chunk 4 / PRD §2.10): preservation (frozen extra-tree copy + re-point
+  // CollectionItem.branchPointerId → treeId) lands with collection serving.
   const activePointers = await prisma.branchPointer.findMany({
-    where: { shareTokenId: tokenId, status: 'active' },
+    where: { shareTokenId: tokenId, status: 'active', isCollectionLink: false },
   });
 
   let copiedPointers = 0;
@@ -107,6 +114,15 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     // Step 4: For each pointer, attempt deep copy then revoke
     for (const pointer of activePointers) {
       try {
+        // Defensive narrow: collection-link pointers are excluded by the WHERE
+        // above, so a real anchored pointer always has a non-null
+        // anchor/relationship. Skip anything that somehow doesn't — fail-closed,
+        // never feed a null anchor to prepareDeepCopy.
+        if (pointer.anchorIndividualId == null || pointer.relationship == null) {
+          disconnectedPointers++;
+          continue;
+        }
+
         if (sourceData) {
           const pointedSubtree = extractPointedSubtree(sourceData, {
             rootIndividualId: pointer.rootIndividualId,

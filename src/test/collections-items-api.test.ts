@@ -21,6 +21,7 @@ const mockItemUpdateMany = vi.fn();
 const mockItemFindUnique = vi.fn();
 const mockItemDeleteMany = vi.fn();
 const mockItemCount = vi.fn();
+const mockPointerCreate = vi.fn();
 // $transaction runs its callback inline (no real tx in unit tests). The tx
 // client proxies to the same module-level mocks a real interactive tx exposes,
 // so functions that thread `tx` (cycle guard + addItem + dedupe count) still
@@ -31,6 +32,9 @@ const txClient = {
     findFirst: (...a: unknown[]) => mockItemFindFirst(...a),
     findMany: (...a: unknown[]) => mockItemFindMany(...a),
     count: (...a: unknown[]) => mockItemCount(...a),
+  },
+  branchPointer: {
+    create: (...a: unknown[]) => mockPointerCreate(...a),
   },
 };
 const mockTransaction = vi.fn((fn: (tx: unknown) => unknown) => fn(txClient));
@@ -53,8 +57,24 @@ vi.mock('@/lib/db', () => ({
       deleteMany: (...a: unknown[]) => mockItemDeleteMany(...a),
       count: (...a: unknown[]) => mockItemCount(...a),
     },
+    branchPointer: { create: (...a: unknown[]) => mockPointerCreate(...a) },
     $transaction: (fn: (tx: unknown) => unknown) => mockTransaction(fn),
   },
+}));
+
+// Add-by-link resolution + cross-workspace deep-copy are unit-tested on their
+// own (collections-resolve-link / collections-copy-borrowed); the route tests
+// mock them to focus on route wiring (gate → resolve → bind).
+const mockResolveLink = vi.fn();
+const mockResolveWholeRoot = vi.fn();
+vi.mock('@/lib/collections/resolve-link', () => ({
+  resolveLinkSource: (...a: unknown[]) => mockResolveLink(...a),
+  resolvePublicTreeRoot: (...a: unknown[]) => mockResolveWholeRoot(...a),
+  WHOLE_TREE_ROOT: '__whole_tree__',
+}));
+const mockCopyBorrowed = vi.fn();
+vi.mock('@/lib/collections/copy-borrowed', () => ({
+  copyBorrowedBranchIntoNewExtraTree: (...a: unknown[]) => mockCopyBorrowed(...a),
 }));
 
 // The cycle guard is exercised against a stubbed DB edge map.
@@ -380,20 +400,168 @@ describe('POST items — nested collection', () => {
 });
 
 // ===========================================================================
-// POST items — linkInput is Chunk 2 → 501
+// POST items — add-by-link (Chunk 3 / Slice A)
+//
+// linkInput resolves a pasted public-tree URL/slug or a private share code.
+// `linked` → a self-anchored branchPointer bound to the item; `copied` →
+// cross-workspace deep-copy into a new extra tree bound to the item. One
+// generic 400 on an unresolvable/forbidden link (no enumeration oracle).
 // ===========================================================================
-describe('POST items — linkInput deferred', () => {
+describe('POST items — add-by-link (linkInput)', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  test('501 when linkInput is present', async () => {
+  const SOURCE_WS = 'ws-source-9999';
+  const BORROW_ROOT = 'ind-borrow-root';
+  const linkedSource = {
+    type: 'private-token' as const,
+    sourceWorkspaceId: SOURCE_WS,
+    sourceTreeId: 'tree-src-0000',
+    rootIndividualId: BORROW_ROOT,
+    depthLimit: 3,
+    includeGrafts: true,
+    isPublic: false,
+    shareTokenId: 'tok-9',
+  };
+
+  test('404 (one generic error) when the link does not resolve', async () => {
     collectionsOn();
     mockAuth();
     mockEditor();
     collectionExists();
+    mockResolveLink.mockResolvedValue(null); // unknown / revoked / reuse-off — all the same
     const { POST } = await import('@/app/api/workspaces/[id]/collections/[collectionId]/items/route');
-    const res = await POST(postReq({ kind: 'tree', linkInput: 'https://x/family/abc', linkMode: 'linked', titleAr: 'مجلوب' }), collParams);
-    expect(res.status).toBe(501);
+    const res = await POST(postReq({ kind: 'tree', linkInput: 'brsh_bad', linkMode: 'linked', titleAr: 'مجلوب' }), collParams);
+    // ONE generic 404 — no exists-but-forbidden oracle (S9).
+    expect(res.status).toBe(404);
     expect(mockItemCreate).not.toHaveBeenCalled();
+    expect(mockPointerCreate).not.toHaveBeenCalled();
+  });
+
+  test('404 self-source: cannot borrow from your own workspace (S14)', async () => {
+    collectionsOn();
+    mockAuth();
+    mockEditor();
+    collectionExists();
+    // Source workspace == the adding workspace → reject with the SAME generic 404.
+    mockResolveLink.mockResolvedValue({ ...linkedSource, sourceWorkspaceId: wsId });
+    const { POST } = await import('@/app/api/workspaces/[id]/collections/[collectionId]/items/route');
+    const res = await POST(postReq({ kind: 'tree', linkInput: 'brsh_self', linkMode: 'linked', titleAr: 'مجلوب' }), collParams);
+    expect(res.status).toBe(404);
+    expect(mockPointerCreate).not.toHaveBeenCalled();
+    expect(mockItemCreate).not.toHaveBeenCalled();
+  });
+
+  test('201 linked: creates an ANCHOR-LESS branchPointer and binds the item to it (zero bytes copied)', async () => {
+    collectionsOn();
+    mockAuth();
+    mockEditor();
+    collectionExists();
+    mockResolveLink.mockResolvedValue(linkedSource);
+    mockPointerCreate.mockResolvedValue({ id: 'ptr-new-0001' });
+    mockItemCount.mockResolvedValue(0); // not already borrowed here
+    mockItemFindFirst.mockResolvedValue(null);
+    mockItemCreate.mockResolvedValue({ id: ITEM_ID, kind: 'tree', branchPointerId: 'ptr-new-0001', linkMode: 'linked', sortOrder: 0 });
+    const { POST } = await import('@/app/api/workspaces/[id]/collections/[collectionId]/items/route');
+    const res = await POST(postReq({ kind: 'tree', linkInput: 'brsh_ok', linkMode: 'linked', titleAr: 'مجلوب' }), collParams);
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.data.branchPointerId).toBe('ptr-new-0001');
+    // No deep copy occurred for a linked borrow.
+    expect(mockCopyBorrowed).not.toHaveBeenCalled();
+    // The pointer is a COLLECTION-LINK pointer: isCollectionLink=true is the
+    // discriminator that keeps it out of the member-tree merge; anchor/selected/
+    // relationship are null (no stitch); target = adding workspace, root = the
+    // real borrowed root.
+    const ptrData = mockPointerCreate.mock.calls[0][0].data;
+    expect(ptrData.sourceWorkspaceId).toBe(SOURCE_WS);
+    expect(ptrData.targetWorkspaceId).toBe(wsId);
+    expect(ptrData.rootIndividualId).toBe(BORROW_ROOT);
+    expect(ptrData.isCollectionLink).toBe(true);
+    expect(ptrData.anchorIndividualId).toBeNull();
+    expect(ptrData.selectedIndividualId).toBeNull();
+    expect(ptrData.relationship).toBeNull();
+    expect(ptrData.shareTokenId).toBe('tok-9');
+  });
+
+  test('201 copied: deep-copies the borrowed branch into a new extra tree and binds treeId', async () => {
+    collectionsOn();
+    mockAuth();
+    mockEditor();
+    collectionExists();
+    mockResolveLink.mockResolvedValue(linkedSource);
+    const NEW_TREE = 't0000000-0000-4000-a000-00000000cccc';
+    mockCopyBorrowed.mockResolvedValue({ newTreeId: NEW_TREE, peopleCount: 4 });
+    mockItemCount.mockResolvedValue(0);
+    mockItemFindFirst.mockResolvedValue(null);
+    mockItemCreate.mockResolvedValue({ id: ITEM_ID, kind: 'tree', treeId: NEW_TREE, linkMode: 'copied', sortOrder: 0 });
+    const { POST } = await import('@/app/api/workspaces/[id]/collections/[collectionId]/items/route');
+    const res = await POST(postReq({ kind: 'tree', linkInput: 'brsh_ok', linkMode: 'copied', titleAr: 'نسخة مجلوبة' }), collParams);
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.data.treeId).toBe(NEW_TREE);
+    expect(mockCopyBorrowed).toHaveBeenCalledOnce();
+    // No live pointer for a copied borrow.
+    expect(mockPointerCreate).not.toHaveBeenCalled();
+  });
+
+  test('linked from a public-slug source resolves a REAL root id for the pointer (never the whole-tree sentinel)', async () => {
+    collectionsOn();
+    mockAuth();
+    mockEditor();
+    collectionExists();
+    const REAL_ROOT = 'ind-real-root-1';
+    // Public-slug source → the resolver hands back the whole-tree sentinel root.
+    mockResolveLink.mockResolvedValue({
+      type: 'public-slug', sourceWorkspaceId: SOURCE_WS, sourceTreeId: 'tree-src-0000',
+      rootIndividualId: '__whole_tree__', depthLimit: null, includeGrafts: false,
+      isPublic: true, shareTokenId: null,
+    });
+    // The route must resolve the real topmost-ancestor id before binding the FK.
+    mockResolveWholeRoot.mockResolvedValue(REAL_ROOT);
+    mockPointerCreate.mockResolvedValue({ id: 'ptr-pub-0001' });
+    mockItemCount.mockResolvedValue(0);
+    mockItemFindFirst.mockResolvedValue(null);
+    mockItemCreate.mockResolvedValue({ id: ITEM_ID, kind: 'tree', branchPointerId: 'ptr-pub-0001', linkMode: 'linked', sortOrder: 0 });
+    const { POST } = await import('@/app/api/workspaces/[id]/collections/[collectionId]/items/route');
+    const res = await POST(postReq({ kind: 'tree', linkInput: 'https://x/family/slug', linkMode: 'linked', titleAr: 'شجرة عامة' }), collParams);
+    expect(res.status).toBe(201);
+    const ptrData = mockPointerCreate.mock.calls[0][0].data;
+    // rootIndividualId is the REAL topmost ancestor (never the sentinel) so the
+    // root FK holds; anchor stays NULL (anchor-less).
+    expect(ptrData.rootIndividualId).toBe(REAL_ROOT);
+    expect(ptrData.rootIndividualId).not.toBe('__whole_tree__');
+    expect(ptrData.anchorIndividualId).toBeNull();
+  });
+
+  test('404 when a public-slug source has no resolvable root (empty source tree)', async () => {
+    collectionsOn();
+    mockAuth();
+    mockEditor();
+    collectionExists();
+    mockResolveLink.mockResolvedValue({
+      type: 'public-slug', sourceWorkspaceId: SOURCE_WS, sourceTreeId: 'tree-src-0000',
+      rootIndividualId: '__whole_tree__', depthLimit: null, includeGrafts: false,
+      isPublic: true, shareTokenId: null,
+    });
+    mockResolveWholeRoot.mockResolvedValue(null); // empty / unresolvable source tree
+    const { POST } = await import('@/app/api/workspaces/[id]/collections/[collectionId]/items/route');
+    const res = await POST(postReq({ kind: 'tree', linkInput: 'https://x/family/slug', linkMode: 'linked', titleAr: 'شجرة عامة' }), collParams);
+    expect(res.status).toBe(404);
+    expect(mockPointerCreate).not.toHaveBeenCalled();
+  });
+
+  test('409 when the same borrowed source is already linked in this collection', async () => {
+    collectionsOn();
+    mockAuth();
+    mockEditor();
+    collectionExists();
+    mockResolveLink.mockResolvedValue(linkedSource);
+    mockItemCount.mockResolvedValue(1); // already borrowed here (same source root + workspace)
+    const { POST } = await import('@/app/api/workspaces/[id]/collections/[collectionId]/items/route');
+    const res = await POST(postReq({ kind: 'tree', linkInput: 'brsh_ok', linkMode: 'linked', titleAr: 'مجلوب' }), collParams);
+    expect(res.status).toBe(409);
+    expect(mockItemCreate).not.toHaveBeenCalled();
+    expect(mockPointerCreate).not.toHaveBeenCalled();
   });
 });
 

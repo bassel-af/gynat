@@ -24,7 +24,9 @@ const mockCollectionDeleteMany = vi.fn();
 const mockCollectionItemFindMany = vi.fn();
 
 const mockTreeFindMany = vi.fn();
+const mockSourceTreeFindFirst = vi.fn();
 const mockIndividualGroupBy = vi.fn();
+const mockPointerFindMany = vi.fn();
 
 vi.mock('@/lib/db', () => ({
   prisma: {
@@ -41,8 +43,12 @@ vi.mock('@/lib/db', () => ({
     collectionItem: {
       findMany: (...a: unknown[]) => mockCollectionItemFindMany(...a),
     },
-    familyTree: { findMany: (...a: unknown[]) => mockTreeFindMany(...a) },
+    familyTree: {
+      findMany: (...a: unknown[]) => mockTreeFindMany(...a),
+      findFirst: (...a: unknown[]) => mockSourceTreeFindFirst(...a),
+    },
     individual: { groupBy: (...a: unknown[]) => mockIndividualGroupBy(...a) },
+    branchPointer: { findMany: (...a: unknown[]) => mockPointerFindMany(...a) },
   },
 }));
 
@@ -266,6 +272,80 @@ describe('GET /api/workspaces/[id]/collections/[collectionId]', () => {
     expect(nested.childCollectionId).toBe(childCollId);
     // Child collection is private → effective visibility private.
     expect(nested.treeVisibility).toBe('private');
+  });
+
+  test('shapes a borrowed (pointer-backed) item with LIVE source visibility', async () => {
+    collectionsOn();
+    mockAuth();
+    mockMember();
+    const PTR_ID = 'p0000000-0000-4000-a000-000000000001';
+    const SOURCE_WS = 'ws-source-7777';
+
+    mockCollectionFindFirst.mockResolvedValue({
+      id: COLL_ID, titleAr: 'دورة', descriptionAr: null, visibility: 'private', publicSlug: null,
+      items: [
+        { id: 'b1', kind: 'tree', titleAr: 'فرع مجلوب', descriptionAr: null, linkMode: 'linked', sortOrder: 0, treeId: null, branchPointerId: PTR_ID, childCollectionId: null, rootIndividualId: 'ind-borrow' },
+      ],
+    });
+    mockTreeFindMany.mockResolvedValue([]);
+    mockIndividualGroupBy.mockResolvedValue([]);
+    mockCollectionFindMany.mockResolvedValue([]);
+
+    // The pointer resolves to its source workspace; the SOURCE main tree's LIVE
+    // visibility decides whether the borrowed item would be withheld when public.
+    mockPointerFindMany.mockResolvedValue([
+      {
+        id: PTR_ID,
+        sourceWorkspaceId: SOURCE_WS,
+        rootIndividualId: 'ind-borrow',
+        sourceWorkspace: { nameAr: 'عائلة المصدر' },
+        rootIndividual: { givenName: null, surname: null },
+      },
+    ]);
+    // Source workspace's main tree is public → borrowed item is public-borrowed.
+    mockSourceTreeFindFirst.mockResolvedValue({ visibility: 'public_listed' });
+
+    const { GET } = await import('@/app/api/workspaces/[id]/collections/[collectionId]/route');
+    const res = await GET(getDetailReq(), detailParams);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+
+    const borrowed = body.items[0];
+    expect(borrowed.sourceLabel).toBe('public-borrowed');
+    expect(borrowed.treeVisibility).toBe('public_listed');
+    // A public source → the item is NOT withheld when the collection publishes.
+    expect(borrowed.withheldWhenPublic).toBe(false);
+  });
+
+  test('a borrowed item from a PRIVATE source is withheld when public (deny-by-default)', async () => {
+    collectionsOn();
+    mockAuth();
+    mockMember();
+    const PTR_ID = 'p0000000-0000-4000-a000-000000000002';
+    const SOURCE_WS = 'ws-source-8888';
+
+    mockCollectionFindFirst.mockResolvedValue({
+      id: COLL_ID, titleAr: 'دورة', descriptionAr: null, visibility: 'private', publicSlug: null,
+      items: [
+        { id: 'b2', kind: 'tree', titleAr: 'فرع خاص', descriptionAr: null, linkMode: 'linked', sortOrder: 0, treeId: null, branchPointerId: PTR_ID, childCollectionId: null, rootIndividualId: 'ind-x' },
+      ],
+    });
+    mockTreeFindMany.mockResolvedValue([]);
+    mockIndividualGroupBy.mockResolvedValue([]);
+    mockCollectionFindMany.mockResolvedValue([]);
+    mockPointerFindMany.mockResolvedValue([
+      { id: PTR_ID, sourceWorkspaceId: SOURCE_WS, rootIndividualId: 'ind-x', sourceWorkspace: { nameAr: 'عائلة' }, rootIndividual: { givenName: null, surname: null } },
+    ]);
+    // Source main tree is private (or missing) → fail-closed withhold.
+    mockSourceTreeFindFirst.mockResolvedValue({ visibility: 'private' });
+
+    const { GET } = await import('@/app/api/workspaces/[id]/collections/[collectionId]/route');
+    const res = await GET(getDetailReq(), detailParams);
+    const body = await res.json();
+    const borrowed = body.items[0];
+    expect(borrowed.sourceLabel).toBe('private-shared');
+    expect(borrowed.treeVisibility).toBe('private');
+    expect(borrowed.withheldWhenPublic).toBe(true);
   });
 });
 

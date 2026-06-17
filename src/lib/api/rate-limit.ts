@@ -70,6 +70,10 @@ export const auditLogLimiter = new RateLimiter({ maxRequests: 60, windowMs: 60 *
 // to blunt scrapers/enumeration, not normal browsing.
 export const publicTreeLimiter = new RateLimiter({ maxRequests: 120, windowMs: 60 * 1000 });
 export const publicReportLimiter = new RateLimiter({ maxRequests: 5, windowMs: 15 * 60 * 1000 });
+// Collections add-by-link resolution is IP-keyed (S10): resolving a pasted code
+// against the share-token / public-slug tables is a guess surface, so it's
+// throttled hard to blunt enumeration even though the caller is authenticated.
+export const collectionLinkResolveLimiter = new RateLimiter({ maxRequests: 10, windowMs: 60 * 1000 });
 
 /** Extract the client IP from forwarding headers (first hop), for IP-keyed rate limiting. */
 export function clientIpKey(request: { headers: { get(name: string): string | null } }): string {
