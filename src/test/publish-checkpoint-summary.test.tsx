@@ -4,7 +4,7 @@ import { PublishCheckpoint } from '@/components/public-tree/PublishCheckpoint/Pu
 import type { PublishCheckpointData } from '@/components/public-tree/PublishCheckpoint/types';
 
 // Substring of the count-summary banner that should be conditionally shown.
-const SUMMARY_FRAGMENT = 'سيُعرض';
+const SUMMARY_FRAGMENT = 'سيعرض';
 
 function renderCheckpoint(data: PublishCheckpointData) {
   return render(

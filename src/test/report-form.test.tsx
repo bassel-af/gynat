@@ -20,22 +20,22 @@ describe('ReportForm', () => {
     details?: string;
   }) {
     if (category !== undefined) {
-      fireEvent.change(screen.getByLabelText('ما الذي تُبلِغ عنه؟'), {
+      fireEvent.change(screen.getByLabelText('ما الذي تبلغ عنه؟'), {
         target: { value: category },
       });
     }
     if (person !== undefined) {
-      fireEvent.change(screen.getByLabelText('مَن الفرد المتأثّر؟'), {
+      fireEvent.change(screen.getByLabelText('من الفرد المتأثر؟'), {
         target: { value: person },
       });
     }
     if (contact !== undefined) {
-      fireEvent.change(screen.getByLabelText('وسيلة تواصلٍ (اختياريّة)'), {
+      fireEvent.change(screen.getByLabelText('وسيلة تواصل (اختيارية)'), {
         target: { value: contact },
       });
     }
     if (details !== undefined) {
-      fireEvent.change(screen.getByLabelText('تفاصيل إضافيّة'), {
+      fireEvent.change(screen.getByLabelText('تفاصيل إضافية'), {
         target: { value: details },
       });
     }
@@ -54,11 +54,11 @@ describe('ReportForm', () => {
   it('composes the affected person and details into the reason', () => {
     const onSubmit = vi.fn();
     render(<ReportForm onSubmit={onSubmit} />);
-    fill({ category: 'معلوماتٌ غير صحيحة', person: 'أحمد', details: 'تفاصيل هنا' });
+    fill({ category: 'معلومات غير صحيحة', person: 'أحمد', details: 'تفاصيل هنا' });
     fireEvent.click(screen.getByRole('button', { name: 'إرسال البلاغ' }));
 
     expect(onSubmit).toHaveBeenCalledWith({
-      reason: 'معلوماتٌ غير صحيحة\nالفرد المتأثّر: أحمد\nتفاصيل هنا',
+      reason: 'معلومات غير صحيحة\nالفرد المتأثر: أحمد\nتفاصيل هنا',
     });
   });
 
@@ -89,7 +89,7 @@ describe('ReportForm', () => {
 
   it('shows a busy label and disables submit while submitting', () => {
     render(<ReportForm onSubmit={vi.fn()} submitting />);
-    const btn = screen.getByRole('button', { name: 'جارٍ الإرسال…' });
+    const btn = screen.getByRole('button', { name: 'جار الإرسال…' });
     expect(btn).toBeDisabled();
   });
 
@@ -100,7 +100,7 @@ describe('ReportForm', () => {
 
   it('replaces the form with a confirmation once submitted', () => {
     render(<ReportForm onSubmit={vi.fn()} submitted />);
-    expect(screen.getByText(/تمّ استلام بلاغك/)).toBeInTheDocument();
+    expect(screen.getByText(/تم استلام بلاغك/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'إرسال البلاغ' })).not.toBeInTheDocument();
   });
 });

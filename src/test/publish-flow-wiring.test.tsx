@@ -28,7 +28,7 @@ function renderFlow(overrides: Partial<Parameters<typeof PublishFlow>[0]> = {}) 
 // Walk: choose 'link' -> continue -> checkpoint -> type phrase -> publish.
 async function proceedToPublish() {
   // Select the by-link level radio (the ladder renders the levels).
-  fireEvent.click(screen.getByText(/عامّة عبر الرابط/));
+  fireEvent.click(screen.getByText(/عامة عبر الرابط/));
   fireEvent.click(screen.getByText('متابعة'));
   // Now on checkpoint: type the family name into the confirm input.
   const input = await screen.findByPlaceholderText(FAMILY);
