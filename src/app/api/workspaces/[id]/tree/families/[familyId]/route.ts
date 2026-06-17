@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db';
 import { requireTreeEditor, isErrorResponse } from '@/lib/api/workspace-auth';
 import { treeMutateLimiter, rateLimitResponse } from '@/lib/api/rate-limit';
 import {
-  getOrCreateTree,
+  resolveTargetTreeOr404,
   getTreeFamilyDecrypted,
   getTreeIndividual,
   touchTreeTimestamp,
@@ -11,7 +11,7 @@ import {
 import { updateFamilySchema } from '@/lib/tree/schemas';
 import { validateFamilyGender } from '@/lib/tree/family-validators';
 import { isSyntheticFamilyId } from '@/lib/tree/branch-pointer-guards';
-import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
+import { parseValidatedBody, isParseError, parseTreeIdFromBody } from '@/lib/api/route-helpers';
 import { isUndoRequest } from '@/lib/api/undo-header';
 import {
   snapshotFamily,
@@ -44,7 +44,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   const parsed = await parseValidatedBody(request, updateFamilySchema);
   if (isParseError(parsed)) return parsed;
 
-  const tree = await getOrCreateTree(workspaceId);
+  // Resolve target tree; strip `treeId` from the payload so it never reaches
+  // the Family row or the audit snapshot.
+  const { treeId } = parsed.data;
+  delete parsed.data.treeId;
+  const tree = await resolveTargetTreeOr404(workspaceId, treeId);
+  if (isErrorResponse(tree)) return tree;
   // Phase 10b: fetch the key once; decrypt the existing family so the
   // snapshot + validation code below sees plaintext event fields.
   const workspaceKey = await getWorkspaceKey(workspaceId);
@@ -208,7 +213,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   const { allowed, retryAfterSeconds } = treeMutateLimiter.check(result.user.id);
   if (!allowed) return rateLimitResponse(retryAfterSeconds);
 
-  const tree = await getOrCreateTree(workspaceId);
+  // Optional body carries `treeId` to target a same-workspace extra tree.
+  const treeId = await parseTreeIdFromBody(request);
+
+  const tree = await resolveTargetTreeOr404(workspaceId, treeId);
+  if (isErrorResponse(tree)) return tree;
   // Phase 10b: decrypted read + key for snapshot envelope.
   const workspaceKey = await getWorkspaceKey(workspaceId);
   const existing = await getTreeFamilyDecrypted(workspaceId, tree.id, familyId);

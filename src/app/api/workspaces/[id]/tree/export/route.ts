@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireWorkspaceMember, isErrorResponse } from '@/lib/api/workspace-auth'
 import { treeExportLimiter, rateLimitResponse } from '@/lib/api/rate-limit'
-import { getOrCreateTree, getTreeByWorkspaceId } from '@/lib/tree/queries'
+import { resolveTargetTreeOr404, getTreeByWorkspaceId } from '@/lib/tree/queries'
 import { dbTreeToGedcomData, redactPrivateIndividuals } from '@/lib/tree/mapper'
 import { getWorkspaceKey } from '@/lib/tree/encryption'
 import { getActivePointersForWorkspace } from '@/lib/tree/branch-pointer-queries'
@@ -57,15 +57,21 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
   const version = parsed.data
 
-  // Fetch tree data
-  const tree = await getOrCreateTree(workspaceId)
+  // Fetch tree data. Optional ?treeId= targets a same-workspace extra (or
+  // main) tree; absent → the workspace main tree. A foreign/unknown id fails
+  // closed → 404. Branch pointers only anchor to the main tree, so the merge
+  // below is gated on the main-tree path.
+  const targetTreeId = request.nextUrl.searchParams.get('treeId') ?? undefined
+  const tree = await resolveTargetTreeOr404(workspaceId, targetTreeId)
+  if (isErrorResponse(tree)) return tree
+  const isMainTree = !targetTreeId
   // Phase 10b: unwrap this workspace's data key once and reuse it for the
   // tree and every downstream decrypt call below.
   const workspaceKey = await getWorkspaceKey(workspaceId)
   let gedcomData: GedcomData = dbTreeToGedcomData(tree, workspaceKey)
 
   // Merge pointed subtrees (so cross-references in native data are consistent)
-  const pointers = await getActivePointersForWorkspace(workspaceId)
+  const pointers = isMainTree ? await getActivePointersForWorkspace(workspaceId) : []
 
   const uniqueSourceIds = [...new Set(pointers.map((p) => p.sourceWorkspaceId))]
 

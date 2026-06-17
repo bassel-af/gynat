@@ -134,10 +134,12 @@ export async function requireCollectionsEnabled(
 }
 
 /**
- * Type guard to check if the result is an error response.
+ * Type guard to check if a guard result is an error `NextResponse`. Generic so
+ * it narrows any `T | NextResponse` (auth guards, tree resolvers, …) to its
+ * non-error branch — the runtime check (`instanceof NextResponse`) is unchanged.
  */
-export function isErrorResponse(
-  result: WorkspaceAuthResult | NextResponse,
+export function isErrorResponse<T>(
+  result: T | NextResponse,
 ): result is NextResponse {
   return result instanceof NextResponse;
 }

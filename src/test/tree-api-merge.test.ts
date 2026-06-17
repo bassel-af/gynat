@@ -35,10 +35,20 @@ vi.mock('@/lib/db', () => ({
 
 // Mock the queries module to intercept source tree fetching
 const mockGetTreeByWorkspaceId = vi.fn();
-vi.mock('@/lib/tree/queries', () => ({
-  getTreeByWorkspaceId: (...args: unknown[]) => mockGetTreeByWorkspaceId(...args),
-  getOrCreateTree: () => mockFamilyTreeFindUnique() ?? mockFamilyTreeCreate(),
-}));
+vi.mock('@/lib/tree/queries', async () => {
+  const { NextResponse } = await import('next/server');
+  return {
+    getTreeByWorkspaceId: (...args: unknown[]) => mockGetTreeByWorkspaceId(...args),
+    getOrCreateTree: () => mockFamilyTreeFindUnique() ?? mockFamilyTreeCreate(),
+    // treeId absent in these tests → resolves the main tree, same as getOrCreateTree
+    getOrCreateTargetTree: () => mockFamilyTreeFindUnique() ?? mockFamilyTreeCreate(),
+    // GET /tree now resolves through resolveTargetTreeOr404 (tree → tree, null → 404).
+    resolveTargetTreeOr404: () => {
+      const tree = mockFamilyTreeFindUnique() ?? mockFamilyTreeCreate();
+      return tree ?? NextResponse.json({ error: 'الشجرة غير موجودة' }, { status: 404 });
+    },
+  };
+});
 
 // Mock the branch pointer queries
 const mockGetActivePointers = vi.fn();

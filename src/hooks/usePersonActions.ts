@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import type { Individual, GedcomData } from '@/lib/gedcom/types';
 import type { IndividualFormData } from '@/components/tree/IndividualForm/IndividualForm';
 import type { FamilyEventFormData } from '@/components/tree/FamilyEventForm/FamilyEventForm';
@@ -72,6 +72,8 @@ interface WorkspaceContext {
   workspaceId: string;
   canEdit: boolean;
   refreshTree: () => Promise<void>;
+  /** When set, mutations target this `extra` tree; absent ⇒ the main tree. */
+  activeTreeId?: string;
 }
 
 export interface UsePersonActionsParams {
@@ -123,6 +125,28 @@ export function usePersonActions({
   // Pointed individuals are read-only — block all mutations
   const isPointed = person?._pointed === true;
 
+  // When editing an `extra` tree, every mutation body must carry its `treeId`
+  // so the API targets that tree instead of the workspace main tree. Absent
+  // ⇒ no `treeId` field (the main-tree default is unchanged).
+  const activeTreeId = workspace?.activeTreeId;
+  const withTreeId = useCallback(
+    <T extends Record<string, unknown>>(body: T): T & { treeId?: string } =>
+      activeTreeId ? { ...body, treeId: activeTreeId } : body,
+    [activeTreeId],
+  );
+
+  // DELETE requests carry no JSON body on the main tree, but when editing an
+  // `extra` tree they must send `{ treeId }`. Spread this into an `apiFetch`
+  // options object: `{ method: 'DELETE', ...deleteInit }`. Empty (no body) when
+  // on the main tree, preserving the main-tree default.
+  const deleteInit = useMemo(
+    () =>
+      activeTreeId
+        ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ treeId: activeTreeId }) }
+        : {},
+    [activeTreeId],
+  );
+
   // Form modal state
   const [formModeRaw, setFormModeRaw] = useState<FormMode | null>(null);
   const [formLoading, setFormLoading] = useState(false);
@@ -147,7 +171,7 @@ export function usePersonActions({
     const res = await apiFetch(`/api/workspaces/${workspace.workspaceId}/tree/individuals`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(serializeIndividualForm(formData)),
+      body: JSON.stringify(withTreeId(serializeIndividualForm(formData))),
     });
     if (!res.ok) {
       const json = await res.json();
@@ -155,14 +179,14 @@ export function usePersonActions({
     }
     const json = await res.json();
     return json.data as { id: string };
-  }, [workspace]);
+  }, [workspace, withTreeId]);
 
   const createFamily = useCallback(async (opts: { husbandId?: string; wifeId?: string; childrenIds?: string[] }) => {
     if (!workspace) throw new Error('No workspace context');
     const res = await apiFetch(`/api/workspaces/${workspace.workspaceId}/tree/families`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(opts),
+      body: JSON.stringify(withTreeId(opts)),
     });
     if (!res.ok) {
       const json = await res.json();
@@ -170,33 +194,33 @@ export function usePersonActions({
     }
     const json = await res.json();
     return json.data as { id: string };
-  }, [workspace]);
+  }, [workspace, withTreeId]);
 
   const addChildToFamily = useCallback(async (familyId: string, individualId: string) => {
     if (!workspace) throw new Error('No workspace context');
     const res = await apiFetch(`/api/workspaces/${workspace.workspaceId}/tree/families/${familyId}/children`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ individualId }),
+      body: JSON.stringify(withTreeId({ individualId })),
     });
     if (!res.ok) {
       const json = await res.json();
       throw new Error(json.error ?? 'حدث خطأ');
     }
-  }, [workspace]);
+  }, [workspace, withTreeId]);
 
   const patchFamily = useCallback(async (familyId: string, patch: { husbandId?: string | null; wifeId?: string | null }) => {
     if (!workspace) throw new Error('No workspace context');
     const res = await apiFetch(`/api/workspaces/${workspace.workspaceId}/tree/families/${familyId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(patch),
+      body: JSON.stringify(withTreeId(patch)),
     });
     if (!res.ok) {
       const json = await res.json();
       throw new Error(json.error ?? 'حدث خطأ');
     }
-  }, [workspace]);
+  }, [workspace, withTreeId]);
 
   // -------------------------------------------------------------------------
   // Shared form action wrapper — handles loading, error, and refresh
@@ -250,7 +274,7 @@ export function usePersonActions({
       const res = await apiFetch(`/api/workspaces/${workspace.workspaceId}/tree/individuals/${personId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(afterSnapshot),
+        body: JSON.stringify(withTreeId(afterSnapshot)),
       });
       if (!res.ok) {
         const json = await res.json();
@@ -266,7 +290,7 @@ export function usePersonActions({
             {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ isUmmWalad: newVal }),
+              body: JSON.stringify(withTreeId({ isUmmWalad: newVal })),
             },
           );
           if (!famRes.ok) {
@@ -284,6 +308,7 @@ export function usePersonActions({
         individualId: personId,
         before: beforeSnapshot,
         after: afterSnapshot,
+        treeId: activeTreeId,
       });
       onPushUndo({
         label: buildUndoLabel({ kind: 'updateIndividual', name: personName }),
@@ -292,7 +317,7 @@ export function usePersonActions({
         redo: inverse.redo,
       });
     }
-  }, [workspace, personId, isPointed, formMode, withFormAction, person, onPushUndo]);
+  }, [workspace, personId, isPointed, formMode, withFormAction, withTreeId, activeTreeId, person, onPushUndo]);
 
   const handleAddChildSubmit = useCallback(async (formData: IndividualFormData) => {
     if (!workspace || !person || !data || isPointed) return;
@@ -333,6 +358,7 @@ export function usePersonActions({
         workspaceId: workspace.workspaceId,
         createdId: newIndividualId,
         createPayload,
+        treeId: activeTreeId,
       });
       onPushUndo({
         label: buildUndoLabel({ kind: 'addChild', name: childName }),
@@ -341,7 +367,7 @@ export function usePersonActions({
         redo: inverse.redo,
       });
     }
-  }, [workspace, person, data, personId, formMode, createIndividual, addChildToFamily, createFamily, isPointed, withFormAction, onPushUndo]);
+  }, [workspace, person, data, personId, formMode, createIndividual, addChildToFamily, createFamily, isPointed, withFormAction, activeTreeId, onPushUndo]);
 
   const handleAddSpouseSubmit = useCallback(async (formData: IndividualFormData) => {
     if (!workspace || !person || isPointed) return;
@@ -391,6 +417,7 @@ export function usePersonActions({
           const famRes = await apiFetch(`/api/workspaces/${wsId}/tree/families/${capturedFamilyId}`, {
             method: 'DELETE',
             isUndo: true,
+            ...deleteInit,
           });
           if (!famRes.ok && famRes.status !== 204) {
             const json = await famRes.json();
@@ -399,6 +426,7 @@ export function usePersonActions({
           const indRes = await apiFetch(`/api/workspaces/${wsId}/tree/individuals/${capturedIndividualId}`, {
             method: 'DELETE',
             isUndo: true,
+            ...deleteInit,
           });
           if (!indRes.ok && indRes.status !== 204) {
             const json = await indRes.json();
@@ -410,7 +438,7 @@ export function usePersonActions({
           const indRes = await apiFetch(`/api/workspaces/${wsId}/tree/individuals`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(serializeIndividualForm(formData)),
+            body: JSON.stringify(withTreeId(serializeIndividualForm(formData))),
             isUndo: true,
           });
           if (!indRes.ok) throw new Error(`undo API error: ${indRes.status}`);
@@ -422,14 +450,14 @@ export function usePersonActions({
           const famRes = await apiFetch(`/api/workspaces/${wsId}/tree/families`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(famOpts),
+            body: JSON.stringify(withTreeId(famOpts)),
             isUndo: true,
           });
           if (!famRes.ok) throw new Error(`undo API error: ${famRes.status}`);
         },
       });
     }
-  }, [workspace, person, personId, createIndividual, createFamily, isPointed, withFormAction, onPushUndo]);
+  }, [workspace, person, personId, createIndividual, createFamily, isPointed, withFormAction, withTreeId, activeTreeId, deleteInit, onPushUndo]);
 
   const handleLinkExistingSpouse = useCallback(async (existingPersonId: string) => {
     if (!workspace || !person || isPointed) return;
@@ -460,6 +488,7 @@ export function usePersonActions({
         workspaceId: workspace.workspaceId,
         createdId: newFamilyId,
         createPayload: createPayload as Record<string, unknown>,
+        treeId: activeTreeId,
       });
       onPushUndo({
         label: buildUndoLabel({ kind: 'linkExistingSpouse', sex: spouseSex, name: spouseName }),
@@ -468,7 +497,7 @@ export function usePersonActions({
         redo: inverse.redo,
       });
     }
-  }, [workspace, person, personId, createFamily, isPointed, withFormAction, data, onPushUndo]);
+  }, [workspace, person, personId, createFamily, isPointed, withFormAction, data, activeTreeId, onPushUndo]);
 
   const handleAddParentSubmit = useCallback(async (formData: IndividualFormData) => {
     if (!workspace || !person || !data || isPointed) return;
@@ -526,7 +555,7 @@ export function usePersonActions({
             const r = await apiFetch(`/api/workspaces/${wsId}/tree/families/${capturedPatchedFam}`, {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(patch),
+              body: JSON.stringify(withTreeId(patch)),
               isUndo: true,
             });
             if (!r.ok) throw new Error(`undo API error: ${r.status}`);
@@ -534,12 +563,14 @@ export function usePersonActions({
             const r = await apiFetch(`/api/workspaces/${wsId}/tree/families/${capturedCreatedFam}`, {
               method: 'DELETE',
               isUndo: true,
+              ...deleteInit,
             });
             if (!r.ok && r.status !== 204) throw new Error(`undo API error: ${r.status}`);
           }
           const indRes = await apiFetch(`/api/workspaces/${wsId}/tree/individuals/${capturedInd}`, {
             method: 'DELETE',
             isUndo: true,
+            ...deleteInit,
           });
           if (!indRes.ok && indRes.status !== 204) throw new Error(`undo API error: ${indRes.status}`);
         },
@@ -547,7 +578,7 @@ export function usePersonActions({
           const indRes = await apiFetch(`/api/workspaces/${wsId}/tree/individuals`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(serializeIndividualForm(formData)),
+            body: JSON.stringify(withTreeId(serializeIndividualForm(formData))),
             isUndo: true,
           });
           if (!indRes.ok) throw new Error(`undo API error: ${indRes.status}`);
@@ -557,7 +588,7 @@ export function usePersonActions({
             const r = await apiFetch(`/api/workspaces/${wsId}/tree/families/${capturedPatchedFam}`, {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(patch),
+              body: JSON.stringify(withTreeId(patch)),
               isUndo: true,
             });
             if (!r.ok) throw new Error(`undo API error: ${r.status}`);
@@ -570,7 +601,7 @@ export function usePersonActions({
             const r = await apiFetch(`/api/workspaces/${wsId}/tree/families`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(famOpts),
+              body: JSON.stringify(withTreeId(famOpts)),
               isUndo: true,
             });
             if (!r.ok) throw new Error(`undo API error: ${r.status}`);
@@ -578,7 +609,7 @@ export function usePersonActions({
         },
       });
     }
-  }, [workspace, person, data, personId, createIndividual, patchFamily, createFamily, isPointed, withFormAction, onPushUndo]);
+  }, [workspace, person, data, personId, createIndividual, patchFamily, createFamily, isPointed, withFormAction, withTreeId, activeTreeId, deleteInit, onPushUndo]);
 
   const handleAddSiblingSubmit = useCallback(async (formData: IndividualFormData) => {
     if (!workspace || formMode?.kind !== 'addSibling' || isPointed) return;
@@ -598,6 +629,7 @@ export function usePersonActions({
         workspaceId: workspace.workspaceId,
         createdId: newIndividualId,
         createPayload,
+        treeId: activeTreeId,
       });
       onPushUndo({
         label: buildUndoLabel({ kind: 'addChild', name: childName }),
@@ -606,7 +638,7 @@ export function usePersonActions({
         redo: inverse.redo,
       });
     }
-  }, [workspace, formMode, createIndividual, addChildToFamily, isPointed, withFormAction, onPushUndo]);
+  }, [workspace, formMode, createIndividual, addChildToFamily, isPointed, withFormAction, activeTreeId, onPushUndo]);
 
   const handleFamilyEventSubmit = useCallback(async (eventData: FamilyEventFormData) => {
     if (!workspace || formMode?.kind !== 'editFamilyEvent' || isPointed) return;
@@ -661,7 +693,7 @@ export function usePersonActions({
       const res = await apiFetch(`/api/workspaces/${workspace.workspaceId}/tree/families/${familyId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(afterPayload),
+        body: JSON.stringify(withTreeId(afterPayload)),
       });
       if (!res.ok) {
         const json = await res.json();
@@ -685,6 +717,7 @@ export function usePersonActions({
         familyId,
         before: beforePayload,
         after: afterPayload,
+        treeId: activeTreeId,
       });
       onPushUndo({
         label: buildUndoLabel({ kind: 'editMarriageEvent', eventType }),
@@ -693,7 +726,7 @@ export function usePersonActions({
         redo: inverse.redo,
       });
     }
-  }, [workspace, formMode, isPointed, withFormAction, data, onPushUndo]);
+  }, [workspace, formMode, isPointed, withFormAction, withTreeId, data, activeTreeId, onPushUndo]);
 
   // -------------------------------------------------------------------------
   // Rada'a (foster nursing) handlers
@@ -736,7 +769,7 @@ export function usePersonActions({
       const res = await apiFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify(withTreeId(body)),
       });
       if (!res.ok) {
         const json = await res.json();
@@ -760,6 +793,7 @@ export function usePersonActions({
           radaFamilyId,
           before: beforePayload,
           after: updatePayload,
+          treeId: activeTreeId,
         });
         onPushUndo({
           label: buildUndoLabel({ kind: 'updateRadaFamily' }),
@@ -772,6 +806,7 @@ export function usePersonActions({
           workspaceId: workspace.workspaceId,
           createdId: newRadaId,
           createPayload,
+          treeId: activeTreeId,
         });
         onPushUndo({
           label: buildUndoLabel({ kind: 'createRadaFamily' }),
@@ -781,7 +816,7 @@ export function usePersonActions({
         });
       }
     }
-  }, [workspace, isPointed, formMode, withFormAction, data, onPushUndo]);
+  }, [workspace, isPointed, formMode, withFormAction, withTreeId, data, activeTreeId, onPushUndo]);
 
   const handleRadaaDelete = useCallback(async (radaFamilyId: string) => {
     if (!workspace || isPointed) return;
@@ -796,7 +831,10 @@ export function usePersonActions({
     await withFormAction(async () => {
       const res = await apiFetch(
         `/api/workspaces/${workspace.workspaceId}/tree/rada-families/${radaFamilyId}`,
-        { method: 'DELETE' },
+        {
+          method: 'DELETE',
+          ...deleteInit,
+        },
       );
       if (!res.ok && res.status !== 204) {
         const json = await res.json();
@@ -810,6 +848,7 @@ export function usePersonActions({
         workspaceId: workspace.workspaceId,
         deletedId: radaFamilyId,
         snapshot,
+        treeId: activeTreeId,
       });
       onPushUndo({
         label: buildUndoLabel({ kind: 'deleteRadaFamily' }),
@@ -818,7 +857,7 @@ export function usePersonActions({
         redo: inverse.redo,
       });
     }
-  }, [workspace, isPointed, withFormAction, data, onPushUndo]);
+  }, [workspace, isPointed, withFormAction, data, activeTreeId, deleteInit, onPushUndo]);
 
   // -------------------------------------------------------------------------
   // Move subtree
@@ -849,7 +888,7 @@ export function usePersonActions({
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(familyOpts),
+            body: JSON.stringify(withTreeId(familyOpts)),
           },
         );
         if (!r.ok) {
@@ -868,7 +907,7 @@ export function usePersonActions({
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ targetFamilyId: resolvedTargetFamilyId }),
+            body: JSON.stringify(withTreeId({ targetFamilyId: resolvedTargetFamilyId })),
           },
         );
         if (!res.ok) {
@@ -882,7 +921,7 @@ export function usePersonActions({
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ individualId: personId }),
+            body: JSON.stringify(withTreeId({ individualId: personId })),
           },
         );
         if (!res.ok) {
@@ -896,7 +935,10 @@ export function usePersonActions({
       for (const orphanId of orphanIds) {
         const r = await apiFetch(
           `/api/workspaces/${workspace.workspaceId}/tree/individuals/${orphanId}`,
-          { method: 'DELETE' },
+          {
+            method: 'DELETE',
+            ...deleteInit,
+          },
         );
         if (!r.ok && r.status !== 204) {
           const json = await r.json().catch(() => ({}));
@@ -922,6 +964,7 @@ export function usePersonActions({
         fromFamilyId,
         toFamilyId: resolvedTargetFamilyId,
         individualId: personId,
+        treeId: activeTreeId,
       });
       onPushUndo({
         label: buildUndoLabel({ kind: 'moveChild', name: personName }),
@@ -930,7 +973,7 @@ export function usePersonActions({
         redo: inverse.redo,
       });
     }
-  }, [workspace, person, personId, isPointed, withFormAction, onPushUndo]);
+  }, [workspace, person, personId, isPointed, withFormAction, withTreeId, activeTreeId, deleteInit, onPushUndo]);
 
   // -------------------------------------------------------------------------
   // Unlink spouse
@@ -985,7 +1028,7 @@ export function usePersonActions({
           {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(patch),
+            body: JSON.stringify(withTreeId(patch)),
           },
         );
         if (!res.ok) {
@@ -996,7 +1039,10 @@ export function usePersonActions({
         // No children — delete the family record entirely
         const res = await apiFetch(
           `/api/workspaces/${workspace.workspaceId}/tree/families/${familyId}`,
-          { method: 'DELETE' },
+          {
+            method: 'DELETE',
+            ...deleteInit,
+          },
         );
         if (!res.ok && res.status !== 204) {
           const json = await res.json();
@@ -1019,7 +1065,7 @@ export function usePersonActions({
             const r = await apiFetch(`/api/workspaces/${wsId}/tree/families/${familyId}`, {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(restorePatch),
+              body: JSON.stringify(withTreeId(restorePatch)),
               isUndo: true,
             });
             if (!r.ok) throw new Error(`undo API error: ${r.status}`);
@@ -1028,7 +1074,7 @@ export function usePersonActions({
             const r = await apiFetch(`/api/workspaces/${wsId}/tree/families/${familyId}`, {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(clearPatch),
+              body: JSON.stringify(withTreeId(clearPatch)),
               isUndo: true,
             });
             if (!r.ok) throw new Error(`undo API error: ${r.status}`);
@@ -1039,6 +1085,7 @@ export function usePersonActions({
           workspaceId: wsId,
           deletedId: familyId,
           snapshot: familySnapshot,
+          treeId: activeTreeId,
         });
         onPushUndo({
           label: buildUndoLabel({ kind: 'unlinkSpouse', sex: removedSpouseSex }),
@@ -1048,7 +1095,7 @@ export function usePersonActions({
         });
       }
     }
-  }, [workspace, person, data, personId, isPointed, withFormAction, onPushUndo]);
+  }, [workspace, person, data, personId, isPointed, withFormAction, withTreeId, activeTreeId, deleteInit, onPushUndo]);
 
   // -------------------------------------------------------------------------
   // Delete handler
@@ -1111,6 +1158,8 @@ export function usePersonActions({
         body.versionHash = currentState.impact.versionHash;
         if (confirmationName) body.confirmationName = confirmationName;
       }
+      // Editing an extra tree: the delete must target that tree.
+      if (activeTreeId) body.treeId = activeTreeId;
 
       const res = await apiFetch(
         `/api/workspaces/${workspace.workspaceId}/tree/individuals/${personId}`,
@@ -1144,6 +1193,7 @@ export function usePersonActions({
           workspaceId: workspace.workspaceId,
           deletedId: personId,
           snapshot: deleteSnapshot,
+          treeId: activeTreeId,
         });
         onPushUndo({
           label: buildUndoLabel({ kind: 'deleteIndividual', name: personName }),
@@ -1160,7 +1210,7 @@ export function usePersonActions({
         setDeleteState({ kind: 'idle' });
       }
     }
-  }, [workspace, personId, setSelectedPersonId, isPointed, deleteState, person, onPushUndo]);
+  }, [workspace, personId, setSelectedPersonId, isPointed, deleteState, person, activeTreeId, onPushUndo]);
 
   return {
     formMode,

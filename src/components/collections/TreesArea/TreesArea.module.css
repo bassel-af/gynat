@@ -266,6 +266,31 @@
   border-color: #e8a15c;
 }
 
+/* Clear text rename affordance (replaces the pen icon, which read as
+   "edit the tree" next to the new edit-content action). */
+.renameBtn {
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 var(--space-4);
+  border-radius: var(--heritage-radius-md);
+  border: 1px solid var(--heritage-glass-border);
+  background: transparent;
+  color: var(--heritage-text-soft);
+  font-family: var(--heritage-font-body);
+  font-size: 12px;
+  font-weight: 400;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 180ms, color 180ms, border-color 180ms;
+}
+
+.renameBtn:hover {
+  background: rgba(200, 168, 101, 0.06);
+  color: var(--heritage-gold-bright);
+  border-color: var(--heritage-gold);
+}
+
 .mainNote {
   font-family: var(--heritage-font-body);
   font-size: 12px;

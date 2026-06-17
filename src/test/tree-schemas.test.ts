@@ -6,6 +6,8 @@ import {
   familyEventFieldsSchema,
   createFamilySchema,
   updateFamilySchema,
+  createRadaFamilySchema,
+  updateRadaFamilySchema,
 } from '@/lib/tree/schemas';
 
 // ============================================================================
@@ -254,6 +256,65 @@ describe('updateFamilySchema', () => {
 
   test('accepts empty object', () => {
     const result = updateFamilySchema.safeParse({});
+    expect(result.success).toBe(true);
+  });
+});
+
+// ============================================================================
+// treeId — optional target-tree binding (Collections Chunk 2)
+// ============================================================================
+describe('treeId — optional target-tree field', () => {
+  const VALID_UUID = '11111111-1111-4111-8111-111111111111';
+
+  test('createIndividualSchema accepts an optional treeId UUID', () => {
+    const result = createIndividualSchema.safeParse({
+      givenName: 'محمد',
+      sex: 'M',
+      treeId: VALID_UUID,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  test('createIndividualSchema rejects a non-UUID treeId', () => {
+    const result = createIndividualSchema.safeParse({
+      givenName: 'محمد',
+      sex: 'M',
+      treeId: 'not-a-uuid',
+    });
+    expect(result.success).toBe(false);
+  });
+
+  test('createIndividualSchema still valid without treeId (backward-compatible)', () => {
+    const result = createIndividualSchema.safeParse({ givenName: 'محمد', sex: 'M' });
+    expect(result.success).toBe(true);
+  });
+
+  test('updateIndividualSchema accepts an optional treeId UUID', () => {
+    const result = updateIndividualSchema.safeParse({ givenName: 'محمد', treeId: VALID_UUID });
+    expect(result.success).toBe(true);
+  });
+
+  test('createFamilySchema accepts an optional treeId UUID', () => {
+    const result = createFamilySchema.safeParse({ treeId: VALID_UUID });
+    expect(result.success).toBe(true);
+  });
+
+  test('updateFamilySchema accepts an optional treeId UUID', () => {
+    const result = updateFamilySchema.safeParse({ husbandId: null, treeId: VALID_UUID });
+    expect(result.success).toBe(true);
+  });
+
+  test('createRadaFamilySchema accepts an optional treeId UUID', () => {
+    const result = createRadaFamilySchema.safeParse({
+      childrenIds: [VALID_UUID],
+      notes: 'رضاعة',
+      treeId: VALID_UUID,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  test('updateRadaFamilySchema accepts an optional treeId UUID', () => {
+    const result = updateRadaFamilySchema.safeParse({ notes: 'رضاعة', treeId: VALID_UUID });
     expect(result.success).toBe(true);
   });
 });

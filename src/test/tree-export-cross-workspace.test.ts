@@ -60,8 +60,7 @@ vi.mock('@/lib/tree/encryption', async () => {
 // Mock queries to bypass FamilyTree lookup (we use workspaceFindUnique for everything)
 vi.mock('@/lib/tree/queries', async () => {
   const now = new Date();
-  return {
-    getOrCreateTree: vi.fn().mockResolvedValue({
+  const treeA = {
       id: 'tree-A',
       workspaceId: 'ws-A',
       lastModifiedAt: now,
@@ -95,7 +94,13 @@ vi.mock('@/lib/tree/queries', async () => {
         },
       ],
       families: [],
-    }),
+  };
+  return {
+    getOrCreateTree: vi.fn().mockResolvedValue(treeA),
+    // Export route resolves via resolveTargetTreeOr404; no treeId in these tests
+    // → the main tree (treeA), so the stub resolves to it (never a 404).
+    getOrCreateTargetTree: vi.fn().mockResolvedValue(treeA),
+    resolveTargetTreeOr404: vi.fn().mockResolvedValue(treeA),
     getTreeByWorkspaceId: vi.fn().mockImplementation(async (wsId: string) => {
       if (wsId === 'ws-B') {
         return {

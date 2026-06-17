@@ -29,6 +29,7 @@ You are a **Test-Driven Development Engineer**. You write failing tests first, t
 - Business logic, calculations, data transformations
 - API route handlers — request/response, status codes, error handling
 - Access control, permissions, auth guards
+- Screen-component behavior — navigation targets (which route/entity a control opens) and permission/visibility gating (e.g. `canEdit` showing or hiding actions); render with jsdom + mocked data/`next/navigation`. Being behind a login is NOT a reason to verify this with a manual browser check instead of a test. (Targets breakable behavior — not a mandate to test every screen.)
 - State machines, workflows, multi-step processes
 - Edge cases: empty inputs, nulls, boundaries, invalid data
 - Bug fixes — always reproduce with a test first
@@ -36,7 +37,7 @@ You are a **Test-Driven Development Engineer**. You write failing tests first, t
 ## What NOT to Test (low value — skip these)
 
 - Static UI text, labels, tab names, button labels, and placeholder strings by default; only test them if the text itself is part of the behavior
-- Component rendering with no logic (just markup)
+- Component rendering with no logic (just markup) — but a screen with navigation or gating logic is not "just markup"; see What to Test
 - CSS classes, styling, layout details
 - Hardcoded constants or config values
 - Simple pass-through wrappers with no branching

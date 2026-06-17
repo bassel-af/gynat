@@ -7,9 +7,11 @@ import type { PointerMetadata } from '@/context/WorkspaceTreeContext';
 
 /**
  * Fetches tree data from the workspace API and feeds it into TreeContext.
- * Fetches tree data from the workspace API and feeds it into TreeContext.
+ *
+ * `activeTreeId` selects which tree to read: when set, it appends `?treeId=<id>`
+ * so an `extra` tree is loaded; absent, the workspace main tree is returned.
  */
-export function useWorkspaceTreeData(workspaceId: string) {
+export function useWorkspaceTreeData(workspaceId: string, activeTreeId?: string) {
   const { setData, setError } = useTree();
   const refreshCounter = useRef(0);
   const [pointers, setPointers] = useState<PointerMetadata[]>([]);
@@ -17,7 +19,8 @@ export function useWorkspaceTreeData(workspaceId: string) {
   const fetchTree = useCallback(async () => {
     const currentRefresh = ++refreshCounter.current;
     try {
-      const res = await apiFetch(`/api/workspaces/${workspaceId}/tree`, {
+      const query = activeTreeId ? `?treeId=${encodeURIComponent(activeTreeId)}` : '';
+      const res = await apiFetch(`/api/workspaces/${workspaceId}/tree${query}`, {
         cache: 'no-cache',
       });
       if (!res.ok) {
@@ -38,7 +41,7 @@ export function useWorkspaceTreeData(workspaceId: string) {
         setError(err instanceof Error ? err.message : 'فشل في تحميل شجرة العائلة');
       }
     }
-  }, [workspaceId, setData, setError]);
+  }, [workspaceId, activeTreeId, setData, setError]);
 
   useEffect(() => {
     fetchTree();

@@ -1,3 +1,4 @@
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import {
   getWorkspaceKey,
@@ -83,6 +84,57 @@ export async function getOrCreateTree(workspaceId: string) {
     data: { workspaceId, kind: 'main' },
     include: TREE_INCLUDES,
   })
+}
+
+/**
+ * Resolve the tree a tree-mutation/read should target.
+ *
+ * - `treeId` absent → the workspace MAIN tree (lazily created), preserving the
+ *   single-tree, backward-compatible behavior.
+ * - `treeId` given → the `main` or `extra` tree with that id IN THIS WORKSPACE.
+ *   Scoped by `workspaceId` + `kind` (never `findUnique` by bare id), so a
+ *   caller passing another workspace's treeId gets `null` — identical to a
+ *   fake id, leaking no existence. The caller is responsible for translating
+ *   `null` into a 404. Resolution must run AFTER the workspace permission gate.
+ */
+export async function getOrCreateTargetTree(
+  workspaceId: string,
+  treeId?: string,
+) {
+  if (!treeId) return getOrCreateTree(workspaceId)
+
+  return prisma.familyTree.findFirst({
+    where: { id: treeId, workspaceId, kind: { in: ['main', 'extra'] } },
+    include: TREE_INCLUDES,
+  })
+}
+
+/** The resolved tree shape (with `TREE_INCLUDES`) — never null. */
+export type ResolvedTargetTree = NonNullable<
+  Awaited<ReturnType<typeof getOrCreateTargetTree>>
+>
+
+/**
+ * Guard wrapper around {@link getOrCreateTargetTree}: resolves the target tree
+ * or returns a ready-to-`return` 404 `NextResponse`. Centralizes the single
+ * "tree not found" Arabic string + status so every route handler reads:
+ *
+ *     const tree = await resolveTargetTreeOr404(workspaceId, treeId)
+ *     if (isErrorResponse(tree)) return tree
+ *
+ * Scoping is untouched — `getOrCreateTargetTree` still fails closed on a
+ * foreign/unknown id (returns null), which this translates to a 404. MUST run
+ * AFTER the workspace permission gate, same as the call it wraps.
+ */
+export async function resolveTargetTreeOr404(
+  workspaceId: string,
+  treeId?: string,
+): Promise<ResolvedTargetTree | NextResponse> {
+  const tree = await getOrCreateTargetTree(workspaceId, treeId)
+  if (!tree) {
+    return NextResponse.json({ error: 'الشجرة غير موجودة' }, { status: 404 })
+  }
+  return tree
 }
 
 /**

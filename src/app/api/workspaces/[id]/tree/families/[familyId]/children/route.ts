@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireTreeEditor, isErrorResponse } from '@/lib/api/workspace-auth';
 import { treeMutateLimiter, rateLimitResponse } from '@/lib/api/rate-limit';
-import { getOrCreateTree, getTreeFamily, getTreeIndividualDecrypted, touchTreeTimestamp } from '@/lib/tree/queries';
+import { resolveTargetTreeOr404, getTreeFamily, getTreeIndividualDecrypted, touchTreeTimestamp } from '@/lib/tree/queries';
 import { getWorkspaceKey } from '@/lib/tree/encryption';
 import { z } from 'zod';
 import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
+import { targetTreeIdSchema } from '@/lib/tree/schemas';
 import { isUndoRequest } from '@/lib/api/undo-header';
 import { encryptAuditDescription, JSON_NULL } from '@/lib/tree/audit';
 
@@ -13,6 +14,7 @@ type RouteParams = { params: Promise<{ id: string; familyId: string }> };
 
 const addChildSchema = z.object({
   individualId: z.string().uuid(),
+  treeId: targetTreeIdSchema,
 });
 
 // POST /api/workspaces/[id]/tree/families/[familyId]/children — Add a child to a family
@@ -28,7 +30,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   const parsed = await parseValidatedBody(request, addChildSchema);
   if (isParseError(parsed)) return parsed;
 
-  const tree = await getOrCreateTree(workspaceId);
+  const tree = await resolveTargetTreeOr404(workspaceId, parsed.data.treeId);
+  if (isErrorResponse(tree)) return tree;
   // Phase 10b follow-up: fetch workspace key for audit description encryption.
   const workspaceKey = await getWorkspaceKey(workspaceId);
   const family = await getTreeFamily(tree.id, familyId);

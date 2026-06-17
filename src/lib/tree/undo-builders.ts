@@ -24,21 +24,31 @@ async function requireOk(res: Response): Promise<Response> {
   return res;
 }
 
-async function patchJson(path: string, body: unknown): Promise<void> {
+/**
+ * Merge an optional `treeId` into a mutation body. When the inverse targets an
+ * `extra` tree, the body must carry its `treeId` so the API mutates that tree
+ * instead of the workspace main tree. Absent ⇒ the body is unchanged.
+ */
+function withTreeId(body: unknown, treeId?: string): unknown {
+  if (!treeId || typeof body !== 'object' || body === null) return body;
+  return { ...(body as Record<string, unknown>), treeId };
+}
+
+async function patchJson(path: string, body: unknown, treeId?: string): Promise<void> {
   const res = await apiFetch(path, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    body: JSON.stringify(withTreeId(body, treeId)),
     isUndo: true,
   });
   await requireOk(res);
 }
 
-async function postJson(path: string, body: unknown): Promise<{ id?: string }> {
+async function postJson(path: string, body: unknown, treeId?: string): Promise<{ id?: string }> {
   const res = await apiFetch(path, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    body: JSON.stringify(withTreeId(body, treeId)),
     isUndo: true,
   });
   await requireOk(res);
@@ -50,8 +60,14 @@ async function postJson(path: string, body: unknown): Promise<{ id?: string }> {
   }
 }
 
-async function del(path: string): Promise<void> {
-  const res = await apiFetch(path, { method: 'DELETE', isUndo: true });
+async function del(path: string, treeId?: string): Promise<void> {
+  const res = await apiFetch(path, {
+    method: 'DELETE',
+    isUndo: true,
+    ...(treeId
+      ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ treeId }) }
+      : {}),
+  });
   await requireOk(res);
 }
 
@@ -64,6 +80,8 @@ export interface UpdateIndividualInverseParams {
   individualId: string;
   before: Record<string, unknown>;
   after: Record<string, unknown>;
+  /** When set, the inverse targets this `extra` tree; absent ⇒ the main tree. */
+  treeId?: string;
 }
 
 export function buildUpdateIndividualInverse({
@@ -71,11 +89,12 @@ export function buildUpdateIndividualInverse({
   individualId,
   before,
   after,
+  treeId,
 }: UpdateIndividualInverseParams): Inverse {
   const url = `/api/workspaces/${workspaceId}/tree/individuals/${individualId}`;
   return {
-    undo: () => patchJson(url, before),
-    redo: () => patchJson(url, after),
+    undo: () => patchJson(url, before, treeId),
+    redo: () => patchJson(url, after, treeId),
   };
 }
 
@@ -83,20 +102,22 @@ export interface CreateIndividualInverseParams {
   workspaceId: string;
   createdId: string;
   createPayload: Record<string, unknown>;
+  treeId?: string;
 }
 
 export function buildCreateIndividualInverse({
   workspaceId,
   createdId,
   createPayload,
+  treeId,
 }: CreateIndividualInverseParams): Inverse {
   let currentId = createdId;
   const deleteUrl = () => `/api/workspaces/${workspaceId}/tree/individuals/${currentId}`;
   const createUrl = `/api/workspaces/${workspaceId}/tree/individuals`;
   return {
-    undo: () => del(deleteUrl()),
+    undo: () => del(deleteUrl(), treeId),
     redo: async () => {
-      const { id } = await postJson(createUrl, createPayload);
+      const { id } = await postJson(createUrl, createPayload, treeId);
       if (id) currentId = id;
     },
   };
@@ -106,12 +127,14 @@ export interface DeleteIndividualInverseParams {
   workspaceId: string;
   deletedId: string;
   snapshot: Record<string, unknown>;
+  treeId?: string;
 }
 
 export function buildDeleteIndividualInverse({
   workspaceId,
   deletedId: _deletedId,
   snapshot,
+  treeId,
 }: DeleteIndividualInverseParams): Inverse {
   let currentId: string | null = null;
   const createUrl = `/api/workspaces/${workspaceId}/tree/individuals`;
@@ -119,10 +142,10 @@ export function buildDeleteIndividualInverse({
     `/api/workspaces/${workspaceId}/tree/individuals/${currentId ?? _deletedId}`;
   return {
     undo: async () => {
-      const { id } = await postJson(createUrl, snapshot);
+      const { id } = await postJson(createUrl, snapshot, treeId);
       if (id) currentId = id;
     },
-    redo: () => del(deleteUrl()),
+    redo: () => del(deleteUrl(), treeId),
   };
 }
 
@@ -135,6 +158,7 @@ export interface UpdateFamilyInverseParams {
   familyId: string;
   before: Record<string, unknown>;
   after: Record<string, unknown>;
+  treeId?: string;
 }
 
 export function buildUpdateFamilyInverse({
@@ -142,11 +166,12 @@ export function buildUpdateFamilyInverse({
   familyId,
   before,
   after,
+  treeId,
 }: UpdateFamilyInverseParams): Inverse {
   const url = `/api/workspaces/${workspaceId}/tree/families/${familyId}`;
   return {
-    undo: () => patchJson(url, before),
-    redo: () => patchJson(url, after),
+    undo: () => patchJson(url, before, treeId),
+    redo: () => patchJson(url, after, treeId),
   };
 }
 
@@ -158,18 +183,20 @@ export interface FamilyChildInverseParams {
   workspaceId: string;
   familyId: string;
   individualId: string;
+  treeId?: string;
 }
 
 export function buildAddChildInverse({
   workspaceId,
   familyId,
   individualId,
+  treeId,
 }: FamilyChildInverseParams): Inverse {
   const childUrl = `/api/workspaces/${workspaceId}/tree/families/${familyId}/children/${individualId}`;
   const postUrl = `/api/workspaces/${workspaceId}/tree/families/${familyId}/children`;
   return {
-    undo: () => del(childUrl),
-    redo: () => postJson(postUrl, { individualId }).then(() => undefined),
+    undo: () => del(childUrl, treeId),
+    redo: () => postJson(postUrl, { individualId }, treeId).then(() => undefined),
   };
 }
 
@@ -177,12 +204,13 @@ export function buildRemoveChildInverse({
   workspaceId,
   familyId,
   individualId,
+  treeId,
 }: FamilyChildInverseParams): Inverse {
   const childUrl = `/api/workspaces/${workspaceId}/tree/families/${familyId}/children/${individualId}`;
   const postUrl = `/api/workspaces/${workspaceId}/tree/families/${familyId}/children`;
   return {
-    undo: () => postJson(postUrl, { individualId }).then(() => undefined),
-    redo: () => del(childUrl),
+    undo: () => postJson(postUrl, { individualId }, treeId).then(() => undefined),
+    redo: () => del(childUrl, treeId),
   };
 }
 
@@ -191,6 +219,7 @@ export interface MoveChildInverseParams {
   fromFamilyId: string;
   toFamilyId: string;
   individualId: string;
+  treeId?: string;
 }
 
 export function buildMoveChildInverse({
@@ -198,14 +227,15 @@ export function buildMoveChildInverse({
   fromFamilyId,
   toFamilyId,
   individualId,
+  treeId,
 }: MoveChildInverseParams): Inverse {
   const moveFrom = `/api/workspaces/${workspaceId}/tree/families/${toFamilyId}/children/${individualId}/move`;
   const moveTo = `/api/workspaces/${workspaceId}/tree/families/${fromFamilyId}/children/${individualId}/move`;
   return {
     undo: () =>
-      postJson(moveFrom, { targetFamilyId: fromFamilyId }).then(() => undefined),
+      postJson(moveFrom, { targetFamilyId: fromFamilyId }, treeId).then(() => undefined),
     redo: () =>
-      postJson(moveTo, { targetFamilyId: toFamilyId }).then(() => undefined),
+      postJson(moveTo, { targetFamilyId: toFamilyId }, treeId).then(() => undefined),
   };
 }
 
@@ -217,19 +247,21 @@ export interface CreateFamilyInverseParams {
   workspaceId: string;
   createdId: string;
   createPayload: Record<string, unknown>;
+  treeId?: string;
 }
 
 export function buildCreateFamilyInverse({
   workspaceId,
   createdId,
   createPayload,
+  treeId,
 }: CreateFamilyInverseParams): Inverse {
   let currentId = createdId;
   const createUrl = `/api/workspaces/${workspaceId}/tree/families`;
   return {
-    undo: () => del(`/api/workspaces/${workspaceId}/tree/families/${currentId}`),
+    undo: () => del(`/api/workspaces/${workspaceId}/tree/families/${currentId}`, treeId),
     redo: async () => {
-      const { id } = await postJson(createUrl, createPayload);
+      const { id } = await postJson(createUrl, createPayload, treeId);
       if (id) currentId = id;
     },
   };
@@ -239,21 +271,23 @@ export interface DeleteFamilyInverseParams {
   workspaceId: string;
   deletedId: string;
   snapshot: Record<string, unknown>;
+  treeId?: string;
 }
 
 export function buildDeleteFamilyInverse({
   workspaceId,
   deletedId: _deletedId,
   snapshot,
+  treeId,
 }: DeleteFamilyInverseParams): Inverse {
   let currentId: string | null = null;
   const createUrl = `/api/workspaces/${workspaceId}/tree/families`;
   return {
     undo: async () => {
-      const { id } = await postJson(createUrl, snapshot);
+      const { id } = await postJson(createUrl, snapshot, treeId);
       if (id) currentId = id;
     },
-    redo: () => del(`/api/workspaces/${workspaceId}/tree/families/${currentId ?? _deletedId}`),
+    redo: () => del(`/api/workspaces/${workspaceId}/tree/families/${currentId ?? _deletedId}`, treeId),
   };
 }
 
@@ -265,19 +299,21 @@ export interface CreateRadaFamilyInverseParams {
   workspaceId: string;
   createdId: string;
   createPayload: Record<string, unknown>;
+  treeId?: string;
 }
 
 export function buildCreateRadaFamilyInverse({
   workspaceId,
   createdId,
   createPayload,
+  treeId,
 }: CreateRadaFamilyInverseParams): Inverse {
   let currentId = createdId;
   const createUrl = `/api/workspaces/${workspaceId}/tree/rada-families`;
   return {
-    undo: () => del(`/api/workspaces/${workspaceId}/tree/rada-families/${currentId}`),
+    undo: () => del(`/api/workspaces/${workspaceId}/tree/rada-families/${currentId}`, treeId),
     redo: async () => {
-      const { id } = await postJson(createUrl, createPayload);
+      const { id } = await postJson(createUrl, createPayload, treeId);
       if (id) currentId = id;
     },
   };
@@ -288,6 +324,7 @@ export interface UpdateRadaFamilyInverseParams {
   radaFamilyId: string;
   before: Record<string, unknown>;
   after: Record<string, unknown>;
+  treeId?: string;
 }
 
 export function buildUpdateRadaFamilyInverse({
@@ -295,11 +332,12 @@ export function buildUpdateRadaFamilyInverse({
   radaFamilyId,
   before,
   after,
+  treeId,
 }: UpdateRadaFamilyInverseParams): Inverse {
   const url = `/api/workspaces/${workspaceId}/tree/rada-families/${radaFamilyId}`;
   return {
-    undo: () => patchJson(url, before),
-    redo: () => patchJson(url, after),
+    undo: () => patchJson(url, before, treeId),
+    redo: () => patchJson(url, after, treeId),
   };
 }
 
@@ -307,20 +345,22 @@ export interface DeleteRadaFamilyInverseParams {
   workspaceId: string;
   deletedId: string;
   snapshot: Record<string, unknown>;
+  treeId?: string;
 }
 
 export function buildDeleteRadaFamilyInverse({
   workspaceId,
   deletedId: _deletedId,
   snapshot,
+  treeId,
 }: DeleteRadaFamilyInverseParams): Inverse {
   let currentId: string | null = null;
   const createUrl = `/api/workspaces/${workspaceId}/tree/rada-families`;
   return {
     undo: async () => {
-      const { id } = await postJson(createUrl, snapshot);
+      const { id } = await postJson(createUrl, snapshot, treeId);
       if (id) currentId = id;
     },
-    redo: () => del(`/api/workspaces/${workspaceId}/tree/rada-families/${currentId ?? _deletedId}`),
+    redo: () => del(`/api/workspaces/${workspaceId}/tree/rada-families/${currentId ?? _deletedId}`, treeId),
   };
 }

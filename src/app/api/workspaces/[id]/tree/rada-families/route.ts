@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireTreeEditor, isErrorResponse } from '@/lib/api/workspace-auth';
 import { treeMutateLimiter, rateLimitResponse } from '@/lib/api/rate-limit';
-import { getOrCreateTree, getTreeIndividual, touchTreeTimestamp } from '@/lib/tree/queries';
+import { resolveTargetTreeOr404, getTreeIndividual, touchTreeTimestamp } from '@/lib/tree/queries';
 import { createRadaFamilySchema } from '@/lib/tree/schemas';
 import { detectCircularRadaRef, detectDuplicateChildren } from '@/lib/tree/rada-validators';
 import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   const parsed = await parseValidatedBody(request, createRadaFamilySchema);
   if (isParseError(parsed)) return parsed;
 
-  const { fosterFatherId, fosterMotherId, childrenIds, notes } = parsed.data;
+  const { treeId, fosterFatherId, fosterMotherId, childrenIds, notes } = parsed.data;
 
   // Circular reference check
   if (detectCircularRadaRef(fosterFatherId, fosterMotherId, childrenIds)) {
@@ -55,7 +55,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     );
   }
 
-  const tree = await getOrCreateTree(workspaceId);
+  const tree = await resolveTargetTreeOr404(workspaceId, treeId);
+  if (isErrorResponse(tree)) return tree;
 
   // Verify foster father belongs to this tree and is not female
   if (fosterFatherId) {

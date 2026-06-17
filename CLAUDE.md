@@ -272,7 +272,7 @@ The GEDCOM file (`public/saeed-family.ged`):
 **API Utilities**:
 - Auth guard: `src/lib/api/auth.ts` — `getAuthenticatedUser(request)` parses Bearer token, verifies via Supabase
 - Workspace guards: `src/lib/api/workspace-auth.ts` — `requireWorkspaceMember()`, `requireWorkspaceAdmin()`, `requireTreeEditor()`, `requireCollectionEditor()` (admin or `collection_editor`), `requireCollectionsEnabled()` (deny-by-default 404 when `enableCollections` off; called FIRST, before the auth guard)
-- Request helpers: `src/lib/api/route-helpers.ts` — `parseValidatedBody(request, zodSchema)` parses JSON + validates with Zod in one call; `isParseError()` type guard. Used by all mutable API routes to eliminate boilerplate.
+- Request helpers: `src/lib/api/route-helpers.ts` — `parseValidatedBody(request, zodSchema)` parses JSON + validates with Zod in one call; `isParseError()` type guard; `parseTreeIdFromBody(request)` / `extractTreeId(body)` pull an optional string `treeId` from a DELETE body (string-only narrowing — a non-string, e.g. a Prisma-operator object, never reaches the scoping query). Used by all mutable API routes to eliminate boilerplate.
 - Rate limiting: `src/lib/api/rate-limit.ts` — in-memory `RateLimiter` class with pre-configured instances per endpoint (single-process; needs Redis before horizontal scaling)
 - Client fetch: `src/lib/api/client.ts` — `apiFetch(path, options)` auto-attaches Bearer token
 - Serialization: `src/lib/api/serialize.ts` — `serializeBigInt()` for JSON responses with BigInt fields
@@ -292,7 +292,7 @@ The GEDCOM file (`public/saeed-family.ged`):
 - `POST /api/workspaces/join` — join via code (atomic transaction, rate limited)
 - `POST /api/invitations/[id]/accept` — accept email invitation (atomic transaction)
 
-**Tree API Routes** (`src/app/api/workspaces/[id]/tree/`):
+**Tree API Routes** (`src/app/api/workspaces/[id]/tree/`): all read + mutation routes accept an optional `treeId` (query param for reads, body field for mutations) to target an `extra` tree; absent → the workspace `main` tree (backward-compatible). The target is resolved once via `resolveTargetTreeOr404()` (scoped by `{ id, workspaceId, kind }`, fail-closed 404). Gated by `tree_editor` or admin (same as the main tree; NOT `collection_editor`). Branch-pointer / visibility / publish / import / audit-log routes stay main-only (no `treeId`).
 - `GET /api/workspaces/[id]/tree` — full tree as `GedcomData` (private individuals redacted server-side); supports ETag/`If-None-Match` for 304 responses, returns `Cache-Control: private, max-age=30, stale-while-revalidate=300`; branch pointer source trees are fetched in parallel and deduplicated by workspace ID
 - `POST /api/workspaces/[id]/tree/individuals` — create individual (`tree_editor` or admin)
 - `PATCH /api/workspaces/[id]/tree/individuals/[id]` — update individual
@@ -371,10 +371,10 @@ The GEDCOM file (`public/saeed-family.ged`):
 **Collections Library** (`src/lib/collections/`):
 - `queries.ts` — collection/item/extra-tree CRUD; pure recursion guards (`detectCollectionCycle` + DB wrapper, `MAX_NESTING_DEPTH`, `MAX_ITEMS`); `resolveEffectiveVisibility` (LIVE, deny-by-default), `shapeCollectionItem`, `peopleCountByTree` (shared Prisma-v7 groupBy workaround), `itemExistsInCollection` (in-tx dedupe), `filterTopLevelCollections`
 - `schemas.ts` — Zod request schemas; `copy.ts` — `copyTreeIntoNewExtraTree` (atomic deep-copy of an own tree into a new extra tree, re-encrypts under same key + writes `CopyProvenance`); `api.ts` — client `apiFetch` wrappers + DB→UI visibility mapping; `useWorkspaceResolver.ts` — slug→id + `enableCollections` resolver hook
-- Components in `src/components/collections/` (CollectionsResolved, CollectionsPageShell, CollectionsList, CollectionDetail, TreesArea, AddItemFlow, CollectionVisibilityModal, CollectionBadges, EnableCollectionsSetting, JoinCodePanel); modal action buttons use the shared `@/components/ui/Button`
+- Components in `src/components/collections/` (CollectionsResolved, CollectionsPageShell, CollectionsList, CollectionDetail, TreesArea, AddItemFlow, CollectionVisibilityModal, CollectionBadges, EnableCollectionsSetting, JoinCodePanel); modal action buttons use the shared `@/components/ui/Button`. `TreesArea` (an extra tree's title) and `CollectionDetail` (a tree item) link into the editor at `/workspaces/[slug]/tree?treeId=<id>` — no separate "edit content" button; the rename control is a text affordance, not a pen icon
 
 **Tree Library** (`src/lib/tree/`):
-- `queries.ts` — database query helpers for tree CRUD; `touchTreeTimestamp(treeId)` updates `FamilyTree.lastModifiedAt` (called by all mutation routes for ETag invalidation)
+- `queries.ts` — database query helpers for tree CRUD; `touchTreeTimestamp(treeId)` updates `FamilyTree.lastModifiedAt` (called by all mutation routes for ETag invalidation); `getOrCreateTargetTree(workspaceId, treeId?)` + `resolveTargetTreeOr404()` resolve the tree a read/mutation targets (main when `treeId` absent, else the `{id, workspaceId, kind:main|extra}`-scoped tree; the guard returns a ready-to-`return` 404 `NextResponse` for a foreign/unknown id, consumed via `isErrorResponse`)
 - `mapper.ts` — `dbTreeToGedcomData()` maps DB records to `GedcomData` shape; `redactPrivateIndividuals()` strips PII from private individuals
 - `seed-helpers.ts` — helpers for seeding tree data from GEDCOM
 - `schemas.ts` — Zod validation schemas for tree API requests
@@ -428,7 +428,7 @@ The GEDCOM file (`public/saeed-family.ged`):
 - `/workspaces/[slug]` — workspace detail with members, invite modal, tree link
 - `/workspaces/[slug]/tree` — database-backed tree view with edit controls (add/edit individual, add child/spouse/parent, move child, edit family events, delete)
 - `/workspaces/[slug]/tree/audit` — audit log page (admin-only, requires `enableAuditLog`): browsable edit history with filtering, pagination, expandable before/after diff viewer
-- `/workspaces/[slug]/trees` — extra-trees management (requires `enableCollections`): the locked main tree + lightweight extra trees, with create/rename/delete/duplicate (collections feature off by default; toggle + join-code panel live in the `/workspaces/[slug]` settings page)
+- `/workspaces/[slug]/trees` — extra-trees management (requires `enableCollections`): the locked main tree + lightweight extra trees, with create/rename/delete/duplicate (collections feature off by default; toggle + join-code panel live in the `/workspaces/[slug]` settings page). Click an extra tree's title (or a tree inside a collection) to open the full editor on it via `/tree?treeId=<id>`
 - `/workspaces/[slug]/collections` + `/workspaces/[slug]/collections/[collectionId]` — collections list + detail (requires `enableCollections`): create collections, add own trees/branches as items, nest collections; add-by-link + make-public shown coming-soon (Chunks 2–3)
 - `/invite/[id]` — invitation acceptance page
 - `/policy` — public policy page (Arabic only)

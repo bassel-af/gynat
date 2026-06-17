@@ -38,9 +38,11 @@ interface WorkspaceInfo {
 
 interface WorkspaceTreeClientProps {
   slug: string;
+  /** When set, the editor opens on this `extra` tree; absent ⇒ the main tree. */
+  treeId?: string;
 }
 
-export function WorkspaceTreeClient({ slug }: WorkspaceTreeClientProps) {
+export function WorkspaceTreeClient({ slug, treeId }: WorkspaceTreeClientProps) {
   const [workspace, setWorkspace] = useState<WorkspaceInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -89,7 +91,7 @@ export function WorkspaceTreeClient({ slug }: WorkspaceTreeClientProps) {
 
   return (
     <TreeProvider>
-      <TreeContent workspace={workspace} canEdit={canEdit} isAdmin={isAdmin} />
+      <TreeContent workspace={workspace} canEdit={canEdit} isAdmin={isAdmin} treeId={treeId} />
     </TreeProvider>
   );
 }
@@ -98,13 +100,15 @@ function TreeContent({
   workspace,
   canEdit,
   isAdmin,
+  treeId,
 }: {
   workspace: WorkspaceInfo;
   canEdit: boolean;
   isAdmin: boolean;
+  treeId?: string;
 }) {
   const { isLoading, error, data } = useTree();
-  const { refreshTree, pointers } = useWorkspaceTreeData(workspace.id);
+  const { refreshTree, pointers } = useWorkspaceTreeData(workspace.id, treeId);
   useTreeColorOverrides();
 
   if (error) {
@@ -130,6 +134,7 @@ function TreeContent({
         canEdit={canEdit}
         isAdmin={isAdmin}
         refreshTree={refreshTree}
+        activeTreeId={treeId}
         pointers={pointers}
         enableUmmWalad={workspace.enableUmmWalad}
         enableRadaa={workspace.enableRadaa}
@@ -153,6 +158,7 @@ function TreeContent({
       canEdit={canEdit}
       isAdmin={isAdmin}
       refreshTree={refreshTree}
+      activeTreeId={treeId}
       pointers={pointers}
       enableUmmWalad={workspace.enableUmmWalad}
       enableRadaa={workspace.enableRadaa}
@@ -256,7 +262,7 @@ function TreeShell({
 }
 
 function EmptyTreeWithForm({ canEdit }: { canEdit: boolean }) {
-  const { workspaceId, refreshTree, enableKunya, defaultNewPersonDeceased } = useWorkspaceTree();
+  const { workspaceId, activeTreeId, refreshTree, enableKunya, defaultNewPersonDeceased } = useWorkspaceTree();
   const { showToast } = useToast();
   const [showForm, setShowForm] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
@@ -284,7 +290,7 @@ function EmptyTreeWithForm({ canEdit }: { canEdit: boolean }) {
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
+            body: JSON.stringify(activeTreeId ? { ...data, treeId: activeTreeId } : data),
           },
         );
         if (!res.ok) {
@@ -300,7 +306,7 @@ function EmptyTreeWithForm({ canEdit }: { canEdit: boolean }) {
         setFormLoading(false);
       }
     },
-    [workspaceId, refreshTree],
+    [workspaceId, activeTreeId, refreshTree],
   );
 
   const handleImport = useCallback(() => {
@@ -319,6 +325,7 @@ function EmptyTreeWithForm({ canEdit }: { canEdit: boolean }) {
       try {
         const formData = new FormData();
         formData.append('file', file);
+        if (activeTreeId) formData.append('treeId', activeTreeId);
 
         const res = await apiFetch(
           `/api/workspaces/${workspaceId}/tree/import`,
@@ -337,7 +344,7 @@ function EmptyTreeWithForm({ canEdit }: { canEdit: boolean }) {
         setImportLoading(false);
       }
     },
-    [workspaceId, refreshTree, showToast],
+    [workspaceId, activeTreeId, refreshTree, showToast],
   );
 
   return (
@@ -345,7 +352,8 @@ function EmptyTreeWithForm({ canEdit }: { canEdit: boolean }) {
       <EmptyTreeState
         canEdit={canEdit}
         onAddFirst={handleAddFirst}
-        onImport={handleImport}
+        // GEDCOM import is main-tree only; extra trees have no import path.
+        onImport={activeTreeId ? undefined : handleImport}
         importLoading={importLoading}
       />
       <input

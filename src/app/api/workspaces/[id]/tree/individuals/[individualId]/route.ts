@@ -3,13 +3,13 @@ import { prisma } from '@/lib/db';
 import { requireTreeEditor, isErrorResponse } from '@/lib/api/workspace-auth';
 import { treeMutateLimiter, rateLimitResponse } from '@/lib/api/rate-limit';
 import {
-  getOrCreateTree,
+  resolveTargetTreeOr404,
   getTreeIndividualDecrypted,
   touchTreeTimestamp,
 } from '@/lib/tree/queries';
 import { updateIndividualSchema } from '@/lib/tree/schemas';
 import { isPointedIndividualInWorkspace } from '@/lib/tree/branch-pointer-queries';
-import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
+import { parseValidatedBody, isParseError, extractTreeId } from '@/lib/api/route-helpers';
 import { isUndoRequest } from '@/lib/api/undo-header';
 import { dbTreeToGedcomData } from '@/lib/tree/mapper';
 import { getWorkspaceKey, encryptIndividualInput, encryptSnapshot } from '@/lib/tree/encryption';
@@ -45,7 +45,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     );
   }
 
-  const tree = await getOrCreateTree(workspaceId);
+  // Resolve target tree (main when treeId absent, else a same-workspace tree).
+  // Strip `treeId` from the payload so it never reaches the Individual row.
+  const { treeId } = parsed.data;
+  delete parsed.data.treeId;
+  const tree = await resolveTargetTreeOr404(workspaceId, treeId);
+  if (isErrorResponse(tree)) return tree;
   // Decrypted read — needed so we can feed plaintext into the audit snapshot
   // and read `givenName` for the human-readable description. Task #13 will
   // wrap the stored snapshot in an encrypted envelope.
@@ -122,7 +127,26 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     );
   }
 
-  const tree = await getOrCreateTree(workspaceId);
+  // Parse optional body for treeId + versionHash + confirmationName (cascade
+  // confirmation). Read it BEFORE resolving the tree so `treeId` can target a
+  // same-workspace extra tree.
+  let clientVersionHash: string | undefined;
+  let confirmationName: string | undefined;
+  let treeId: string | undefined;
+  try {
+    const body = await request.json();
+    clientVersionHash = body?.versionHash;
+    confirmationName = body?.confirmationName;
+    // `extractTreeId` accepts only a string treeId; a non-string (e.g. a Prisma
+    // operator object) must never reach the `where: { id: treeId }` clause.
+    treeId = extractTreeId(body);
+  } catch {
+    // No body or invalid JSON — that's fine for simple deletes
+  }
+
+  // Resolve target tree; a foreign/unknown treeId fails closed → 404.
+  const tree = await resolveTargetTreeOr404(workspaceId, treeId);
+  if (isErrorResponse(tree)) return tree;
   // Decrypted read — the confirmation flow needs plaintext `givenName` to
   // compare against the user's typed name, and `dbTreeToGedcomData` below
   // needs the workspace key to decrypt the tree.
@@ -133,17 +157,6 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       { error: 'الشخص غير موجود في هذه الشجرة' },
       { status: 404 },
     );
-  }
-
-  // Parse optional body for versionHash + confirmationName (cascade confirmation)
-  let clientVersionHash: string | undefined;
-  let confirmationName: string | undefined;
-  try {
-    const body = await request.json();
-    clientVersionHash = body?.versionHash;
-    confirmationName = body?.confirmationName;
-  } catch {
-    // No body or invalid JSON — that's fine for simple deletes
   }
 
   // Compute cascade impact

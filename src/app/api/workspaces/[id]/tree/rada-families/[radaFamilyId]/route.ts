@@ -3,13 +3,13 @@ import { prisma } from '@/lib/db';
 import { requireTreeEditor, isErrorResponse } from '@/lib/api/workspace-auth';
 import { treeMutateLimiter, rateLimitResponse } from '@/lib/api/rate-limit';
 import {
-  getOrCreateTree,
+  resolveTargetTreeOr404,
   getTreeIndividual,
   getTreeRadaFamilyDecrypted,
   touchTreeTimestamp,
 } from '@/lib/tree/queries';
 import { updateRadaFamilySchema } from '@/lib/tree/schemas';
-import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
+import { parseValidatedBody, isParseError, parseTreeIdFromBody } from '@/lib/api/route-helpers';
 import { isUndoRequest } from '@/lib/api/undo-header';
 import {
   snapshotRadaFamily,
@@ -46,7 +46,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   const parsed = await parseValidatedBody(request, updateRadaFamilySchema);
   if (isParseError(parsed)) return parsed;
 
-  const tree = await getOrCreateTree(workspaceId);
+  // Resolve target tree; strip `treeId` so it never reaches the RadaFamily row.
+  const { treeId } = parsed.data;
+  delete parsed.data.treeId;
+  const tree = await resolveTargetTreeOr404(workspaceId, treeId);
+  if (isErrorResponse(tree)) return tree;
   // Phase 10b: fetch key once; decrypted read for snapshotBefore plaintext.
   const workspaceKey = await getWorkspaceKey(workspaceId);
   const existing = await getTreeRadaFamilyDecrypted(workspaceId, tree.id, radaFamilyId);
@@ -150,7 +154,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     );
   }
 
-  const tree = await getOrCreateTree(workspaceId);
+  // Optional body carries `treeId` to target a same-workspace extra tree.
+  const treeId = await parseTreeIdFromBody(request);
+
+  const tree = await resolveTargetTreeOr404(workspaceId, treeId);
+  if (isErrorResponse(tree)) return tree;
   // Phase 10b: decrypted read + key for the snapshot envelope.
   const workspaceKey = await getWorkspaceKey(workspaceId);
   const existing = await getTreeRadaFamilyDecrypted(workspaceId, tree.id, radaFamilyId);

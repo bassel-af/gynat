@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireTreeEditor, isErrorResponse } from '@/lib/api/workspace-auth';
 import { treeMutateLimiter, rateLimitResponse } from '@/lib/api/rate-limit';
-import { getOrCreateTree, getTreeIndividual, touchTreeTimestamp } from '@/lib/tree/queries';
+import { resolveTargetTreeOr404, getTreeIndividual, touchTreeTimestamp } from '@/lib/tree/queries';
 import { createFamilySchema } from '@/lib/tree/schemas';
 import { validateFamilyGender } from '@/lib/tree/family-validators';
 import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   const parsed = await parseValidatedBody(request, createFamilySchema);
   if (isParseError(parsed)) return parsed;
 
-  const { husbandId, wifeId, childrenIds, ...eventFields } = parsed.data;
+  const { treeId, husbandId, wifeId, childrenIds, ...eventFields } = parsed.data;
 
   // Self-marriage check
   if (husbandId && wifeId && husbandId === wifeId) {
@@ -36,7 +36,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     );
   }
 
-  const tree = await getOrCreateTree(workspaceId);
+  // Resolve target tree; a foreign/unknown treeId fails closed → 404 before
+  // any read or write. `eventFields` no longer carries `treeId`.
+  const tree = await resolveTargetTreeOr404(workspaceId, treeId);
+  if (isErrorResponse(tree)) return tree;
 
   // Guard: isUmmWalad requires workspace enableUmmWalad
   if (eventFields.isUmmWalad) {

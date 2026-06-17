@@ -111,6 +111,8 @@ Key endpoints:
 - **Unlink spouse**: if the family has no children, DELETE the family; otherwise PATCH to null the spouse slot.
 - **Move subtree**: replaces the old single-child-between-families move. Updates the person's `FamilyChild` row; descendants follow through their own family chains. Cycle detection runs as a bounded BFS inside the transaction — if the target family's parents are in the moving subtree, reject.
 
+**Editing extra trees**: the same editor opens any tree in the workspace via `/workspaces/[slug]/tree?treeId=<id>` (the `main` tree or an `extra` tree created for Collections). When `treeId` is absent it targets the main tree (backward-compatible — the member view is unchanged). Read + mutation routes resolve the target through `resolveTargetTreeOr404()` (`src/lib/tree/queries.ts`) — scoped by `{ id, workspaceId, kind: main|extra }`, failing closed to a 404 on a foreign/unknown id (no existence leak). The editor is reached from the collections trees screen and from a tree inside a collection (click the title). `tree_editor`/admin gating (NOT `collection_editor`), same per-workspace encryption as the main tree. `import` is hidden for extra trees (main-only).
+
 ### 4.5 Cascade delete
 
 `computeDeleteImpact()` in `src/lib/tree/cascade-delete.ts` does a BFS reachability analysis from the lineage roots:

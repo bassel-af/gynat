@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireWorkspaceMember, isErrorResponse } from '@/lib/api/workspace-auth';
-import { getOrCreateTree, getTreeByWorkspaceId } from '@/lib/tree/queries';
+import { resolveTargetTreeOr404, getTreeByWorkspaceId } from '@/lib/tree/queries';
 import { dbTreeToGedcomData, redactPrivateIndividuals } from '@/lib/tree/mapper';
 import { getWorkspaceKey } from '@/lib/tree/encryption';
 import { getActivePointersForWorkspace } from '@/lib/tree/branch-pointer-queries';
@@ -26,7 +26,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   const result = await requireWorkspaceMember(request, workspaceId);
   if (isErrorResponse(result)) return result;
 
-  const tree = await getOrCreateTree(workspaceId);
+  // Optional ?treeId= targets a same-workspace extra (or main) tree. Absent →
+  // workspace main tree. A foreign/unknown id fails closed → 404. Branch
+  // pointers only ever anchor to the main tree, so the pointer merge below is
+  // gated on the main-tree path (treeId absent).
+  const targetTreeId = request.nextUrl.searchParams.get('treeId') ?? undefined;
+  const tree = await resolveTargetTreeOr404(workspaceId, targetTreeId);
+  if (isErrorResponse(tree)) return tree;
+  const isMainTree = !targetTreeId;
 
   // ETag/304 — check If-None-Match before doing expensive work
   const etag = computeETag(tree.lastModifiedAt);
@@ -42,8 +49,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   const workspaceKey = await getWorkspaceKey(workspaceId);
   let gedcomData: GedcomData = dbTreeToGedcomData(tree, workspaceKey);
 
-  // Merge pointed subtrees from active branch pointers
-  const pointers = await getActivePointersForWorkspace(workspaceId);
+  // Merge pointed subtrees from active branch pointers — main tree only.
+  // Extra trees have no branch pointers anchored to them, so an extra-tree
+  // read skips the pointer machinery entirely.
+  const pointers = isMainTree ? await getActivePointersForWorkspace(workspaceId) : [];
 
   // Deduplicate source workspace IDs and fetch all unique trees + keys in
   // parallel. Each source workspace has its own encryption key; we have to

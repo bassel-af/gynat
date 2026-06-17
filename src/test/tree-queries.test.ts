@@ -37,9 +37,12 @@ vi.mock('@/lib/db', () => ({
   },
 }))
 
+import { NextResponse } from 'next/server'
 import {
   getTreeByWorkspaceId,
   getOrCreateTree,
+  getOrCreateTargetTree,
+  resolveTargetTreeOr404,
   getTreeIndividual,
   getTreeFamily,
   getTreeWithKey,
@@ -157,6 +160,88 @@ describe('getOrCreateTree', () => {
       data: { workspaceId: WORKSPACE_ID, kind: 'main' },
       include: TREE_INCLUDES,
     })
+  })
+})
+
+describe('getOrCreateTargetTree', () => {
+  it('returns the main tree (via getOrCreateTree) when treeId is absent', async () => {
+    mockFamilyTreeFindUnique.mockResolvedValue(fakeDbTree)
+
+    const result = await getOrCreateTargetTree(WORKSPACE_ID)
+
+    expect(result).toEqual(fakeDbTree)
+    // Resolves the workspace MAIN tree — same scoping as getOrCreateTree
+    expect(mockFamilyTreeFindUnique).toHaveBeenCalledWith({
+      where: { workspaceId: WORKSPACE_ID, kind: 'main' },
+      include: TREE_INCLUDES,
+    })
+    expect(mockFamilyTreeCreate).not.toHaveBeenCalled()
+  })
+
+  it('returns the extra tree when treeId matches a tree in the workspace', async () => {
+    const extraTree = { ...fakeDbTree, id: 'extra-001', kind: 'extra' }
+    mockFamilyTreeFindUnique.mockResolvedValue(extraTree)
+
+    const result = await getOrCreateTargetTree(WORKSPACE_ID, 'extra-001')
+
+    expect(result).toEqual(extraTree)
+    // MUST scope by workspaceId + kind (never findUnique by bare id) so a
+    // foreign-workspace id cannot resolve.
+    expect(mockFamilyTreeFindUnique).toHaveBeenCalledWith({
+      where: {
+        id: 'extra-001',
+        workspaceId: WORKSPACE_ID,
+        kind: { in: ['main', 'extra'] },
+      },
+      include: TREE_INCLUDES,
+    })
+    expect(mockFamilyTreeCreate).not.toHaveBeenCalled()
+  })
+
+  it('returns null when treeId belongs to a different workspace (fail-closed)', async () => {
+    // Scoped findFirst returns null because the id is not in WORKSPACE_ID
+    mockFamilyTreeFindUnique.mockResolvedValue(null)
+
+    const result = await getOrCreateTargetTree(WORKSPACE_ID, 'foreign-tree-id')
+
+    expect(result).toBeNull()
+    // Never lazily creates a tree for an explicit (missing) treeId
+    expect(mockFamilyTreeCreate).not.toHaveBeenCalled()
+  })
+})
+
+describe('resolveTargetTreeOr404', () => {
+  it('returns the resolved tree (not a NextResponse) for a same-workspace treeId', async () => {
+    const extraTree = { ...fakeDbTree, id: 'extra-001', kind: 'extra' }
+    mockFamilyTreeFindUnique.mockResolvedValue(extraTree)
+
+    const result = await resolveTargetTreeOr404(WORKSPACE_ID, 'extra-001')
+
+    expect(result).not.toBeInstanceOf(NextResponse)
+    expect(result).toEqual(extraTree)
+  })
+
+  it('returns the main tree when treeId is absent', async () => {
+    mockFamilyTreeFindUnique.mockResolvedValue(fakeDbTree)
+
+    const result = await resolveTargetTreeOr404(WORKSPACE_ID)
+
+    expect(result).not.toBeInstanceOf(NextResponse)
+    expect(result).toEqual(fakeDbTree)
+  })
+
+  it('returns a 404 NextResponse when the treeId is foreign/unknown', async () => {
+    // Scoped findFirst returns null because the id is not in WORKSPACE_ID
+    mockFamilyTreeFindUnique.mockResolvedValue(null)
+
+    const result = await resolveTargetTreeOr404(WORKSPACE_ID, 'foreign-tree-id')
+
+    expect(result).toBeInstanceOf(NextResponse)
+    const res = result as NextResponse
+    expect(res.status).toBe(404)
+    expect(await res.json()).toEqual({ error: 'الشجرة غير موجودة' })
+    // Fails closed — never lazily creates a tree for an explicit treeId
+    expect(mockFamilyTreeCreate).not.toHaveBeenCalled()
   })
 })
 

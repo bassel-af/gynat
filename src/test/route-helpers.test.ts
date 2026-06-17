@@ -1,7 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
+import {
+  parseValidatedBody,
+  isParseError,
+  extractTreeId,
+  parseTreeIdFromBody,
+} from '@/lib/api/route-helpers';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -89,5 +94,48 @@ describe('isParseError', () => {
 
   it('returns false for { data } objects', () => {
     expect(isParseError({ data: { name: 'Ali', age: 30 } })).toBe(false);
+  });
+});
+
+describe('extractTreeId', () => {
+  it('returns the string treeId when present', () => {
+    expect(extractTreeId({ treeId: 'tree-abc' })).toBe('tree-abc');
+  });
+
+  it('returns undefined when treeId is absent', () => {
+    expect(extractTreeId({ foo: 'bar' })).toBeUndefined();
+    expect(extractTreeId({})).toBeUndefined();
+  });
+
+  it('returns undefined for null/undefined/non-object bodies', () => {
+    expect(extractTreeId(null)).toBeUndefined();
+    expect(extractTreeId(undefined)).toBeUndefined();
+    expect(extractTreeId('a string')).toBeUndefined();
+  });
+
+  it('rejects a non-string treeId (Prisma-operator injection guard)', () => {
+    // A Prisma operator object must never reach a `where: { id: treeId }` clause.
+    expect(extractTreeId({ treeId: { in: ['x', 'y'] } })).toBeUndefined();
+    expect(extractTreeId({ treeId: 42 })).toBeUndefined();
+    expect(extractTreeId({ treeId: ['x'] })).toBeUndefined();
+    expect(extractTreeId({ treeId: null })).toBeUndefined();
+  });
+});
+
+describe('parseTreeIdFromBody', () => {
+  it('reads a string treeId from the request JSON body', async () => {
+    const req = makeRequest({ treeId: 'tree-xyz' });
+    expect(await parseTreeIdFromBody(req)).toBe('tree-xyz');
+  });
+
+  it('returns undefined for invalid JSON (no body / unparsable)', async () => {
+    expect(await parseTreeIdFromBody(makeInvalidJsonRequest())).toBeUndefined();
+  });
+
+  it('returns undefined when treeId is missing or a non-string operator object', async () => {
+    expect(await parseTreeIdFromBody(makeRequest({ other: 1 }))).toBeUndefined();
+    expect(
+      await parseTreeIdFromBody(makeRequest({ treeId: { in: ['x'] } })),
+    ).toBeUndefined();
   });
 });

@@ -656,13 +656,19 @@ function ItemRow({
     </>
   );
 
+  // A nested collection links to its detail page; a tree item opens that tree.
+  // Anything else (e.g. an unresolved source) renders as a non-link row.
+  const href =
+    isNested && item.childCollectionId
+      ? `/workspaces/${slug}/collections/${item.childCollectionId}`
+      : item.kind === 'tree' && item.treeId
+        ? `/workspaces/${slug}/tree?treeId=${item.treeId}`
+        : null;
+
   return (
     <li className={styles.itemRow}>
-      {isNested && item.childCollectionId ? (
-        <Link
-          href={`/workspaces/${slug}/collections/${item.childCollectionId}`}
-          className={styles.itemMain}
-        >
+      {href ? (
+        <Link href={href} className={styles.itemMain}>
           {inner}
           <span className={styles.openChild} aria-hidden="true">
             ←

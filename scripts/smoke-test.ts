@@ -57,6 +57,11 @@ const ENDPOINTS: Endpoint[] = [
   { method: 'GET', path: '/api/workspaces/00000000-0000-4000-a000-000000000000/collections', label: 'Collections list (anon → 401/404)', allowUnauth: true },
   { method: 'GET', path: '/api/workspaces/00000000-0000-4000-a000-000000000000/collections/00000000-0000-4000-a000-000000000001', label: 'Collection detail (anon → 401/404)', allowUnauth: true },
   { method: 'POST', path: '/api/workspaces/00000000-0000-4000-a000-000000000000/extra-trees/00000000-0000-4000-a000-000000000001/duplicate', label: 'Duplicate tree (anon → 401/404)', allowUnauth: true },
+
+  // Extra-tree editing (Collections Chunk 2): reading the member tree with a
+  // `?treeId=` selector must load the route and reject at the auth/feature gate
+  // (401/404), NOT 500 — catches a broken tree-id resolver in the GET path.
+  { method: 'GET', path: '/api/workspaces/00000000-0000-4000-a000-000000000000/tree?treeId=00000000-0000-4000-a000-000000000001', label: 'Tree GET with treeId selector (anon → 401/404)', allowUnauth: true },
 ];
 
 async function runSmokeTest() {

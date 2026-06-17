@@ -285,25 +285,32 @@ export function TreesArea({
           <div className={styles.treeList}>
             {extraTrees.map((tree) => (
               <div key={tree.id} className={styles.treeCard}>
-                <span className={styles.treeIcon}>
-                  <iconify-icon
-                    icon="material-symbols:nest-eco-leaf"
-                    width="22"
-                    height="22"
-                  />
-                </span>
-                <div className={styles.treeBody}>
-                  <div className={styles.treeNameRow}>
-                    <span className={styles.treeName}>{tree.nameAr}</span>
+                {/* The title/body opens the family-tree editor on this extra
+                    tree — no separate "edit content" button needed. */}
+                <Link
+                  href={`/workspaces/${slug}/tree?treeId=${tree.id}`}
+                  className={styles.cardLink}
+                >
+                  <span className={styles.treeIcon}>
+                    <iconify-icon
+                      icon="material-symbols:nest-eco-leaf"
+                      width="22"
+                      height="22"
+                    />
+                  </span>
+                  <div className={styles.treeBody}>
+                    <div className={styles.treeNameRow}>
+                      <span className={styles.treeName}>{tree.nameAr}</span>
+                    </div>
+                    <div className={styles.treeMeta}>
+                      <span>{tree.peopleCount} فرداً</span>
+                      <span className={styles.metaDot} aria-hidden="true">
+                        ·
+                      </span>
+                      <VisibilityChip level={tree.visibility} />
+                    </div>
                   </div>
-                  <div className={styles.treeMeta}>
-                    <span>{tree.peopleCount} فرداً</span>
-                    <span className={styles.metaDot} aria-hidden="true">
-                      ·
-                    </span>
-                    <VisibilityChip level={tree.visibility} />
-                  </div>
-                </div>
+                </Link>
                 {canEdit && (
                   <div className={styles.treeActions}>
                     <button
@@ -320,14 +327,14 @@ export function TreesArea({
                         <iconify-icon icon="material-symbols:content-copy-outline" width="18" height="18" />
                       )}
                     </button>
+                    {/* Text affordance (not a pen) so it reads clearly as
+                        "rename", not "edit the tree". */}
                     <button
                       type="button"
-                      className={styles.iconBtn}
+                      className={styles.renameBtn}
                       onClick={() => openRename(tree)}
-                      title="تعديل الاسم"
-                      aria-label="تعديل الاسم"
                     >
-                      <iconify-icon icon="material-symbols:edit-outline" width="18" height="18" />
+                      إعادة التسمية
                     </button>
                     <button
                       type="button"

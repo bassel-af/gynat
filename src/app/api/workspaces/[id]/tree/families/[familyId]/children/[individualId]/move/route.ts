@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireTreeEditor, isErrorResponse } from '@/lib/api/workspace-auth';
 import { treeMutateLimiter, rateLimitResponse } from '@/lib/api/rate-limit';
-import { getOrCreateTree, getTreeFamily, touchTreeTimestamp } from '@/lib/tree/queries';
+import { resolveTargetTreeOr404, getTreeFamily, touchTreeTimestamp } from '@/lib/tree/queries';
 import { z } from 'zod';
 import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
+import { targetTreeIdSchema } from '@/lib/tree/schemas';
 import { isUndoRequest } from '@/lib/api/undo-header';
 import { isSyntheticFamilyId } from '@/lib/tree/branch-pointer-guards';
 import { isPointedIndividualInWorkspace } from '@/lib/tree/branch-pointer-queries';
@@ -19,6 +20,7 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 
 const moveSubtreeSchema = z.object({
   targetFamilyId: z.string().uuid(),
+  treeId: targetTreeIdSchema,
 });
 
 /** Sentinel error for cycle detection inside transactions */
@@ -95,8 +97,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   }
 
   try {
-    // 9. Resolve tree
-    const tree = await getOrCreateTree(workspaceId);
+    // 9. Resolve tree (main when treeId absent, else a same-workspace tree).
+    //    A foreign/unknown treeId fails closed → 404. Both source + target
+    //    families are then verified against THIS resolved tree below.
+    const tree = await resolveTargetTreeOr404(workspaceId, parsed.data.treeId);
+    if (isErrorResponse(tree)) return tree;
     const workspaceKey = await getWorkspaceKey(workspaceId);
 
     // 10. Verify source family belongs to tree

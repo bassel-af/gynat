@@ -1,11 +1,25 @@
 import { z } from 'zod';
 
 // ---------------------------------------------------------------------------
+// Target tree binding (Collections Chunk 2)
+// ---------------------------------------------------------------------------
+
+/**
+ * Optional `treeId` on tree mutations. Absent ⇒ the workspace main tree
+ * (backward-compatible). When present, the route resolves it to a `main`/
+ * `extra` tree IN THE SAME WORKSPACE via `getOrCreateTargetTree`, returning a
+ * 404 on a foreign/unknown id. The id is validated as a UUID here; ownership is
+ * enforced server-side, never trusted from the client.
+ */
+export const targetTreeIdSchema = z.string().uuid().optional();
+
+// ---------------------------------------------------------------------------
 // Individual — shared field definitions
 // ---------------------------------------------------------------------------
 
 /** Shared individual string fields with max lengths. All nullable + optional. */
 export const individualFieldsSchema = z.object({
+  treeId: targetTreeIdSchema,
   givenName: z.string().max(200).nullable().optional(),
   surname: z.string().max(200).nullable().optional(),
   fullName: z.string().max(200).nullable().optional(),
@@ -50,6 +64,7 @@ export const updateIndividualSchema = individualFieldsSchema.extend({
 
 /** Shared marriage/divorce event fields. All nullable + optional. */
 export const familyEventFieldsSchema = z.object({
+  treeId: targetTreeIdSchema,
   // Marriage contract
   marriageContractDate: z.string().max(50).nullable().optional(),
   marriageContractHijriDate: z.string().max(50).nullable().optional(),
@@ -117,6 +132,7 @@ export const updateFamilySchema = familyEventFieldsSchema.extend({
 
 /** Create rada family — at least one foster parent or notes required, plus children */
 export const createRadaFamilySchema = z.object({
+  treeId: targetTreeIdSchema,
   fosterFatherId: z.string().uuid().nullable().optional(),
   fosterMotherId: z.string().uuid().nullable().optional(),
   childrenIds: z.array(z.string().uuid()).min(1).max(50),
@@ -128,6 +144,7 @@ export const createRadaFamilySchema = z.object({
 
 /** Update rada family — foster parents and notes, all optional */
 export const updateRadaFamilySchema = z.object({
+  treeId: targetTreeIdSchema,
   fosterFatherId: z.string().uuid().nullable().optional(),
   fosterMotherId: z.string().uuid().nullable().optional(),
   notes: z.string().max(5000).nullable().optional(),

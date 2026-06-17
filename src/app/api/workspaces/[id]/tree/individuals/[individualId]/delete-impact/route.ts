@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireTreeEditor, isErrorResponse } from '@/lib/api/workspace-auth';
 import { cascadePreviewLimiter, rateLimitResponse } from '@/lib/api/rate-limit';
-import { getOrCreateTree, getTreeIndividual } from '@/lib/tree/queries';
+import { resolveTargetTreeOr404, getTreeIndividual } from '@/lib/tree/queries';
 import { dbTreeToGedcomData } from '@/lib/tree/mapper';
 import { getWorkspaceKey } from '@/lib/tree/encryption';
 import { computeDeleteImpact, computeVersionHash } from '@/lib/tree/cascade-delete';
@@ -19,7 +19,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   const { allowed, retryAfterSeconds } = cascadePreviewLimiter.check(result.user.id);
   if (!allowed) return rateLimitResponse(retryAfterSeconds);
 
-  const tree = await getOrCreateTree(workspaceId);
+  const targetTreeId = request.nextUrl.searchParams.get('treeId') ?? undefined;
+  const tree = await resolveTargetTreeOr404(workspaceId, targetTreeId);
+  if (isErrorResponse(tree)) return tree;
   const existing = await getTreeIndividual(tree.id, individualId);
   if (!existing) {
     return NextResponse.json(

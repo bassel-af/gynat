@@ -18,6 +18,12 @@ interface WorkspaceTreeContextValue {
   canEdit: boolean;
   isAdmin: boolean;
   refreshTree: () => Promise<void>;
+  /**
+   * Which tree the editor is mutating. Set when the member tree view was
+   * opened on an `extra` tree (via `?treeId=`); absent ⇒ the workspace main
+   * tree. Threaded into mutation request bodies so edits target the right tree.
+   */
+  activeTreeId?: string;
   /** Branch pointer metadata from GET /tree response */
   pointers?: PointerMetadata[];
   /** Whether the workspace has umm walad feature enabled */
@@ -50,6 +56,7 @@ interface WorkspaceTreeProviderProps {
   canEdit: boolean;
   isAdmin: boolean;
   refreshTree: () => Promise<void>;
+  activeTreeId?: string;
   pointers?: PointerMetadata[];
   enableUmmWalad?: boolean;
   enableRadaa?: boolean;
@@ -69,6 +76,7 @@ export function WorkspaceTreeProvider({
   canEdit,
   isAdmin,
   refreshTree,
+  activeTreeId,
   pointers,
   enableUmmWalad,
   enableRadaa,
@@ -82,7 +90,7 @@ export function WorkspaceTreeProvider({
   defaultNewPersonDeceased,
 }: WorkspaceTreeProviderProps) {
   return (
-    <WorkspaceTreeContext.Provider value={{ workspaceId, canEdit, isAdmin, refreshTree, pointers, enableUmmWalad, enableRadaa, enableKunya, enableAuditLog, enableTreeExport, allowMemberExport, hideBirthDateForFemale, hideBirthDateForMale, description, defaultNewPersonDeceased }}>
+    <WorkspaceTreeContext.Provider value={{ workspaceId, canEdit, isAdmin, refreshTree, activeTreeId, pointers, enableUmmWalad, enableRadaa, enableKunya, enableAuditLog, enableTreeExport, allowMemberExport, hideBirthDateForFemale, hideBirthDateForMale, description, defaultNewPersonDeceased }}>
       {children}
     </WorkspaceTreeContext.Provider>
   );

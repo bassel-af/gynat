@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireTreeEditor, isErrorResponse } from '@/lib/api/workspace-auth';
 import { treeMutateLimiter, rateLimitResponse } from '@/lib/api/rate-limit';
-import { getOrCreateTree, getTreeFamily, touchTreeTimestamp } from '@/lib/tree/queries';
+import { resolveTargetTreeOr404, getTreeFamily, touchTreeTimestamp } from '@/lib/tree/queries';
 import { getWorkspaceKey } from '@/lib/tree/encryption';
+import { parseTreeIdFromBody } from '@/lib/api/route-helpers';
 import { isUndoRequest } from '@/lib/api/undo-header';
 import { encryptAuditDescription, JSON_NULL } from '@/lib/tree/audit';
 
@@ -19,7 +20,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   const { allowed, retryAfterSeconds } = treeMutateLimiter.check(result.user.id);
   if (!allowed) return rateLimitResponse(retryAfterSeconds);
 
-  const tree = await getOrCreateTree(workspaceId);
+  // Optional body carries `treeId` to target a same-workspace extra tree.
+  const treeId = await parseTreeIdFromBody(request);
+
+  const tree = await resolveTargetTreeOr404(workspaceId, treeId);
+  if (isErrorResponse(tree)) return tree;
   const workspaceKey = await getWorkspaceKey(workspaceId);
   const family = await getTreeFamily(tree.id, familyId);
   if (!family) {
