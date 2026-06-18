@@ -71,6 +71,14 @@ const ENDPOINTS: Endpoint[] = [
   // or schema in the extended publish path.
   { method: 'PATCH', path: '/api/workspaces/00000000-0000-4000-a000-000000000000/tree/visibility', label: 'Extra-tree publish visibility (anon → 401)', allowUnauth: true },
 
+  // Unified publish flow: the publish-preview route now resolves a tree via the
+  // shared treeId-aware resolver (main when absent, scoped extra tree when
+  // present). Anon GET (both forms) must load the route and reject at the admin
+  // gate (401/403/404), NOT 500 — catches a broken resolver or a dropped import
+  // (e.g. the getOrCreateTreeWithKey → resolveTargetTreeOr404 + getWorkspaceKey swap).
+  { method: 'GET', path: '/api/workspaces/00000000-0000-4000-a000-000000000000/tree/publish-preview', label: 'Publish preview, main (anon → 401/404)', allowUnauth: true },
+  { method: 'GET', path: '/api/workspaces/00000000-0000-4000-a000-000000000000/tree/publish-preview?treeId=00000000-0000-4000-a000-000000000001', label: 'Publish preview with treeId (anon → 401/404)', allowUnauth: true },
+
   // Add-by-link (Collections Chunk 3, Slice A): the items POST route now imports
   // the link resolver + cross-workspace deep-copy. Anon POST with a linkInput
   // body must load the route and reject at the feature/auth gate (404/401/403),

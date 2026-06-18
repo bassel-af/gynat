@@ -150,4 +150,32 @@ describe('TreesArea — login-only trees screen', () => {
     // Two "تكرار" buttons: one on the main card, one on the extra card.
     expect(screen.getAllByLabelText('تكرار').length).toBeGreaterThanOrEqual(1);
   });
+
+  // Unified publish flow: the SAME share-icon publish action appears on EVERY
+  // row — the main card AND every extra card — so a single shared component
+  // drives all of them and they can never diverge.
+  it('shows the publish (نشر الشجرة) button on both the main row and each extra row', async () => {
+    mockListExtraTrees.mockResolvedValue([mainTree(), extraTree()]);
+    renderTreesArea(true);
+
+    await screen.findByText('بنو تميم');
+    // One on the locked main card + one on the single extra card.
+    expect(screen.getAllByLabelText('نشر الشجرة')).toHaveLength(2);
+  });
+
+  it('no longer renders the old "الظهور" text button (replaced by the shared share-icon)', async () => {
+    mockListExtraTrees.mockResolvedValue([mainTree(), extraTree()]);
+    renderTreesArea(true);
+
+    await screen.findByText('بنو تميم');
+    expect(screen.queryByText('الظهور')).not.toBeInTheDocument();
+  });
+
+  it('hides the publish button from viewers (canEdit false)', async () => {
+    mockListExtraTrees.mockResolvedValue([mainTree(), extraTree()]);
+    renderTreesArea(false);
+
+    await screen.findByText('بنو تميم');
+    expect(screen.queryByLabelText('نشر الشجرة')).not.toBeInTheDocument();
+  });
 });

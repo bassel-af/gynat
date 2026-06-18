@@ -48,6 +48,10 @@ export type { PublishFlowProps } from './PublishFlow';
 export { PublicTreeViewer } from './PublicTreeViewer';
 export type { PublicTreeViewerProps } from './PublicTreeViewer';
 
+export { PublishIcon } from './PublishIcon';
+
+export { PublishFlowContainer } from './PublishFlowContainer';
+
 // NOTE: the SAMPLE_* dev fixtures are intentionally NOT re-exported from this
 // production barrel — dev-harness routes import them by full path.
 

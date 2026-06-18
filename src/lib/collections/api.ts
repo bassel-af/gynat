@@ -484,22 +484,3 @@ export interface TreeVisibilityResult {
   allowReuse?: boolean;
 }
 
-/**
- * Publish (or change the visibility of) a single tree via the SAME visibility
- * route the main tree uses, scoped to `treeId` (Slice B — extra-tree publish).
- * `confirmationPhrase` is required only when going public for the first time
- * (the server validates it against the tree's name). Returns the new slug.
- */
-export async function setTreeVisibility(
-  workspaceId: string,
-  treeId: string,
-  input: { level: Visibility; confirmationPhrase?: string; allowReuse?: boolean },
-): Promise<TreeVisibilityResult> {
-  return unwrap<TreeVisibilityResult>(
-    await apiFetch(`/api/workspaces/${workspaceId}/tree/visibility`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...input, treeId }),
-    }),
-  );
-}

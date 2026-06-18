@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { CollectionsPageShell } from '@/components/collections/CollectionsPageShell/CollectionsPageShell';
 import { VisibilityChip } from '@/components/collections/CollectionBadges/CollectionBadges';
-import { ExtraTreePublishModal } from '@/components/collections/ExtraTreePublishModal/ExtraTreePublishModal';
+import { PublishFlowContainer, PublishIcon } from '@/components/public-tree';
 import {
   listExtraTrees,
   createExtraTree,
@@ -32,7 +32,9 @@ type DialogState =
   | { kind: 'create' }
   | { kind: 'rename'; tree: WorkspaceTree }
   | { kind: 'delete'; tree: WorkspaceTree }
-  | { kind: 'publish'; tree: WorkspaceTree };
+  // Publish target: an extra tree (treeId set, refresh its chip) or the locked
+  // main tree (treeId null → the shared flow publishes the workspace main tree).
+  | { kind: 'publish'; treeId: string | null; treeName: string };
 
 /**
  * Screen 2 — the workspace's trees (§0, §2.5, §2.6): one fixed main family tree
@@ -223,6 +225,19 @@ export function TreesArea({
           </Link>
           {canEdit && mainTreeId && (
             <div className={styles.treeActions}>
+              {/* Same share-icon publish action as every other row — opens the
+                  ONE shared flow on the MAIN tree (treeId null). */}
+              <button
+                type="button"
+                className={styles.iconBtn}
+                onClick={() =>
+                  setDialog({ kind: 'publish', treeId: null, treeName: workspaceName })
+                }
+                title="نشر الشجرة"
+                aria-label="نشر الشجرة"
+              >
+                <PublishIcon size={18} />
+              </button>
               <button
                 type="button"
                 className={styles.iconBtn}
@@ -339,16 +354,19 @@ export function TreesArea({
                     >
                       إعادة التسمية
                     </button>
-                    {/* Make-public ladder for this single extra tree (Slice B). */}
+                    {/* Same share-icon publish action as the main row + the
+                        tree top bar — the ONE shared flow, scoped to this tree. */}
                     <button
                       type="button"
-                      className={styles.renameBtn}
+                      className={styles.iconBtn}
                       onClick={() => {
                         setActionError('');
-                        setDialog({ kind: 'publish', tree });
+                        setDialog({ kind: 'publish', treeId: tree.id, treeName: tree.nameAr });
                       }}
+                      title="نشر الشجرة"
+                      aria-label="نشر الشجرة"
                     >
-                      الظهور
+                      <PublishIcon size={18} />
                     </button>
                     <button
                       type="button"
@@ -444,19 +462,22 @@ export function TreesArea({
         </Modal>
       )}
 
-      {/* Make-public ladder for a single extra tree (Slice B) */}
+      {/* The ONE shared publish flow — identical for the main tree and every
+          extra tree (same component the tree top bar mounts), scoped by treeId.
+          For an extra tree, refresh that row's visibility chip on success. */}
       {dialog.kind === 'publish' && (
-        <ExtraTreePublishModal
+        <PublishFlowContainer
           workspaceId={workspaceId}
-          treeId={dialog.tree.id}
-          treeName={dialog.tree.nameAr}
-          currentLevel={dialog.tree.visibility}
-          onClose={close}
+          treeId={dialog.treeId}
+          familyName={dialog.treeName}
+          onClose={() => setDialog({ kind: 'none' })}
           onChanged={(level: Visibility) => {
-            const id = dialog.tree.id;
-            setExtraTrees((prev) =>
-              prev.map((t) => (t.id === id ? { ...t, visibility: level } : t)),
-            );
+            const id = dialog.treeId;
+            if (id) {
+              setExtraTrees((prev) =>
+                prev.map((t) => (t.id === id ? { ...t, visibility: level } : t)),
+              );
+            }
             setDialog({ kind: 'none' });
           }}
         />

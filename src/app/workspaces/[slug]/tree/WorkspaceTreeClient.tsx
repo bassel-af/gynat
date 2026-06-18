@@ -11,7 +11,7 @@ import { FamilyTree, EmptyTreeState, IndividualForm } from '@/components/tree';
 import type { IndividualFormData } from '@/components/tree';
 import { CanvasToolbar } from '@/components/tree/CanvasToolbar';
 import { ConflictDialog } from '@/components/tree/ConflictDialog';
-import { PublishFlowContainer } from './PublishFlowContainer';
+import { PublishFlowContainer } from '@/components/public-tree';
 import { Sidebar } from '@/components/ui';
 import { Spinner } from '@/components/ui/Spinner';
 import { apiFetch } from '@/lib/api/client';
@@ -191,7 +191,7 @@ function TreeShell({
   workspaceId: string;
   workspaceNameAr: string;
 }) {
-  const { canEdit, isAdmin } = useWorkspaceTree();
+  const { canEdit, isAdmin, activeTreeId } = useWorkspaceTree();
   const undoStack = useUndoStack();
   const { showToast } = useToast();
   const [publishOpen, setPublishOpen] = useState(false);
@@ -253,6 +253,7 @@ function TreeShell({
       {canPublish && publishOpen && (
         <PublishFlowContainer
           workspaceId={workspaceId}
+          treeId={activeTreeId}
           familyName={workspaceNameAr}
           onClose={() => setPublishOpen(false)}
         />
