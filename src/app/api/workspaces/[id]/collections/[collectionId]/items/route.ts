@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+import { prisma, isUniqueViolation } from '@/lib/db';
 import {
   requireCollectionEditor,
   requireCollectionsEnabled,
@@ -15,6 +15,7 @@ import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
 import { addItemSchema } from '@/lib/collections/schemas';
 import {
   addItem,
+  addOwnTreeLinked,
   detectCollectionCycleInWorkspace,
   itemExistsInCollection,
 } from '@/lib/collections/queries';
@@ -27,19 +28,6 @@ import {
 import { copyBorrowedBranchIntoNewExtraTree } from '@/lib/collections/copy-borrowed';
 
 type RouteParams = { params: Promise<{ id: string; collectionId: string }> };
-
-/**
- * True for a Prisma unique-constraint violation (P2002). The DB unique indexes
- * on `(collectionId, treeId)` / `(collectionId, childCollectionId)` are the
- * race backstop behind the in-transaction pre-check: if a concurrent identical
- * add wins the race, the insert trips the index and Prisma throws P2002, which
- * the route maps to the SAME friendly 409 the pre-check returns.
- */
-function isUniqueViolation(err: unknown): boolean {
-  return (
-    !!err && typeof err === 'object' && 'code' in err && err.code === 'P2002'
-  );
-}
 
 // POST /api/workspaces/[id]/collections/[collectionId]/items — Add an item
 export async function POST(request: NextRequest, { params }: RouteParams) {
@@ -152,64 +140,35 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'غير موجود' }, { status: 404 });
   }
 
-  // linkMode 'copied' snapshots the tree into a new extra tree; 'linked'
-  // references the original directly.
-  let targetTreeId = input.treeId!;
+  // linkMode 'copied' snapshots the tree into a new extra tree, which always
+  // mints a brand-new tree id so it can never collide — a plain insert.
   if (input.linkMode === 'copied') {
     const { newTreeId } = await copyTreeIntoNewExtraTree({
       workspaceId,
       sourceTreeId: input.treeId!,
       nameAr: input.titleAr,
     });
-    targetTreeId = newTreeId;
-  }
-
-  // A 'linked' add references an EXISTING tree, so the same tree can't be linked
-  // into one collection twice. The dedupe check + insert run in ONE transaction
-  // so a concurrent identical add can't both pass the check and both insert
-  // (TOCTOU-safe, matching the nested path). A 'copied' add always mints a
-  // brand-new extra tree above, so it can never collide — guard the linked case.
-  let item: Awaited<ReturnType<typeof addItem>> | null;
-  try {
-    item = await prisma.$transaction(async (tx) => {
-      if (
-        input.linkMode === 'linked' &&
-        (await itemExistsInCollection(collectionId, { treeId: targetTreeId }, tx))
-      ) {
-        return null;
-      }
-      return addItem(
-        {
-          collectionId,
-          kind: 'tree',
-          titleAr: input.titleAr,
-          descriptionAr: input.descriptionAr ?? null,
-          linkMode: input.linkMode,
-          treeId: targetTreeId,
-        },
-        tx,
-      );
+    const item = await addItem({
+      collectionId,
+      kind: 'tree',
+      titleAr: input.titleAr,
+      descriptionAr: input.descriptionAr ?? null,
+      linkMode: 'copied',
+      treeId: newTreeId,
     });
-  } catch (err) {
-    // A concurrent identical add beat the pre-check and tripped the unique
-    // index — same outcome as the friendly duplicate path.
-    if (isUniqueViolation(err)) {
-      return NextResponse.json(
-        { error: 'هذه الشجرة مضافة بالفعل إلى المجموعة' },
-        { status: 409 },
-      );
-    }
-    throw err;
+    return NextResponse.json({ data: item }, { status: 201 });
   }
 
-  if (!item) {
-    return NextResponse.json(
-      { error: 'هذه الشجرة مضافة بالفعل إلى المجموعة' },
-      { status: 409 },
-    );
-  }
-
-  return NextResponse.json({ data: item }, { status: 201 });
+  // 'linked' references the existing tree directly — dedupe + insert atomically
+  // via the shared own-tree helper (same path the self-source add-by-link uses).
+  const linkedAdd = await addOwnTreeLinked(
+    collectionId,
+    input.treeId!,
+    input.titleAr,
+    input.descriptionAr ?? null,
+  );
+  if (!linkedAdd.ok) return treeDuplicateResponse();
+  return NextResponse.json({ data: linkedAdd.item }, { status: 201 });
 }
 
 /** One generic message for an unresolvable/forbidden link — no enumeration oracle (S9). */
@@ -218,6 +177,14 @@ const INVALID_LINK_ERROR = 'الرابط غير صالح أو غير متاح';
 /** Build the single generic 404 used for EVERY resolve failure (bad token, unknown/private/non-reusable slug, self-source). */
 function invalidLinkResponse(): NextResponse {
   return NextResponse.json({ error: INVALID_LINK_ERROR }, { status: 404 });
+}
+
+/** The friendly 409 for re-adding a tree already in the collection (own-tree picker or self-source link). */
+function treeDuplicateResponse(): NextResponse {
+  return NextResponse.json(
+    { error: 'هذه الشجرة مضافة بالفعل إلى المجموعة' },
+    { status: 409 },
+  );
 }
 
 /**
@@ -253,21 +220,33 @@ async function addByLink(
   const source = await resolveLinkSource(input.linkInput!, workspaceId);
   if (!source) return invalidLinkResponse();
 
-  // S14: a collection borrows from OTHER families; borrowing your own tree by
-  // link is meaningless (and would double-count) — reject same-workspace with
-  // the SAME generic 404 (no oracle).
-  if (source.sourceWorkspaceId === workspaceId) return invalidLinkResponse();
+  // SELF-SOURCE: the pasted link identifies a tree in the CALLER'S OWN workspace
+  // (membership already proven). The link already names the tree, so this is just
+  // an own-tree add — short-circuit to the shared linked-add helper, IGNORING
+  // linkMode (own-tree adds are always live links, Chunk-1 rule) and the reuse
+  // gate (a cross-workspace concept). A re-add returns the same 409 tree-dup the
+  // direct picker does — never the generic link error.
+  if (source.sourceWorkspaceId === workspaceId) {
+    const result = await addOwnTreeLinked(
+      collectionId,
+      source.sourceTreeId,
+      input.titleAr,
+      input.descriptionAr ?? null,
+    );
+    if (!result.ok) return treeDuplicateResponse();
+    return NextResponse.json({ data: result.item }, { status: 201 });
+  }
 
-  // The borrowed branch's REAL root id (a private token carries it; a public-
-  // slug whole-tree source resolves to a sentinel → look up the topmost ancestor).
-  // Needed as the pointer's `rootIndividualId` (a real FK) and for dedupe.
-  const rootIndividualId =
-    source.rootIndividualId === WHOLE_TREE_ROOT
-      ? await resolvePublicTreeRoot(source.sourceWorkspaceId)
-      : source.rootIndividualId;
-  if (!rootIndividualId) return invalidLinkResponse(); // empty/unresolvable source tree
+  // CROSS-WORKSPACE reuse gate (S11): borrowing ANOTHER family's tree requires
+  // that family to have opted into reuse. The gate lives HERE (not resolve-link)
+  // so a self-source paste above is never reuse-blocked. Same generic 404 as any
+  // other resolve failure — no exists-but-forbidden oracle (S9).
+  if (!source.allowReuse) return invalidLinkResponse();
 
   // ----- copied: deep-copy into a new extra tree, bind treeId -----
+  // The copied path re-derives its own root inside copyBorrowedBranchIntoNewExtraTree,
+  // so it does NOT need resolvePublicTreeRoot. Resolving the root below (linked-only)
+  // avoids a redundant whole-tree decrypt on a public-slug copy.
   if (input.linkMode === 'copied') {
     const { newTreeId } = await copyBorrowedBranchIntoNewExtraTree({
       addingWorkspaceId: workspaceId,
@@ -286,6 +265,14 @@ async function addByLink(
   }
 
   // ----- linked: ANCHOR-LESS branchPointer, bind branchPointerId -----
+  // The borrowed branch's REAL root id (a private token carries it; a public-
+  // slug whole-tree source resolves to a sentinel → look up the topmost ancestor).
+  // Needed as the pointer's `rootIndividualId` (a real FK) and for dedupe.
+  const rootIndividualId =
+    source.rootIndividualId === WHOLE_TREE_ROOT
+      ? await resolvePublicTreeRoot(source.sourceWorkspaceId, source.sourceTreeId)
+      : source.rootIndividualId;
+  if (!rootIndividualId) return invalidLinkResponse(); // empty/unresolvable source tree
   // The dedupe re-check + pointer create + item insert run in ONE transaction so
   // a concurrent identical borrow can't both pass the check and both insert.
   const item = await prisma.$transaction(async (tx) => {
@@ -324,7 +311,7 @@ async function addByLink(
         status: 'active',
         shareTokenId: source.shareTokenId,
         createdById: userId,
-      } as unknown as Parameters<typeof txPrisma.branchPointer.create>[0]['data'],
+      },
     });
 
     return addItem(

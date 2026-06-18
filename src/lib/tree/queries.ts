@@ -73,6 +73,23 @@ export async function getTreeByWorkspaceId(workspaceId: string) {
 }
 
 /**
+ * Returns a SPECIFIC tree (main OR extra) by id, scoped to its workspace, with
+ * all included data. Returns null when no such tree exists in that workspace.
+ *
+ * SECURITY: scoped by `workspaceId` + `id` (NEVER a bare `findUnique` by id) so
+ * a caller passing another workspace's treeId gets `null` — fail-closed,
+ * identical to a fake id, leaking no existence. Mirrors the security note on
+ * `getOrCreateTargetTree`. Used by add-by-link to decrypt the SPECIFIC published
+ * tree (main or extra), not always the workspace main tree.
+ */
+export async function getTreeByIdWithIncludes(workspaceId: string, treeId: string) {
+  return prisma.familyTree.findFirst({
+    where: { id: treeId, workspaceId },
+    include: TREE_INCLUDES,
+  })
+}
+
+/**
  * Gets or lazily creates the MAIN FamilyTree for a workspace.
  * Returns the tree with all includes.
  */
@@ -194,17 +211,6 @@ export async function getTreeRadaFamily(treeId: string, radaFamilyId: string) {
 export async function getTreeWithKey(workspaceId: string) {
   const tree = await getTreeByWorkspaceId(workspaceId)
   if (!tree) return null
-  const workspaceKey = await getWorkspaceKey(workspaceId)
-  return { tree, workspaceKey }
-}
-
-/**
- * Same as `getOrCreateTree`, but additionally returns the workspace's
- * unwrapped encryption key. Used by mutation routes that need to encrypt new
- * rows before persisting them.
- */
-export async function getOrCreateTreeWithKey(workspaceId: string) {
-  const tree = await getOrCreateTree(workspaceId)
   const workspaceKey = await getWorkspaceKey(workspaceId)
   return { tree, workspaceKey }
 }

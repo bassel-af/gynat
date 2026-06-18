@@ -60,6 +60,8 @@ vi.mock('@/lib/db', () => ({
     branchPointer: { create: (...a: unknown[]) => mockPointerCreate(...a) },
     $transaction: (fn: (tx: unknown) => unknown) => mockTransaction(fn),
   },
+  isUniqueViolation: (err: unknown) =>
+    !!err && typeof err === 'object' && 'code' in err && err.code === 'P2002',
 }));
 
 // Add-by-link resolution + cross-workspace deep-copy are unit-tested on their
@@ -408,7 +410,14 @@ describe('POST items — nested collection', () => {
 // generic 400 on an unresolvable/forbidden link (no enumeration oracle).
 // ===========================================================================
 describe('POST items — add-by-link (linkInput)', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    // The IP-keyed link-resolve limiter is module-level in-memory state; reset it
+    // so an earlier add-by-link test in this block can't exhaust it for a later
+    // one (all NextRequests share the same localhost IP key).
+    const { collectionLinkResolveLimiter } = await import('@/lib/api/rate-limit');
+    collectionLinkResolveLimiter.reset();
+  });
 
   const SOURCE_WS = 'ws-source-9999';
   const BORROW_ROOT = 'ind-borrow-root';
@@ -421,6 +430,7 @@ describe('POST items — add-by-link (linkInput)', () => {
     includeGrafts: true,
     isPublic: false,
     shareTokenId: 'tok-9',
+    allowReuse: true,
   };
 
   test('404 (one generic error) when the link does not resolve', async () => {
@@ -437,15 +447,98 @@ describe('POST items — add-by-link (linkInput)', () => {
     expect(mockPointerCreate).not.toHaveBeenCalled();
   });
 
-  test('404 self-source: cannot borrow from your own workspace (S14)', async () => {
+  // The owner pasted a link to their OWN published tree. The link already
+  // identifies the tree, so this just ADDS it as a live-linked own-tree item —
+  // no 404, no pointer, no copy. (Even if the source has allowReuse=false: the
+  // cross-workspace reuse gate doesn't apply to your own workspace.)
+  test('self-source public-slug paste → 201 linked own-tree item bound to that treeId (allowReuse ignored)', async () => {
     collectionsOn();
     mockAuth();
     mockEditor();
     collectionExists();
-    // Source workspace == the adding workspace → reject with the SAME generic 404.
-    mockResolveLink.mockResolvedValue({ ...linkedSource, sourceWorkspaceId: wsId });
+    const OWN_TREE = 'a0000000-0000-4000-a000-0000000000ee';
+    mockResolveLink.mockResolvedValue({
+      type: 'public-slug', sourceWorkspaceId: wsId, sourceTreeId: OWN_TREE,
+      rootIndividualId: '__whole_tree__', depthLimit: null, includeGrafts: false,
+      isPublic: true, shareTokenId: null, allowReuse: false, // reuse off, but it's our own tree
+    });
+    mockItemCount.mockResolvedValue(0); // tree not already in collection
+    mockItemFindFirst.mockResolvedValue(null);
+    mockItemCreate.mockResolvedValue({ id: ITEM_ID, kind: 'tree', treeId: OWN_TREE, linkMode: 'linked', sortOrder: 0 });
     const { POST } = await import('@/app/api/workspaces/[id]/collections/[collectionId]/items/route');
-    const res = await POST(postReq({ kind: 'tree', linkInput: 'brsh_self', linkMode: 'linked', titleAr: 'مجلوب' }), collParams);
+    const res = await POST(postReq({ kind: 'tree', linkInput: `https://x/family/own-slug`, linkMode: 'linked', titleAr: 'شجرتي' }), collParams);
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    // Bound directly to the own tree id — a LINKED item, no pointer, no copy.
+    expect(body.data.treeId).toBe(OWN_TREE);
+    expect(mockPointerCreate).not.toHaveBeenCalled();
+    expect(mockCopyBorrowed).not.toHaveBeenCalled();
+    expect(mockTreeCreate).not.toHaveBeenCalled();
+    // The created item is a linked own-tree row pointing at the resolved treeId.
+    const itemData = mockItemCreate.mock.calls[0][0].data;
+    expect(itemData.linkMode).toBe('linked');
+    expect(itemData.treeId).toBe(OWN_TREE);
+  });
+
+  test('self-source re-add of the same own tree → 409 tree-dup (NOT the link error)', async () => {
+    collectionsOn();
+    mockAuth();
+    mockEditor();
+    collectionExists();
+    const OWN_TREE = 'a0000000-0000-4000-a000-0000000000ee';
+    mockResolveLink.mockResolvedValue({
+      type: 'public-slug', sourceWorkspaceId: wsId, sourceTreeId: OWN_TREE,
+      rootIndividualId: '__whole_tree__', depthLimit: null, includeGrafts: false,
+      isPublic: true, shareTokenId: null, allowReuse: true,
+    });
+    mockItemCount.mockResolvedValue(1); // own tree already an item in this collection
+    const { POST } = await import('@/app/api/workspaces/[id]/collections/[collectionId]/items/route');
+    const res = await POST(postReq({ kind: 'tree', linkInput: `https://x/family/own-slug`, linkMode: 'linked', titleAr: 'شجرتي' }), collParams);
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    // Same tree-dup message the direct picker returns — NOT the generic link error.
+    expect(body.error).toBe('هذه الشجرة مضافة بالفعل إلى المجموعة');
+    expect(mockItemCreate).not.toHaveBeenCalled();
+  });
+
+  test('self-source with linkMode copied → still a LINKED add (linkMode ignored for own tree)', async () => {
+    collectionsOn();
+    mockAuth();
+    mockEditor();
+    collectionExists();
+    const OWN_TREE = 'a0000000-0000-4000-a000-0000000000ee';
+    mockResolveLink.mockResolvedValue({
+      type: 'public-slug', sourceWorkspaceId: wsId, sourceTreeId: OWN_TREE,
+      rootIndividualId: '__whole_tree__', depthLimit: null, includeGrafts: false,
+      isPublic: true, shareTokenId: null, allowReuse: true,
+    });
+    mockItemCount.mockResolvedValue(0);
+    mockItemFindFirst.mockResolvedValue(null);
+    mockItemCreate.mockResolvedValue({ id: ITEM_ID, kind: 'tree', treeId: OWN_TREE, linkMode: 'linked', sortOrder: 0 });
+    const { POST } = await import('@/app/api/workspaces/[id]/collections/[collectionId]/items/route');
+    const res = await POST(postReq({ kind: 'tree', linkInput: `https://x/family/own-slug`, linkMode: 'copied', titleAr: 'شجرتي' }), collParams);
+    expect(res.status).toBe(201);
+    // No cross-workspace copy for an own-tree paste, even with linkMode:'copied'.
+    expect(mockCopyBorrowed).not.toHaveBeenCalled();
+    expect(mockTreeCreate).not.toHaveBeenCalled();
+    const itemData = mockItemCreate.mock.calls[0][0].data;
+    expect(itemData.linkMode).toBe('linked');
+    expect(itemData.treeId).toBe(OWN_TREE);
+  });
+
+  test('cross-workspace non-reusable source → generic 404 (reuse gate now in addByLink)', async () => {
+    collectionsOn();
+    mockAuth();
+    mockEditor();
+    collectionExists();
+    // Resolved a real cross-workspace source, but reuse is OFF → generic 404.
+    mockResolveLink.mockResolvedValue({
+      type: 'public-slug', sourceWorkspaceId: SOURCE_WS, sourceTreeId: 'tree-src-0000',
+      rootIndividualId: '__whole_tree__', depthLimit: null, includeGrafts: false,
+      isPublic: true, shareTokenId: null, allowReuse: false,
+    });
+    const { POST } = await import('@/app/api/workspaces/[id]/collections/[collectionId]/items/route');
+    const res = await POST(postReq({ kind: 'tree', linkInput: 'https://x/family/slug', linkMode: 'linked', titleAr: 'مجلوب' }), collParams);
     expect(res.status).toBe(404);
     expect(mockPointerCreate).not.toHaveBeenCalled();
     expect(mockItemCreate).not.toHaveBeenCalled();
@@ -514,7 +607,7 @@ describe('POST items — add-by-link (linkInput)', () => {
     mockResolveLink.mockResolvedValue({
       type: 'public-slug', sourceWorkspaceId: SOURCE_WS, sourceTreeId: 'tree-src-0000',
       rootIndividualId: '__whole_tree__', depthLimit: null, includeGrafts: false,
-      isPublic: true, shareTokenId: null,
+      isPublic: true, shareTokenId: null, allowReuse: true,
     });
     // The route must resolve the real topmost-ancestor id before binding the FK.
     mockResolveWholeRoot.mockResolvedValue(REAL_ROOT);
@@ -533,6 +626,36 @@ describe('POST items — add-by-link (linkInput)', () => {
     expect(ptrData.anchorIndividualId).toBeNull();
   });
 
+  // Scenario 4: a PUBLISHED EXTRA tree in another workspace, reuse on, linked.
+  // The root must be resolved from THAT extra tree (by id), and the pointer must
+  // record the extra tree's source workspace — proving extra trees are borrowable.
+  test('cross-workspace published+reusable EXTRA tree (linked) borrows THAT extra tree', async () => {
+    collectionsOn();
+    mockAuth();
+    mockEditor();
+    collectionExists();
+    const EXTRA_TREE_ID = 'tree-extra-src-1';
+    const REAL_ROOT = 'ind-extra-root-1';
+    mockResolveLink.mockResolvedValue({
+      type: 'public-slug', sourceWorkspaceId: SOURCE_WS, sourceTreeId: EXTRA_TREE_ID,
+      rootIndividualId: '__whole_tree__', depthLimit: null, includeGrafts: false,
+      isPublic: true, shareTokenId: null, allowReuse: true,
+    });
+    mockResolveWholeRoot.mockResolvedValue(REAL_ROOT);
+    mockPointerCreate.mockResolvedValue({ id: 'ptr-extra-0001' });
+    mockItemCount.mockResolvedValue(0);
+    mockItemFindFirst.mockResolvedValue(null);
+    mockItemCreate.mockResolvedValue({ id: ITEM_ID, kind: 'tree', branchPointerId: 'ptr-extra-0001', linkMode: 'linked', sortOrder: 0 });
+    const { POST } = await import('@/app/api/workspaces/[id]/collections/[collectionId]/items/route');
+    const res = await POST(postReq({ kind: 'tree', linkInput: 'https://x/family/extra-slug', linkMode: 'linked', titleAr: 'شجرة إضافية عامة' }), collParams);
+    expect(res.status).toBe(201);
+    // The root was resolved from the SPECIFIC extra tree (workspace + tree id).
+    expect(mockResolveWholeRoot).toHaveBeenCalledWith(SOURCE_WS, EXTRA_TREE_ID);
+    const ptrData = mockPointerCreate.mock.calls[0][0].data;
+    expect(ptrData.sourceWorkspaceId).toBe(SOURCE_WS);
+    expect(ptrData.rootIndividualId).toBe(REAL_ROOT);
+  });
+
   test('404 when a public-slug source has no resolvable root (empty source tree)', async () => {
     collectionsOn();
     mockAuth();
@@ -541,7 +664,7 @@ describe('POST items — add-by-link (linkInput)', () => {
     mockResolveLink.mockResolvedValue({
       type: 'public-slug', sourceWorkspaceId: SOURCE_WS, sourceTreeId: 'tree-src-0000',
       rootIndividualId: '__whole_tree__', depthLimit: null, includeGrafts: false,
-      isPublic: true, shareTokenId: null,
+      isPublic: true, shareTokenId: null, allowReuse: true,
     });
     mockResolveWholeRoot.mockResolvedValue(null); // empty / unresolvable source tree
     const { POST } = await import('@/app/api/workspaces/[id]/collections/[collectionId]/items/route');

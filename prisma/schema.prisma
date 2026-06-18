@@ -273,7 +273,7 @@ model CopyProvenance {
   sourceWorkspaceId String   @map("source_workspace_id") @db.Uuid
   sourceTreeId      String   @map("source_tree_id") @db.Uuid
   sourceRootId      String   @map("source_root_id") @db.Uuid
-  reason            String   // 'going_private' | 'token_revoked' | 'manual_copy'
+  reason            String   // 'going_private' | 'token_revoked' | 'manual_copy' | 'collection_link_copy'
   createdAt         DateTime @default(now()) @map("created_at")
 
   @@index([sourceWorkspaceId])

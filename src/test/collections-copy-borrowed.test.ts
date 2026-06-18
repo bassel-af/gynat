@@ -24,9 +24,9 @@ vi.mock('@/lib/tree/encryption', () => ({
   getWorkspaceKey: (wsId: string) => mockGetWorkspaceKey(wsId),
 }));
 
-const mockGetTreeByWorkspaceId = vi.fn((..._a: unknown[]): unknown => undefined);
+const mockGetTreeByIdWithIncludes = vi.fn((..._a: unknown[]): unknown => undefined);
 vi.mock('@/lib/tree/queries', () => ({
-  getTreeByWorkspaceId: (...a: unknown[]) => mockGetTreeByWorkspaceId(...a),
+  getTreeByIdWithIncludes: (...a: unknown[]) => mockGetTreeByIdWithIncludes(...a),
   TREE_INCLUDES: {},
 }));
 
@@ -79,7 +79,7 @@ import { WHOLE_TREE_ROOT } from '@/lib/collections/resolve-link';
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockGetTreeByWorkspaceId.mockResolvedValue({ id: SOURCE_TREE_ID });
+  mockGetTreeByIdWithIncludes.mockResolvedValue({ id: SOURCE_TREE_ID });
   mockGetWorkspaceKey.mockImplementation(async (wsId: string) =>
     wsId === SOURCE_WS ? mockSourceKey : mockTargetKey,
   );
@@ -94,7 +94,7 @@ describe('copyBorrowedBranchIntoNewExtraTree — TWO-KEY cross-workspace deep co
       source: {
         type: 'private-token', sourceWorkspaceId: SOURCE_WS, sourceTreeId: SOURCE_TREE_ID,
         rootIndividualId: ROOT_IND, depthLimit: null, includeGrafts: false,
-        isPublic: false, shareTokenId: 'tok-1',
+        isPublic: false, shareTokenId: 'tok-1', allowReuse: true,
       },
       nameAr: 'فرع منسوخ',
     });
@@ -113,7 +113,7 @@ describe('copyBorrowedBranchIntoNewExtraTree — TWO-KEY cross-workspace deep co
       source: {
         type: 'private-token', sourceWorkspaceId: SOURCE_WS, sourceTreeId: SOURCE_TREE_ID,
         rootIndividualId: ROOT_IND, depthLimit: null, includeGrafts: false,
-        isPublic: false, shareTokenId: 'tok-1',
+        isPublic: false, shareTokenId: 'tok-1', allowReuse: true,
       },
       nameAr: 'فرع منسوخ',
     });
@@ -127,7 +127,7 @@ describe('copyBorrowedBranchIntoNewExtraTree — TWO-KEY cross-workspace deep co
       source: {
         type: 'private-token', sourceWorkspaceId: SOURCE_WS, sourceTreeId: SOURCE_TREE_ID,
         rootIndividualId: ROOT_IND, depthLimit: null, includeGrafts: false,
-        isPublic: false, shareTokenId: 'tok-1',
+        isPublic: false, shareTokenId: 'tok-1', allowReuse: true,
       },
       nameAr: 'فرع منسوخ',
     });
@@ -147,7 +147,7 @@ describe('copyBorrowedBranchIntoNewExtraTree — TWO-KEY cross-workspace deep co
       source: {
         type: 'public-slug', sourceWorkspaceId: SOURCE_WS, sourceTreeId: SOURCE_TREE_ID,
         rootIndividualId: WHOLE_TREE_ROOT, depthLimit: null, includeGrafts: false,
-        isPublic: true, shareTokenId: null,
+        isPublic: true, shareTokenId: null, allowReuse: true,
       },
       nameAr: 'شجرة عامة',
     });
@@ -158,15 +158,31 @@ describe('copyBorrowedBranchIntoNewExtraTree — TWO-KEY cross-workspace deep co
     expect(Object.keys(copyResult.individuals)).toHaveLength(2);
   });
 
+  test('borrows the SPECIFIC source tree by id (an extra tree, not always main)', async () => {
+    const EXTRA_TREE_ID = 'tree-extra-id00';
+    await copyBorrowedBranchIntoNewExtraTree({
+      addingWorkspaceId: ADDING_WS,
+      source: {
+        type: 'public-slug', sourceWorkspaceId: SOURCE_WS, sourceTreeId: EXTRA_TREE_ID,
+        rootIndividualId: WHOLE_TREE_ROOT, depthLimit: null, includeGrafts: false,
+        isPublic: true, shareTokenId: null, allowReuse: true,
+      },
+      nameAr: 'شجرة إضافية عامة',
+    });
+    // The published EXTRA tree is fetched by its own id, scoped to the source
+    // workspace — so a published extra tree is copyable, not just the main tree.
+    expect(mockGetTreeByIdWithIncludes).toHaveBeenCalledWith(SOURCE_WS, EXTRA_TREE_ID);
+  });
+
   test('throws when the source tree is missing (fail-closed)', async () => {
-    mockGetTreeByWorkspaceId.mockResolvedValue(null);
+    mockGetTreeByIdWithIncludes.mockResolvedValue(null);
     await expect(
       copyBorrowedBranchIntoNewExtraTree({
         addingWorkspaceId: ADDING_WS,
         source: {
           type: 'private-token', sourceWorkspaceId: SOURCE_WS, sourceTreeId: SOURCE_TREE_ID,
           rootIndividualId: ROOT_IND, depthLimit: null, includeGrafts: false,
-          isPublic: false, shareTokenId: 'tok-1',
+          isPublic: false, shareTokenId: 'tok-1', allowReuse: true,
         },
         nameAr: 'فرع',
       }),

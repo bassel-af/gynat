@@ -20,3 +20,13 @@ export const prisma = globalForPrisma.prisma || createPrismaClient();
 if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma;
 }
+
+/**
+ * True for a Prisma unique-constraint violation (P2002) — the duplicate-insert
+ * race backstop behind in-transaction pre-checks. Shared so the collections add
+ * paths (queries + items route) map a tripped unique index to the SAME friendly
+ * 409 the pre-check returns.
+ */
+export function isUniqueViolation(err: unknown): boolean {
+  return !!err && typeof err === 'object' && 'code' in err && err.code === 'P2002';
+}

@@ -46,7 +46,6 @@ import {
   getTreeIndividual,
   getTreeFamily,
   getTreeWithKey,
-  getOrCreateTreeWithKey,
   getTreeIndividualDecrypted,
   getTreeFamilyDecrypted,
   getTreeRadaFamilyDecrypted,
@@ -328,32 +327,6 @@ describe('getTreeWithKey', () => {
     mockWorkspaceFindUnique.mockResolvedValue({ encryptedKey: null })
 
     await expect(getTreeWithKey(WORKSPACE_ID)).rejects.toThrow()
-  })
-})
-
-describe('getOrCreateTreeWithKey', () => {
-  it('returns existing tree + key when both present', async () => {
-    const { plaintextKey, wrappedKey } = seededWorkspace()
-    mockFamilyTreeFindUnique.mockResolvedValue(fakeDbTree)
-    mockWorkspaceFindUnique.mockResolvedValue({ encryptedKey: wrappedKey })
-
-    const result = await getOrCreateTreeWithKey(WORKSPACE_ID)
-
-    expect(result.tree).toEqual(fakeDbTree)
-    expect(result.workspaceKey.equals(plaintextKey)).toBe(true)
-    expect(mockFamilyTreeCreate).not.toHaveBeenCalled()
-  })
-
-  it('lazily creates the tree and returns the key', async () => {
-    const { plaintextKey, wrappedKey } = seededWorkspace()
-    mockFamilyTreeFindUnique.mockResolvedValueOnce(null)
-    mockFamilyTreeCreate.mockResolvedValue(fakeDbTree)
-    mockWorkspaceFindUnique.mockResolvedValue({ encryptedKey: wrappedKey })
-
-    const result = await getOrCreateTreeWithKey(WORKSPACE_ID)
-
-    expect(result.tree).toEqual(fakeDbTree)
-    expect(result.workspaceKey.equals(plaintextKey)).toBe(true)
   })
 })
 

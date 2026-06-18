@@ -16,6 +16,7 @@ import { getWorkspaceKey } from '@/lib/tree/encryption'
 import { dbTreeToGedcomData } from '@/lib/tree/mapper'
 import { extractPointedSubtree } from '@/lib/tree/branch-pointer-merge'
 import { prepareDeepCopy, persistDeepCopy } from '@/lib/tree/branch-pointer-deep-copy'
+import { isStitchablePointer } from '@/lib/tree/branch-pointer-guards'
 import { logSwallowedAuditError } from '@/lib/api/swallowed-error-log'
 
 export interface FreezeResult {
@@ -65,7 +66,7 @@ export async function freezeDependentPointers(
       // WHERE above, so a real anchored pointer always has a non-null
       // anchor/relationship here. Skip (don't stitch) anything that somehow
       // doesn't — fail-closed, never feed a null anchor to prepareDeepCopy.
-      if (pointer.anchorIndividualId == null || pointer.relationship == null) {
+      if (!isStitchablePointer(pointer)) {
         failed++
         continue
       }

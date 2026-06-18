@@ -6,6 +6,7 @@ import { dbTreeToGedcomData } from '@/lib/tree/mapper';
 import { getWorkspaceKey } from '@/lib/tree/encryption';
 import { extractPointedSubtree } from '@/lib/tree/branch-pointer-merge';
 import { prepareDeepCopy, persistDeepCopy } from '@/lib/tree/branch-pointer-deep-copy';
+import { isStitchablePointer } from '@/lib/tree/branch-pointer-guards';
 import { z } from 'zod';
 import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
 import { logSwallowedAuditError } from '@/lib/api/swallowed-error-log';
@@ -118,7 +119,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         // above, so a real anchored pointer always has a non-null
         // anchor/relationship. Skip anything that somehow doesn't — fail-closed,
         // never feed a null anchor to prepareDeepCopy.
-        if (pointer.anchorIndividualId == null || pointer.relationship == null) {
+        if (!isStitchablePointer(pointer)) {
           disconnectedPointers++;
           continue;
         }

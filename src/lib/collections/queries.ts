@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/db';
+import { prisma, isUniqueViolation } from '@/lib/db';
 import { generatePublicSlug } from '@/lib/tree/public-slug';
 
 /**
@@ -282,6 +282,48 @@ export async function addItem(data: AddItemData, client: PrismaLike = prisma) {
       sortOrder,
     },
   });
+}
+
+/**
+ * Result of {@link addOwnTreeLinked}: the created item, or a `duplicate` flag the
+ * caller maps to a 409. Keeps the DB call free of `NextResponse` so it's reusable
+ * from BOTH the direct picker path and the add-by-link self-source short-circuit.
+ */
+export type AddOwnTreeLinkedResult =
+  | { ok: true; item: Awaited<ReturnType<typeof addItem>> }
+  | { ok: false; reason: 'duplicate' };
+
+/**
+ * Add an OWN tree (main or extra, in this workspace) to a collection as a LIVE
+ * linked item. The dedupe re-check + insert run in ONE `$transaction` so a
+ * concurrent identical add can't both pass the check and both insert (TOCTOU-
+ * safe); the DB `@@unique([collectionId, treeId])` index is the race backstop —
+ * a P2002 collapses to the SAME `duplicate` result the pre-check returns.
+ *
+ * Shared by the direct picker (`kind:'tree'`, `linkMode:'linked'`, own `treeId`)
+ * AND the self-source add-by-link path (pasting a link to your OWN published
+ * tree just adds it — own-tree adds are always live links, `linkMode` ignored).
+ */
+export async function addOwnTreeLinked(
+  collectionId: string,
+  treeId: string,
+  titleAr: string,
+  descriptionAr: string | null = null,
+): Promise<AddOwnTreeLinkedResult> {
+  try {
+    const item = await prisma.$transaction(async (tx) => {
+      if (await itemExistsInCollection(collectionId, { treeId }, tx)) return null;
+      return addItem(
+        { collectionId, kind: 'tree', titleAr, descriptionAr, linkMode: 'linked', treeId },
+        tx,
+      );
+    });
+    if (!item) return { ok: false, reason: 'duplicate' };
+    return { ok: true, item };
+  } catch (err) {
+    if (isUniqueViolation(err)) return { ok: false, reason: 'duplicate' };
+    throw err;
+  }
 }
 
 /**

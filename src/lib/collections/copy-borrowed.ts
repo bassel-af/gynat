@@ -11,12 +11,12 @@
  *
  * A standalone collection snapshot has NO anchor to graft onto, so it reuses
  * `prepareTreeSnapshot` (no stitch family). A `CopyProvenance` row (reason
- * `manual_copy`) is written in the SAME transaction so the admin global
+ * `collection_link_copy`) is written in the SAME transaction so the admin global
  * takedown can still find the copy (S13).
  */
 
 import { prisma } from '@/lib/db';
-import { getTreeByWorkspaceId } from '@/lib/tree/queries';
+import { getTreeByIdWithIncludes } from '@/lib/tree/queries';
 import { dbTreeToGedcomData } from '@/lib/tree/mapper';
 import { getWorkspaceKey } from '@/lib/tree/encryption';
 import { extractPointedSubtree } from '@/lib/tree/branch-pointer-merge';
@@ -44,7 +44,9 @@ export async function copyBorrowedBranchIntoNewExtraTree(
   // Source key decrypts; target key re-encrypts. Resolve both BEFORE the tx so
   // the master-key unwrap stays off the DB lock (matches the pointer-copy route).
   const [sourceTree, sourceKey, targetKey] = await Promise.all([
-    getTreeByWorkspaceId(source.sourceWorkspaceId),
+    // Fetch the SPECIFIC published tree (main OR extra) by id, scoped to the
+    // source workspace — copies the actual borrowed tree, not always the main.
+    getTreeByIdWithIncludes(source.sourceWorkspaceId, source.sourceTreeId),
     getWorkspaceKey(source.sourceWorkspaceId),
     getWorkspaceKey(addingWorkspaceId),
   ]);

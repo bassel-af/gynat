@@ -25,9 +25,9 @@ vi.mock('@/lib/db', () => ({
 
 // resolvePublicTreeRoot maps a source tree to GedcomData and picks the root —
 // stub the source-tree load + key + mapper + root picker.
-const mockGetTreeByWorkspaceId = vi.fn();
+const mockGetTreeByIdWithIncludes = vi.fn();
 vi.mock('@/lib/tree/queries', () => ({
-  getTreeByWorkspaceId: (...a: unknown[]) => mockGetTreeByWorkspaceId(...a),
+  getTreeByIdWithIncludes: (...a: unknown[]) => mockGetTreeByIdWithIncludes(...a),
 }));
 vi.mock('@/lib/tree/encryption', () => ({
   getWorkspaceKey: () => Promise.resolve(Buffer.from('k')),
@@ -113,6 +113,9 @@ describe('resolveLinkSource — private share token', () => {
     expect(res!.includeGrafts).toBe(true);
     expect(res!.shareTokenId).toBe('token-id-0000');
     expect(res!.isPublic).toBe(false);
+    // A token already passed the reuse gate inside resolve-link, so it carries
+    // allowReuse:true for the route's cross-workspace re-check.
+    expect(res!.allowReuse).toBe(true);
     // The token lookup is by sha256 hash, never the plaintext.
     const where = mockTokenFindFirst.mock.calls[0][0].where;
     expect(where.tokenHash).toBe(hashToken('brsh_sometoken'));
@@ -172,25 +175,33 @@ describe('resolveLinkSource — public slug', () => {
     expect(res!.includeGrafts).toBe(false);
     expect(res!.isPublic).toBe(true);
     expect(res!.shareTokenId).toBeNull();
+    // resolve-link carries the tree's real allowReuse; the cross-workspace
+    // reuse gate now lives in addByLink, not here.
+    expect(res!.allowReuse).toBe(true);
   });
 
-  test('S11: null when the public tree has reuse turned off (viewable ≠ reusable)', async () => {
+  test('resolves a published EXTRA tree by slug (kind gate removed — identity only)', async () => {
+    mockTokenFindFirst.mockResolvedValue(null);
+    mockTreeFindUnique.mockResolvedValue(publicTree({ kind: 'extra' }));
+    const res = await resolveLinkSource('slug22charslug22chars0', ADDING_WS);
+    // An extra tree resolves by IDENTITY; it is no longer rejected here.
+    expect(res).not.toBeNull();
+    expect(res!.type).toBe('public-slug');
+    expect(res!.sourceTreeId).toBe(SOURCE_TREE);
+  });
+
+  test('carries allowReuse:false (reuse gate moved to addByLink) instead of nulling', async () => {
     mockTokenFindFirst.mockResolvedValue(null);
     mockTreeFindUnique.mockResolvedValue(publicTree({ allowReuse: false }));
     const res = await resolveLinkSource('slug22charslug22chars0', ADDING_WS);
-    expect(res).toBeNull();
+    // Identity still resolves; the route gates cross-workspace reuse off allowReuse.
+    expect(res).not.toBeNull();
+    expect(res!.allowReuse).toBe(false);
   });
 
-  test('null when the slug resolves to a private tree (deny-by-default)', async () => {
+  test('null when the slug resolves to a private tree (deny-by-default — visibility gate KEPT)', async () => {
     mockTokenFindFirst.mockResolvedValue(null);
     mockTreeFindUnique.mockResolvedValue(publicTree({ visibility: 'private' }));
-    const res = await resolveLinkSource('slug22charslug22chars0', ADDING_WS);
-    expect(res).toBeNull();
-  });
-
-  test('null when the slug resolves to an extra (non-main) tree', async () => {
-    mockTokenFindFirst.mockResolvedValue(null);
-    mockTreeFindUnique.mockResolvedValue(publicTree({ kind: 'extra' }));
     const res = await resolveLinkSource('slug22charslug22chars0', ADDING_WS);
     expect(res).toBeNull();
   });
@@ -200,25 +211,28 @@ describe('resolveLinkSource — public slug', () => {
 // resolvePublicTreeRoot — real root id for a whole-tree (public-slug) borrow
 // ===========================================================================
 describe('resolvePublicTreeRoot', () => {
-  test('returns the source tree default root id', async () => {
-    mockGetTreeByWorkspaceId.mockResolvedValue({ id: SOURCE_TREE });
+  test('resolves the root from the SPECIFIC source tree (by id, not the main tree)', async () => {
+    mockGetTreeByIdWithIncludes.mockResolvedValue({ id: SOURCE_TREE });
     mockDbTreeToGedcom.mockReturnValue({ individuals: {}, families: {} });
     mockFindDefaultRoot.mockReturnValue({ id: 'real-root-id' });
-    const root = await resolvePublicTreeRoot(SOURCE_WS);
+    const root = await resolvePublicTreeRoot(SOURCE_WS, SOURCE_TREE);
     expect(root).toBe('real-root-id');
+    // Scoped fetch by BOTH workspace id AND the source tree id — so an extra
+    // tree's root is resolved from that extra tree, not always the main.
+    expect(mockGetTreeByIdWithIncludes).toHaveBeenCalledWith(SOURCE_WS, SOURCE_TREE);
   });
 
   test('returns null for an empty source tree (no root)', async () => {
-    mockGetTreeByWorkspaceId.mockResolvedValue({ id: SOURCE_TREE });
+    mockGetTreeByIdWithIncludes.mockResolvedValue({ id: SOURCE_TREE });
     mockDbTreeToGedcom.mockReturnValue({ individuals: {}, families: {} });
     mockFindDefaultRoot.mockReturnValue(null);
-    const root = await resolvePublicTreeRoot(SOURCE_WS);
+    const root = await resolvePublicTreeRoot(SOURCE_WS, SOURCE_TREE);
     expect(root).toBeNull();
   });
 
-  test('returns null when the source main tree is missing', async () => {
-    mockGetTreeByWorkspaceId.mockResolvedValue(null);
-    const root = await resolvePublicTreeRoot(SOURCE_WS);
+  test('returns null when the source tree is missing', async () => {
+    mockGetTreeByIdWithIncludes.mockResolvedValue(null);
+    const root = await resolvePublicTreeRoot(SOURCE_WS, SOURCE_TREE);
     expect(root).toBeNull();
   });
 });

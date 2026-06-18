@@ -19,7 +19,7 @@
 
 import { prisma } from '@/lib/db';
 import { hashToken } from '@/lib/tree/branch-share-token';
-import { getTreeByWorkspaceId } from '@/lib/tree/queries';
+import { getTreeByIdWithIncludes } from '@/lib/tree/queries';
 import { getWorkspaceKey } from '@/lib/tree/encryption';
 import { dbTreeToGedcomData } from '@/lib/tree/mapper';
 import { findDefaultRoot } from '@/lib/gedcom/roots';
@@ -41,6 +41,13 @@ export interface ResolvedLinkSource {
   isPublic: boolean;
   /** The redeemed share token's id (private-token only), so the pointer records its provenance. */
   shareTokenId: string | null;
+  /**
+   * The SOURCE tree's reuse flag, carried so `addByLink` can gate CROSS-WORKSPACE
+   * borrows WITHOUT re-querying. A self-source (own paste) ignores this — own-tree
+   * adds are always live links. For the private-token path this is always `true`
+   * (the token already passed resolve-link's own reuse gate).
+   */
+  allowReuse: boolean;
 }
 
 /**
@@ -102,25 +109,31 @@ export async function resolveLinkSource(
       includeGrafts: token.includeGrafts,
       isPublic: false,
       shareTokenId: token.id,
+      // The token already passed the reuse gate above; carry true so the route's
+      // cross-workspace re-check passes (a token is inherently a cross-workspace
+      // share artifact, never a self-source own paste).
+      allowReuse: true,
     };
   }
 
-  // ---- 2. Public slug (deny-by-default; viewable ≠ reusable) ----
+  // ---- 2. Public slug — resolve IDENTITY only (deny-by-default on visibility) ----
+  // A published tree of ANY kind (main OR extra) resolves by identity here. The
+  // kind gate is gone: a slug points at exactly one tree. The reuse gate is gone
+  // too — it's a CROSS-WORKSPACE concept, so `addByLink` enforces it off the
+  // carried `allowReuse` (a self-source own paste must NOT be reuse-gated). Only
+  // the visibility gate stays: a non-public slug is genuinely unresolvable.
   const slug = extractSlugCandidate(raw);
   const tree = await prisma.familyTree.findUnique({
     where: { publicSlug: slug },
     select: {
       id: true,
       workspaceId: true,
-      kind: true,
       visibility: true,
       allowReuse: true,
     },
   });
   if (!tree) return null;
-  if (tree.kind !== 'main') return null;
   if (tree.visibility !== 'public_link' && tree.visibility !== 'public_listed') return null;
-  if (!tree.allowReuse) return null; // S11: published ≠ opted-in to reuse
 
   return {
     type: 'public-slug',
@@ -133,6 +146,9 @@ export async function resolveLinkSource(
     includeGrafts: false,
     isPublic: true,
     shareTokenId: null,
+    // Carry the SOURCE tree's real reuse flag; addByLink gates cross-workspace
+    // off it. (A non-reusable slug still RESOLVES — only the route rejects it.)
+    allowReuse: tree.allowReuse,
   };
 }
 
@@ -159,12 +175,16 @@ async function getSourceMainTreeReuseFacts(
  * its root/anchor FKs — the `WHOLE_TREE_ROOT` sentinel is never persistable.
  * Returns the topmost ancestor with the most descendants, or null for an empty
  * source tree (the caller fails the add closed).
+ *
+ * Scoped by `sourceTreeId` (not the workspace main tree) so the root of a
+ * borrowed EXTRA tree resolves from that extra tree, not always the main.
  */
 export async function resolvePublicTreeRoot(
   sourceWorkspaceId: string,
+  sourceTreeId: string,
 ): Promise<string | null> {
   const [tree, key] = await Promise.all([
-    getTreeByWorkspaceId(sourceWorkspaceId),
+    getTreeByIdWithIncludes(sourceWorkspaceId, sourceTreeId),
     getWorkspaceKey(sourceWorkspaceId),
   ]);
   if (!tree) return null;
