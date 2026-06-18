@@ -18,6 +18,8 @@ import { extractPointedSubtree } from '@/lib/tree/branch-pointer-merge'
 import { prepareDeepCopy, persistDeepCopy } from '@/lib/tree/branch-pointer-deep-copy'
 import { isStitchablePointer } from '@/lib/tree/branch-pointer-guards'
 import { logSwallowedAuditError } from '@/lib/api/swallowed-error-log'
+import { copyBorrowedBranchIntoNewExtraTree } from '@/lib/collections/copy-borrowed'
+import type { ResolvedLinkSource } from '@/lib/collections/resolve-link'
 
 export interface FreezeResult {
   frozen: number
@@ -116,6 +118,119 @@ export async function freezeDependentPointers(
       frozen++
     } catch (err) {
       logSwallowedAuditError('going_private_freeze', { pointerId: pointer.id }, err)
+      failed++
+    }
+  }
+
+  return { frozen, failed }
+}
+
+/**
+ * Freeze every active COLLECTION-LINK pointer whose SOURCE is `sourceWorkspaceId`
+ * into a frozen extra-tree copy in its TARGET (borrowing) workspace, then re-point
+ * the dependent `CollectionItem`s (`branchPointerId → treeId`, `linkMode:'copied'`)
+ * and mark the pointer broken. The Chunk-4 PRESERVATION path (PRD §2.10).
+ *
+ * SEPARATE from {@link freezeDependentPointers}: a collection-link pointer is
+ * ANCHOR-LESS, so there is NO main-tree stitch — it is a standalone snapshot
+ * (REUSES `copyBorrowedBranchIntoNewExtraTree`, the two-key cross-workspace
+ * deep-copy that also writes `CopyProvenance` for takedown reachability).
+ *
+ * Best-effort per pointer — one failure does not abort the rest. Returns counts.
+ */
+export async function freezeCollectionLinks(
+  sourceWorkspaceId: string,
+): Promise<FreezeResult> {
+  const pointers = await prisma.branchPointer.findMany({
+    where: { sourceWorkspaceId, status: 'active', isCollectionLink: true },
+    select: {
+      id: true,
+      sourceWorkspaceId: true,
+      targetWorkspaceId: true,
+      rootIndividualId: true,
+      depthLimit: true,
+      includeGrafts: true,
+      // The leaf tree the borrow lives in (owns the pointer's root individual)
+      // — its id is the snapshot source for the two-key deep copy, and its LIVE
+      // visibility + allowReuse decide whether the borrow would still serve
+      // publicly (S19: skip the freeze if so — see the loop below).
+      rootIndividual: {
+        select: {
+          tree: { select: { id: true, visibility: true, allowReuse: true } },
+        },
+      },
+      // The dependent collection items to re-point onto the frozen copy.
+      collectionItems: { select: { id: true, titleAr: true } },
+    },
+  })
+  if (pointers.length === 0) return { frozen: 0, failed: 0 }
+
+  let frozen = 0
+  let failed = 0
+
+  for (const pointer of pointers) {
+    try {
+      const leaf = pointer.rootIndividual?.tree ?? null
+      const sourceTreeId = leaf?.id ?? null
+      if (!sourceTreeId) {
+        // No source leaf tree to copy → fail-closed (leave it; the serve-time
+        // reuse-gate already hides a now-private borrow).
+        failed++
+        continue
+      }
+
+      // S19: this freeze is WORKSPACE-scoped — it sees EVERY collection-link
+      // pointer sourced from this workspace, not just ones rooting in the tree
+      // that went private. A borrow whose leaf tree is STILL public + reusable
+      // would keep serving publicly (same gate as the serve path:
+      // resolveEffectiveVisibility(branchPointer) non-private AND leaf.allowReuse),
+      // so freezing it would prematurely snapshot a live borrow. Skip it —
+      // leave the live link intact. Only freeze borrows that are no longer
+      // publicly reusable (private leaf, or allowReuse off).
+      const stillPubliclyReusable =
+        leaf.visibility !== 'private' && leaf.allowReuse === true
+      if (stillPubliclyReusable) continue
+
+      // Build the ResolvedLinkSource the two-key copier consumes. A collection
+      // link is inherently a cross-workspace borrow; `allowReuse`/`isPublic`
+      // don't gate the freeze (the owner is preserving an existing borrow).
+      const source: ResolvedLinkSource = {
+        type: 'public-slug',
+        sourceWorkspaceId: pointer.sourceWorkspaceId,
+        sourceTreeId,
+        rootIndividualId: pointer.rootIndividualId,
+        depthLimit: pointer.depthLimit,
+        includeGrafts: pointer.includeGrafts,
+        isPublic: true,
+        shareTokenId: null,
+        allowReuse: true,
+      }
+
+      const nameAr = pointer.collectionItems[0]?.titleAr ?? 'فرع محفوظ'
+      const { newTreeId } = await copyBorrowedBranchIntoNewExtraTree({
+        addingWorkspaceId: pointer.targetWorkspaceId,
+        source,
+        nameAr,
+      })
+
+      // Re-point the dependent items onto the frozen copy + break the pointer,
+      // atomically. (`copyBorrowedBranchIntoNewExtraTree` already committed the
+      // copy + provenance in its own transaction; this is the cheap re-point.)
+      await prisma.$transaction(async (tx) => {
+        const txPrisma = tx as typeof prisma
+        await txPrisma.collectionItem.updateMany({
+          where: { branchPointerId: pointer.id },
+          data: { treeId: newTreeId, branchPointerId: null, linkMode: 'copied' },
+        })
+        await txPrisma.branchPointer.update({
+          where: { id: pointer.id },
+          data: { status: 'broken' },
+        })
+      })
+
+      frozen++
+    } catch (err) {
+      logSwallowedAuditError('going_private_freeze_collection_link', { pointerId: pointer.id }, err)
       failed++
     }
   }

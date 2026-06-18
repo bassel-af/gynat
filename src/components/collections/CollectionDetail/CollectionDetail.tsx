@@ -64,6 +64,14 @@ export function CollectionDetail({
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState('');
 
+  // Live origin for the public link (matches the family publish flow — the
+  // displayed URL must follow local/staging/prod, never a hardcoded domain).
+  // Computed in an effect to stay SSR-safe (no `window` during render).
+  const [origin, setOrigin] = useState('');
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
+
   // Rename collection draft
   const [draftTitle, setDraftTitle] = useState('');
   const [draftDesc, setDraftDesc] = useState('');
@@ -290,7 +298,7 @@ export function CollectionDetail({
           <div className={styles.linkRow}>
             <span className={styles.linkLabel}>الرابط العام</span>
             <code className={styles.linkValue} dir="ltr">
-              gynat.com/c/{collection.publicCode}
+              {origin}/collections/{collection.publicCode}
             </code>
           </div>
         )}
@@ -389,12 +397,17 @@ export function CollectionDetail({
         />
       )}
 
-      {/* Visibility + publish (Chunk 3 — shown as coming-soon) */}
+      {/* Visibility + publish (Chunk 4 — real publish ladder) */}
       {showVisibility && (
         <CollectionVisibilityModal
+          workspaceId={workspaceId}
           collection={collection}
           items={items}
           onClose={() => setShowVisibility(false)}
+          onPublished={() => {
+            setShowVisibility(false);
+            void refresh();
+          }}
         />
       )}
 

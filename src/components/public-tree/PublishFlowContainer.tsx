@@ -125,7 +125,15 @@ export function PublishFlowContainer({
     <PublishFlow
       isOpen
       onClose={onClose}
-      familyName={familyName}
+      // The type-to-confirm phrase MUST be the server's source of truth
+      // (`tree.nameAr || workspace.nameAr`, returned as `confirmationPhrase`) —
+      // the visibility route validates against exactly this. The `familyName`
+      // prop is the workspace name the editor top bar passes regardless of which
+      // tree is active, so for an extra tree opened in the editor it diverges
+      // and publishing 400s («عبارة التأكيد غير صحيحة»). Drive both the local
+      // gate and the sent phrase from the preview; keep the prop only as a
+      // pre-load fallback (never reached — we render null until preview loads).
+      familyName={preview.confirmationPhrase || familyName}
       currentLevel={preview.currentLevel}
       checkpointData={preview.checkpoint}
       shareUrl={shareUrl}

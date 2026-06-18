@@ -142,4 +142,41 @@ describe('PublishFlowContainer — visibility PATCH', () => {
     const body = JSON.parse(patchCall[1].body);
     expect(body.treeId).toBeUndefined();
   });
+
+  // Regression: the editor top bar always passes the WORKSPACE name as
+  // `familyName`, but the server validates the typed phrase against the ACTIVE
+  // tree's `tree.nameAr || workspace.nameAr`. For an extra tree opened in the
+  // editor those differ, so driving the confirm phrase from the prop made
+  // publishing impossible (400 «عبارة التأكيد غير صحيحة»). The container must
+  // drive the type-to-confirm + the sent phrase from `preview.confirmationPhrase`
+  // (the server's source of truth), never the prop.
+  test('uses the server confirmation phrase (preview), not the familyName prop', async () => {
+    const SERVER_PHRASE = 'شجرة الفرع'; // = tree.nameAr || workspace.nameAr
+    const PROP_NAME = 'اسم المساحة'; // workspace name the editor passes
+    mockApiFetch.mockImplementation((_url: string, opts?: { method?: string }) =>
+      opts?.method === 'PATCH'
+        ? Promise.resolve(patchResponse())
+        : Promise.resolve({
+            ok: true,
+            json: async () => ({ ...PREVIEW, confirmationPhrase: SERVER_PHRASE }),
+          }),
+    );
+    render(
+      <PublishFlowContainer
+        workspaceId="ws-1"
+        treeId="extra-9"
+        familyName={PROP_NAME}
+        onClose={vi.fn()}
+      />,
+    );
+    // The type-to-confirm field is keyed off the SERVER phrase, not the prop.
+    await walkToPublish(SERVER_PHRASE);
+
+    await waitFor(() => {
+      const patchCall = mockApiFetch.mock.calls.find((c) => c[1]?.method === 'PATCH');
+      expect(patchCall).toBeTruthy();
+    });
+    const patchCall = mockApiFetch.mock.calls.find((c) => c[1]?.method === 'PATCH')!;
+    expect(JSON.parse(patchCall[1].body).confirmationPhrase).toBe(SERVER_PHRASE);
+  });
 });

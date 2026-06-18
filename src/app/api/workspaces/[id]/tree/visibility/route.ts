@@ -12,7 +12,7 @@ import {
 } from '@/lib/tree/publish'
 import { generatePublicSlug } from '@/lib/tree/public-slug'
 import { JSON_NULL, encryptAuditDescription } from '@/lib/tree/audit'
-import { freezeDependentPointers } from '@/lib/tree/going-private'
+import { freezeDependentPointers, freezeCollectionLinks } from '@/lib/tree/going-private'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -116,6 +116,15 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       await freezeDependentPointers(workspaceId)
     } catch (e) {
       console.error('[visibility] dependent freeze failed', { errorType: (e as Error)?.name })
+    }
+    // PRESERVATION path for COLLECTION links (PRD §2.10, separate from the
+    // anchored member-tree freeze above): convert each anchor-less collection
+    // borrow FROM this workspace into a frozen extra-tree copy + re-point its
+    // dependent collection items. Best-effort; never fail the visibility change.
+    try {
+      await freezeCollectionLinks(workspaceId)
+    } catch (e) {
+      console.error('[visibility] collection-link freeze failed', { errorType: (e as Error)?.name })
     }
   }
 

@@ -50,8 +50,10 @@ vi.mock('@/lib/db', () => ({
 // unpublish — never on an extra-tree unpublish (which would clobber main's
 // dependent pointers). Returns a benign result so the route's try/catch passes.
 const mockFreezeDependentPointers = vi.fn().mockResolvedValue({ frozen: 0, failed: 0 });
+const mockFreezeCollectionLinks = vi.fn().mockResolvedValue({ frozen: 0, failed: 0 });
 vi.mock('@/lib/tree/going-private', () => ({
   freezeDependentPointers: (...a: unknown[]) => mockFreezeDependentPointers(...a),
+  freezeCollectionLinks: (...a: unknown[]) => mockFreezeCollectionLinks(...a),
 }));
 
 import { PATCH } from '@/app/api/workspaces/[id]/tree/visibility/route';

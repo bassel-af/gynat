@@ -1,0 +1,92 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
+import { prisma } from '@/lib/db'
+import { requireWorkspaceAdmin, isErrorResponse } from '@/lib/api/workspace-auth'
+import { requireCollectionsEnabled } from '@/lib/api/workspace-auth'
+import { treeMutateLimiter, rateLimitResponse } from '@/lib/api/rate-limit'
+import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers'
+import { generateUniqueCollectionSlug } from '@/lib/collections/queries'
+import { freezeCollectionLinks } from '@/lib/tree/going-private'
+
+type RouteParams = { params: Promise<{ id: string; collectionId: string }> }
+
+/** Collection visibility ladder — the THREE DB values, set directly. */
+const collectionVisibilitySchema = z.object({
+  visibility: z.enum(['private', 'public_link', 'public_listed']),
+})
+
+/**
+ * PATCH /api/workspaces/[id]/collections/[collectionId]/visibility — set a
+ * collection's public visibility. ADMIN-ONLY (publishing is never delegated to
+ * collection_editor), behind enableCollections (404 when off, before auth).
+ *
+ * Mints an unguessable public slug on first publish; KEEPS the slug across a
+ * private round-trip (the public address is stable — owner's decision, §7.11).
+ * Going private freezes any anchor-less collection-link borrows that source FROM
+ * this workspace into frozen copies (the preservation path, best-effort).
+ */
+export async function PATCH(request: NextRequest, { params }: RouteParams) {
+  const { id: workspaceId, collectionId } = await params
+
+  // Deny-by-default feature gate FIRST (404 when collections are off).
+  const gate = await requireCollectionsEnabled(workspaceId)
+  if (gate) return gate
+
+  const auth = await requireWorkspaceAdmin(request, workspaceId)
+  if (isErrorResponse(auth)) return auth
+
+  const { allowed, retryAfterSeconds } = treeMutateLimiter.check(auth.user.id)
+  if (!allowed) return rateLimitResponse(retryAfterSeconds)
+
+  const parsed = await parseValidatedBody(request, collectionVisibilitySchema)
+  if (isParseError(parsed)) return parsed
+  const { visibility } = parsed.data
+
+  // Scope the lookup by workspace so a foreign id is indistinguishable from a
+  // missing one (404, no existence leak).
+  const collection = await prisma.collection.findFirst({
+    where: { id: collectionId, workspaceId },
+    select: { id: true, visibility: true, publicSlug: true },
+  })
+  if (!collection) {
+    return NextResponse.json({ error: 'غير موجود' }, { status: 404 })
+  }
+
+  const goingPrivate = visibility === 'private' && collection.visibility !== 'private'
+
+  const data: Record<string, unknown> = { visibility }
+  if (visibility !== 'private') {
+    // Going public (or switching public levels): ensure a slug exists; keep the
+    // existing one (re-publish / link<->listed never regenerates it).
+    if (!collection.publicSlug) {
+      data.publicSlug = await generateUniqueCollectionSlug()
+      data.publishedAt = new Date()
+      data.publishedById = auth.user.id
+    }
+  }
+  // Going private deliberately KEEPS publicSlug (stable address across a
+  // round-trip — the serving route denies-by-default on private visibility).
+
+  const updated = await prisma.collection.update({
+    where: { id: collection.id },
+    data,
+    select: { visibility: true, publicSlug: true },
+  })
+
+  // Going private must not silently break collections borrowing FROM this
+  // workspace: freeze each anchor-less collection-link borrow into a frozen
+  // copy + re-point its dependent items. Best-effort.
+  if (goingPrivate) {
+    try {
+      await freezeCollectionLinks(workspaceId)
+    } catch (e) {
+      console.error('[collection-visibility] collection-link freeze failed', {
+        errorType: (e as Error)?.name,
+      })
+    }
+  }
+
+  return NextResponse.json({
+    data: { visibility: updated.visibility, publicSlug: updated.publicSlug },
+  })
+}

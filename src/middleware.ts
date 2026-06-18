@@ -14,6 +14,7 @@ const PUBLIC_PATHS = [
   '/policy',
   '/islamic-gedcom',
   '/family', // public tree pages (anonymous, deny-by-default in the route)
+  '/collections', // public collection pages (anonymous, deny-by-default in the route)
   '/test', // test route for browser testing
   '/design-preview', // design direction prototype (no-auth preview)
   '/public-tree-preview', // public-tree feature mockups (no-auth preview)

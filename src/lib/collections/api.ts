@@ -475,12 +475,78 @@ export async function removeItem(
   );
 }
 
-// --- extra-tree publish (Slice B) ------------------------------------------
+// --- collection publish (Chunk 4) ------------------------------------------
 
-/** The shape the visibility route returns after a publish/visibility change. */
-export interface TreeVisibilityResult {
+/**
+ * The wire enum the visibility route expects — the same `TreeVisibility` enum
+ * the rest of the platform uses. The UI ladder (`Visibility`) maps onto it here
+ * so the route never sees the UI shorthand.
+ */
+export type WireVisibility = 'private' | 'public_link' | 'public_listed';
+
+/** UI ladder level → the DB `TreeVisibility` enum the route stores. */
+export function toWireVisibility(level: Visibility): WireVisibility {
+  switch (level) {
+    case 'link':
+      return 'public_link';
+    case 'search':
+      return 'public_listed';
+    default:
+      return 'private';
+  }
+}
+
+/** Response of `PATCH .../collections/[collectionId]/visibility`. */
+export interface CollectionVisibilityResult {
+  publicSlug: string;
   visibility: string;
+}
+
+/**
+ * Response of `GET .../collections/[collectionId]/publish-preview` — the §3
+ * withhold preview shown before publishing: which member-private trees will be
+ * hidden from visitors, how many remain publishable, and the current state.
+ */
+export interface CollectionPublishPreview {
+  /** Trees that will be WITHHELD when the collection goes public (§3). */
+  withheldTrees: { titleAr: string }[];
+  /** How many trees would actually be shown to visitors. */
+  publishableCount: number;
+  /** Present once published; null while private. */
   publicSlug: string | null;
-  allowReuse?: boolean;
+  currentVisibility: string;
+}
+
+/**
+ * Publish / re-level / unpublish a collection. Maps the UI ladder level to the
+ * DB enum, PATCHes the visibility route, and returns the new slug + level.
+ */
+export async function setCollectionVisibility(
+  workspaceId: string,
+  collectionId: string,
+  level: Visibility,
+): Promise<CollectionVisibilityResult> {
+  return unwrap<CollectionVisibilityResult>(
+    await apiFetch(
+      `/api/workspaces/${workspaceId}/collections/${collectionId}/visibility`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ visibility: toWireVisibility(level) }),
+      },
+    ),
+  );
+}
+
+/** Fetch the §3 withhold preview for a collection before publishing it. */
+export async function getCollectionPublishPreview(
+  workspaceId: string,
+  collectionId: string,
+): Promise<CollectionPublishPreview> {
+  return unwrap<CollectionPublishPreview>(
+    await apiFetch(
+      `/api/workspaces/${workspaceId}/collections/${collectionId}/publish-preview`,
+    ),
+  );
 }
 

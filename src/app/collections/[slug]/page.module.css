@@ -1,0 +1,595 @@
+/*
+ * Public collection viewer (/collections/[slug]) — a jeweled-heritage grid of
+ * the collection's published trees, built from the SAME visual vocabulary as
+ * the approved /design-preview prototype: the gold-orb جينات nav strip + glass
+ * status pill, a gold-eyebrow / Reem-Kufi display section header with a floating
+ * count chip, and tree cards that are faithful clones of the prototype's
+ * WORKSPACE CARD (tall glass panel, gold top hairline, big display name, a foot
+ * stat over a faint gold rule, and a low-opacity corner figure cluster). The
+ * page IS a full heritage surface (obsidian + emerald + aged gold). Heritage
+ * tokens only.
+ */
+
+/*
+ * Visually-hidden-but-crawlable container for the server-rendered public text
+ * (collection title, description, card list). Mirrors the family viewer's
+ * .srOnly so crawlers and screen readers read the names while the interactive
+ * grid below is the sighted view. Not display:none (that drops it from the a11y
+ * tree and weakens the crawl signal).
+ */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* The page column — the dark backdrop comes from .heritage-surface (global). */
+.page {
+  position: relative;
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: var(--space-13) var(--space-13) calc(var(--space-15) + 96px);
+}
+
+/* ============ NAV STRIP (prototype) ============ */
+/* The gold-orb جينات wordmark linking home + a glass status pill — opens the
+   public surface exactly like the approved workspace screens. */
+.navStrip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-7);
+  margin-bottom: var(--space-15);
+  animation: collectionFadeDown 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+  font-family: var(--heritage-font-display);
+  font-size: 26px;
+  font-weight: var(--font-weight-medium);
+  letter-spacing: 0.02em;
+  color: var(--heritage-gold-bright);
+  text-decoration: none;
+  transition: opacity var(--transition-base);
+}
+
+.wordmark:hover {
+  opacity: 0.9;
+}
+
+.wordmark:focus-visible {
+  outline: none;
+  text-decoration: underline;
+  text-underline-offset: 6px;
+  text-decoration-color: var(--heritage-gold);
+}
+
+/* The signature gold orb that precedes the wordmark in the prototype. */
+.wordmarkOrb {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--heritage-radius-pill);
+  background: radial-gradient(
+    circle at 30% 30%,
+    var(--heritage-gold-bright) 0%,
+    var(--heritage-gold) 35%,
+    var(--heritage-gold-deep) 100%
+  );
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.18),
+    0 0 24px rgba(200, 168, 101, 0.4);
+}
+
+.navPill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-9);
+  border-radius: var(--heritage-radius-pill);
+  background: var(--heritage-glass-bg-strong);
+  border: 1px solid var(--heritage-glass-border);
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  font-family: var(--heritage-font-body);
+  font-size: var(--font-size-md);
+  letter-spacing: 0.02em;
+  color: var(--heritage-cream);
+}
+
+.navDot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--heritage-radius-pill);
+  background: var(--heritage-emerald-glow);
+  box-shadow: 0 0 10px rgba(46, 152, 118, 0.8);
+  animation: collectionPulse 2.4s ease-in-out infinite;
+}
+
+/* ============ SECTION HEADER (prototype) ============ */
+/* Gold eyebrow with a leading hairline + Reem Kufi display title + soft lead,
+   with the tree count as a floating glass stat chip on the side. */
+.intro {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-12);
+  margin-bottom: var(--space-14);
+  animation: collectionFadeUp 1000ms cubic-bezier(0.16, 1, 0.3, 1) 80ms both;
+}
+
+.introText {
+  min-width: 0;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  font-family: var(--heritage-font-body);
+  font-size: 12px;
+  font-weight: var(--font-weight-medium);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--heritage-gold);
+  margin-bottom: var(--space-7);
+}
+
+.eyebrow::before {
+  content: '';
+  width: 32px;
+  height: 1px;
+  background: var(--heritage-gold);
+}
+
+.collectionTitle {
+  margin: 0;
+  font-family: var(--heritage-font-display);
+  font-size: clamp(38px, 5.4vw, 64px);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.04;
+  letter-spacing: -0.01em;
+  background: var(--heritage-gradient-title);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 0 40px rgba(200, 168, 101, 0.12);
+}
+
+.collectionDesc {
+  margin: var(--space-7) 0 0;
+  max-width: 60ch;
+  font-family: var(--heritage-font-body);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-normal);
+  line-height: 1.8;
+  color: var(--heritage-text-soft);
+}
+
+/* The tree count as a floating glass stat chip (prototype's statChip). */
+.countChip {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-7) var(--space-10);
+  border-radius: var(--heritage-radius-lg);
+  background: rgba(10, 14, 26, 0.7);
+  border: 1px solid var(--heritage-glass-border);
+  backdrop-filter: blur(24px) saturate(1.3);
+  -webkit-backdrop-filter: blur(24px) saturate(1.3);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+    0 20px 50px rgba(0, 0, 0, 0.5);
+}
+
+.countChipLabel {
+  font-family: var(--heritage-font-body);
+  font-size: 10px;
+  font-weight: var(--font-weight-medium);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--heritage-gold);
+}
+
+.countChipValue {
+  font-family: var(--heritage-font-display);
+  font-size: var(--font-size-4xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--heritage-parchment);
+  letter-spacing: 0.01em;
+}
+
+/* ============ TREE CARD GRID (prototype workspace card) ============ */
+.cardGrid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--space-11);
+}
+
+/* A 1–2 tree collection stays intimate instead of stretching edge to edge. */
+.cardGridSparse {
+  grid-template-columns: repeat(auto-fit, minmax(340px, 440px));
+  justify-content: center;
+}
+
+.cardItem {
+  display: flex;
+}
+
+/* The tree card — a faithful clone of the prototype's WORKSPACE CARD. */
+.card {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 264px;
+  padding: var(--space-12) var(--space-11) var(--space-11);
+  border-radius: var(--heritage-radius-xl);
+  border: 1px solid var(--heritage-glass-border);
+  background: var(--heritage-glass-bg-strong);
+  backdrop-filter: blur(30px) saturate(1.2);
+  -webkit-backdrop-filter: blur(30px) saturate(1.2);
+  box-shadow: var(--heritage-shadow-card);
+  text-decoration: none;
+  color: inherit;
+  overflow: hidden;
+  isolation: isolate;
+  transition:
+    transform 360ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 360ms,
+    box-shadow 360ms;
+  animation: collectionCardIn 760ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* The prototype's gold top hairline, spanning the full width. */
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  inset-inline: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--heritage-gold) 50%,
+    transparent 100%
+  );
+  opacity: 0.5;
+  transition: opacity var(--transition-base);
+}
+
+/* A soft diagonal sheen that slides across on hover. */
+.cardSheen {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(
+    115deg,
+    transparent 35%,
+    rgba(230, 207, 158, 0.06) 50%,
+    transparent 65%
+  );
+  transform: translateX(120%);
+  transition: transform var(--transition-slow);
+  pointer-events: none;
+}
+
+.card:hover {
+  transform: translateY(-6px);
+  border-color: var(--heritage-glass-border-strong);
+  box-shadow: var(--heritage-shadow-card-hover);
+}
+
+.card:hover::before {
+  opacity: 1;
+}
+
+.card:hover .cardSheen {
+  transform: translateX(-120%);
+}
+
+.card:focus-visible {
+  outline: none;
+  border-color: var(--heritage-gold);
+  box-shadow:
+    var(--heritage-shadow-card-hover),
+    0 0 0 3px rgba(200, 168, 101, 0.35);
+}
+
+.card:active {
+  transform: translateY(-2px);
+}
+
+/* Header row: the gold-framed crest at the start, the "view tree" affordance
+   pinned to the end. */
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+  margin-bottom: var(--space-9);
+}
+
+.cardCrest {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  height: 50px;
+  border-radius: var(--heritage-radius-md);
+  color: var(--heritage-gold-bright);
+  background:
+    radial-gradient(circle at 32% 28%, rgba(230, 207, 158, 0.22), transparent 70%),
+    rgba(200, 168, 101, 0.1);
+  border: 1px solid rgba(200, 168, 101, 0.28);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 6px 16px rgba(0, 0, 0, 0.35);
+  transition:
+    background var(--transition-base),
+    border-color var(--transition-base),
+    transform 360ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.card:hover .cardCrest {
+  background:
+    radial-gradient(circle at 32% 28%, rgba(230, 207, 158, 0.3), transparent 70%),
+    rgba(200, 168, 101, 0.16);
+  border-color: var(--heritage-gold);
+  transform: translateY(-2px);
+}
+
+/* The "view tree" affordance — gold, chevron points into the page (RTL: right,
+   toward the start edge). */
+.cardOpen {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--heritage-font-display);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: 0.02em;
+  color: var(--heritage-gold-bright);
+  opacity: 0.78;
+  transition: opacity var(--transition-base), gap var(--transition-base);
+}
+
+.cardOpenArrow {
+  transition: transform var(--transition-base);
+}
+
+.card:hover .cardOpen {
+  opacity: 1;
+  gap: var(--space-3);
+}
+
+.card:hover .cardOpenArrow {
+  transform: translateX(-3px);
+}
+
+/* The family name — the prototype's big display card name. */
+.cardName {
+  font-family: var(--heritage-font-display);
+  font-size: var(--font-size-6xl);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-snug);
+  letter-spacing: -0.005em;
+  color: var(--heritage-parchment);
+  /* Long names wrap to two lines, then ellipsize — never blow out the card. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* The foot stat row, pinned to the bottom over a faint gold rule — exactly the
+   prototype's .cardStats treatment. */
+.cardFoot {
+  margin-top: auto;
+  padding-top: var(--space-11);
+  border-top: 1px solid rgba(200, 168, 101, 0.08);
+}
+
+.cardStat {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-family: var(--heritage-font-body);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: 0.02em;
+  color: var(--heritage-text-soft);
+}
+
+.cardStatDot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--heritage-radius-pill);
+  background: var(--heritage-gradient-gold);
+  box-shadow: 0 0 8px rgba(200, 168, 101, 0.5);
+}
+
+/* The low-opacity heritage silhouettes anchored in the corner — the
+   prototype's workspace-card signature; lifts and brightens on hover. */
+.cardFigures {
+  position: absolute;
+  bottom: -8px;
+  inset-inline-start: -8px;
+  width: 140px;
+  height: 120px;
+  opacity: 0.32;
+  pointer-events: none;
+  z-index: -1;
+  transition: opacity 360ms, transform 360ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cardFigures svg {
+  width: 100%;
+  height: 100%;
+}
+
+.card:hover .cardFigures {
+  opacity: 0.55;
+  transform: translate(4px, -2px);
+}
+
+/* ---- Empty / all-withheld state ---- */
+.emptySlot {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-13) var(--space-6);
+  animation: collectionFadeUp 1000ms cubic-bezier(0.16, 1, 0.3, 1) 120ms both;
+}
+
+/* ---- Docked growth CTA ---- */
+.ctaSlot {
+  position: fixed;
+  bottom: var(--space-7);
+  inset-inline-start: var(--space-7);
+  z-index: 20;
+  width: min(320px, calc(100vw - 2 * var(--space-7)));
+  animation: collectionFadeUp 500ms cubic-bezier(0.16, 1, 0.3, 1) 400ms both;
+}
+
+@keyframes collectionFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes collectionFadeDown {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes collectionCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes collectionPulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.2);
+  }
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 900px) {
+  .intro {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-9);
+  }
+
+  .countChip {
+    flex-direction: row;
+    align-items: baseline;
+    gap: var(--space-5);
+    padding: var(--space-5) var(--space-9);
+  }
+}
+
+@media (max-width: 768px) {
+  .page {
+    padding: var(--space-9) var(--space-7) calc(var(--space-15) + 84px);
+  }
+
+  .navStrip {
+    margin-bottom: var(--space-13);
+  }
+
+  .intro {
+    margin-bottom: var(--space-12);
+  }
+}
+
+@media (max-width: 640px) {
+  .cardGrid,
+  .cardGridSparse {
+    grid-template-columns: 1fr;
+    justify-content: stretch;
+    gap: var(--space-9);
+  }
+
+  .card {
+    min-height: 232px;
+    padding: var(--space-11) var(--space-9) var(--space-9);
+  }
+
+  .cardName {
+    font-size: var(--font-size-5xl);
+  }
+
+  .ctaSlot {
+    inset-inline: var(--space-4);
+    width: auto;
+  }
+}
+
+/* The nav pill loses its meaning at the smallest widths; keep the wordmark. */
+@media (max-width: 420px) {
+  .navPill {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .card:hover,
+  .card:active,
+  .navStrip,
+  .intro,
+  .emptySlot,
+  .ctaSlot {
+    animation: none;
+    transform: none;
+  }
+
+  .cardSheen {
+    display: none;
+  }
+
+  .navDot {
+    animation: none;
+  }
+}

@@ -49,6 +49,13 @@ const ENDPOINTS: Endpoint[] = [
   // (A 500 here means the Prisma client is stale or the route is broken.)
   { method: 'GET', path: '/api/family/__smoke_unknown__/tree', label: 'Public tree JSON (unknown → 404)', allowUnauth: true },
   { method: 'GET', path: '/family/__smoke_unknown__', label: 'Public tree page (unknown → 404)', allowUnauth: true },
+  // Public collection page (anon) — unknown slug must load the route and 404,
+  // not 500 (a 500 means the collections serving layer or Prisma client broke).
+  { method: 'GET', path: '/collections/__smoke_unknown__', label: 'Public collection page (unknown → 404)', allowUnauth: true },
+  // Anonymous collection serve API (Chunk 4) — unknown/private/collections-off
+  // slug → ONE generic 404 (deny-by-default, no oracle). A 500 means the
+  // collections public-serve composition or Prisma client broke.
+  { method: 'GET', path: '/api/collections/__smoke_unknown__/tree', label: 'Public collection JSON (unknown → 404)', allowUnauth: true },
   // Admin global takedown — anon must be rejected (401) at the gate, not 500.
   { method: 'POST', path: '/api/admin/takedown', label: 'Admin takedown (anon → 401)', allowUnauth: true },
 
