@@ -195,6 +195,13 @@ Concretely: a public collection can only contain public trees; a borrowed privat
 - **Per-collection granular viewing (separate viewer lists)** — not planned; separate workspaces cover it (§2.8).
 - **Collection publishing's private-tree handling + warning** — build last (§2.10). *Why later:* the core collection experience works without it; it's a refinement on the publish step.
 
+**Newly captured need (not yet planned):**
+- **Nasab "jump" — bridging unknown links in a lineage chain.** A family often knows the start of a person's lineage and a later ancestor, but **not the generations in between**. We need a way to record a *jump* across that gap — a deliberate "we don't know who connects here, but the chain continues up there" link — instead of forcing a fabricated or blank node. Two points make this richer than a simple gap:
+  - The jump's two ends are not always **people**. An end can be a **family name or tribe name** the lineage attaches to, not a named individual.
+  - These are just **two illustrative examples, not the only cases** — planning should treat the jump generally, not hard-code these shapes:
+    1. *Person → (unknown ancestors) → person:* we know «فلان بن علان بن …», then the chain is unknown for some grandfathers, then it picks up again with known ancestors further up.
+    2. *Person → family/tribe → family/tribe → …:* a person belongs to «الشلاحي», which belongs to «غباش», which belongs to «المطيري», and so on (names invented here purely to illustrate the shape).
+
 **Consciously set aside (for now):**
 - **Re-review of living people added *after* a tree is already public (scenario gap 3)** — still open; new living people added post-publish do not currently re-trigger the checkpoint. Security recommends at minimum audit-logging additions to an already-public tree; a lightweight re-confirmation prompt is a candidate refinement.
 
