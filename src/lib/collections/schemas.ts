@@ -42,6 +42,25 @@ export type CreateCollectionInput = z.infer<typeof createCollectionSchema>;
 export type UpdateCollectionInput = z.infer<typeof updateCollectionSchema>;
 
 // ---------------------------------------------------------------------------
+// Collection visibility PATCH (Slice C).
+//
+// Wire format is the THREE DB enum values, set directly (the UI ladder
+// link/search is mapped to public_link/public_listed at the api client). When
+// listing a collection (public_listed) the admin may opt to promote their OWN
+// public_link leaf trees to public_listed in the SAME call so the collection
+// becomes fully listable — only the caller's workspace trees are ever touched.
+// ---------------------------------------------------------------------------
+
+export const collectionVisibilityPatchSchema = z.object({
+  visibility: z.enum(['private', 'public_link', 'public_listed']),
+  promoteOwnTreesToListed: z.boolean().optional(),
+});
+
+export type CollectionVisibilityPatchInput = z.infer<
+  typeof collectionVisibilityPatchSchema
+>;
+
+// ---------------------------------------------------------------------------
 // Extra tree create — an `extra`-kind FamilyTree that lives inside collections.
 // ---------------------------------------------------------------------------
 

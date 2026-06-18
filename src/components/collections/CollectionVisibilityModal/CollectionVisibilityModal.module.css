@@ -40,11 +40,13 @@
   border-radius: var(--radius-lg);
   border: 1px solid var(--heritage-glass-border);
   background: rgba(10, 14, 26, 0.4);
+  cursor: pointer;
   transition: border-color 200ms, background 200ms;
 }
 
 .levelDisabled {
   opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .levelSoon {
@@ -263,6 +265,66 @@
   line-height: 1.6;
   margin: 0;
   font-style: italic;
+}
+
+/* Slice C — listing readiness groups (own promotable vs borrowed blocking) */
+.ownTreesBox {
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  background: rgba(46, 152, 118, 0.07);
+  border: 1px solid rgba(46, 152, 118, 0.25);
+}
+
+.ownTreesTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--heritage-font-display);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--heritage-emerald-glow);
+  margin: 0 0 var(--space-2);
+}
+
+.readinessWhy {
+  font-family: var(--heritage-font-body);
+  font-size: 12px;
+  color: var(--heritage-text-soft);
+  line-height: 1.6;
+  margin: 0 0 var(--space-4);
+  font-weight: 300;
+}
+
+.listAllBtn {
+  margin-top: var(--space-4);
+}
+
+.borrowedSource {
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  color: var(--heritage-text-muted);
+  white-space: nowrap;
+}
+
+.blockedBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  margin-top: var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(232, 161, 92, 0.35);
+  background: rgba(232, 92, 51, 0.08);
+  font-family: var(--heritage-font-body);
+  font-size: 13px;
+  line-height: 1.6;
+  color: #f0b98b;
+}
+
+.blockedBanner iconify-icon {
+  color: #f0b98b;
+  flex-shrink: 0;
+  margin-top: 2px;
 }
 
 /* Escalation (link -> search) button reuses danger-ish gold emphasis */

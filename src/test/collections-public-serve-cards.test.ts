@@ -34,6 +34,7 @@ const record: PublicCollectionRecord = {
   descriptionAr: 'وصف',
   visibility: 'public_listed',
   publicSlug: 'collslug',
+  updatedAt: new Date('2026-06-01T00:00:00Z'),
 };
 
 // One root collection holding two PUBLIC own-tree items (t1, t2) — both survive

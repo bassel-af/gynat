@@ -128,9 +128,9 @@ export default function PublicTreePreviewPage() {
             <a className={styles.docTocChip} href="#states">٣. حالات الصفحة</a>
             <a className={styles.docTocChip} href="#publish">٤. خطوات النشر</a>
             <a className={styles.docTocChip} href="#checkpoint">٥. مراجعة قبل النشر</a>
-            <a className={styles.docTocChip} href="#private">٦. إيقاف العرض</a>
+            <a className={styles.docTocChip} href="#private">٦. إيقاف النشر</a>
             <a className={styles.docTocChip} href="#report">٧. صفحة الإبلاغ</a>
-            <a className={styles.docTocChip} href="#seo">٨. الظهور في البحث</a>
+            <a className={styles.docTocChip} href="#seo">٨. الظهور في محركات البحث</a>
           </div>
         </header>
 
@@ -250,7 +250,7 @@ export default function PublicTreePreviewPage() {
           <div className={styles.caption}>
             <span className={styles.captionIcon}>✦</span>
             <span>
-              شاشة «غير متاحة» هي نفسها التي يصل إليها الزائر إذا أوقفت العائلةُ العرض العامّ لاحقاً —
+              شاشة «غير متاحة» هي نفسها التي يصل إليها الزائر إذا أوقفت العائلةُ النشر لاحقاً —
               فلا يرى رسالة خطأٍ مزعجة، بل دعوةً لطيفة للعودة إلى الصفحة الرئيسيّة.
             </span>
           </div>
@@ -290,7 +290,7 @@ export default function PublicTreePreviewPage() {
             <h2 className={styles.sectionTitle}>مراجعةٌ قبل النشر</h2>
             <p className={styles.sectionHint}>
               قبل أن تصبح الشجرة عامّة، يُعرض على المسؤول كلُّ الأشخاص الأحياء — مجموعين حسب البيت — ليراجعهم
-              ويُصحّح أيّ خطأٍ قبل النشر. ثمّ يكتب اسم العائلة بيده للتأكيد. وإن اختار الظهور في البحث، يرى تنبيهاً
+              ويُصحّح أيّ خطأٍ قبل النشر. ثمّ يكتب اسم العائلة بيده للتأكيد. وإن اختار الظهور في محركات البحث، يرى تنبيهاً
               صريحاً بأنّ هذا القرار يصعب التراجع عنه.
             </p>
           </div>
@@ -314,9 +314,9 @@ export default function PublicTreePreviewPage() {
         <section className={styles.section} id="private">
           <div className={styles.sectionHead}>
             <span className={styles.sectionKicker}>القسم السادس</span>
-            <h2 className={styles.sectionTitle}>إيقاف العرض العامّ</h2>
+            <h2 className={styles.sectionTitle}>إيقاف النشر</h2>
             <p className={styles.sectionHint}>
-              حين تقرّر العائلة إيقاف عرض شجرتها للعموم. نافذةٌ هادئة وصادقة: تُوضِح أنّ العرض يتوقّف فوراً، لكنّها
+              حين تقرّر العائلة إيقاف نشر شجرتها للعموم. نافذةٌ هادئة وصادقة: تُوضِح أنّ النشر يتوقّف فوراً، لكنّها
               لا تُخفي أنّ ما حفظه آخرون قد يبقى لديهم، وتُشير بوضوحٍ إلى طريق الإزالة النهائيّة.
             </p>
           </div>
@@ -341,7 +341,7 @@ export default function PublicTreePreviewPage() {
             <h2 className={styles.sectionTitle}>صفحة الإبلاغ</h2>
             <p className={styles.sectionHint}>
               صفحةٌ عامّة لا تتطلّب حساباً — حتّى يستطيع شخصٌ ظهرت بياناتُه دون علمه أن يطلب إزالتها.
-              يصل إليها الزائر من أسفل أيّ شجرةٍ عامّة، ومن نافذة «إيقاف العرض».
+              يصل إليها الزائر من أسفل أيّ شجرةٍ عامّة، ومن نافذة «إيقاف النشر».
             </p>
           </div>
 
@@ -699,7 +699,7 @@ function StateEmpty() {
 function StateUnavailable() {
   return (
     <div>
-      <span className={styles.frameLabel}>غير متاحة (أُوقف العرض أو رابطٌ غير صحيح)</span>
+      <span className={styles.frameLabel}>غير متاحة (أُوقف النشر أو رابطٌ غير صحيح)</span>
       <div className={styles.statePanel}>
         <div className={styles.stateWordmark}>جينات</div>
         <div className={styles.stateRing} />
@@ -744,7 +744,7 @@ function VisibilityLadder() {
           <div className={styles.ladderText}>
             <div className={styles.ladderLabel}>عامّة عبر الرابط</div>
             <div className={styles.ladderDesc}>
-              يستطيع مَن يملك الرابط مشاهدتها، ولا تظهر في نتائج البحث. خطوةٌ أولى آمنة.
+              يستطيع مَن يملك الرابط مشاهدتها، ولا تظهر في نتائج محركات البحث. خطوةٌ أولى آمنة.
             </div>
           </div>
         </div>
@@ -753,7 +753,7 @@ function VisibilityLadder() {
           <div className={styles.ladderRadio} />
           <div className={styles.ladderText}>
             <div className={styles.ladderLabel}>
-              عامّة وتظهر في البحث
+              عامّة وتظهر في محركات البحث
               <span className={styles.furtherTag}>خطوةٌ أبعد</span>
             </div>
             <div className={styles.ladderDesc}>
@@ -857,10 +857,10 @@ function PublishCheckpoint() {
             </svg>
           </div>
           <div>
-            <h4 className={styles.irreversibleTitle}>الظهور في البحث قرارٌ يصعب التراجع عنه</h4>
+            <h4 className={styles.irreversibleTitle}>الظهور في محركات البحث قرارٌ يصعب التراجع عنه</h4>
             <p className={styles.irreversibleText}>
               بمجرّد ظهور الشجرة في محرّكات البحث، قد تبقى بعض النسخ محفوظةً لدى Google أو أرشيف الإنترنت
-              حتّى لو أوقفتَ العرض لاحقاً. هذا التنبيه يظهر فقط حين تختار «الظهور في البحث».
+              حتّى لو أوقفتَ النشر لاحقاً. هذا التنبيه يظهر فقط حين تختار «الظهور في محركات البحث».
             </p>
           </div>
         </div>
@@ -926,7 +926,7 @@ function MakePrivateDialog() {
             <path d="M8 11V8a4 4 0 018 0v3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
           </svg>
         </div>
-        <h3 className={styles.modalTitle}>إيقاف العرض العامّ</h3>
+        <h3 className={styles.modalTitle}>إيقاف النشر</h3>
         <p className={styles.modalLead}>
           ستتوقّف الشجرة عن الظهور للعموم فوراً، وسنطلب من محرّكات البحث إزالتها.
         </p>
@@ -947,7 +947,7 @@ function MakePrivateDialog() {
           <span className={styles.reportLinkArrow}>←</span>
         </a>
         <div className={styles.modalActions}>
-          <button type="button" className={styles.btnPrimary}>إيقاف العرض</button>
+          <button type="button" className={styles.btnPrimary}>إيقاف النشر</button>
           <button type="button" className={styles.btnGhost}>تراجُع</button>
         </div>
       </div>

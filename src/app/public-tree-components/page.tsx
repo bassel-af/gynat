@@ -78,7 +78,7 @@ export default function PublicTreeComponentsPage() {
               className={styles.launchBtn}
               onClick={() => { setFlowFromLevel('search'); setFlowOpen(true); }}
             >
-              منشورة وتظهر في البحث (لوحة الإدارة)
+              منشورة وتظهر في محركات البحث (لوحة الإدارة)
             </button>
           </div>
           <PublishFlow
@@ -136,7 +136,7 @@ export default function PublicTreeComponentsPage() {
             onAllowReuseChange={setAllowReuse}
           />
           <p className={styles.live}>
-            الدرجة المختارة: {visibility === 'private' ? 'خاصّة' : visibility === 'link' ? 'عبر الرابط' : 'تظهر في البحث'}
+            الدرجة المختارة: {visibility === 'private' ? 'خاصّة' : visibility === 'link' ? 'عبر الرابط' : 'تظهر في محركات البحث'}
             {' · '}الضمّ: {allowReuse ? 'مسموح' : 'غير مسموح'} (تفاعليّ للمعاينة)
           </p>
         </Section>
@@ -148,7 +148,7 @@ export default function PublicTreeComponentsPage() {
               افتح المراجعة (نشر عبر الرابط)
             </button>
             <button type="button" className={styles.launchBtn} onClick={() => { setCheckpointSearchable(true); setCheckpointOpen(true); }}>
-              افتح المراجعة (الظهور في البحث — مع التنبيه)
+              افتح المراجعة (الظهور في محركات البحث — مع التنبيه)
             </button>
             <button type="button" className={styles.launchBtn} onClick={() => { setCheckpointSearchable(false); setCheckpointZeroOpen(true); }}>
               افتح المراجعة (لا أحياء — تأكيد مباشر)
@@ -172,9 +172,9 @@ export default function PublicTreeComponentsPage() {
         </Section>
 
         {/* ===== MakePrivateDialog ===== */}
-        <Section title="إيقاف العرض العامّ" note="نافذةٌ هادئة مع طريق الإزالة النهائيّة">
+        <Section title="إيقاف النشر" note="نافذةٌ هادئة مع طريق الإزالة النهائيّة">
           <button type="button" className={styles.launchBtn} onClick={() => setMakePrivateOpen(true)}>
-            افتح نافذة «إيقاف العرض»
+            افتح نافذة «إيقاف النشر»
           </button>
           <MakePrivateDialog
             isOpen={makePrivateOpen}

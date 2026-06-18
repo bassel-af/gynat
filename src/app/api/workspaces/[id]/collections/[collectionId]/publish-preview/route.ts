@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireWorkspaceAdmin, isErrorResponse } from '@/lib/api/workspace-auth'
 import { requireCollectionsEnabled } from '@/lib/api/workspace-auth'
-import { countPublishableTrees } from '@/lib/collections/public-serve'
+import {
+  countPublishableTrees,
+  getCollectionListingReadinessById,
+} from '@/lib/collections/public-serve'
 
 type RouteParams = { params: Promise<{ id: string; collectionId: string }> }
 
@@ -37,12 +40,23 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     workspaceId,
   )
 
+  // Listing-readiness breakdown (Slice C) — the AUTHORITATIVE source the modal
+  // renders to decide whether a search-listed publish is even possible and what
+  // it would take. Computed by COLLECTION ID (the admin id-keyed variant) so a
+  // still-private collection (no slug yet) evaluates the same "if I publish this"
+  // way the public path would once published.
+  const readiness = await getCollectionListingReadinessById(collectionId)
+
   return NextResponse.json({
     data: {
       withheldTrees,
       publishableCount,
       publicSlug: collection.publicSlug,
       currentVisibility: collection.visibility,
+      // Forward-looking "can this be search-listed?" breakdown.
+      fullyListable: readiness?.fullyListable ?? false,
+      notListedOwnTrees: readiness?.notListedOwnTrees ?? [],
+      notListedBorrowedTrees: readiness?.notListedBorrowedTrees ?? [],
     },
   })
 }

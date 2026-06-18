@@ -496,16 +496,32 @@ export function toWireVisibility(level: Visibility): WireVisibility {
   }
 }
 
+/** A borrowed (foreign-workspace) tree that is not yet search-listed (Slice C). */
+export interface NotListedBorrowedTree {
+  titleAr: string;
+  sourceWorkspaceNameAr: string;
+}
+
 /** Response of `PATCH .../collections/[collectionId]/visibility`. */
 export interface CollectionVisibilityResult {
   publicSlug: string;
   visibility: string;
+  /**
+   * True when a search-listed publish was DOWNGRADED to public_link because a
+   * borrowed tree is still not listed (we can never change another workspace's
+   * tree). The collection is published by-link only.
+   */
+  listedBlocked?: boolean;
+  /** The borrowed families that blocked listing (shown so the owner can act). */
+  blockingBorrowed?: NotListedBorrowedTree[];
 }
 
 /**
  * Response of `GET .../collections/[collectionId]/publish-preview` — the §3
  * withhold preview shown before publishing: which member-private trees will be
  * hidden from visitors, how many remain publishable, and the current state.
+ * Slice C adds the listing-readiness breakdown (own not-listed trees the owner
+ * may promote, borrowed not-listed trees that block listing).
  */
 export interface CollectionPublishPreview {
   /** Trees that will be WITHHELD when the collection goes public (§3). */
@@ -515,16 +531,25 @@ export interface CollectionPublishPreview {
   /** Present once published; null while private. */
   publicSlug: string | null;
   currentVisibility: string;
+  /** True when every servable leaf tree is already public_listed. */
+  fullyListable: boolean;
+  /** The caller's OWN public_link trees — promotable to listed in one click. */
+  notListedOwnTrees: { treeId: string; titleAr: string }[];
+  /** Borrowed trees that are not listed — block listing (ask source or remove). */
+  notListedBorrowedTrees: NotListedBorrowedTree[];
 }
 
 /**
  * Publish / re-level / unpublish a collection. Maps the UI ladder level to the
- * DB enum, PATCHes the visibility route, and returns the new slug + level.
+ * DB enum, PATCHes the visibility route, and returns the new slug + level. When
+ * listing (`search`), `promoteOwnTreesToListed` opts to flip the caller's own
+ * public_link leaf trees to listed in the same call (Slice C).
  */
 export async function setCollectionVisibility(
   workspaceId: string,
   collectionId: string,
   level: Visibility,
+  promoteOwnTreesToListed?: boolean,
 ): Promise<CollectionVisibilityResult> {
   return unwrap<CollectionVisibilityResult>(
     await apiFetch(
@@ -532,7 +557,10 @@ export async function setCollectionVisibility(
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ visibility: toWireVisibility(level) }),
+        body: JSON.stringify({
+          visibility: toWireVisibility(level),
+          ...(promoteOwnTreesToListed ? { promoteOwnTreesToListed: true } : {}),
+        }),
       },
     ),
   );

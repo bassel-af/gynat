@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import {
   getPublicTreeForRequest,
   buildPublicTreePayload,
+  isPublicTreeIndexable,
 } from '@/lib/tree/public-serve';
 import PublicTreePageClient from './PublicTreePageClient';
 import styles from './page.module.css';
@@ -24,12 +25,25 @@ export async function generateMetadata({ params }: PageParams): Promise<Metadata
   // trees are explicitly kept out of search (PRD §1.2, §7.6). An EXTRA tree
   // (Collections, Slice B) is ALWAYS noindex regardless of its visibility level
   // — only the main family tree is discoverable.
-  const indexable =
-    record.kind === 'main' && record.visibility === 'public_listed';
+  const indexable = isPublicTreeIndexable(record);
+
+  const description = `شجرة عائلة ${familyName} الموثقة بالأنساب والتقويم الهجري على جينات`;
+  const url = `/family/${slug}`;
 
   return {
+    // The root layout template ('%s · جينات') appends the brand — title is the
+    // bare family name (no hand-written suffix).
     title: familyName,
-    description: `شجرة عائلة ${familyName}`,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      type: 'website',
+      locale: 'ar_SA',
+      url,
+      siteName: 'جينات',
+      title: familyName,
+      description,
+    },
     robots: indexable
       ? { index: true, follow: true }
       : { index: false, follow: false },
@@ -46,8 +60,41 @@ export default async function PublicFamilyTreePage({ params }: PageParams) {
   const payload = await buildPublicTreePayload(record);
   const familyName = record.nameAr || record.workspaceNameAr;
 
+  // JSON-LD only on the indexable branch (public_listed MAIN). WebPage +
+  // BreadcrumbList only — NO Person/genealogy schema (would leak redacted
+  // living PII). All strings derive from the already-redacted record.
+  const indexable = isPublicTreeIndexable(record);
+  const url = `/family/${slug}`;
+  const jsonLd = indexable
+    ? {
+        '@context': 'https://schema.org',
+        '@graph': [
+          {
+            '@type': 'WebPage',
+            name: familyName,
+            description: `شجرة عائلة ${familyName} الموثقة بالأنساب والتقويم الهجري على جينات`,
+            inLanguage: 'ar',
+            url,
+          },
+          {
+            '@type': 'BreadcrumbList',
+            itemListElement: [
+              { '@type': 'ListItem', position: 1, name: 'جينات', item: '/' },
+              { '@type': 'ListItem', position: 2, name: familyName, item: url },
+            ],
+          },
+        ],
+      }
+    : null;
+
   return (
     <>
+      {jsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      )}
       {/*
         Server-rendered crawlable text (SEO, §7.6). The interactive canvas is
         drawn by client JS that search engines can't read, so the family name,

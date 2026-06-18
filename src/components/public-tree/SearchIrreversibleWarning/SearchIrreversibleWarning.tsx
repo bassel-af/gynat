@@ -40,10 +40,10 @@ export function SearchIrreversibleWarning({ as: Heading = 'h3', className }: Sea
         </svg>
       </div>
       <div>
-        <Heading className={styles.title}>الظهور في البحث قرار يصعب التراجع عنه</Heading>
+        <Heading className={styles.title}>الظهور في محركات البحث قرار يصعب التراجع عنه</Heading>
         <p className={styles.text}>
           بمجرد ظهور الشجرة في محركات البحث، قد تبقى بعض النسخ محفوظة لدى Google أو أرشيف الإنترنت
-          حتى لو أوقفت العرض لاحقا.
+          حتى لو أوقفت النشر لاحقا.
         </p>
       </div>
     </div>

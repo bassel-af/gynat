@@ -287,7 +287,7 @@ export function CollectionDetail({
                   height="16"
                   aria-hidden="true"
                 />
-                {isPublic ? 'إدارة العرض' : 'نشر المجموعة'}
+                {isPublic ? 'إدارة النشر' : 'نشر المجموعة'}
               </button>
             </div>
           )}
@@ -314,7 +314,7 @@ export function CollectionDetail({
             />
             {withheldCount}{' '}
             {withheldCount === 1 ? 'عنصرٌ خاصّ محجوب' : 'عناصر خاصّة محجوبة'} عن
-            العرض العام.
+            العموم.
           </div>
         )}
       </div>

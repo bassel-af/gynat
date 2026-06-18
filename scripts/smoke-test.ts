@@ -91,6 +91,14 @@ const ENDPOINTS: Endpoint[] = [
   // body must load the route and reject at the feature/auth gate (404/401/403),
   // NOT 500 — catches a missing import or runtime error in the new path.
   { method: 'POST', path: '/api/workspaces/00000000-0000-4000-a000-000000000000/collections/00000000-0000-4000-a000-000000000001/items', label: 'Add item by link (anon → 401/403/404)', allowUnauth: true, body: { kind: 'tree', linkInput: 'brsh_smoke', linkMode: 'linked', titleAr: 'دخان' } },
+
+  // Collection publish + listing readiness (Collections Chunk 4, Slice C): the
+  // visibility PATCH route now imports the id-keyed listing-readiness helper +
+  // the own-tree promote query; the publish-preview route surfaces the readiness
+  // breakdown. Anon must reject at the feature/auth gate (404/401), NOT 500 —
+  // catches a missing import or runtime error in the promote/list path.
+  { method: 'PATCH', path: '/api/workspaces/00000000-0000-4000-a000-000000000000/collections/00000000-0000-4000-a000-000000000001/visibility', label: 'Collection visibility + promote (anon → 401/404)', allowUnauth: true, body: { visibility: 'public_listed', promoteOwnTreesToListed: true } },
+  { method: 'GET', path: '/api/workspaces/00000000-0000-4000-a000-000000000000/collections/00000000-0000-4000-a000-000000000001/publish-preview', label: 'Collection publish-preview readiness (anon → 401/404)', allowUnauth: true },
 ];
 
 async function runSmokeTest() {

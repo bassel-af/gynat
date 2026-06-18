@@ -129,6 +129,35 @@ export async function loadPublicTreeBySlug(
 }
 
 /**
+ * The single "is this tree search-indexable" predicate: a tree is indexable iff
+ * it is the workspace `main` tree AND `public_listed` (a by-link/private tree,
+ * or any `extra` tree, must never appear in search — no enumeration oracle).
+ * Both `family/[slug]` render passes consume this; `listIndexableTreeSlugs`
+ * mirrors it as a SQL `where` so the page gate and the sitemap can't drift.
+ */
+export function isPublicTreeIndexable(record: PublicTreeRecord): boolean {
+  return record.kind === 'main' && record.visibility === 'public_listed'
+}
+
+/**
+ * The sitemap data source for published trees. Mirrors `isPublicTreeIndexable`
+ * as a SQL `where`. Re-queried LIVE per sitemap build, so a tree flipped to
+ * private/by-link vanishes on the next build (fail-closed: no entry).
+ */
+export async function listIndexableTreeSlugs(): Promise<
+  { slug: string; lastModified: Date }[]
+> {
+  const trees = await prisma.familyTree.findMany({
+    where: { kind: 'main', visibility: 'public_listed' },
+    select: { publicSlug: true, lastModifiedAt: true },
+  })
+  return trees.map((t) => ({
+    slug: t.publicSlug as string,
+    lastModified: t.lastModifiedAt,
+  }))
+}
+
+/**
  * Per-request memoized `loadPublicTreeBySlug` for the SSR page: `generateMetadata`
  * and the page body both call this, so the slug → tree query runs ONCE per
  * request (React `cache`). Pure memoization — same result as the raw function;

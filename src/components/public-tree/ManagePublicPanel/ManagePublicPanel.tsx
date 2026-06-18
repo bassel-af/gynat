@@ -33,7 +33,7 @@ export interface ManagePublicPanelProps {
 
 const LEVEL_LABEL: Record<Exclude<VisibilityLevel, 'private'>, string> = {
   link: 'عبر الرابط',
-  search: 'تظهر في البحث',
+  search: 'تظهر في محركات البحث',
 };
 
 /**
@@ -101,7 +101,7 @@ export function ManagePublicPanel({
       className={clsx(styles.panel, className)}
       role="dialog"
       aria-modal="true"
-      aria-label="إدارة العرض العام"
+      aria-label="إدارة النشر"
       onClick={(e) => e.stopPropagation()}
     >
       <button type="button" className={styles.close} onClick={onClose} aria-label="إغلاق">
@@ -162,11 +162,11 @@ export function ManagePublicPanel({
           <div className={styles.settingsActions}>
             {isEscalation ? (
               <button type="button" className={styles.confirmEscalate} onClick={onEscalateToSearch}>
-                تأكيد الظهور في البحث
+                تأكيد الظهور في محركات البحث
               </button>
             ) : wantsPrivate ? (
               <button type="button" className={styles.applyBtn} onClick={handleApply}>
-                متابعة إلى إيقاف العرض
+                متابعة إلى إيقاف النشر
               </button>
             ) : (
               <button

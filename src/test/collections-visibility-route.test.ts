@@ -40,10 +40,13 @@ vi.mock('@/lib/collections/queries', async (orig) => {
   return { ...actual, generateUniqueCollectionSlug: () => mockGenSlug() };
 });
 
-// publish-preview computes withheld items via the public-serve walk.
+// publish-preview computes withheld items via the public-serve walk, plus the
+// id-keyed listing-readiness breakdown (Slice C).
 const mockLoadWalk = vi.fn();
+const mockReadinessById = vi.fn();
 vi.mock('@/lib/collections/public-serve', () => ({
   countPublishableTrees: (...a: unknown[]) => mockLoadWalk(...a),
+  getCollectionListingReadinessById: (...a: unknown[]) => mockReadinessById(...a),
 }));
 
 import { PATCH } from '@/app/api/workspaces/[id]/collections/[collectionId]/visibility/route';

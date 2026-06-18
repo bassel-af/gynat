@@ -50,7 +50,7 @@ export function MakePrivateDialog({
         </div>
 
         <h3 id="make-private-title" className={styles.title}>
-          إيقاف العرض العام
+          إيقاف النشر
         </h3>
         <p className={styles.lead}>
           ستتوقف الشجرة عن الظهور للعموم فورا، وسنطلب من محركات البحث إزالتها.
@@ -88,7 +88,7 @@ export function MakePrivateDialog({
 
         <div className={styles.actions}>
           <button type="button" className={styles.confirm} onClick={onConfirm} disabled={loading}>
-            {loading ? 'جار الإيقاف…' : 'إيقاف العرض'}
+            {loading ? 'جار الإيقاف…' : 'إيقاف النشر'}
           </button>
           <button type="button" className={styles.cancel} onClick={onClose} disabled={loading}>
             تراجع

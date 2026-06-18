@@ -39,6 +39,15 @@ export interface PublicTreeRef {
   treeId: string;
   /** Curation label for the item (the collection item's title). */
   titleAr: string;
+  /** LIVE effective visibility of the surviving leaf — public_link vs
+   * public_listed drives the fully-listable predicate (listing readiness). */
+  effectiveVisibility: TreeVisibility;
+  /** True when the leaf's source workspace differs from the publishing one. */
+  isCrossWorkspace: boolean;
+  /** The leaf's own display name (own tree → its nameAr). */
+  treeNameAr: string | null;
+  /** For a cross-workspace borrow: the source workspace's display name. */
+  sourceWorkspaceNameAr: string | null;
 }
 
 /** One item inside a collection node, as the pure walk sees it. */
@@ -53,6 +62,11 @@ export type CollectionWalkItem =
       allowReuse: boolean;
       /** True when the source workspace differs from the publishing workspace. */
       isCrossWorkspace: boolean;
+      /** The leaf tree's own display name (own tree → its nameAr). Optional so
+       * existing walk fixtures stay valid; the readiness reader defaults null. */
+      treeNameAr?: string | null;
+      /** Cross-workspace borrow: the source workspace's display name. */
+      sourceWorkspaceNameAr?: string | null;
     }
   | {
       kind: 'collection';
@@ -124,6 +138,10 @@ export function collectPublicTreeRefs(
           refs.push({
             treeId: item.treeRef.treeId,
             titleAr: item.titleAr,
+            effectiveVisibility: item.effectiveVisibility,
+            isCrossWorkspace: item.isCrossWorkspace,
+            treeNameAr: item.treeNameAr ?? null,
+            sourceWorkspaceNameAr: item.sourceWorkspaceNameAr ?? null,
           });
         } else {
           // Recurse only into a public child collection.
@@ -151,6 +169,8 @@ export interface PublicCollectionRecord {
   descriptionAr: string | null;
   visibility: 'public_link' | 'public_listed';
   publicSlug: string;
+  /** Last edit timestamp — the sitemap `lastModified` for this collection. */
+  updatedAt: Date;
 }
 
 /**
@@ -170,6 +190,7 @@ export async function loadPublicCollectionBySlug(
       descriptionAr: true,
       visibility: true,
       publicSlug: true,
+      updatedAt: true,
       workspace: { select: { enableCollections: true } },
     },
   });
@@ -190,6 +211,7 @@ export async function loadPublicCollectionBySlug(
     descriptionAr: collection.descriptionAr,
     visibility: collection.visibility,
     publicSlug: collection.publicSlug as string,
+    updatedAt: collection.updatedAt,
   };
 }
 
@@ -246,7 +268,7 @@ async function loadWalkNodes(
           branchPointerId: true,
           // LIVE source facts — never trust a stored copy.
           tree: {
-            select: { id: true, workspaceId: true, visibility: true },
+            select: { id: true, workspaceId: true, visibility: true, nameAr: true },
           },
           // A collection-link pointer has no `sourceTreeId` column; the leaf
           // tree it borrows is the tree that OWNS its root individual in the
@@ -257,7 +279,16 @@ async function loadWalkNodes(
               status: true,
               rootIndividual: {
                 select: {
-                  tree: { select: { id: true, workspaceId: true, visibility: true, allowReuse: true } },
+                  tree: {
+                    select: {
+                      id: true,
+                      workspaceId: true,
+                      visibility: true,
+                      allowReuse: true,
+                      nameAr: true,
+                      workspace: { select: { nameAr: true } },
+                    },
+                  },
                 },
               },
             },
@@ -295,6 +326,8 @@ async function loadWalkNodes(
           // Own tree: same workspace → not cross-workspace, allowReuse ignored.
           allowReuse: true,
           isCrossWorkspace: it.tree.workspaceId !== workspaceId,
+          treeNameAr: it.tree.nameAr,
+          sourceWorkspaceNameAr: null,
         });
       } else if (it.branchPointerId && it.branchPointer) {
         // A cross-workspace borrowed (linked) branch — the leaf is the SOURCE
@@ -316,6 +349,8 @@ async function loadWalkNodes(
             : 'private',
           allowReuse: active ? leaf!.allowReuse : false,
           isCrossWorkspace: true,
+          treeNameAr: active ? leaf!.nameAr : null,
+          sourceWorkspaceNameAr: active ? (leaf!.workspace?.nameAr ?? null) : null,
         });
       }
       // Any other shape (dangling tree/pointer reference) is dropped — the leaf
@@ -439,4 +474,150 @@ export async function countPublishableTrees(
   }
 
   return { withheldTrees, publishableCount };
+}
+
+// ===========================================================================
+// Listing readiness — the ONE "is a collection fully-listable" predicate.
+// ===========================================================================
+
+export interface CollectionListingReadiness {
+  /** True iff EVERY servable leaf (across nested collections) is public_listed. */
+  fullyListable: boolean;
+  /** Servable own-workspace leaves that are public_link (not listed). */
+  notListedOwnTrees: { treeId: string; titleAr: string }[];
+  /** Servable cross-workspace borrows that are public_link (not listed). */
+  notListedBorrowedTrees: { titleAr: string; sourceWorkspaceNameAr: string }[];
+}
+
+function isListed(v: TreeVisibility): boolean {
+  return v === 'public_listed';
+}
+
+/**
+ * Compute whether a published collection is fully search-listable: every leaf
+ * tree that SURVIVES the public withholding walk (recursing nested collections
+ * via the bounded `collectPublicTreeRefs`) must itself be `public_listed`. A
+ * surviving leaf that is merely `public_link` is what blocks listing — split
+ * into own-workspace trees (the publisher can fix directly) vs cross-workspace
+ * borrows (the other family must change). This is the single source of the
+ * "fully-listable" predicate; sitemap + publish-preview consume it.
+ *
+ * Returns null when the slug is unknown / private / Collections-off — same
+ * deny-by-default posture as the serve path (no enumeration oracle).
+ */
+export const getCollectionListingReadiness = cache(
+  async (slug: string): Promise<CollectionListingReadiness | null> => {
+    // Cached loader (shared with the SSR page) so generateMetadata + the page
+    // body don't each re-walk the collection graph for the same request.
+    const record = await getPublicCollectionForRequest(slug);
+    if (!record) return null;
+    return computeListingReadiness(record.collectionId, record.workspaceId);
+  },
+);
+
+/**
+ * Id-keyed readiness for the ADMIN pre-publish surface (publish-preview +
+ * visibility PATCH). A still-private collection has no public slug yet, so the
+ * slug-keyed path can't reach it — this entry resolves the collection by id and
+ * computes readiness REGARDLESS of the collection's own visibility (the admin
+ * is evaluating "if I publish this"). Returns null only when the collection
+ * doesn't exist. Shares the exact same core as the public slug-keyed path.
+ */
+export async function getCollectionListingReadinessById(
+  collectionId: string,
+): Promise<CollectionListingReadiness | null> {
+  const row = await prisma.collection.findUnique({
+    where: { id: collectionId },
+    select: { workspaceId: true },
+  });
+  if (!row) return null;
+  return computeListingReadiness(collectionId, row.workspaceId);
+}
+
+/**
+ * The shared listing-readiness core: walk the collection graph (recursing
+ * nested collections via the bounded `collectPublicTreeRefs`) and classify the
+ * surviving public leaves into already-listed vs public-but-not-listed, the
+ * latter split own-workspace vs cross-workspace borrow.
+ *
+ * The root node is treated as public for the walk so the pre-publish admin path
+ * (a still-private root collection) evaluates the SAME way the public path does
+ * once published — matching `countPublishableTrees`, which iterates the root's
+ * items directly and never gates on the root's own visibility. Nested child
+ * collections are still gated on THEIR live visibility (a public parent never
+ * widens a non-public child).
+ */
+async function computeListingReadiness(
+  collectionId: string,
+  workspaceId: string,
+): Promise<CollectionListingReadiness> {
+  const nodes = await loadWalkNodes(workspaceId);
+
+  // Treat the root as public for the walk (pre-publish parity). Child nodes keep
+  // their own live visibility — only the entrypoint is forced open.
+  const rootNode = nodes.get(collectionId);
+  if (rootNode && !isPublic(rootNode.visibility)) {
+    nodes.set(collectionId, { ...rootNode, visibility: 'public_listed' });
+  }
+
+  const refs = collectPublicTreeRefs(collectionId, {
+    getCollectionNode: (id) => nodes.get(id) ?? null,
+  });
+
+  const notListedOwnTrees: { treeId: string; titleAr: string }[] = [];
+  const notListedBorrowedTrees: { titleAr: string; sourceWorkspaceNameAr: string }[] = [];
+  const seenOwn = new Set<string>();
+
+  for (const ref of refs) {
+    if (isListed(ref.effectiveVisibility)) continue; // already listed → fine
+    // Surviving the walk means it is public; not-listed means public_link.
+    if (ref.isCrossWorkspace) {
+      notListedBorrowedTrees.push({
+        titleAr: ref.treeNameAr ?? ref.titleAr,
+        sourceWorkspaceNameAr: ref.sourceWorkspaceNameAr ?? 'غير معروف',
+      });
+    } else {
+      if (ref.treeId && seenOwn.has(ref.treeId)) continue;
+      if (ref.treeId) seenOwn.add(ref.treeId);
+      notListedOwnTrees.push({
+        treeId: ref.treeId,
+        titleAr: ref.treeNameAr ?? ref.titleAr,
+      });
+    }
+  }
+
+  const fullyListable =
+    notListedOwnTrees.length === 0 && notListedBorrowedTrees.length === 0;
+  return { fullyListable, notListedOwnTrees, notListedBorrowedTrees };
+}
+
+/**
+ * The sitemap data source for published collections. A collection is indexable
+ * iff it is `public_listed`, its workspace has Collections enabled, AND it is
+ * fully-listable (every servable leaf is `public_listed`). Re-queried LIVE per
+ * sitemap build — a collection flipped private/by-link, or one whose leaf turns
+ * by-link, vanishes on the next build (fail-closed: no entry).
+ */
+export async function listIndexableCollectionSlugs(): Promise<
+  { slug: string; lastModified: Date }[]
+> {
+  const collections = await prisma.collection.findMany({
+    where: {
+      visibility: 'public_listed',
+      workspace: { enableCollections: true },
+    },
+    select: { id: true, workspaceId: true, publicSlug: true, updatedAt: true },
+  });
+
+  // Compute readiness straight from the id-keyed core (the rows are already
+  // loaded — no per-slug reload) and in parallel rather than one-by-one.
+  const entries = await Promise.all(
+    collections.map(async (c) => {
+      const slug = c.publicSlug as string | null;
+      if (!slug) return null;
+      const readiness = await computeListingReadiness(c.id, c.workspaceId);
+      return readiness.fullyListable ? { slug, lastModified: c.updatedAt } : null;
+    }),
+  );
+  return entries.filter((e): e is { slug: string; lastModified: Date } => e !== null);
 }

@@ -1,18 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
 import { prisma } from '@/lib/db'
 import { requireWorkspaceAdmin, isErrorResponse } from '@/lib/api/workspace-auth'
 import { requireCollectionsEnabled } from '@/lib/api/workspace-auth'
 import { treeMutateLimiter, rateLimitResponse } from '@/lib/api/rate-limit'
 import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers'
-import { generateUniqueCollectionSlug } from '@/lib/collections/queries'
+import {
+  generateUniqueCollectionSlug,
+  promoteOwnTreesToListed,
+} from '@/lib/collections/queries'
+import { collectionVisibilityPatchSchema } from '@/lib/collections/schemas'
+import { getCollectionListingReadinessById } from '@/lib/collections/public-serve'
 
 type RouteParams = { params: Promise<{ id: string; collectionId: string }> }
-
-/** Collection visibility ladder — the THREE DB values, set directly. */
-const collectionVisibilitySchema = z.object({
-  visibility: z.enum(['private', 'public_link', 'public_listed']),
-})
 
 /**
  * PATCH /api/workspaces/[id]/collections/[collectionId]/visibility — set a
@@ -38,9 +37,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   const { allowed, retryAfterSeconds } = treeMutateLimiter.check(auth.user.id)
   if (!allowed) return rateLimitResponse(retryAfterSeconds)
 
-  const parsed = await parseValidatedBody(request, collectionVisibilitySchema)
+  const parsed = await parseValidatedBody(request, collectionVisibilityPatchSchema)
   if (isParseError(parsed)) return parsed
-  const { visibility } = parsed.data
+  const { visibility, promoteOwnTreesToListed: promote } = parsed.data
 
   // Scope the lookup by workspace so a foreign id is indistinguishable from a
   // missing one (404, no existence leak).
@@ -52,22 +51,80 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'غير موجود' }, { status: 404 })
   }
 
-  const data: Record<string, unknown> = { visibility }
-  if (visibility !== 'private') {
-    // Going public (or switching public levels): ensure a slug exists; keep the
-    // existing one (re-publish / link<->listed never regenerates it).
-    if (!collection.publicSlug) {
-      data.publicSlug = await generateUniqueCollectionSlug()
-      data.publishedAt = new Date()
-      data.publishedById = auth.user.id
-    }
+  // Going public mints an unguessable slug on first publish; the address is
+  // STABLE thereafter (kept across a private round-trip, never regenerated).
+  // Build the publish fields once, applied by whichever write path runs below.
+  const publishFields: Record<string, unknown> = {}
+  if (visibility !== 'private' && !collection.publicSlug) {
+    publishFields.publicSlug = await generateUniqueCollectionSlug()
+    publishFields.publishedAt = new Date()
+    publishFields.publishedById = auth.user.id
   }
   // Going private deliberately KEEPS publicSlug (stable address across a
   // round-trip — the serving route denies-by-default on private visibility).
 
+  // -------------------------------------------------------------------------
+  // public_listed — the privacy-sensitive case. A collection may be search-
+  // listed ONLY when every servable leaf tree is itself public_listed; a
+  // link-only family must never be surfaced in search against its owner's
+  // choice. We may promote the CALLER's own public_link trees to listed (their
+  // own /family page also becomes indexed — the modal warns the owner). We can
+  // NEVER touch another workspace's tree, so a still-not-listed BORROWED tree
+  // blocks listing: we publish public_link instead and report it.
+  //
+  // Readiness is computed by COLLECTION ID (the id-keyed admin variant) so a
+  // still-private collection with no slug yet evaluates correctly.
+  // -------------------------------------------------------------------------
+  if (visibility === 'public_listed') {
+    const readiness = await getCollectionListingReadinessById(collection.id)
+    const ownNotListed = readiness?.notListedOwnTrees ?? []
+    const borrowedNotListed = readiness?.notListedBorrowedTrees ?? []
+
+    // A still-not-listed borrowed tree is the owner's to resolve out-of-band
+    // (ask the source family, or remove it) — listing is blocked. Publish
+    // public_link instead and report what blocked it.
+    if (borrowedNotListed.length > 0) {
+      const updated = await prisma.collection.update({
+        where: { id: collection.id },
+        data: { ...publishFields, visibility: 'public_link' },
+        select: { visibility: true, publicSlug: true },
+      })
+      return NextResponse.json({
+        data: {
+          visibility: updated.visibility,
+          publicSlug: updated.publicSlug,
+          listedBlocked: true,
+          blockingBorrowed: borrowedNotListed,
+        },
+      })
+    }
+
+    // Nothing borrowed blocks. Flip the caller's own public_link leaves to
+    // listed (only when opted in) and list the collection — atomically.
+    const updated = await prisma.$transaction(async (tx) => {
+      if (promote && ownNotListed.length > 0) {
+        await promoteOwnTreesToListed(
+          ownNotListed.map((t) => t.treeId),
+          workspaceId,
+          tx,
+        )
+      }
+      return tx.collection.update({
+        where: { id: collection.id },
+        data: { ...publishFields, visibility: 'public_listed' },
+        select: { visibility: true, publicSlug: true },
+      })
+    })
+
+    return NextResponse.json({
+      data: { visibility: updated.visibility, publicSlug: updated.publicSlug },
+    })
+  }
+
+  // private / public_link — set directly, applying any first-publish slug.
   const updated = await prisma.collection.update({
     where: { id: collection.id },
-    data,
+    data: { ...publishFields, visibility },
     select: { visibility: true, publicSlug: true },
   })
 

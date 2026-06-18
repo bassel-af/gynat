@@ -243,6 +243,30 @@ export async function deleteExtraTree(workspaceId: string, treeId: string) {
   return result.count > 0;
 }
 
+/**
+ * Promote the given OWN leaf trees from `public_link` to `public_listed` so a
+ * collection can be search-listed without exposing a link-only family against
+ * its owner's choice (Slice C).
+ *
+ * Privacy non-negotiable: the WHERE clause is scoped to `workspaceId` AND
+ * `visibility:'public_link'`, so a foreign-workspace treeId in the list can
+ * NEVER be flipped (it just doesn't match) and an already-private tree is never
+ * silently published. No-op (no DB write) on an empty list. Accepts a tx client
+ * so the route can flip trees + collection atomically.
+ */
+export async function promoteOwnTreesToListed(
+  treeIds: string[],
+  workspaceId: string,
+  client: PrismaLike = prisma,
+): Promise<number> {
+  if (treeIds.length === 0) return 0;
+  const result = await client.familyTree.updateMany({
+    where: { id: { in: treeIds }, workspaceId, visibility: 'public_link' },
+    data: { visibility: 'public_listed' },
+  });
+  return result.count;
+}
+
 // ---------------------------------------------------------------------------
 // Item CRUD (DB-backed)
 // ---------------------------------------------------------------------------
