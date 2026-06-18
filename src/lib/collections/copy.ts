@@ -5,6 +5,7 @@ import { dbTreeToGedcomData } from '@/lib/tree/mapper';
 import { getWorkspaceKey } from '@/lib/tree/encryption';
 import { persistDeepCopy } from '@/lib/tree/branch-pointer-deep-copy';
 import type { DeepCopyResult } from '@/lib/tree/branch-pointer-deep-copy';
+import { assertExtraTreeCapacity } from '@/lib/collections/extra-tree-cap';
 import type { GedcomData, Individual, Family } from '@/lib/gedcom/types';
 
 // ---------------------------------------------------------------------------
@@ -77,6 +78,10 @@ export async function copyTreeIntoNewExtraTree(input: {
   sourceTreeId: string;
   nameAr: string;
 }): Promise<{ newTreeId: string; nameAr: string; peopleCount: number }> {
+  // Minting another extra tree — reject when the workspace is at the cap before
+  // doing any decrypt/copy work (same limit the extra-trees POST route enforces).
+  await assertExtraTreeCapacity(input.workspaceId);
+
   const sourceTree = await prisma.familyTree.findFirst({
     where: { id: input.sourceTreeId, workspaceId: input.workspaceId },
     include: TREE_INCLUDES,

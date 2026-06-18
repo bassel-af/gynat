@@ -6,7 +6,6 @@ import { requireCollectionsEnabled } from '@/lib/api/workspace-auth'
 import { treeMutateLimiter, rateLimitResponse } from '@/lib/api/rate-limit'
 import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers'
 import { generateUniqueCollectionSlug } from '@/lib/collections/queries'
-import { freezeCollectionLinks } from '@/lib/tree/going-private'
 
 type RouteParams = { params: Promise<{ id: string; collectionId: string }> }
 
@@ -22,8 +21,9 @@ const collectionVisibilitySchema = z.object({
  *
  * Mints an unguessable public slug on first publish; KEEPS the slug across a
  * private round-trip (the public address is stable — owner's decision, §7.11).
- * Going private freezes any anchor-less collection-link borrows that source FROM
- * this workspace into frozen copies (the preservation path, best-effort).
+ * No collection-link freeze runs here: a collection going private flips no source
+ * tree's visibility, so there is nothing to preserve (that path is driven by a
+ * TREE going private — see freezeCollectionLinks in tree/going-private.ts).
  */
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   const { id: workspaceId, collectionId } = await params
@@ -52,8 +52,6 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'غير موجود' }, { status: 404 })
   }
 
-  const goingPrivate = visibility === 'private' && collection.visibility !== 'private'
-
   const data: Record<string, unknown> = { visibility }
   if (visibility !== 'private') {
     // Going public (or switching public levels): ensure a slug exists; keep the
@@ -73,18 +71,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     select: { visibility: true, publicSlug: true },
   })
 
-  // Going private must not silently break collections borrowing FROM this
-  // workspace: freeze each anchor-less collection-link borrow into a frozen
-  // copy + re-point its dependent items. Best-effort.
-  if (goingPrivate) {
-    try {
-      await freezeCollectionLinks(workspaceId)
-    } catch (e) {
-      console.error('[collection-visibility] collection-link freeze failed', {
-        errorType: (e as Error)?.name,
-      })
-    }
-  }
+  // NOTE: a collection going private changes NO source tree's visibility, so the
+  // collection-link freeze-repoint does NOT run here — it is driven by a TREE
+  // going private (see freezeCollectionLinks in tree/going-private.ts), the only
+  // event that actually flips a borrowed source's reuse/visibility.
 
   return NextResponse.json({
     data: { visibility: updated.visibility, publicSlug: updated.publicSlug },

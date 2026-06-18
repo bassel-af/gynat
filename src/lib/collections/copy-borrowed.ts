@@ -22,6 +22,7 @@ import { getWorkspaceKey } from '@/lib/tree/encryption';
 import { extractPointedSubtree } from '@/lib/tree/branch-pointer-merge';
 import { persistDeepCopy } from '@/lib/tree/branch-pointer-deep-copy';
 import { prepareTreeSnapshot } from '@/lib/collections/copy';
+import { assertExtraTreeCapacity } from '@/lib/collections/extra-tree-cap';
 import { WHOLE_TREE_ROOT, type ResolvedLinkSource } from '@/lib/collections/resolve-link';
 import type { GedcomData } from '@/lib/gedcom/types';
 
@@ -40,6 +41,10 @@ export async function copyBorrowedBranchIntoNewExtraTree(
   input: CopyBorrowedInput,
 ): Promise<{ newTreeId: string; peopleCount: number }> {
   const { addingWorkspaceId, source, nameAr } = input;
+
+  // Minting another extra tree in the ADDING workspace — reject at the cap before
+  // any decrypt/copy work (same limit the extra-trees POST route enforces).
+  await assertExtraTreeCapacity(addingWorkspaceId);
 
   // Source key decrypts; target key re-encrypts. Resolve both BEFORE the tx so
   // the master-key unwrap stays off the DB lock (matches the pointer-copy route).

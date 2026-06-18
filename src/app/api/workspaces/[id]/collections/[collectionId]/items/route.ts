@@ -26,6 +26,7 @@ import {
   WHOLE_TREE_ROOT,
 } from '@/lib/collections/resolve-link';
 import { copyBorrowedBranchIntoNewExtraTree } from '@/lib/collections/copy-borrowed';
+import { ExtraTreeCapError } from '@/lib/collections/extra-tree-cap';
 
 type RouteParams = { params: Promise<{ id: string; collectionId: string }> };
 
@@ -143,11 +144,17 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   // linkMode 'copied' snapshots the tree into a new extra tree, which always
   // mints a brand-new tree id so it can never collide — a plain insert.
   if (input.linkMode === 'copied') {
-    const { newTreeId } = await copyTreeIntoNewExtraTree({
-      workspaceId,
-      sourceTreeId: input.treeId!,
-      nameAr: input.titleAr,
-    });
+    let newTreeId: string;
+    try {
+      ({ newTreeId } = await copyTreeIntoNewExtraTree({
+        workspaceId,
+        sourceTreeId: input.treeId!,
+        nameAr: input.titleAr,
+      }));
+    } catch (err) {
+      if (err instanceof ExtraTreeCapError) return rateLimitResponse(0);
+      throw err;
+    }
     const item = await addItem({
       collectionId,
       kind: 'tree',
@@ -248,11 +255,17 @@ async function addByLink(
   // so it does NOT need resolvePublicTreeRoot. Resolving the root below (linked-only)
   // avoids a redundant whole-tree decrypt on a public-slug copy.
   if (input.linkMode === 'copied') {
-    const { newTreeId } = await copyBorrowedBranchIntoNewExtraTree({
-      addingWorkspaceId: workspaceId,
-      source,
-      nameAr: input.titleAr,
-    });
+    let newTreeId: string;
+    try {
+      ({ newTreeId } = await copyBorrowedBranchIntoNewExtraTree({
+        addingWorkspaceId: workspaceId,
+        source,
+        nameAr: input.titleAr,
+      }));
+    } catch (err) {
+      if (err instanceof ExtraTreeCapError) return rateLimitResponse(0);
+      throw err;
+    }
     const item = await addItem({
       collectionId,
       kind: 'tree',

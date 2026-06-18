@@ -57,7 +57,6 @@ describe('PublishFlowContainer — preview fetch', () => {
       <PublishFlowContainer
         workspaceId="ws-1"
         treeId="extra-9"
-        familyName="فرع بني تميم"
         onClose={vi.fn()}
       />,
     );
@@ -70,7 +69,7 @@ describe('PublishFlowContainer — preview fetch', () => {
   test('fetches the preview WITHOUT a treeId query for the main tree', async () => {
     mockApiFetch.mockResolvedValue(previewResponse());
     render(
-      <PublishFlowContainer workspaceId="ws-1" familyName="آل السعيد" onClose={vi.fn()} />,
+      <PublishFlowContainer workspaceId="ws-1" onClose={vi.fn()} />,
     );
     await waitFor(() => expect(mockApiFetch).toHaveBeenCalled());
     expect(mockApiFetch.mock.calls[0][0]).toBe(
@@ -102,7 +101,6 @@ describe('PublishFlowContainer — visibility PATCH', () => {
       <PublishFlowContainer
         workspaceId="ws-1"
         treeId="extra-9"
-        familyName="فرع بني تميم"
         onClose={vi.fn()}
         onChanged={onChanged}
       />,
@@ -130,7 +128,7 @@ describe('PublishFlowContainer — visibility PATCH', () => {
         : Promise.resolve(previewResponse()),
     );
     render(
-      <PublishFlowContainer workspaceId="ws-1" familyName="فرع بني تميم" onClose={vi.fn()} />,
+      <PublishFlowContainer workspaceId="ws-1" onClose={vi.fn()} />,
     );
     await walkToPublish('فرع بني تميم');
 
@@ -143,16 +141,13 @@ describe('PublishFlowContainer — visibility PATCH', () => {
     expect(body.treeId).toBeUndefined();
   });
 
-  // Regression: the editor top bar always passes the WORKSPACE name as
-  // `familyName`, but the server validates the typed phrase against the ACTIVE
-  // tree's `tree.nameAr || workspace.nameAr`. For an extra tree opened in the
-  // editor those differ, so driving the confirm phrase from the prop made
-  // publishing impossible (400 «عبارة التأكيد غير صحيحة»). The container must
-  // drive the type-to-confirm + the sent phrase from `preview.confirmationPhrase`
-  // (the server's source of truth), never the prop.
-  test('uses the server confirmation phrase (preview), not the familyName prop', async () => {
+  // Regression: the server validates the typed phrase against the ACTIVE tree's
+  // `tree.nameAr || workspace.nameAr` (returned as `confirmationPhrase`). The
+  // container MUST drive the type-to-confirm gate + the sent phrase from
+  // `preview.confirmationPhrase` (the server's source of truth) — there is no
+  // client-supplied name to diverge from anymore.
+  test('uses the server confirmation phrase (preview) for the type-to-confirm gate', async () => {
     const SERVER_PHRASE = 'شجرة الفرع'; // = tree.nameAr || workspace.nameAr
-    const PROP_NAME = 'اسم المساحة'; // workspace name the editor passes
     mockApiFetch.mockImplementation((_url: string, opts?: { method?: string }) =>
       opts?.method === 'PATCH'
         ? Promise.resolve(patchResponse())
@@ -165,7 +160,6 @@ describe('PublishFlowContainer — visibility PATCH', () => {
       <PublishFlowContainer
         workspaceId="ws-1"
         treeId="extra-9"
-        familyName={PROP_NAME}
         onClose={vi.fn()}
       />,
     );

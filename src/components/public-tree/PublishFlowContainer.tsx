@@ -27,7 +27,6 @@ interface PublishFlowContainerProps {
    * visibility PATCH (body field) so the SAME flow drives every tree.
    */
   treeId?: string | null;
-  familyName: string;
   onClose: () => void;
   /**
    * Called after a successful visibility change with the new level. Used by the
@@ -49,7 +48,6 @@ interface PublishFlowContainerProps {
 export function PublishFlowContainer({
   workspaceId,
   treeId,
-  familyName,
   onClose,
   onChanged,
 }: PublishFlowContainerProps) {
@@ -127,13 +125,9 @@ export function PublishFlowContainer({
       onClose={onClose}
       // The type-to-confirm phrase MUST be the server's source of truth
       // (`tree.nameAr || workspace.nameAr`, returned as `confirmationPhrase`) —
-      // the visibility route validates against exactly this. The `familyName`
-      // prop is the workspace name the editor top bar passes regardless of which
-      // tree is active, so for an extra tree opened in the editor it diverges
-      // and publishing 400s («عبارة التأكيد غير صحيحة»). Drive both the local
-      // gate and the sent phrase from the preview; keep the prop only as a
-      // pre-load fallback (never reached — we render null until preview loads).
-      familyName={preview.confirmationPhrase || familyName}
+      // the visibility route validates against exactly this. We render null until
+      // the preview loads, so `confirmationPhrase` is always present here.
+      familyName={preview.confirmationPhrase}
       currentLevel={preview.currentLevel}
       checkpointData={preview.checkpoint}
       shareUrl={shareUrl}

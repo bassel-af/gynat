@@ -10,11 +10,12 @@ import { treeMutateLimiter, rateLimitResponse } from '@/lib/api/rate-limit';
 import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
 import { createExtraTreeSchema } from '@/lib/collections/schemas';
 import { createExtraTree, peopleCountByTree } from '@/lib/collections/queries';
+// Single source of truth for the cap (also enforced by the copy paths).
+import { MAX_EXTRA_TREES_PER_WORKSPACE } from '@/lib/collections/extra-tree-cap';
 
 type RouteParams = { params: Promise<{ id: string }> };
 
-/** Hard cap on the number of extra trees a single workspace may hold. */
-export const MAX_EXTRA_TREES_PER_WORKSPACE = 50;
+export { MAX_EXTRA_TREES_PER_WORKSPACE };
 
 // POST /api/workspaces/[id]/extra-trees — Create an extra (collections) tree
 export async function POST(request: NextRequest, { params }: RouteParams) {

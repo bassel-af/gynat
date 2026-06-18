@@ -37,10 +37,6 @@ import {
 export interface PublicTreeRef {
   /** The referenced FamilyTree id (the leaf to serve). */
   treeId: string;
-  /** The workspace the leaf tree lives in. */
-  sourceWorkspaceId: string;
-  /** The specific tree id within that workspace (== treeId today; kept explicit). */
-  sourceTreeId: string;
   /** Curation label for the item (the collection item's title). */
   titleAr: string;
 }
@@ -49,7 +45,7 @@ export interface PublicTreeRef {
 export type CollectionWalkItem =
   | {
       kind: 'tree';
-      treeRef: { treeId: string; sourceWorkspaceId: string; sourceTreeId: string };
+      treeRef: { treeId: string };
       titleAr: string;
       /** LIVE effective visibility of the referenced tree (deny-by-default). */
       effectiveVisibility: TreeVisibility;
@@ -127,8 +123,6 @@ export function collectPublicTreeRefs(
           if (item.isCrossWorkspace && !item.allowReuse) continue;
           refs.push({
             treeId: item.treeRef.treeId,
-            sourceWorkspaceId: item.treeRef.sourceWorkspaceId,
-            sourceTreeId: item.treeRef.sourceTreeId,
             titleAr: item.titleAr,
           });
         } else {
@@ -261,7 +255,6 @@ async function loadWalkNodes(
           branchPointer: {
             select: {
               status: true,
-              sourceWorkspaceId: true,
               rootIndividual: {
                 select: {
                   tree: { select: { id: true, workspaceId: true, visibility: true, allowReuse: true } },
@@ -293,11 +286,7 @@ async function loadWalkNodes(
         // An OWN tree (linked or copied snapshot) — its visibility IS the leaf's.
         items.push({
           kind: 'tree',
-          treeRef: {
-            treeId: it.tree.id,
-            sourceWorkspaceId: it.tree.workspaceId,
-            sourceTreeId: it.tree.id,
-          },
+          treeRef: { treeId: it.tree.id },
           titleAr: it.titleAr,
           effectiveVisibility: resolveEffectiveVisibility({
             kind: 'tree',
@@ -317,11 +306,7 @@ async function loadWalkNodes(
         const active = ptr.status === 'active' && leaf != null;
         items.push({
           kind: 'tree',
-          treeRef: {
-            treeId: active ? leaf!.id : '',
-            sourceWorkspaceId: ptr.sourceWorkspaceId,
-            sourceTreeId: active ? leaf!.id : '',
-          },
+          treeRef: { treeId: active ? leaf!.id : '' },
           titleAr: it.titleAr,
           effectiveVisibility: active
             ? resolveEffectiveVisibility({

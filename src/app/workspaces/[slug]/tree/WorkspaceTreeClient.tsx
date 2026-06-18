@@ -175,7 +175,6 @@ function TreeContent({
         <TreeShell
           workspaceSlug={workspace.slug}
           workspaceId={workspace.id}
-          workspaceNameAr={workspace.nameAr}
         />
       </UndoStackProvider>
     </WorkspaceTreeProvider>
@@ -185,11 +184,9 @@ function TreeContent({
 function TreeShell({
   workspaceSlug,
   workspaceId,
-  workspaceNameAr,
 }: {
   workspaceSlug: string;
   workspaceId: string;
-  workspaceNameAr: string;
 }) {
   const { canEdit, isAdmin, activeTreeId } = useWorkspaceTree();
   const undoStack = useUndoStack();
@@ -254,7 +251,6 @@ function TreeShell({
         <PublishFlowContainer
           workspaceId={workspaceId}
           treeId={activeTreeId}
-          familyName={workspaceNameAr}
           onClose={() => setPublishOpen(false)}
         />
       )}

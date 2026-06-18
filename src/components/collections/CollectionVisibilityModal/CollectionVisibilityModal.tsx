@@ -1,15 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { WithheldBadge } from '@/components/collections/CollectionBadges/CollectionBadges';
 import {
   VISIBILITY_LABEL,
-  isWithheldWhenPublic,
+  getCollectionPublishPreview,
   setCollectionVisibility,
   type Collection,
-  type CollectionItem,
   type Visibility,
 } from '@/lib/collections/api';
 import styles from './CollectionVisibilityModal.module.css';
@@ -17,7 +16,6 @@ import styles from './CollectionVisibilityModal.module.css';
 interface CollectionVisibilityModalProps {
   workspaceId: string;
   collection: Collection;
-  items: CollectionItem[];
   onClose: () => void;
   /** Called after a successful publish/re-level/unpublish so the parent reloads. */
   onPublished: () => void;
@@ -60,7 +58,6 @@ const LEVELS: {
 export function CollectionVisibilityModal({
   workspaceId,
   collection,
-  items,
   onClose,
   onPublished,
 }: CollectionVisibilityModalProps) {
@@ -68,10 +65,30 @@ export function CollectionVisibilityModal({
   const [selected, setSelected] = useState<Visibility>(collection.visibility);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  // The §3 withhold list is computed SERVER-side (the publish-preview route via
+  // countPublishableTrees) — it applies the cross-workspace allowReuse gate the
+  // serve path uses, which the old client-side rule (private-only) under-reported.
+  const [withheld, setWithheld] = useState<{ titleAr: string }[]>([]);
 
-  const withheld = items.filter(isWithheldWhenPublic);
   const goingPublic = selected !== 'private';
   const changed = selected !== collection.visibility;
+
+  // Fetch the authoritative withhold list once (independent of the chosen level —
+  // it describes what WOULD be hidden if published). Only shown for a public level.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const preview = await getCollectionPublishPreview(workspaceId, collection.id);
+        if (!cancelled) setWithheld(preview.withheldTrees);
+      } catch {
+        // Best-effort — a failed preview just hides the warning, never blocks publish.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceId, collection.id]);
 
   async function confirm() {
     setBusy(true);
@@ -169,9 +186,9 @@ export function CollectionVisibilityModal({
               هذه الأشجار خاصة ولن تظهر للزوار
             </p>
             <ul className={styles.previewList}>
-              {withheld.map((item) => (
+              {withheld.map((item, i) => (
                 <li
-                  key={item.id}
+                  key={`${item.titleAr}-${i}`}
                   className={`${styles.previewRow} ${styles.previewRowWithheld}`}
                 >
                   <span className={styles.previewName}>{item.titleAr}</span>

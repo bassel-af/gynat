@@ -67,14 +67,19 @@ vi.mock('@/lib/tree/branch-pointer-deep-copy', async (importOriginal) => {
 });
 
 const mockTreeCreate = vi.fn((..._a: unknown[]): Promise<{ id: string }> => Promise.resolve({ id: NEW_TREE_ID }));
+const mockTreeCount = vi.fn((..._a: unknown[]): Promise<number> => Promise.resolve(0));
 const mockTransaction = vi.fn((fn: (tx: unknown) => unknown) =>
   fn({ familyTree: { create: (...a: unknown[]) => mockTreeCreate(...a) } }),
 );
 vi.mock('@/lib/db', () => ({
-  prisma: { $transaction: (fn: (tx: unknown) => unknown) => mockTransaction(fn) },
+  prisma: {
+    $transaction: (fn: (tx: unknown) => unknown) => mockTransaction(fn),
+    familyTree: { count: (...a: unknown[]) => mockTreeCount(...a) },
+  },
 }));
 
 import { copyBorrowedBranchIntoNewExtraTree } from '@/lib/collections/copy-borrowed';
+import { ExtraTreeCapError, MAX_EXTRA_TREES_PER_WORKSPACE } from '@/lib/collections/extra-tree-cap';
 import { WHOLE_TREE_ROOT } from '@/lib/collections/resolve-link';
 
 beforeEach(() => {
@@ -85,6 +90,7 @@ beforeEach(() => {
   );
   mockDbTreeToGedcomData.mockReturnValue(sourceData);
   mockTreeCreate.mockResolvedValue({ id: NEW_TREE_ID });
+  mockTreeCount.mockResolvedValue(0);
 });
 
 describe('copyBorrowedBranchIntoNewExtraTree — TWO-KEY cross-workspace deep copy', () => {
@@ -172,6 +178,26 @@ describe('copyBorrowedBranchIntoNewExtraTree — TWO-KEY cross-workspace deep co
     // The published EXTRA tree is fetched by its own id, scoped to the source
     // workspace — so a published extra tree is copyable, not just the main tree.
     expect(mockGetTreeByIdWithIncludes).toHaveBeenCalledWith(SOURCE_WS, EXTRA_TREE_ID);
+  });
+
+  test('rejects with ExtraTreeCapError when the target workspace is at the cap', async () => {
+    mockTreeCount.mockResolvedValue(MAX_EXTRA_TREES_PER_WORKSPACE);
+    await expect(
+      copyBorrowedBranchIntoNewExtraTree({
+        addingWorkspaceId: ADDING_WS,
+        source: {
+          type: 'private-token', sourceWorkspaceId: SOURCE_WS, sourceTreeId: SOURCE_TREE_ID,
+          rootIndividualId: ROOT_IND, depthLimit: null, includeGrafts: false,
+          isPublic: false, shareTokenId: 'tok-1', allowReuse: true,
+        },
+        nameAr: 'فرع منسوخ',
+      }),
+    ).rejects.toBeInstanceOf(ExtraTreeCapError);
+    // The cap is the ADDING (target) workspace, and we never reach the write.
+    expect(mockTreeCount).toHaveBeenCalledWith({
+      where: { workspaceId: ADDING_WS, kind: 'extra' },
+    });
+    expect(mockTransaction).not.toHaveBeenCalled();
   });
 
   test('throws when the source tree is missing (fail-closed)', async () => {

@@ -402,7 +402,6 @@ export function CollectionDetail({
         <CollectionVisibilityModal
           workspaceId={workspaceId}
           collection={collection}
-          items={items}
           onClose={() => setShowVisibility(false)}
           onPublished={() => {
             setShowVisibility(false);

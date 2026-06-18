@@ -40,7 +40,7 @@ describe('collectPublicTreeRefs — withholding rules', () => {
           items: [
             {
               kind: 'tree',
-              treeRef: { treeId: 't1', sourceWorkspaceId: 'ws1', sourceTreeId: 't1' },
+              treeRef: { treeId: 't1' },
               titleAr: 'شجرة',
               effectiveVisibility: 'public_link',
               allowReuse: true,
@@ -63,7 +63,7 @@ describe('collectPublicTreeRefs — withholding rules', () => {
           items: [
             {
               kind: 'tree',
-              treeRef: { treeId: 't1', sourceWorkspaceId: 'ws1', sourceTreeId: 't1' },
+              treeRef: { treeId: 't1' },
               titleAr: 'خاص',
               effectiveVisibility: 'private',
               allowReuse: true,
@@ -85,7 +85,7 @@ describe('collectPublicTreeRefs — withholding rules', () => {
           items: [
             {
               kind: 'tree',
-              treeRef: { treeId: 't1', sourceWorkspaceId: 'ws-src', sourceTreeId: 't1' },
+              treeRef: { treeId: 't1' },
               titleAr: 'مستعار',
               effectiveVisibility: 'public_link',
               allowReuse: false, // source turned reuse off → withhold
@@ -107,7 +107,7 @@ describe('collectPublicTreeRefs — withholding rules', () => {
           items: [
             {
               kind: 'tree',
-              treeRef: { treeId: 't1', sourceWorkspaceId: 'ws-src', sourceTreeId: 't1' },
+              treeRef: { treeId: 't1' },
               titleAr: 'مستعار',
               effectiveVisibility: 'public_link',
               allowReuse: true,
@@ -129,7 +129,7 @@ describe('collectPublicTreeRefs — withholding rules', () => {
           items: [
             {
               kind: 'tree',
-              treeRef: { treeId: 't1', sourceWorkspaceId: 'ws1', sourceTreeId: 't1' },
+              treeRef: { treeId: 't1' },
               titleAr: 'شجرتي',
               effectiveVisibility: 'public_link',
               allowReuse: false, // irrelevant for own tree
@@ -165,7 +165,7 @@ describe('collectPublicTreeRefs — recursion', () => {
           items: [
             {
               kind: 'tree',
-              treeRef: { treeId: 't2', sourceWorkspaceId: 'ws1', sourceTreeId: 't2' },
+              treeRef: { treeId: 't2' },
               titleAr: 'شجرة',
               effectiveVisibility: 'public_link',
               allowReuse: true,
@@ -199,7 +199,7 @@ describe('collectPublicTreeRefs — recursion', () => {
           items: [
             {
               kind: 'tree',
-              treeRef: { treeId: 't3', sourceWorkspaceId: 'ws1', sourceTreeId: 't3' },
+              treeRef: { treeId: 't3' },
               titleAr: 'شجرة',
               effectiveVisibility: 'public_link', // even a public tree inside stays hidden
               allowReuse: true,
@@ -241,7 +241,7 @@ describe('collectPublicTreeRefs — recursion', () => {
           items: [
             {
               kind: 'tree',
-              treeRef: { treeId: 'ta', sourceWorkspaceId: 'ws1', sourceTreeId: 'ta' },
+              treeRef: { treeId: 'ta' },
               titleAr: 'A',
               effectiveVisibility: 'public_link',
               allowReuse: true,

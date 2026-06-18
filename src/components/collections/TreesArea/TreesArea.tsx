@@ -469,7 +469,6 @@ export function TreesArea({
         <PublishFlowContainer
           workspaceId={workspaceId}
           treeId={dialog.treeId}
-          familyName={dialog.treeName}
           onClose={() => setDialog({ kind: 'none' })}
           onChanged={(level: Visibility) => {
             const id = dialog.treeId;
