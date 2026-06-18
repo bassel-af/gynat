@@ -7,7 +7,7 @@ import {
 } from '@/lib/api/workspace-auth';
 import { treeMutateLimiter, rateLimitResponse } from '@/lib/api/rate-limit';
 import { copyTreeIntoNewExtraTree } from '@/lib/collections/copy';
-import { MAX_EXTRA_TREES_PER_WORKSPACE } from '../../route';
+import { MAX_EXTRA_TREES_PER_WORKSPACE } from '@/lib/collections/extra-tree-cap';
 
 type RouteParams = { params: Promise<{ id: string; treeId: string }> };
 

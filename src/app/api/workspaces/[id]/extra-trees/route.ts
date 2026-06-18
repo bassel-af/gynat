@@ -15,8 +15,6 @@ import { MAX_EXTRA_TREES_PER_WORKSPACE } from '@/lib/collections/extra-tree-cap'
 
 type RouteParams = { params: Promise<{ id: string }> };
 
-export { MAX_EXTRA_TREES_PER_WORKSPACE };
-
 // POST /api/workspaces/[id]/extra-trees — Create an extra (collections) tree
 export async function POST(request: NextRequest, { params }: RouteParams) {
   const { id: workspaceId } = await params;
