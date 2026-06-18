@@ -45,7 +45,7 @@ Rate limiting lives in `src/lib/api/rate-limit.ts` — an in-memory per-user lim
 
 ## 3. Workspaces
 
-A workspace is the single organizational unit. Any authenticated user can create one (capped at 5 owned workspaces per user); the creator becomes the first `workspace_admin`. Creation is atomic — workspace + membership + fresh wrapped encryption key in one `$transaction`.
+A workspace is the single organizational unit. Any authenticated user can create one (capped at 10 owned workspaces per user); the creator becomes the first `workspace_admin`. Creation is atomic — workspace + membership + fresh wrapped encryption key in one `$transaction`.
 
 **Roles**: `workspace_admin` and `workspace_member`. Content permissions (`tree_editor`, `news_editor`, `album_editor`, `event_editor`) are an array on the membership row; admins implicitly have all of them.
 
@@ -362,7 +362,7 @@ Handles 5.5.1 with all Islamic extensions:
 - **Email verification**: `GOTRUE_MAILER_AUTOCONFIRM` is off — signup requires confirmation
 - **Member list** returns only `id`, `displayName`, `avatarUrl` (no email/phone)
 - **Invitation errors** are consolidated into a generic message to prevent enumeration
-- **Workspace creation**: capped at 5 owned per user; rate-limited
+- **Workspace creation**: capped at 10 owned per user; rate-limited
 - **Search engine indexing**: `robots.txt` disallow-all + explicit allow-list for the marketing pages; `/family/` and `/collections/` are NOT blanket-disallowed (per-page `noindex` handles unlisted ones — a crawler must fetch the page to read the `noindex` tag); `sitemap.xml` lists the marketing pages plus only `public_listed` main trees and fully-listable `public_listed` collections (re-queried live per build, fail-closed); `?next=` is disallowed so slugs can't leak
 
 ---

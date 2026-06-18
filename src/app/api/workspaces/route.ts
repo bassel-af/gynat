@@ -33,10 +33,10 @@ export async function POST(request: NextRequest) {
   const workspaceCount = await prisma.workspaceMembership.count({
     where: { userId: user.id, role: 'workspace_admin' },
   });
-  const maxWorkspaces = process.env.NODE_ENV === 'development' ? 50 : 5;
+  const maxWorkspaces = process.env.NODE_ENV === 'development' ? 50 : 10;
   if (workspaceCount >= maxWorkspaces) {
     return NextResponse.json(
-      { error: 'Maximum workspace limit reached' },
+      { error: 'لقد وصلت إلى الحد الأقصى لعدد مساحات العائلة' },
       { status: 403 },
     );
   }

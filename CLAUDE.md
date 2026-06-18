@@ -465,7 +465,7 @@ The GEDCOM file (`public/saeed-family.ged`):
 - **Input validation**: All Zod schemas have `.max()` constraints on string fields
 - **Privacy enforcement**: `isPrivate` individuals have PII redacted server-side before API response (names → "خاص", dates/places cleared, tree structure preserved)
 - **Error handling**: Unknown errors return generic 500 responses — no stack trace leakage
-- **Workspace limits**: Max 5 owned workspaces per user; workspace creation rate limited
+- **Workspace limits**: Max 10 owned workspaces per user; workspace creation rate limited
 - **Invitation security**: Generic error messages prevent enumeration; member list returns only `id`/`displayName`/`avatarUrl`
 
 ## TypeScript Configuration

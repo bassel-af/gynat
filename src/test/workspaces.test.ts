@@ -196,21 +196,21 @@ describe('POST /api/workspaces', () => {
     });
   });
 
-  test('returns 403 when user already has 5 workspaces', async () => {
+  test('returns 403 when user already has 10 workspaces', async () => {
     mockAuthenticatedUser();
     const { POST } = await import('@/app/api/workspaces/route');
 
-    mockMembershipCount.mockResolvedValue(5);
+    mockMembershipCount.mockResolvedValue(10);
 
     const request = makeRequest('http://localhost:3000/api/workspaces', {
       method: 'POST',
-      body: { slug: 'sixth-ws', nameAr: 'سادسة' },
+      body: { slug: 'eleventh-ws', nameAr: 'حادية عشرة' },
     });
     const response = await POST(request);
 
     expect(response.status).toBe(403);
     const body = await response.json();
-    expect(body.error).toContain('limit');
+    expect(body.error).toContain('الحد الأقصى');
 
     // Verify the count query filters by workspace_admin role (owned workspaces, not memberships)
     expect(mockMembershipCount).toHaveBeenCalledWith({
