@@ -8,7 +8,6 @@ import { passwordStrengthSchema } from '@/lib/profile/validation';
 import { translateAuthError } from '@/lib/auth/translate-error';
 import { preloadZxcvbn, checkPasswordStrength } from '@/lib/profile/password-strength';
 import { CenteredCardLayout } from '@/components/ui/CenteredCardLayout';
-import { AcknowledgmentModal } from '@/components/AcknowledgmentModal/AcknowledgmentModal';
 import styles from '../auth.module.css';
 
 export default function SignupPage() {
@@ -170,7 +169,6 @@ function SignupForm() {
 
   return (
     <CenteredCardLayout>
-      <AcknowledgmentModal />
       <div className={styles.icon}>
         <iconify-icon icon="material-symbols:account-tree" width="48" height="48" />
       </div>

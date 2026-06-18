@@ -6,7 +6,6 @@ import { createClient } from '@/lib/supabase/client';
 import { validateRedirectPath } from '@/lib/auth/validate-redirect';
 import { translateAuthError } from '@/lib/auth/translate-error';
 import { CenteredCardLayout } from '@/components/ui/CenteredCardLayout';
-import { AcknowledgmentModal } from '@/components/AcknowledgmentModal/AcknowledgmentModal';
 import styles from '../auth.module.css';
 
 export default function LoginPage() {
@@ -136,7 +135,6 @@ function LoginForm() {
 
   return (
     <CenteredCardLayout>
-      <AcknowledgmentModal />
       <div className={styles.icon}>
         <iconify-icon icon="material-symbols:account-tree" width="48" height="48" />
       </div>

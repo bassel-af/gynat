@@ -1,4 +1,3 @@
-import { AcknowledgmentModal } from '@/components/AcknowledgmentModal/AcknowledgmentModal';
 import { FigureCluster } from '@/components/heritage/FigureCluster';
 import LandingRedirector from './LandingRedirector';
 import { SITE_CONTACT_EMAIL } from '@/lib/site';
@@ -95,7 +94,6 @@ function renderFaqAnswer(answer: string) {
 export default function Home() {
   return (
     <main className={styles.root}>
-      <AcknowledgmentModal />
       <LandingRedirector />
 
       <div className={styles.page}>
