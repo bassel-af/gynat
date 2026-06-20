@@ -5,6 +5,7 @@ import {
   formatDateWithPlace,
   getDeceasedLabel,
   needsFamilyPickerForAddChild,
+  getEditableSpouseFamilyIds,
   validateAddParent,
   canMoveSubtree,
   getTargetFamiliesForMove,
@@ -235,19 +236,47 @@ describe('PersonDetail Phase 3 – edit form pre-fill', () => {
 })
 
 describe('PersonDetail Phase 3 – family picker for add-child', () => {
-  it('needs family picker when person has multiple families', () => {
+  function dataWith(families: Family[]): GedcomData {
+    return {
+      individuals: {},
+      families: Object.fromEntries(families.map((f) => [f.id, f])),
+    }
+  }
+
+  it('needs family picker when person has multiple editable families', () => {
     const person = makeIndividual({ familiesAsSpouse: ['@F1@', '@F2@'] })
-    expect(needsFamilyPickerForAddChild(person)).toBe(true)
+    const data = dataWith([makeFamily({ id: '@F1@' }), makeFamily({ id: '@F2@' })])
+    expect(needsFamilyPickerForAddChild(person, data)).toBe(true)
   })
 
   it('does not need family picker when person has one family', () => {
     const person = makeIndividual({ familiesAsSpouse: ['@F1@'] })
-    expect(needsFamilyPickerForAddChild(person)).toBe(false)
+    const data = dataWith([makeFamily({ id: '@F1@' })])
+    expect(needsFamilyPickerForAddChild(person, data)).toBe(false)
   })
 
   it('does not need family picker when person has no families', () => {
     const person = makeIndividual({ familiesAsSpouse: [] })
-    expect(needsFamilyPickerForAddChild(person)).toBe(false)
+    expect(needsFamilyPickerForAddChild(person, dataWith([]))).toBe(false)
+  })
+
+  it('ignores synthetic branch-pointer stitch families (regression: add-child to a pointer anchor)', () => {
+    // The anchor of a branch pointer has only the synthetic `ptr-{id}-fam`
+    // stitch family. It must not trigger the picker or count as editable.
+    const person = makeIndividual({ familiesAsSpouse: ['ptr-abc-fam'] })
+    const data = dataWith([makeFamily({ id: 'ptr-abc-fam', _pointed: true })])
+    expect(needsFamilyPickerForAddChild(person, data)).toBe(false)
+    expect(getEditableSpouseFamilyIds(person, data)).toEqual([])
+  })
+
+  it('keeps native families but drops synthetic ones when both are present', () => {
+    const person = makeIndividual({ familiesAsSpouse: ['@F1@', 'ptr-abc-fam'] })
+    const data = dataWith([
+      makeFamily({ id: '@F1@' }),
+      makeFamily({ id: 'ptr-abc-fam', _pointed: true }),
+    ])
+    expect(getEditableSpouseFamilyIds(person, data)).toEqual(['@F1@'])
+    expect(needsFamilyPickerForAddChild(person, data)).toBe(false)
   })
 })
 

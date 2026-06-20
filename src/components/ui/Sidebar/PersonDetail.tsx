@@ -574,7 +574,7 @@ export function PersonDetail({ personId }: PersonDetailProps) {
     setFormError('');
     if (!person || !data) return;
 
-    if (needsFamilyPickerForAddChild(person)) {
+    if (needsFamilyPickerForAddChild(person, data)) {
       setFamilyPickerMode('addChild');
     } else {
       setFormMode({ kind: 'addChild' });

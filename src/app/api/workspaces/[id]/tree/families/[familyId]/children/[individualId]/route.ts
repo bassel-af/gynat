@@ -7,12 +7,22 @@ import { getWorkspaceKey } from '@/lib/tree/encryption';
 import { parseTreeIdFromBody } from '@/lib/api/route-helpers';
 import { isUndoRequest } from '@/lib/api/undo-header';
 import { encryptAuditDescription, JSON_NULL } from '@/lib/tree/audit';
+import { isSyntheticFamilyId } from '@/lib/tree/branch-pointer-guards';
 
 type RouteParams = { params: Promise<{ id: string; familyId: string; individualId: string }> };
 
 // DELETE /api/workspaces/[id]/tree/families/[familyId]/children/[individualId] — Remove a child
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   const { id: workspaceId, familyId, individualId } = await params;
+
+  // Synthetic pointer family ids (`ptr-{id}-fam`) are not UUIDs — reject before
+  // they reach Prisma (would throw P2007 → empty 500 body on the client).
+  if (isSyntheticFamilyId(familyId)) {
+    return NextResponse.json(
+      { error: 'معرف العائلة غير صالح' },
+      { status: 400 },
+    );
+  }
 
   const result = await requireTreeEditor(request, workspaceId);
   if (isErrorResponse(result)) return result;

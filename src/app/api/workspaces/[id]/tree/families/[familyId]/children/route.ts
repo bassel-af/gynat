@@ -9,6 +9,7 @@ import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
 import { targetTreeIdSchema } from '@/lib/tree/schemas';
 import { isUndoRequest } from '@/lib/api/undo-header';
 import { encryptAuditDescription, JSON_NULL } from '@/lib/tree/audit';
+import { isSyntheticFamilyId } from '@/lib/tree/branch-pointer-guards';
 
 type RouteParams = { params: Promise<{ id: string; familyId: string }> };
 
@@ -20,6 +21,16 @@ const addChildSchema = z.object({
 // POST /api/workspaces/[id]/tree/families/[familyId]/children — Add a child to a family
 export async function POST(request: NextRequest, { params }: RouteParams) {
   const { id: workspaceId, familyId } = await params;
+
+  // Reject mutations on synthetic pointer families — their id (`ptr-{id}-fam`)
+  // is not a UUID, so reaching Prisma with it throws P2007 and returns an empty
+  // 500 body (the client then fails with "Unexpected end of JSON input").
+  if (isSyntheticFamilyId(familyId)) {
+    return NextResponse.json(
+      { error: 'معرف العائلة غير صالح' },
+      { status: 400 },
+    );
+  }
 
   const result = await requireTreeEditor(request, workspaceId);
   if (isErrorResponse(result)) return result;

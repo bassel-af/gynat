@@ -4,7 +4,7 @@ import type { IndividualFormData } from '@/components/tree/IndividualForm/Indivi
 import type { FamilyEventFormData } from '@/components/tree/FamilyEventForm/FamilyEventForm';
 import type { MoveSubtreeOption } from '@/components/tree/MoveSubtreeModal';
 import { apiFetch } from '@/lib/api/client';
-import { serializeIndividualForm } from '@/lib/person-detail-helpers';
+import { serializeIndividualForm, getEditableSpouseFamilyIds } from '@/lib/person-detail-helpers';
 import type { UndoEntry } from '@/lib/undo/types';
 import { buildUndoLabel } from '@/lib/tree/undo-label';
 import {
@@ -329,16 +329,20 @@ export function usePersonActions({
       const newPerson = await createIndividual(formData);
       newIndividualId = newPerson.id;
 
-      // Use the target family from the form mode, or the first family
+      // Use the target family from the form mode, or the first NATIVE family.
+      // Synthetic branch-pointer stitch families (the anchor's grafted-children
+      // family) are excluded — they're read-only and their id is not a UUID, so
+      // adding a child to one crashes the DB. When the person's only family is
+      // synthetic (e.g. a pointer anchor), fall through to create a native one.
       const targetFamilyId = formMode?.kind === 'addChild' ? formMode.targetFamilyId : undefined;
+      const editableFamilyIds = getEditableSpouseFamilyIds(person, data);
 
       if (targetFamilyId) {
         await addChildToFamily(targetFamilyId, newPerson.id);
-      } else if (person.familiesAsSpouse.length > 0) {
-        const familyId = person.familiesAsSpouse[0];
-        await addChildToFamily(familyId, newPerson.id);
+      } else if (editableFamilyIds.length > 0) {
+        await addChildToFamily(editableFamilyIds[0], newPerson.id);
       } else {
-        // No family exists — create one with current person as spouse and new person as child
+        // No native family exists — create one with current person as spouse and new person as child
         const familyOpts: { husbandId?: string; wifeId?: string; childrenIds: string[] } = {
           childrenIds: [newPerson.id],
         };

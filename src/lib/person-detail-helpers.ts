@@ -17,9 +17,32 @@ export function getDeceasedLabel(person: Individual): string | null {
   return person.sex === 'F' ? 'متوفية' : 'متوفى';
 }
 
+/**
+ * Family IDs where the person is a spouse AND the family is natively editable.
+ *
+ * Excludes synthetic branch-pointer stitch families (`ptr-{pointerId}-fam`,
+ * marked `_pointed`) and any other pointed/read-only family. These can appear
+ * in `familiesAsSpouse` when the person is the ANCHOR of a branch pointer — the
+ * stitch family is appended to the anchor's spouse-families so its grafted
+ * children render, but it must never be a target for native mutations (its id
+ * is not a UUID, so the DB rejects it).
+ */
+export function getEditableSpouseFamilyIds(
+  person: Individual,
+  data: GedcomData,
+): string[] {
+  return person.familiesAsSpouse.filter((familyId) => {
+    const family = data.families[familyId];
+    return family != null && !family._pointed;
+  });
+}
+
 /** Determine if family picker is needed for add-child action */
-export function needsFamilyPickerForAddChild(person: Individual): boolean {
-  return person.familiesAsSpouse.length > 1;
+export function needsFamilyPickerForAddChild(
+  person: Individual,
+  data: GedcomData,
+): boolean {
+  return getEditableSpouseFamilyIds(person, data).length > 1;
 }
 
 /** Add-parent validation result */
@@ -307,7 +330,7 @@ export function getFamiliesForPicker(
   person: Individual,
   data: GedcomData,
 ): Array<{ familyId: string; spouseName: string | null }> {
-  return person.familiesAsSpouse.map((familyId) => {
+  return getEditableSpouseFamilyIds(person, data).map((familyId) => {
     const family = data.families[familyId];
     if (!family) return { familyId, spouseName: null };
     const spouseId = family.husband === person.id ? family.wife : family.husband;
