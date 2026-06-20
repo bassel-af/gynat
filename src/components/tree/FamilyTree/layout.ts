@@ -198,92 +198,36 @@ export function getLayoutedElements(
     return { offsets, left, right };
   }
 
-  // Multi-wife parent (>1 spouse): each wife's children hang under her spouse
-  // handle. Children within a wife-group are contour-packed; groups are centered
-  // under their handle and pushed apart if they collide (preserves polygamy).
-  function layoutMultiWife(
-    nodeId: string,
-    w: number,
+  // Multi-wife parent (>1 spouse): reorder children so each wife's brood is
+  // contiguous and ordered by wife (the husband card, then wife-0, wife-1, …,
+  // matching the spouse cards left-to-right), then hand off to the SAME tight
+  // contour packing as the standard case. This keeps full siblings grouped by
+  // mother (the color-coded per-wife edges still tell them apart) while packing
+  // the whole brood compactly under the father — instead of flinging each
+  // wife's children far out under her own handle.
+  function reorderChildrenByWife(
     children: string[],
     childLayouts: SubtreeLayout[],
     handleMap: Map<string, string>,
-  ): SubtreeLayout {
-    const order: string[] = [];
+  ): { children: string[]; childLayouts: SubtreeLayout[] } {
     const groupIdxs = new Map<string, number[]>();
     children.forEach((childId, i) => {
       const handle = handleMap.get(childId) || 'default';
-      if (!groupIdxs.has(handle)) {
-        groupIdxs.set(handle, []);
-        order.push(handle);
-      }
+      if (!groupIdxs.has(handle)) groupIdxs.set(handle, []);
       groupIdxs.get(handle)!.push(i);
     });
+    const handleOrder = (h: string) => (h === 'default' ? -1 : parseInt(h.match(/spouse-(\d+)/)?.[1] ?? '0', 10));
+    const handles = [...groupIdxs.keys()].sort((a, b) => handleOrder(a) - handleOrder(b));
 
-    interface Grp {
-      handleX: number;
-      width: number;
-      gLeft: number;
-      idxs: number[];
-      shifts: number[];
-      acc: Contour;
-    }
-    const groups: Grp[] = [];
-    for (const handle of order) {
-      const idxs = groupIdxs.get(handle)!;
-      const { shifts, acc } = packByContour(idxs.map((i) => childLayouts[i]));
-      let gLeft = Infinity;
-      let gRight = -Infinity;
-      for (let d = 0; d < acc.left.length; d++) {
-        if (acc.left[d] < gLeft) gLeft = acc.left[d];
-        if (acc.right[d] > gRight) gRight = acc.right[d];
-      }
-      if (!isFinite(gLeft)) {
-        gLeft = 0;
-        gRight = 0;
-      }
-      const match = handle.match(/spouse-(\d+)/);
-      const handleX = match
-        ? NODE_WIDTH + SPOUSE_GAP + parseInt(match[1]) * SPOUSE_WIDTH + NODE_WIDTH / 2
-        : NODE_WIDTH / 2;
-      groups.push({ handleX, width: gRight - gLeft, gLeft, idxs, shifts, acc });
-    }
-
-    // Order by handle X and push colliding groups to the right.
-    groups.sort((a, b) => a.handleX - b.handleX);
-    for (let i = 1; i < groups.length; i++) {
-      const prevRight = groups[i - 1].handleX + groups[i - 1].width / 2;
-      const currLeft = groups[i].handleX - groups[i].width / 2;
-      if (currLeft < prevRight + HORIZONTAL_GAP) {
-        groups[i].handleX = prevRight + HORIZONTAL_GAP + groups[i].width / 2;
+    const outChildren: string[] = [];
+    const outLayouts: SubtreeLayout[] = [];
+    for (const h of handles) {
+      for (const i of groupIdxs.get(h)!) {
+        outChildren.push(children[i]);
+        outLayouts.push(childLayouts[i]);
       }
     }
-
-    const offsets = new Map<string, number>();
-    offsets.set(nodeId, 0);
-    const left = [0];
-    const right = [w];
-
-    for (const g of groups) {
-      const originAbs = g.handleX - g.width / 2 - g.gLeft;
-      g.idxs.forEach((childIdx, k) => {
-        const base = originAbs + g.shifts[k];
-        for (const [id, off] of childLayouts[childIdx].offsets) offsets.set(id, off + base);
-      });
-      for (let d = 0; d < g.acc.left.length; d++) {
-        const l = g.acc.left[d] + originAbs;
-        const r = g.acc.right[d] + originAbs;
-        const dd = d + 1;
-        if (dd >= left.length) {
-          left[dd] = l;
-          right[dd] = r;
-        } else {
-          if (l < left[dd]) left[dd] = l;
-          if (r > right[dd]) right[dd] = r;
-        }
-      }
-    }
-
-    return { offsets, left, right };
+    return { children: outChildren, childLayouts: outLayouts };
   }
 
   function layoutSubtree(nodeId: string): SubtreeLayout {
@@ -297,15 +241,18 @@ export function getLayoutedElements(
     const childLayouts = children.map(layoutSubtree);
 
     const node = nodeMap.get(nodeId);
-    // Multi-wife parents (>1 spouse) get per-wife child grouping. Single-spouse
-    // parents use the standard centered layout — their spouse-0 handle is at
-    // (NODE_WIDTH + SPOUSE_WIDTH) / 2, which aligns with centered children.
+    // Multi-wife parents (>1 spouse) get their children re-grouped by wife, then
+    // packed tight like any other siblings. Single-spouse parents pack as-is —
+    // their spouse-0 handle is at (NODE_WIDTH + SPOUSE_WIDTH) / 2, aligning with
+    // the centered children.
     const spouseCount = (node?.data as PersonNodeDataForLayout)?.spouses?.length || 0;
     const handleMap = childHandleMap.get(nodeId);
 
-    return spouseCount > 1 && handleMap
-      ? layoutMultiWife(nodeId, w, children, childLayouts, handleMap)
-      : layoutStandard(nodeId, w, children, childLayouts);
+    if (spouseCount > 1 && handleMap) {
+      const ordered = reorderChildrenByWife(children, childLayouts, handleMap);
+      return layoutStandard(nodeId, w, ordered.children, ordered.childLayouts);
+    }
+    return layoutStandard(nodeId, w, children, childLayouts);
   }
 
   const rootLayout = layoutSubtree(rootId);
