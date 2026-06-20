@@ -4,7 +4,7 @@ import type { GraftDescriptor } from '@/lib/gedcom/graph';
 // Layout configuration
 export const NODE_WIDTH = 170;
 export const NODE_HEIGHT = 140;
-export const SPOUSE_WIDTH = 190; // Additional width per spouse (card + gap)
+export const SPOUSE_WIDTH = 194; // Additional rendered width per spouse = card (NODE_WIDTH 170) + SPOUSE_GAP (24). Must match the DOM exactly, else tight sibling packing leaves near-zero gaps after wide multi-spouse nodes.
 export const HORIZONTAL_GAP = 48; // Gap between siblings
 export const VERTICAL_GAP = 150; // Gap between generations
 export const SPOUSE_GAP = 24; // Gap between person card and first spouse card
@@ -106,162 +106,229 @@ export function getLayoutedElements(
   const rootId = nodes.find((n) => !hasParent.has(n.id))?.id;
   if (!rootId) return { nodes, edges };
 
-  // Multi-wife layout info: groups of children positioned under each wife's handle
-  interface WifeGroup {
-    handleX: number; // handle X relative to node left edge
-    children: string[];
-    width: number; // total width of children subtrees with gaps
+  // ---------------------------------------------------------------------------
+  // Contour-based layout (Reingold–Tilford style).
+  //
+  // The previous layout reserved each subtree's full bounding-box width and
+  // centered every node over that whole box, so a shallow sibling was banished
+  // to the far edge of a wide sibling's box — a wide branch pushed its small
+  // brother far away with a big empty gap between them. Instead we now pack
+  // sibling subtrees by their CONTOURS (the closest-facing silhouette at each
+  // depth), sliding each one only until it clears the previous siblings by
+  // HORIZONTAL_GAP at every shared depth. A shallow sibling therefore tucks
+  // right beside a wide one and is pushed apart only at the depths where the
+  // wide subtree actually encroaches. Each parent is centered over the midpoint
+  // of its immediate children's cards.
+  // ---------------------------------------------------------------------------
+
+  type Contour = { left: number[]; right: number[] }; // by depth (0 = own row)
+  interface SubtreeLayout {
+    offsets: Map<string, number>; // nodeId -> left-edge X in this subtree's local frame
+    left: number[];
+    right: number[];
   }
-  const multiWifeLayout = new Map<string, {
-    groups: WifeGroup[];
-    nodeOffset: number; // offset of node left edge from subtree start
-  }>();
 
-  // Calculate subtree widths bottom-up (post-order traversal)
-  const subtreeWidths = new Map<string, number>();
+  // Merge `child` (slid right by `shift`, one level down) into the accumulated
+  // child-block contour (indexed by the child row = depth 0 of the block).
+  function mergeContour(acc: Contour, child: SubtreeLayout, shift: number) {
+    for (let d = 0; d < child.left.length; d++) {
+      const l = child.left[d] + shift;
+      const r = child.right[d] + shift;
+      if (d >= acc.left.length) {
+        acc.left[d] = l;
+        acc.right[d] = r;
+      } else {
+        if (l < acc.left[d]) acc.left[d] = l;
+        if (r > acc.right[d]) acc.right[d] = r;
+      }
+    }
+  }
 
-  function calculateSubtreeWidth(nodeId: string): number {
-    const children = childrenOf.get(nodeId) || [];
-    const nodeWidth = nodeWidths.get(nodeId) || NODE_WIDTH;
+  // Smallest shift so `child` clears `acc` by HORIZONTAL_GAP at every shared depth.
+  function requiredShift(acc: Contour, child: SubtreeLayout): number {
+    const maxD = Math.min(acc.right.length, child.left.length);
+    let shift = -Infinity;
+    for (let d = 0; d < maxD; d++) {
+      const need = acc.right[d] + HORIZONTAL_GAP - child.left[d];
+      if (need > shift) shift = need;
+    }
+    return shift === -Infinity ? 0 : shift;
+  }
 
-    if (children.length === 0) {
-      subtreeWidths.set(nodeId, nodeWidth);
-      return nodeWidth;
+  // Pack already-laid-out child subtrees left-to-right by contour.
+  function packByContour(childLayouts: SubtreeLayout[]): { shifts: number[]; acc: Contour } {
+    const acc: Contour = { left: [], right: [] };
+    const shifts: number[] = [];
+    for (let i = 0; i < childLayouts.length; i++) {
+      const shift = i === 0 ? 0 : requiredShift(acc, childLayouts[i]);
+      shifts.push(shift);
+      mergeContour(acc, childLayouts[i], shift);
+    }
+    return { shifts, acc };
+  }
+
+  // Standard parent: contour-pack the children and center the parent over the
+  // midpoint of the first and last child cards.
+  function layoutStandard(
+    nodeId: string,
+    w: number,
+    children: string[],
+    childLayouts: SubtreeLayout[],
+  ): SubtreeLayout {
+    const { shifts, acc } = packByContour(childLayouts);
+
+    const lastIdx = children.length - 1;
+    const firstLeft = shifts[0] + (childLayouts[0].offsets.get(children[0]) ?? 0);
+    const lastLeft = shifts[lastIdx] + (childLayouts[lastIdx].offsets.get(children[lastIdx]) ?? 0);
+    const nodeCenter = (firstLeft + lastLeft + NODE_WIDTH) / 2; // midpoint of first/last card centers
+    const nodeLeft = nodeCenter - w / 2;
+
+    const offsets = new Map<string, number>();
+    offsets.set(nodeId, nodeLeft);
+    for (let i = 0; i < childLayouts.length; i++) {
+      for (const [id, off] of childLayouts[i].offsets) offsets.set(id, off + shifts[i]);
     }
 
-    // Multi-wife parents (>1 spouse) get per-wife child grouping.
-    // Single-spouse parents use standard centered layout — their spouse-0
-    // handle is at (NODE_WIDTH + SPOUSE_WIDTH) / 2 which aligns with centered children.
+    const left = [nodeLeft];
+    const right = [nodeLeft + w];
+    for (let d = 0; d < acc.left.length; d++) {
+      left[d + 1] = acc.left[d];
+      right[d + 1] = acc.right[d];
+    }
+    return { offsets, left, right };
+  }
+
+  // Multi-wife parent (>1 spouse): each wife's children hang under her spouse
+  // handle. Children within a wife-group are contour-packed; groups are centered
+  // under their handle and pushed apart if they collide (preserves polygamy).
+  function layoutMultiWife(
+    nodeId: string,
+    w: number,
+    children: string[],
+    childLayouts: SubtreeLayout[],
+    handleMap: Map<string, string>,
+  ): SubtreeLayout {
+    const order: string[] = [];
+    const groupIdxs = new Map<string, number[]>();
+    children.forEach((childId, i) => {
+      const handle = handleMap.get(childId) || 'default';
+      if (!groupIdxs.has(handle)) {
+        groupIdxs.set(handle, []);
+        order.push(handle);
+      }
+      groupIdxs.get(handle)!.push(i);
+    });
+
+    interface Grp {
+      handleX: number;
+      width: number;
+      gLeft: number;
+      idxs: number[];
+      shifts: number[];
+      acc: Contour;
+    }
+    const groups: Grp[] = [];
+    for (const handle of order) {
+      const idxs = groupIdxs.get(handle)!;
+      const { shifts, acc } = packByContour(idxs.map((i) => childLayouts[i]));
+      let gLeft = Infinity;
+      let gRight = -Infinity;
+      for (let d = 0; d < acc.left.length; d++) {
+        if (acc.left[d] < gLeft) gLeft = acc.left[d];
+        if (acc.right[d] > gRight) gRight = acc.right[d];
+      }
+      if (!isFinite(gLeft)) {
+        gLeft = 0;
+        gRight = 0;
+      }
+      const match = handle.match(/spouse-(\d+)/);
+      const handleX = match
+        ? NODE_WIDTH + SPOUSE_GAP + parseInt(match[1]) * SPOUSE_WIDTH + NODE_WIDTH / 2
+        : NODE_WIDTH / 2;
+      groups.push({ handleX, width: gRight - gLeft, gLeft, idxs, shifts, acc });
+    }
+
+    // Order by handle X and push colliding groups to the right.
+    groups.sort((a, b) => a.handleX - b.handleX);
+    for (let i = 1; i < groups.length; i++) {
+      const prevRight = groups[i - 1].handleX + groups[i - 1].width / 2;
+      const currLeft = groups[i].handleX - groups[i].width / 2;
+      if (currLeft < prevRight + HORIZONTAL_GAP) {
+        groups[i].handleX = prevRight + HORIZONTAL_GAP + groups[i].width / 2;
+      }
+    }
+
+    const offsets = new Map<string, number>();
+    offsets.set(nodeId, 0);
+    const left = [0];
+    const right = [w];
+
+    for (const g of groups) {
+      const originAbs = g.handleX - g.width / 2 - g.gLeft;
+      g.idxs.forEach((childIdx, k) => {
+        const base = originAbs + g.shifts[k];
+        for (const [id, off] of childLayouts[childIdx].offsets) offsets.set(id, off + base);
+      });
+      for (let d = 0; d < g.acc.left.length; d++) {
+        const l = g.acc.left[d] + originAbs;
+        const r = g.acc.right[d] + originAbs;
+        const dd = d + 1;
+        if (dd >= left.length) {
+          left[dd] = l;
+          right[dd] = r;
+        } else {
+          if (l < left[dd]) left[dd] = l;
+          if (r > right[dd]) right[dd] = r;
+        }
+      }
+    }
+
+    return { offsets, left, right };
+  }
+
+  function layoutSubtree(nodeId: string): SubtreeLayout {
+    const w = nodeWidths.get(nodeId) || NODE_WIDTH;
+    const children = childrenOf.get(nodeId) || [];
+
+    if (children.length === 0) {
+      return { offsets: new Map([[nodeId, 0]]), left: [0], right: [w] };
+    }
+
+    const childLayouts = children.map(layoutSubtree);
+
     const node = nodeMap.get(nodeId);
+    // Multi-wife parents (>1 spouse) get per-wife child grouping. Single-spouse
+    // parents use the standard centered layout — their spouse-0 handle is at
+    // (NODE_WIDTH + SPOUSE_WIDTH) / 2, which aligns with centered children.
     const spouseCount = (node?.data as PersonNodeDataForLayout)?.spouses?.length || 0;
     const handleMap = childHandleMap.get(nodeId);
 
-    if (spouseCount > 1 && handleMap) {
-      // Group children by source handle
-      const groupMap = new Map<string, string[]>();
-      for (const childId of children) {
-        const handle = handleMap.get(childId) || 'default';
-        const group = groupMap.get(handle) || [];
-        group.push(childId);
-        groupMap.set(handle, group);
-      }
-
-      // Build wife groups with handle X positions and widths
-      const groups: WifeGroup[] = [];
-      for (const [handle, groupChildren] of groupMap) {
-        let groupWidth = 0;
-        groupChildren.forEach((childId, i) => {
-          groupWidth += calculateSubtreeWidth(childId);
-          if (i < groupChildren.length - 1) groupWidth += HORIZONTAL_GAP;
-        });
-
-        const match = handle.match(/spouse-(\d+)/);
-        const handleX = match
-          ? NODE_WIDTH + SPOUSE_GAP + parseInt(match[1]) * SPOUSE_WIDTH + NODE_WIDTH / 2
-          : NODE_WIDTH / 2;
-
-        groups.push({ handleX, children: groupChildren, width: groupWidth });
-      }
-
-      // Sort by handle X
-      groups.sort((a, b) => a.handleX - b.handleX);
-
-      // Resolve overlaps: push groups right if they collide
-      for (let i = 1; i < groups.length; i++) {
-        const prevRight = groups[i - 1].handleX + groups[i - 1].width / 2;
-        const currLeft = groups[i].handleX - groups[i].width / 2;
-        if (currLeft < prevRight + HORIZONTAL_GAP) {
-          groups[i].handleX = prevRight + HORIZONTAL_GAP + groups[i].width / 2;
-        }
-      }
-
-      // Calculate subtree extent (relative to node left edge)
-      let leftmost = 0;
-      let rightmost = nodeWidth;
-      for (const g of groups) {
-        leftmost = Math.min(leftmost, g.handleX - g.width / 2);
-        rightmost = Math.max(rightmost, g.handleX + g.width / 2);
-      }
-
-      const subtreeWidth = rightmost - leftmost;
-      const nodeOffset = -leftmost;
-
-      multiWifeLayout.set(nodeId, { groups, nodeOffset });
-      subtreeWidths.set(nodeId, subtreeWidth);
-      return subtreeWidth;
-    }
-
-    // Standard: sum of all children's subtree widths + gaps between them
-    let childrenTotalWidth = 0;
-    children.forEach((childId, index) => {
-      childrenTotalWidth += calculateSubtreeWidth(childId);
-      if (index < children.length - 1) {
-        childrenTotalWidth += HORIZONTAL_GAP;
-      }
-    });
-
-    const subtreeWidth = Math.max(nodeWidth, childrenTotalWidth);
-    subtreeWidths.set(nodeId, subtreeWidth);
-    return subtreeWidth;
+    return spouseCount > 1 && handleMap
+      ? layoutMultiWife(nodeId, w, children, childLayouts, handleMap)
+      : layoutStandard(nodeId, w, children, childLayouts);
   }
 
-  calculateSubtreeWidth(rootId);
+  const rootLayout = layoutSubtree(rootId);
 
-  // Assign positions top-down (pre-order traversal)
+  // Vertical position is purely depth-based.
+  const depthOf = new Map<string, number>();
+  (function setDepth(id: string, d: number) {
+    depthOf.set(id, d);
+    for (const c of childrenOf.get(id) || []) setDepth(c, d + 1);
+  })(rootId, 0);
+
+  // Normalize so the leftmost card sits at x = 0.
+  let minX = Infinity;
+  for (const x of rootLayout.offsets.values()) if (x < minX) minX = x;
+  if (!isFinite(minX)) minX = 0;
+
   const positions = new Map<string, { x: number; y: number }>();
-
-  function assignPositions(nodeId: string, x: number, y: number) {
-    const nodeWidth = nodeWidths.get(nodeId) || NODE_WIDTH;
-    const subtreeWidth = subtreeWidths.get(nodeId) || nodeWidth;
-
-    const multiWife = multiWifeLayout.get(nodeId);
-
-    if (multiWife) {
-      // Multi-wife: position node using stored offset
-      const nodeX = x + multiWife.nodeOffset;
-      positions.set(nodeId, { x: nodeX, y });
-
-      const childY = y + NODE_HEIGHT + VERTICAL_GAP;
-
-      // Position each group centered at its wife handle X
-      for (const group of multiWife.groups) {
-        let childX = nodeX + group.handleX - group.width / 2;
-
-        for (const childId of group.children) {
-          const childSubtreeWidth = subtreeWidths.get(childId) || NODE_WIDTH;
-          assignPositions(childId, childX, childY);
-          childX += childSubtreeWidth + HORIZONTAL_GAP;
-        }
-      }
-      return;
-    }
-
-    // Standard: center the node within its allocated subtree space
-    const nodeX = x + (subtreeWidth - nodeWidth) / 2;
-    positions.set(nodeId, { x: nodeX, y });
-
-    const children = childrenOf.get(nodeId) || [];
-    if (children.length === 0) return;
-
-    let childrenTotalWidth = 0;
-    children.forEach((childId, index) => {
-      childrenTotalWidth += subtreeWidths.get(childId) || NODE_WIDTH;
-      if (index < children.length - 1) {
-        childrenTotalWidth += HORIZONTAL_GAP;
-      }
-    });
-
-    let childX = x + (subtreeWidth - childrenTotalWidth) / 2;
-    const childY = y + NODE_HEIGHT + VERTICAL_GAP;
-
-    children.forEach((childId) => {
-      const childSubtreeWidth = subtreeWidths.get(childId) || NODE_WIDTH;
-      assignPositions(childId, childX, childY);
-      childX += childSubtreeWidth + HORIZONTAL_GAP;
+  for (const [id, x] of rootLayout.offsets) {
+    positions.set(id, {
+      x: x - minX,
+      y: (depthOf.get(id) ?? 0) * (NODE_HEIGHT + VERTICAL_GAP),
     });
   }
-
-  assignPositions(rootId, 0, 0);
 
   // Create final positioned nodes
   const layoutedNodes: Node[] = nodes.map((node) => {
