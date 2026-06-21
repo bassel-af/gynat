@@ -267,6 +267,9 @@ export function buildTreeData(
     parentId: string;
     husbandId: string;
     sisterIds: string[];
+    /** The parent's spouse (the sisters' mother) so the F→H link draws from
+     *  HER handle, not the father's — keeps the cluster under its mother. */
+    motherSpouseId: string | null;
   }> = [];
 
   // Buffer of "your children are over there" markers — gathered during BFS,
@@ -296,6 +299,9 @@ export function buildTreeData(
     // a surrogate H child (in lieu of S1, S2…) and queue H's BFS visit.
     const clusters = detectSisterWifeClusters(personFamilies, data, claimedDescendants);
     const sisterIdsToSkipAsChildren = new Set<string>();
+    // Surrogate husband id → the sisters' mother (this parent's spouse), so the
+    // cluster groups under HER handle in the layout and its edge draws from her.
+    const clusterMotherSpouseId = new Map<string, string | null>();
     for (const cluster of clusters) {
       for (const sid of cluster.sisterIds) {
         claimedDescendants.add(sid);
@@ -306,10 +312,22 @@ export function buildTreeData(
       const surrogates = clusterSurrogates.get(personId) ?? new Set<string>();
       surrogates.add(cluster.husbandId);
       clusterSurrogates.set(personId, surrogates);
+      // The sisters are children of this parent; their mother is the spouse of
+      // the parent's family that lists them as children.
+      const sisterSet = new Set(cluster.sisterIds);
+      let motherSpouseId: string | null = null;
+      for (const fam of personFamilies) {
+        if (fam.children.some((c) => sisterSet.has(c))) {
+          motherSpouseId = fam.husband === personId ? fam.wife : fam.husband;
+          break;
+        }
+      }
+      clusterMotherSpouseId.set(cluster.husbandId, motherSpouseId);
       pendingClusterParentEdges.push({
         parentId: personId,
         husbandId: cluster.husbandId,
         sisterIds: cluster.sisterIds,
+        motherSpouseId,
       });
     }
 
@@ -444,11 +462,15 @@ export function buildTreeData(
     const surrogatesAtThisParent = clusterSurrogates.get(personId);
     if (surrogatesAtThisParent && surrogatesAtThisParent.size > 0) {
       for (const husbandId of surrogatesAtThisParent) {
+        // Group the cluster under its mother's handle (so the layout places it
+        // with her other children), falling back to the father when unknown.
+        const motherSpouseId = clusterMotherSpouseId.get(husbandId) ?? null;
+        const motherIdx = motherSpouseId ? spouseIds.indexOf(motherSpouseId) : -1;
         allChildren.push({
           childId: husbandId,
-          spouseIndex: -1,
-          edgeColor: SPOUSE_EDGE_COLORS[0],
-          sourceHandle: 'default',
+          spouseIndex: motherIdx,
+          edgeColor: SPOUSE_EDGE_COLORS[Math.max(0, motherIdx) % SPOUSE_EDGE_COLORS.length],
+          sourceHandle: motherIdx >= 0 ? `spouse-${motherIdx}` : 'default',
         });
       }
     }
@@ -589,6 +611,14 @@ export function buildTreeData(
       continue;
     }
     const husbandData = husbandNode.data as PersonNodeData;
+    // Draw the F→H link from the sisters' MOTHER's handle on F (not F's own),
+    // so it visibly connects to her now that wives are spread over their kids.
+    const parentNode = nodes.find((n) => n.id === pending.parentId);
+    const parentSpouses = parentNode ? (parentNode.data as PersonNodeData).spouses : [];
+    const motherIdx = pending.motherSpouseId
+      ? parentSpouses.findIndex((s) => s.spouse.id === pending.motherSpouseId)
+      : -1;
+    const parentSourceHandle = motherIdx >= 0 ? `spouse-${motherIdx}` : 'default';
     const replacements: Edge[] = [];
     for (const sisterId of pending.sisterIds) {
       const sisterIdx = husbandData.spouses.findIndex((s) => s.spouse.id === sisterId);
@@ -597,7 +627,7 @@ export function buildTreeData(
       replacements.push({
         id: `${pending.parentId}-${pending.husbandId}-via-${sisterId}`,
         source: pending.parentId,
-        sourceHandle: 'default',
+        sourceHandle: parentSourceHandle,
         target: pending.husbandId,
         targetHandle: `spouse-target-${sisterIdx}`,
         type: 'bezier',
