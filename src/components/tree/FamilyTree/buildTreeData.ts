@@ -619,11 +619,15 @@ export function buildTreeData(
       ? parentSpouses.findIndex((s) => s.spouse.id === pending.motherSpouseId)
       : -1;
     const parentSourceHandle = motherIdx >= 0 ? `spouse-${motherIdx}` : 'default';
+    // Match the sisters' edges to their normal siblings: same mother colour and,
+    // when the cluster is borrowed (parent + surrogate both pointed), the same
+    // green dashed "pointed-edge" style — instead of solid per-sister colours.
+    const motherColor = SPOUSE_EDGE_COLORS[Math.max(0, motherIdx) % SPOUSE_EDGE_COLORS.length];
+    const borrowed = !!(data.individuals[pending.parentId]?._pointed && data.individuals[pending.husbandId]?._pointed);
     const replacements: Edge[] = [];
     for (const sisterId of pending.sisterIds) {
       const sisterIdx = husbandData.spouses.findIndex((s) => s.spouse.id === sisterId);
       if (sisterIdx < 0) continue;
-      const color = SPOUSE_EDGE_COLORS[sisterIdx % SPOUSE_EDGE_COLORS.length];
       replacements.push({
         id: `${pending.parentId}-${pending.husbandId}-via-${sisterId}`,
         source: pending.parentId,
@@ -631,7 +635,8 @@ export function buildTreeData(
         target: pending.husbandId,
         targetHandle: `spouse-target-${sisterIdx}`,
         type: 'bezier',
-        style: { stroke: color, strokeWidth: 1.6, opacity: 0.78 },
+        style: { stroke: motherColor, strokeWidth: 1.6, opacity: 0.78 },
+        className: borrowed ? 'pointed-edge' : '',
         pathOptions: { offset: 20 + sisterIdx * 15, borderRadius: 8 },
       } as Edge);
     }
