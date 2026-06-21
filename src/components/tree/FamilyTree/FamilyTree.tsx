@@ -40,6 +40,7 @@ function PersonNode({ data }: { data: PersonNodeData }) {
     selectedPersonId,
     isInLawExpansion,
     hideSpouseBadge,
+    spouseOffsets,
     linkedTo: mainLinkedTo,
     childrenElsewhere,
     onPersonClick,
@@ -189,6 +190,17 @@ function PersonNode({ data }: { data: PersonNodeData }) {
     );
   };
 
+  // Multi-wife layout: when the layout has computed per-wife offsets (each
+  // mother sitting over her own children), spread the wife cards to those
+  // x-positions instead of the default tight row. `wifeLeft(i)` is the wife
+  // card's left edge relative to the husband card.
+  const useSpread = Array.isArray(spouseOffsets) && spouseOffsets.length === spouses.length;
+  const wifeLeft = (index: number) =>
+    useSpread ? spouseOffsets![index] : NODE_WIDTH + SPOUSE_GAP + index * SPOUSE_WIDTH;
+  const coupleWidth = useSpread && spouses.length > 0
+    ? Math.max(...spouses.map((_, i) => wifeLeft(i))) + NODE_WIDTH
+    : undefined;
+
   return (
     <>
       <Handle type="target" position={Position.Top} style={{ opacity: 0, left: NODE_WIDTH / 2 }} />
@@ -198,11 +210,11 @@ function PersonNode({ data }: { data: PersonNodeData }) {
           <Handle type="source" position={Position.Bottom} id="default" style={{ opacity: 0 }} />
         </>
       ) : (
-        <div className="couple" style={{ position: 'relative' }}>
+        <div className="couple" style={{ position: 'relative', width: coupleWidth }}>
           {renderPersonCard(person, true, undefined, mainLinkedTo)}
           {/* Connector lines from husband to each wife */}
           {spouses.map(({ color }, index) => {
-            const lineWidth = SPOUSE_GAP + index * SPOUSE_WIDTH;
+            const lineWidth = wifeLeft(index) - NODE_WIDTH;
             return (
               <div
                 key={`line-${index}`}
@@ -218,9 +230,16 @@ function PersonNode({ data }: { data: PersonNodeData }) {
               />
             );
           })}
-          {/* Wife cards */}
+          {/* Wife cards — spread to sit over their own children when offsets are
+              provided, else a default tight row via marginLeft. */}
           {spouses.map(({ spouse, highlightClass, hasExternalFamily: hasExtFam, topAncestorId, linkedTo: spouseLinkedTo }, spouseIdx) => (
-            <div key={spouse.id} className="spouse-card-wrapper" style={{ marginLeft: SPOUSE_GAP, position: 'relative' }}>
+            <div
+              key={spouse.id}
+              className="spouse-card-wrapper"
+              style={useSpread
+                ? { position: 'absolute', left: wifeLeft(spouseIdx), top: 0 }
+                : { marginLeft: SPOUSE_GAP, position: 'relative' }}
+            >
               {/* Target handle for graft parent edges */}
               <Handle
                 type="target"
@@ -310,7 +329,7 @@ function PersonNode({ data }: { data: PersonNodeData }) {
                   id={`spouse-${index}`}
                   style={{
                     opacity: 0,
-                    left: NODE_WIDTH + SPOUSE_GAP + index * SPOUSE_WIDTH + NODE_WIDTH / 2,
+                    left: wifeLeft(index) + NODE_WIDTH / 2,
                   }}
                 />
               ))}

@@ -53,6 +53,10 @@ export interface PersonNodeData {
   selectedPersonId: string | null;
   isInLawExpansion?: boolean;
   hideSpouseBadge?: boolean;
+  /** Multi-wife only: per-wife card left-offset (relative to the husband card
+   *  left), computed by the layout so each mother sits over her own children.
+   *  Indexed by spouse index. Absent → render wives in the default tight row. */
+  spouseOffsets?: number[];
   /** When set: this person also appears as a spouse-card on another node
    *  (cousin marriage). The string is the OTHER node id where they appear
    *  as a spouse — used to pan on link badge click. Presence implies

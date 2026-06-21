@@ -198,36 +198,79 @@ export function getLayoutedElements(
     return { offsets, left, right };
   }
 
-  // Multi-wife parent (>1 spouse): reorder children so each wife's brood is
-  // contiguous and ordered by wife (the husband card, then wife-0, wife-1, …,
-  // matching the spouse cards left-to-right), then hand off to the SAME tight
-  // contour packing as the standard case. This keeps full siblings grouped by
-  // mother (the color-coded per-wife edges still tell them apart) while packing
-  // the whole brood compactly under the father — instead of flinging each
-  // wife's children far out under her own handle.
-  function reorderChildrenByWife(
+  // Multi-wife parent (>1 spouse): each WIFE (mother) is centered over HER OWN
+  // children. Children are grouped by wife and the groups packed left-to-right
+  // (tight contour packing); then each wife card is slid to sit above the centre
+  // of her group, and the husband card sits at the left (over his own/unassigned
+  // children, or just left of the first wife). The per-wife card x-offsets are
+  // stored so the node renderer can spread the wife cards out instead of cramming
+  // them in a fixed row. Childless wives tuck in tight in spouse order.
+  const spouseOffsetsMap = new Map<string, number[]>();
+
+  function layoutMultiWife(
+    nodeId: string,
     children: string[],
     childLayouts: SubtreeLayout[],
     handleMap: Map<string, string>,
-  ): { children: string[]; childLayouts: SubtreeLayout[] } {
-    const groupIdxs = new Map<string, number[]>();
-    children.forEach((childId, i) => {
-      const handle = handleMap.get(childId) || 'default';
-      if (!groupIdxs.has(handle)) groupIdxs.set(handle, []);
-      groupIdxs.get(handle)!.push(i);
+    spouseCount: number,
+  ): SubtreeLayout {
+    const handleIdx = (h: string) => (h === 'default' ? -1 : parseInt(h.match(/spouse-(\d+)/)?.[1] ?? '0', 10));
+    const byHandle = new Map<string, number[]>();
+    children.forEach((id, i) => {
+      const h = handleMap.get(id) || 'default';
+      if (!byHandle.has(h)) byHandle.set(h, []);
+      byHandle.get(h)!.push(i);
     });
-    const handleOrder = (h: string) => (h === 'default' ? -1 : parseInt(h.match(/spouse-(\d+)/)?.[1] ?? '0', 10));
-    const handles = [...groupIdxs.keys()].sort((a, b) => handleOrder(a) - handleOrder(b));
+    const orderedHandles = [...byHandle.keys()].sort((a, b) => handleIdx(a) - handleIdx(b));
 
-    const outChildren: string[] = [];
-    const outLayouts: SubtreeLayout[] = [];
-    for (const h of handles) {
-      for (const i of groupIdxs.get(h)!) {
-        outChildren.push(children[i]);
-        outLayouts.push(childLayouts[i]);
-      }
+    // Flat wife-ordered child list + each handle's [start,end] range within it.
+    const flat: SubtreeLayout[] = [];
+    const flatIds: string[] = [];
+    const range = new Map<string, [number, number]>();
+    for (const h of orderedHandles) {
+      const start = flat.length;
+      for (const i of byHandle.get(h)!) { flat.push(childLayouts[i]); flatIds.push(children[i]); }
+      range.set(h, [start, flat.length - 1]);
     }
-    return { children: outChildren, childLayouts: outLayouts };
+
+    const { shifts, acc } = packByContour(flat);
+    const childLeft = (k: number) => shifts[k] + (flat[k].offsets.get(flatIds[k]) ?? 0);
+    const cardCenter = (k: number) => childLeft(k) + NODE_WIDTH / 2;
+    const blockCenter = (h: string) => { const [s, e] = range.get(h)!; return (cardCenter(s) + cardCenter(e)) / 2; };
+
+    // Husband card: over his own children block if any, else just left of the brood.
+    const leftmostChild = Math.min(...flat.map((_, k) => childLeft(k)));
+    const husbandLeft = byHandle.has('default')
+      ? blockCenter('default') - NODE_WIDTH / 2
+      : leftmostChild - SPOUSE_GAP - NODE_WIDTH;
+
+    // Each wife centered over her block (clamped so cards never overlap), in
+    // spouse-index order; childless wives tuck in tight afterwards.
+    const spouseOffsets: number[] = [];
+    let cursor = husbandLeft + NODE_WIDTH + SPOUSE_GAP;
+    for (const h of orderedHandles) {
+      if (h === 'default') continue;
+      const cardLeft = Math.max(blockCenter(h) - NODE_WIDTH / 2, cursor);
+      spouseOffsets[handleIdx(h)] = cardLeft - husbandLeft;
+      cursor = cardLeft + NODE_WIDTH + SPOUSE_GAP;
+    }
+    for (let i = 0; i < spouseCount; i++) {
+      if (spouseOffsets[i] === undefined) { spouseOffsets[i] = cursor - husbandLeft; cursor += NODE_WIDTH + SPOUSE_GAP; }
+    }
+    spouseOffsetsMap.set(nodeId, spouseOffsets);
+
+    const offsets = new Map<string, number>();
+    offsets.set(nodeId, husbandLeft);
+    for (let k = 0; k < flat.length; k++) {
+      for (const [id, off] of flat[k].offsets) offsets.set(id, off + shifts[k]);
+    }
+
+    // depth 0 = the card row (husband + spread wives); depth d+1 = the children block.
+    const rowRight = husbandLeft + (spouseOffsets.length ? Math.max(...spouseOffsets) + NODE_WIDTH : NODE_WIDTH);
+    const left = [husbandLeft];
+    const right = [rowRight];
+    for (let d = 0; d < acc.left.length; d++) { left[d + 1] = acc.left[d]; right[d + 1] = acc.right[d]; }
+    return { offsets, left, right };
   }
 
   function layoutSubtree(nodeId: string): SubtreeLayout {
@@ -241,16 +284,13 @@ export function getLayoutedElements(
     const childLayouts = children.map(layoutSubtree);
 
     const node = nodeMap.get(nodeId);
-    // Multi-wife parents (>1 spouse) get their children re-grouped by wife, then
-    // packed tight like any other siblings. Single-spouse parents pack as-is —
-    // their spouse-0 handle is at (NODE_WIDTH + SPOUSE_WIDTH) / 2, aligning with
-    // the centered children.
+    // Multi-wife parents (>1 spouse): each mother centered over her own children.
+    // Single-spouse parents use the standard centered layout.
     const spouseCount = (node?.data as PersonNodeDataForLayout)?.spouses?.length || 0;
     const handleMap = childHandleMap.get(nodeId);
 
     if (spouseCount > 1 && handleMap) {
-      const ordered = reorderChildrenByWife(children, childLayouts, handleMap);
-      return layoutStandard(nodeId, w, ordered.children, ordered.childLayouts);
+      return layoutMultiWife(nodeId, children, childLayouts, handleMap, spouseCount);
     }
     return layoutStandard(nodeId, w, children, childLayouts);
   }
@@ -277,24 +317,32 @@ export function getLayoutedElements(
     });
   }
 
-  // Create final positioned nodes
+  // Create final positioned nodes. Multi-wife nodes carry the computed per-wife
+  // card x-offsets so the renderer can spread the wives over their children.
   const layoutedNodes: Node[] = nodes.map((node) => {
     const pos = positions.get(node.id) || { x: 0, y: 0 };
+    const spouseOffsets = spouseOffsetsMap.get(node.id);
     return {
       ...node,
       position: pos,
+      data: spouseOffsets ? { ...node.data, spouseOffsets } : node.data,
     };
   });
+
+  // Rendered width of a node, accounting for spread wife cards on multi-wife nodes.
+  const renderedWidth = (node: Node): number => {
+    const offs = (node.data as { spouseOffsets?: number[] }).spouseOffsets;
+    if (offs && offs.length) return Math.max(...offs) + NODE_WIDTH;
+    const spouseCount = (node.data as PersonNodeDataForLayout).spouses?.length || 0;
+    return NODE_WIDTH + spouseCount * SPOUSE_WIDTH;
+  };
 
   // Build a map of occupied X ranges per Y level (for collision detection with graft parents)
   const occupiedByY = new Map<number, Array<{ left: number; right: number }>>();
   for (const node of layoutedNodes) {
     const { x, y } = node.position;
-    const nodeData = node.data as PersonNodeDataForLayout;
-    const spouseCount = nodeData.spouses?.length || 0;
-    const totalWidth = NODE_WIDTH + spouseCount * SPOUSE_WIDTH;
     const level = occupiedByY.get(y) || [];
-    level.push({ left: x, right: x + totalWidth });
+    level.push({ left: x, right: x + renderedWidth(node) });
     occupiedByY.set(y, level);
   }
 
