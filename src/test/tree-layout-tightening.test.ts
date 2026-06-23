@@ -3,8 +3,25 @@ import {
   getLayoutedElements,
   NODE_WIDTH,
   HORIZONTAL_GAP,
+  SPOUSE_WIDTH,
+  SPOUSE_GAP,
 } from '@/components/tree/FamilyTree/layout';
 import type { Node, Edge } from '@xyflow/react';
+
+/** Edge from a parent's specific spouse-handle (which wife a child hangs from). */
+function makeWifeEdge(source: string, target: string, spouseIdx: number): Edge {
+  return { id: `${source}-${target}`, source, target, type: 'smoothstep', sourceHandle: `spouse-${spouseIdx}` };
+}
+
+/** Per-wife card offsets the layout attaches to a multi-wife node. */
+function spouseOffsets(nodes: Node[], id: string): number[] | undefined {
+  return (nodes.find((n) => n.id === id)!.data as { spouseOffsets?: number[] }).spouseOffsets;
+}
+
+/** Absolute centre X of wife #idx's card on a (possibly spread) multi-wife node. */
+function wifeCardCenter(nodes: Node[], husbandId: string, idx: number): number {
+  return pos(nodes, husbandId).x + (spouseOffsets(nodes, husbandId)![idx]) + NODE_WIDTH / 2;
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -135,5 +152,86 @@ describe('tree layout — parent centering invariants', () => {
     const { nodes: out } = getLayoutedElements(nodes, edges);
     const mid = (cardCenter(out, 'a') + cardCenter(out, 'b')) / 2;
     expect(cardCenter(out, 'p')).toBeCloseTo(mid, 5);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Polygamy: each wife (mother) sits centred over her OWN children, the husband
+// sits beside his first wife, and childless wives tuck in tight. These guard
+// the behaviours we previously only verified by eye.
+// ---------------------------------------------------------------------------
+
+describe('tree layout — multi-wife (each mother over her children)', () => {
+  // Husband H with two wives. Wife-0 has children a0,b0; wife-1 has child a1.
+  function buildTwoWifeTree() {
+    const nodes = [
+      makeNode('H', 2),
+      makeNode('a0'), makeNode('b0'), // wife-0's children
+      makeNode('a1'),                 // wife-1's child
+    ];
+    const edges = [
+      makeWifeEdge('H', 'a0', 0), makeWifeEdge('H', 'b0', 0),
+      makeWifeEdge('H', 'a1', 1),
+    ];
+    return getLayoutedElements(nodes, edges).nodes;
+  }
+
+  test('the layout attaches per-wife card offsets', () => {
+    const out = buildTwoWifeTree();
+    expect(spouseOffsets(out, 'H')).toHaveLength(2);
+  });
+
+  test('each wife card is centred over the centre of HER children', () => {
+    const out = buildTwoWifeTree();
+    const wife0Kids = (cardCenter(out, 'a0') + cardCenter(out, 'b0')) / 2;
+    expect(wifeCardCenter(out, 'H', 0)).toBeCloseTo(wife0Kids, 5);
+    expect(wifeCardCenter(out, 'H', 1)).toBeCloseTo(cardCenter(out, 'a1'), 5);
+  });
+
+  test('the husband sits one card+gap to the left of his FIRST wife', () => {
+    const out = buildTwoWifeTree();
+    expect(cardCenter(out, 'H')).toBeCloseTo(
+      wifeCardCenter(out, 'H', 0) - (NODE_WIDTH + SPOUSE_GAP), 5,
+    );
+  });
+
+  test('wife cards never overlap (each at least a card-width apart)', () => {
+    const out = buildTwoWifeTree();
+    const offs = spouseOffsets(out, 'H')!;
+    expect(offs[1] - offs[0]).toBeGreaterThanOrEqual(NODE_WIDTH);
+  });
+
+  test('a childless wife tucks in tight right after the wife who has children', () => {
+    // Wife-0 has two children; wife-1 has none.
+    const nodes = [makeNode('H', 2), makeNode('a0'), makeNode('b0')];
+    const edges = [makeWifeEdge('H', 'a0', 0), makeWifeEdge('H', 'b0', 0)];
+    const out = getLayoutedElements(nodes, edges).nodes;
+    const offs = spouseOffsets(out, 'H')!;
+    expect(offs).toHaveLength(2);
+    // childless wife-1 packs exactly one card+gap after wife-0 (no huge gap, no overlap)
+    expect(offs[1] - offs[0]).toBeCloseTo(NODE_WIDTH + SPOUSE_GAP, 5);
+  });
+
+  test('a wide first-wife branch does not strand the husband far from her', () => {
+    // Wife-0's child has its own 3 kids (a wide sub-branch); husband must still
+    // sit right beside wife-0, not at the far-left edge of that branch.
+    const nodes = [
+      makeNode('H', 2),
+      makeNode('a0'), makeNode('g1'), makeNode('g2'), makeNode('g3'),
+      makeNode('a1'),
+    ];
+    const edges = [
+      makeWifeEdge('H', 'a0', 0), makeWifeEdge('H', 'a1', 1),
+      makeEdge('a0', 'g1'), makeEdge('a0', 'g2'), makeEdge('a0', 'g3'),
+    ];
+    const out = getLayoutedElements(nodes, edges).nodes;
+    expect(cardCenter(out, 'H')).toBeCloseTo(
+      wifeCardCenter(out, 'H', 0) - (NODE_WIDTH + SPOUSE_GAP), 5,
+    );
+  });
+
+  test('SPOUSE_WIDTH matches a rendered card + gap (card-to-sibling spacing stays correct)', () => {
+    // The "too close" bug: the layout reserved less per wife than the DOM renders.
+    expect(SPOUSE_WIDTH).toBe(NODE_WIDTH + SPOUSE_GAP);
   });
 });
