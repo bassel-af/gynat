@@ -438,7 +438,7 @@ function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
 
   // Reusable function to center viewport on a node (at top or centered)
   const scrollToNode = useCallback(
-    (nodeId: string, nodes: Node[], position: 'top' | 'center' = 'center', animate = true) => {
+    (nodeId: string, nodes: Node[], position: 'top' | 'center' = 'center', animate = true, targetPersonId?: string) => {
       const targetNode = nodes.find((n) => n.id === nodeId);
       if (!targetNode || !containerRef.current) return;
 
@@ -446,13 +446,27 @@ function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
       const spouseCount = nodeData.spouses?.length || 0;
       const nodeWidth = NODE_WIDTH + spouseCount * SPOUSE_WIDTH;
 
+      // Horizontal focus point inside the node: the node centre by default, but
+      // the SPECIFIC person's card when one is named — so clicking a spread-out
+      // wife (e.g. مروة) centres on HER card, not on the husband far to the left.
+      let focusX = nodeWidth / 2;
+      if (targetPersonId === nodeId) {
+        focusX = NODE_WIDTH / 2; // the main person's own card
+      } else if (targetPersonId) {
+        const idx = nodeData.spouses?.findIndex((s) => s.spouse.id === targetPersonId) ?? -1;
+        if (idx >= 0) {
+          const cardLeft = nodeData.spouseOffsets?.[idx] ?? (NODE_WIDTH + SPOUSE_GAP + idx * SPOUSE_WIDTH);
+          focusX = cardLeft + NODE_WIDTH / 2;
+        }
+      }
+
       if (position === 'top') {
         // Position node at top, centered horizontally
         const { width } = containerRef.current.getBoundingClientRect();
         const zoom = 0.85;
         const topPadding = 40;
 
-        const nodeCenterX = targetNode.position.x + nodeWidth / 2;
+        const nodeCenterX = targetNode.position.x + focusX;
         const nodeTopY = targetNode.position.y;
 
         const x = width / 2 - nodeCenterX * zoom;
@@ -461,7 +475,7 @@ function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
         setViewport({ x, y, zoom }, { duration: animate ? 500 : 0 });
       } else {
         // Center node in viewport
-        const centerX = targetNode.position.x + nodeWidth / 2;
+        const centerX = targetNode.position.x + focusX;
         const centerY = targetNode.position.y + NODE_HEIGHT / 2;
 
         const currentZoom = getZoom();
@@ -556,7 +570,7 @@ function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
 
     const targetInNodes = findTargetIn(nodes);
     if (targetInNodes) {
-      scrollToNode(targetInNodes, nodes, 'center', true);
+      scrollToNode(targetInNodes, nodes, 'center', true, focusPersonId);
       // Clear focus target so subsequent node changes don't re-trigger centering
       setFocusPersonId(null);
       return;
