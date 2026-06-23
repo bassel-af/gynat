@@ -238,11 +238,15 @@ export function getLayoutedElements(
     const cardCenter = (k: number) => childLeft(k) + NODE_WIDTH / 2;
     const blockCenter = (h: string) => { const [s, e] = range.get(h)!; return (cardCenter(s) + cardCenter(e)) / 2; };
 
-    // Husband card: over his own children block if any, else just left of the brood.
-    const leftmostChild = Math.min(...flat.map((_, k) => childLeft(k)));
-    const husbandLeft = byHandle.has('default')
+    // Husband card: over his own children block if any, else right beside his
+    // FIRST wife (so a married man with children reads as a couple with her,
+    // rather than stranded at the far-left edge of a wife's huge brood). The
+    // first wife's left-hand children then extend left of him, opening a gap to
+    // his left sibling — an accepted trade-off the user chose for married men.
+    const firstHandle = orderedHandles[0]; // 'default' (idx -1) if present, else the first wife
+    const husbandLeft = firstHandle === 'default'
       ? blockCenter('default') - NODE_WIDTH / 2
-      : leftmostChild - SPOUSE_GAP - NODE_WIDTH;
+      : blockCenter(firstHandle) - NODE_WIDTH / 2 - SPOUSE_GAP - NODE_WIDTH;
 
     // Each wife centered over her block (clamped so cards never overlap), in
     // spouse-index order; childless wives tuck in tight afterwards.
