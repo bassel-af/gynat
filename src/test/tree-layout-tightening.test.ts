@@ -1,6 +1,7 @@
 import { describe, test, expect } from 'vitest';
 import {
   getLayoutedElements,
+  computeFocusX,
   NODE_WIDTH,
   HORIZONTAL_GAP,
   SPOUSE_WIDTH,
@@ -233,5 +234,41 @@ describe('tree layout — multi-wife (each mother over her children)', () => {
   test('SPOUSE_WIDTH matches a rendered card + gap (card-to-sibling spacing stays correct)', () => {
     // The "too close" bug: the layout reserved less per wife than the DOM renders.
     expect(SPOUSE_WIDTH).toBe(NODE_WIDTH + SPOUSE_GAP);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Click-to-centre: focusing a person centres the viewport on THAT person's
+// card. With wives spread over their children, a far-out wife (e.g. مروة) must
+// centre on her own card, not on the husband node far to the left.
+// ---------------------------------------------------------------------------
+
+describe('tree layout — computeFocusX (centre on the clicked person)', () => {
+  const husband = {
+    spouses: [{ spouse: { id: 'w0' } }, { spouse: { id: 'w1' } }],
+    spouseOffsets: [194, 18175], // w1 spread far to the right, like مروة
+  };
+
+  test('a spread-out wife focuses on HER card, not the husband / node centre', () => {
+    expect(computeFocusX(husband, 'H', 'w1')).toBe(18175 + NODE_WIDTH / 2);
+    expect(computeFocusX(husband, 'H', 'w1')).not.toBe(NODE_WIDTH / 2);
+    expect(computeFocusX(husband, 'H', 'w1')).not.toBe((NODE_WIDTH + 2 * SPOUSE_WIDTH) / 2);
+  });
+
+  test('the first wife focuses on her card', () => {
+    expect(computeFocusX(husband, 'H', 'w0')).toBe(194 + NODE_WIDTH / 2);
+  });
+
+  test('the main person focuses on his own card', () => {
+    expect(computeFocusX(husband, 'H', 'H')).toBe(NODE_WIDTH / 2);
+  });
+
+  test('falls back to the tight spouse position when offsets are absent', () => {
+    const tight = { spouses: [{ spouse: { id: 'w0' } }, { spouse: { id: 'w1' } }] };
+    expect(computeFocusX(tight, 'H', 'w1')).toBe(NODE_WIDTH + SPOUSE_GAP + SPOUSE_WIDTH + NODE_WIDTH / 2);
+  });
+
+  test('with no target person, returns the whole-node centre (unchanged for root scrolls)', () => {
+    expect(computeFocusX(husband, 'H', undefined)).toBe((NODE_WIDTH + 2 * SPOUSE_WIDTH) / 2);
   });
 });

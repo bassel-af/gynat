@@ -4,6 +4,7 @@ import type { Node, Edge } from '@xyflow/react';
 import { buildTreeData, type HighlightState, type PersonNodeData } from '@/components/tree/FamilyTree/buildTreeData';
 import {
   buildSisterWivesFixture,
+  buildSisterWivesWithMotherFixture,
   buildThreeSisterWivesFixture,
   buildMixedClusterFixture,
   buildSisterWivesTiebreakFixture,
@@ -170,5 +171,26 @@ describe('buildTreeData — sister-wives clustering (A.2: H promoted to main nod
     const { edges } = buildTreeData(data, 'F', 50, '', noHighlight, null, noopCallbacks);
     const order = siblingOrderForParent(edges, 'F');
     expect(order).toEqual(['B0', 'H', 'B1']);
+  });
+});
+
+describe('buildTreeData — sister-wife daughters link to their MOTHER', () => {
+  test("the F→H cluster edges source from the mother's spouse handle, not the father's own", () => {
+    // S1, S2 are sister-wives of H and daughters of F + M (the mother). Their
+    // link back up to F must be drawn from M (F's only wife = spouse-0), so they
+    // sit with their mother — not from F's own 'default' handle.
+    const data = buildSisterWivesWithMotherFixture();
+    const { edges } = buildTreeData(data, 'F', 50, '', noHighlight, null, noopCallbacks);
+    const fToH = edges.filter((e) => e.source === 'F' && e.target === 'H');
+    expect(fToH.length).toBe(2); // one per sister-wife
+    for (const e of fToH) expect(e.sourceHandle).toBe('spouse-0');
+  });
+
+  test('without a mother, the cluster edges fall back to the father\'s default handle', () => {
+    const data = buildSisterWivesFixture(); // F has no wife
+    const { edges } = buildTreeData(data, 'F', 50, '', noHighlight, null, noopCallbacks);
+    const fToH = edges.filter((e) => e.source === 'F' && e.target === 'H');
+    expect(fToH.length).toBe(2);
+    for (const e of fToH) expect(e.sourceHandle).toBe('default');
   });
 });

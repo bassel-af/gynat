@@ -24,7 +24,7 @@ import { useTree } from '@/context/TreeContext';
 import { useOptionalWorkspaceTree } from '@/context/WorkspaceTreeContext';
 import { shouldHideBirthDate } from '@/lib/tree/birth-date-privacy';
 import { NodeSilhouette } from '@/components/heritage/NodeSilhouette';
-import { NODE_WIDTH, NODE_HEIGHT, SPOUSE_WIDTH, SPOUSE_GAP } from './layout';
+import { NODE_WIDTH, NODE_HEIGHT, SPOUSE_WIDTH, SPOUSE_GAP, computeFocusX } from './layout';
 import { buildTreeData, computeOccurrenceLinkEdge, type HighlightState, type PersonNodeData } from './buildTreeData';
 
 function PersonNode({ data }: { data: PersonNodeData }) {
@@ -443,22 +443,10 @@ function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
       if (!targetNode || !containerRef.current) return;
 
       const nodeData = targetNode.data as PersonNodeData;
-      const spouseCount = nodeData.spouses?.length || 0;
-      const nodeWidth = NODE_WIDTH + spouseCount * SPOUSE_WIDTH;
-
-      // Horizontal focus point inside the node: the node centre by default, but
-      // the SPECIFIC person's card when one is named — so clicking a spread-out
-      // wife (e.g. مروة) centres on HER card, not on the husband far to the left.
-      let focusX = nodeWidth / 2;
-      if (targetPersonId === nodeId) {
-        focusX = NODE_WIDTH / 2; // the main person's own card
-      } else if (targetPersonId) {
-        const idx = nodeData.spouses?.findIndex((s) => s.spouse.id === targetPersonId) ?? -1;
-        if (idx >= 0) {
-          const cardLeft = nodeData.spouseOffsets?.[idx] ?? (NODE_WIDTH + SPOUSE_GAP + idx * SPOUSE_WIDTH);
-          focusX = cardLeft + NODE_WIDTH / 2;
-        }
-      }
+      // Horizontal focus point inside the node — the SPECIFIC person's card when
+      // one is named (so clicking a spread-out wife centres on HER, not on the
+      // husband far to the left). Pure + unit-tested in layout.ts.
+      const focusX = computeFocusX(nodeData, nodeId, targetPersonId);
 
       if (position === 'top') {
         // Position node at top, centered horizontally

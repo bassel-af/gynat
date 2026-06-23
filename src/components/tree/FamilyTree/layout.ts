@@ -531,3 +531,28 @@ export function getLayoutedElements(
     edges: [...edges, ...graftEdges],
   };
 }
+
+/**
+ * The horizontal point INSIDE a node to centre the viewport on when focusing a
+ * person. Returns the main person's own card by default / when they're named,
+ * and — crucially — a SPECIFIC spouse's card (via its computed spread offset)
+ * when a spouse is named. This is what makes clicking a spread-out wife centre
+ * on HER card, not on the husband far to the left. Pure so it can be unit-tested
+ * without React Flow.
+ */
+export function computeFocusX(
+  node: { spouses?: { spouse: { id: string } }[]; spouseOffsets?: number[] },
+  nodeId: string,
+  targetPersonId?: string,
+): number {
+  const spouseCount = node.spouses?.length ?? 0;
+  if (targetPersonId === nodeId) return NODE_WIDTH / 2; // the main person's own card
+  if (targetPersonId) {
+    const idx = node.spouses?.findIndex((s) => s.spouse.id === targetPersonId) ?? -1;
+    if (idx >= 0) {
+      const cardLeft = node.spouseOffsets?.[idx] ?? (NODE_WIDTH + SPOUSE_GAP + idx * SPOUSE_WIDTH);
+      return cardLeft + NODE_WIDTH / 2;
+    }
+  }
+  return (NODE_WIDTH + spouseCount * SPOUSE_WIDTH) / 2; // whole-node centre
+}

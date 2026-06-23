@@ -343,6 +343,23 @@ export function buildSisterWivesFixture(): GedcomData {
 }
 
 /**
+ * Sister-wives WITH a mother: same as buildSisterWivesFixture, but the father F
+ * has a wife M (the sisters' mother). Used to verify the sister-wife daughters'
+ * link to their father is drawn from the MOTHER's spouse handle, not F's own.
+ */
+export function buildSisterWivesWithMotherFixture(): GedcomData {
+  const data = buildSisterWivesFixture();
+  data.individuals['M'] = makeIndividual({
+    id: 'M',
+    name: 'الأم',
+    sex: 'F',
+    familiesAsSpouse: ['F_F'],
+  });
+  data.families['F_F'].wife = 'M';
+  return data;
+}
+
+/**
  * Three-sister-wives fixture: H marries three sisters of the same parent F.
  *
  * Structure:
