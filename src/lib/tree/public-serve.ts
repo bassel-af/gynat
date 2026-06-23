@@ -303,6 +303,14 @@ export interface PublicTreePayload {
   data: GedcomData
   /** SSR-crawlable names list (subset of `data`, redacted-safe). */
   names: PublicNameEntry[]
+  /**
+   * Ids of the HOME tree's own individuals (before composition). Captured here
+   * because `redactForPublic` strips the `_pointed`/`_sourceWorkspaceId` markers
+   * that would otherwise distinguish home from borrowed nodes. The public person
+   * page uses this as its ancestry boundary: anything NOT in this set is a
+   * borrowed/foreign node whose ancestry must never be climbed.
+   */
+  homeIndividualIds: Set<string>
 }
 
 /**
@@ -331,6 +339,11 @@ export async function buildPublicTreePayload(
     ? dbTreeToGedcomData(tree, workspaceKey)
     : { individuals: {}, families: {} }
 
+  // Capture home ids BEFORE composition/redaction (redaction strips the markers
+  // that distinguish home from borrowed). Used by the person page as the
+  // ancestry boundary.
+  const homeIndividualIds = new Set(Object.keys(home.individuals))
+
   // Compose FIRST, then redact ONCE over the whole set.
   const composed = composePublicGedcom(home, borrowed)
 
@@ -350,5 +363,5 @@ export async function buildPublicTreePayload(
   }
 
   const names = buildPublicNamesList(data)
-  return { record, data, names }
+  return { record, data, names, homeIndividualIds }
 }

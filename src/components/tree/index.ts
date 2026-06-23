@@ -8,3 +8,4 @@ export { FamilyPickerModal } from './FamilyPickerModal';
 export type { FamilyPickerModalProps } from './FamilyPickerModal';
 export { FamilyEventForm } from './FamilyEventForm';
 export type { FamilyEventFormData } from './FamilyEventForm';
+export { ViewSwitcherIconButton } from './ViewSwitcherIconButton/ViewSwitcherIconButton';

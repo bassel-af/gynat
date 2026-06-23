@@ -2,7 +2,9 @@
 
 import clsx from 'clsx';
 import { useMemo, useState, useCallback, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 import { useTree } from '@/context/TreeContext';
+import { ViewSwitcherIconButton } from '@/components/tree/ViewSwitcherIconButton/ViewSwitcherIconButton';
 import { useOptionalWorkspaceTree } from '@/context/WorkspaceTreeContext';
 import { useOptionalUndoStack } from '@/context/UndoStackContext';
 import { getDisplayName, getDisplayNameWithNasab, getPersonRelationships, getRadaRelationships, getAllDescendants, findTopmostAncestor, hasExternalFamily } from '@/lib/gedcom';
@@ -419,6 +421,8 @@ export function PersonDetail({ personId }: PersonDetailProps) {
 
   const workspace = useOptionalWorkspaceTree();
   const undoStack = useOptionalUndoStack();
+  const routeParams = useParams<{ slug: string }>();
+  const slug = routeParams?.slug;
   const canEdit = workspace?.canEdit ?? false;
   const enableRadaa = workspace?.enableRadaa ?? false;
   const { preference: calendarPreference, setPreference: setCalendarPreference } = useCalendarPreference();
@@ -885,6 +889,13 @@ export function PersonDetail({ personId }: PersonDetailProps) {
               <path d="M12 2V5M12 19V22M2 12H5M19 12H22" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
             </svg>
           </button>
+          {slug && (
+            <ViewSwitcherIconButton
+              currentMode="tree"
+              ctx={{ slug, individualId: personId, treeId: workspace?.activeTreeId }}
+              className={styles.focusButton}
+            />
+          )}
           {canEdit && !person._pointed && (
             <button
               className={styles.focusButton}

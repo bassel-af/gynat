@@ -19,8 +19,12 @@ function applyColors() {
  * properties on `document.documentElement`. Listens for cross-tab `storage`
  * events to stay in sync. Removes the custom properties on unmount.
  */
-export function useTreeColorOverrides(): void {
+export function useTreeColorOverrides(disabled = false): void {
   useEffect(() => {
+    // Skip entirely on surfaces with no per-user settings (e.g. the anonymous
+    // public tree) — leave the design tokens at their defaults.
+    if (disabled) return;
+
     applyColors();
 
     function handleStorage(e: StorageEvent) {
@@ -38,5 +42,5 @@ export function useTreeColorOverrides(): void {
         style.removeProperty(v);
       }
     };
-  }, []);
+  }, [disabled]);
 }

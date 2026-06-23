@@ -1,13 +1,14 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { Suspense, useEffect, useState, useCallback, useRef } from 'react';
+import { useParams, useSearchParams } from 'next/navigation';
 import { TreeProvider, useTree } from '@/context/TreeContext';
 import { WorkspaceTreeProvider, useWorkspaceTree } from '@/context/WorkspaceTreeContext';
 import { UndoStackProvider, useUndoStack } from '@/context/UndoStackContext';
 import { useWorkspaceTreeData } from '@/hooks/useWorkspaceTreeData';
 import { useTreeColorOverrides } from '@/hooks/useTreeColorOverrides';
 import { useKeyboardUndoRedo } from '@/hooks/useKeyboardUndoRedo';
-import { FamilyTree, EmptyTreeState, IndividualForm } from '@/components/tree';
+import { EmptyTreeState, IndividualForm } from '@/components/tree';
 import type { IndividualFormData } from '@/components/tree';
 import { CanvasToolbar } from '@/components/tree/CanvasToolbar';
 import { ConflictDialog } from '@/components/tree/ConflictDialog';
@@ -17,6 +18,15 @@ import { Spinner } from '@/components/ui/Spinner';
 import { apiFetch } from '@/lib/api/client';
 import { useToast } from '@/context/ToastContext';
 import Link from 'next/link';
+
+// The member tree has two views — the spatial canvas (`tree/page.tsx`) and the
+// focused person page (`tree/person/[individualId]/page.tsx`) — that share ONE
+// shell: workspace fetch, providers, sidebar, toolbar and the undo stack all
+// live here so toggling between the two views is a child-segment swap, not a
+// remount. `{children}` renders inside <main> exactly where <FamilyTree/> used
+// to live; each child reads the same providers (no refetch) and decides what
+// fills the canvas area. The member surface is always noindex (no metadata,
+// no JSON-LD) — that concern lives only on the public `/family/[slug]` route.
 
 interface WorkspaceInfo {
   id: string;
@@ -36,13 +46,14 @@ interface WorkspaceInfo {
   defaultNewPersonDeceased?: boolean;
 }
 
-interface WorkspaceTreeClientProps {
-  slug: string;
-  /** When set, the editor opens on this `extra` tree; absent ⇒ the main tree. */
-  treeId?: string;
-}
+function TreeLayoutInner({ children }: { children: React.ReactNode }) {
+  const params = useParams<{ slug: string }>();
+  const slug = params.slug;
+  // `?treeId=<id>` opens the editor on an `extra` tree; absent ⇒ main tree.
+  // Read once here and fed into WorkspaceTreeProvider; children re-read it from
+  // the search params for their own href-building.
+  const treeId = useSearchParams().get('treeId') ?? undefined;
 
-export function WorkspaceTreeClient({ slug, treeId }: WorkspaceTreeClientProps) {
   const [workspace, setWorkspace] = useState<WorkspaceInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -91,21 +102,43 @@ export function WorkspaceTreeClient({ slug, treeId }: WorkspaceTreeClientProps) 
 
   return (
     <TreeProvider>
-      <TreeContent workspace={workspace} canEdit={canEdit} isAdmin={isAdmin} treeId={treeId} />
+      <TreeShellGate
+        workspace={workspace}
+        canEdit={canEdit}
+        isAdmin={isAdmin}
+        treeId={treeId}
+      >
+        {children}
+      </TreeShellGate>
     </TreeProvider>
   );
 }
 
-function TreeContent({
+export default function TreeLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={<div className="loading">جاري التحميل...</div>}>
+      <TreeLayoutInner>{children}</TreeLayoutInner>
+    </Suspense>
+  );
+}
+
+/**
+ * Loads the tree data and gates on its state: the empty-tree first-run UI
+ * (sidebar/toolbar deliberately absent, exactly as before), or the full shell
+ * with the undo stack wrapping the sidebar + toolbar + {children}.
+ */
+function TreeShellGate({
   workspace,
   canEdit,
   isAdmin,
   treeId,
+  children,
 }: {
   workspace: WorkspaceInfo;
   canEdit: boolean;
   isAdmin: boolean;
   treeId?: string;
+  children: React.ReactNode;
 }) {
   const { isLoading, error, data } = useTree();
   const { refreshTree, pointers } = useWorkspaceTreeData(workspace.id, treeId);
@@ -123,59 +156,41 @@ function TreeContent({
     );
   }
 
-  const isEmpty =
-    !data ||
-    Object.keys(data.individuals).length === 0;
+  const isEmpty = !data || Object.keys(data.individuals).length === 0;
+
+  const providerProps = {
+    workspaceId: workspace.id,
+    canEdit,
+    isAdmin,
+    refreshTree,
+    activeTreeId: treeId,
+    pointers,
+    enableUmmWalad: workspace.enableUmmWalad,
+    enableRadaa: workspace.enableRadaa,
+    enableKunya: workspace.enableKunya,
+    enableAuditLog: workspace.enableAuditLog,
+    enableTreeExport: workspace.enableTreeExport,
+    allowMemberExport: workspace.allowMemberExport,
+    hideBirthDateForFemale: workspace.hideBirthDateForFemale,
+    hideBirthDateForMale: workspace.hideBirthDateForMale,
+    description: workspace.description,
+    defaultNewPersonDeceased: workspace.defaultNewPersonDeceased,
+  } as const;
 
   if (isEmpty) {
     return (
-      <WorkspaceTreeProvider
-        workspaceId={workspace.id}
-        canEdit={canEdit}
-        isAdmin={isAdmin}
-        refreshTree={refreshTree}
-        activeTreeId={treeId}
-        pointers={pointers}
-        enableUmmWalad={workspace.enableUmmWalad}
-        enableRadaa={workspace.enableRadaa}
-        enableKunya={workspace.enableKunya}
-        enableAuditLog={workspace.enableAuditLog}
-        enableTreeExport={workspace.enableTreeExport}
-        allowMemberExport={workspace.allowMemberExport}
-        hideBirthDateForFemale={workspace.hideBirthDateForFemale}
-        hideBirthDateForMale={workspace.hideBirthDateForMale}
-        description={workspace.description}
-        defaultNewPersonDeceased={workspace.defaultNewPersonDeceased}
-      >
+      <WorkspaceTreeProvider {...providerProps}>
         <EmptyTreeWithForm canEdit={canEdit} />
       </WorkspaceTreeProvider>
     );
   }
 
   return (
-    <WorkspaceTreeProvider
-      workspaceId={workspace.id}
-      canEdit={canEdit}
-      isAdmin={isAdmin}
-      refreshTree={refreshTree}
-      activeTreeId={treeId}
-      pointers={pointers}
-      enableUmmWalad={workspace.enableUmmWalad}
-      enableRadaa={workspace.enableRadaa}
-      enableKunya={workspace.enableKunya}
-      enableAuditLog={workspace.enableAuditLog}
-      enableTreeExport={workspace.enableTreeExport}
-      allowMemberExport={workspace.allowMemberExport}
-      hideBirthDateForFemale={workspace.hideBirthDateForFemale}
-      hideBirthDateForMale={workspace.hideBirthDateForMale}
-      description={workspace.description}
-      defaultNewPersonDeceased={workspace.defaultNewPersonDeceased}
-    >
+    <WorkspaceTreeProvider {...providerProps}>
       <UndoStackProvider workspaceId={workspace.id} refreshTree={refreshTree} key={workspace.id}>
-        <TreeShell
-          workspaceSlug={workspace.slug}
-          workspaceId={workspace.id}
-        />
+        <TreeShell workspaceSlug={workspace.slug} workspaceId={workspace.id}>
+          {children}
+        </TreeShell>
       </UndoStackProvider>
     </WorkspaceTreeProvider>
   );
@@ -184,9 +199,11 @@ function TreeContent({
 function TreeShell({
   workspaceSlug,
   workspaceId,
+  children,
 }: {
   workspaceSlug: string;
   workspaceId: string;
+  children: React.ReactNode;
 }) {
   const { canEdit, isAdmin, activeTreeId } = useWorkspaceTree();
   const undoStack = useUndoStack();
@@ -237,7 +254,7 @@ function TreeShell({
           undoRedo={undoRedoProps}
           onPublish={canPublish ? () => setPublishOpen(true) : undefined}
         />
-        <FamilyTree hideMiniMap />
+        {children}
       </main>
       <ConflictDialog
         isOpen={undoStack.conflict !== null}
