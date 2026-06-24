@@ -44,6 +44,8 @@ interface WorkspaceTreeContextValue {
   hideBirthDateForMale?: boolean;
   /** Workspace description (shown in sidebar "about" panel) */
   description?: string;
+  /** Workspace (family) name in Arabic — shown in the sidebar title */
+  familyName?: string;
   /** Pre-check "deceased" on new person forms (create mode only) */
   defaultNewPersonDeceased?: boolean;
 }
@@ -67,6 +69,7 @@ interface WorkspaceTreeProviderProps {
   hideBirthDateForFemale?: boolean;
   hideBirthDateForMale?: boolean;
   description?: string;
+  familyName?: string;
   defaultNewPersonDeceased?: boolean;
 }
 
@@ -87,10 +90,11 @@ export function WorkspaceTreeProvider({
   hideBirthDateForFemale,
   hideBirthDateForMale,
   description,
+  familyName,
   defaultNewPersonDeceased,
 }: WorkspaceTreeProviderProps) {
   return (
-    <WorkspaceTreeContext.Provider value={{ workspaceId, canEdit, isAdmin, refreshTree, activeTreeId, pointers, enableUmmWalad, enableRadaa, enableKunya, enableAuditLog, enableTreeExport, allowMemberExport, hideBirthDateForFemale, hideBirthDateForMale, description, defaultNewPersonDeceased }}>
+    <WorkspaceTreeContext.Provider value={{ workspaceId, canEdit, isAdmin, refreshTree, activeTreeId, pointers, enableUmmWalad, enableRadaa, enableKunya, enableAuditLog, enableTreeExport, allowMemberExport, hideBirthDateForFemale, hideBirthDateForMale, description, familyName, defaultNewPersonDeceased }}>
       {children}
     </WorkspaceTreeContext.Provider>
   );

@@ -62,6 +62,7 @@ export function PublicTreeViewer({
         isAdmin={false}
         refreshTree={noopRefresh}
         description={description}
+        familyName={familyName}
       >
         <PublicTreeViewerInner
           data={data}

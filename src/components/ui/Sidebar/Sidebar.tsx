@@ -40,7 +40,7 @@ export function Sidebar() {
     setMobileSidebarOpen,
   } = useTree();
 
-  const { description, hideBirthDateForFemale, hideBirthDateForMale, activeTreeId } = useWorkspaceTree();
+  const { description, familyName, hideBirthDateForFemale, hideBirthDateForMale, activeTreeId } = useWorkspaceTree();
 
   // The canvas and the person page share this sidebar. On the person page a
   // search-result click navigates the page to that person (Bug 2) rather than
@@ -275,7 +275,7 @@ export function Sidebar() {
         <div className={styles.header}>
           <div className={styles.headerTop}>
             <div className={styles.headerTitleRow}>
-              <h2>شجرة العائلة</h2>
+              <h2>{familyName ? `شجرة ${familyName}` : 'شجرة العائلة'}</h2>
               {description && (
                 <button
                   className={clsx(styles.aboutChip, { [styles.isOpen]: isAboutOpen })}

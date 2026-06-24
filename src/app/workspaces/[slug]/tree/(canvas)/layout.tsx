@@ -175,6 +175,7 @@ function TreeShellGate({
     hideBirthDateForFemale: workspace.hideBirthDateForFemale,
     hideBirthDateForMale: workspace.hideBirthDateForMale,
     description: workspace.description,
+    familyName: workspace.nameAr,
     defaultNewPersonDeceased: workspace.defaultNewPersonDeceased,
   } as const;
 
