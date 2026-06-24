@@ -12,6 +12,7 @@
  * them through), which is enough to exercise every component + state.
  */
 
+import { use } from 'react';
 import { PersonPage } from '@/components/person';
 import type {
   MotherLine,
@@ -215,9 +216,9 @@ const livingChainProjection: PersonProjection = {
 export default function PersonLivePreviewPage({
   searchParams,
 }: {
-  searchParams: { variant?: string };
+  searchParams: Promise<{ variant?: string }>;
 }) {
-  const isPublic = searchParams?.variant === 'public';
+  const isPublic = use(searchParams)?.variant === 'public';
   return (
     <PersonPage
       projection={isPublic ? livingChainProjection : projection}
