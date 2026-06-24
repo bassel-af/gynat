@@ -23,6 +23,7 @@ import { getDisplayName, getAllAncestors, getAllDescendants } from '@/lib/gedcom
 import { useTree } from '@/context/TreeContext';
 import { useOptionalWorkspaceTree } from '@/context/WorkspaceTreeContext';
 import { shouldHideBirthDate } from '@/lib/tree/birth-date-privacy';
+import { DRAWER_MAX_WIDTH } from '@/lib/utils/viewport';
 import { NodeSilhouette } from '@/components/heritage/NodeSilhouette';
 import { NODE_WIDTH, NODE_HEIGHT, SPOUSE_WIDTH, SPOUSE_GAP, computeFocusX } from './layout';
 import { buildTreeData, computeOccurrenceLinkEdge, type HighlightState, type PersonNodeData } from './buildTreeData';
@@ -212,9 +213,15 @@ function PersonNode({ data }: { data: PersonNodeData }) {
       ) : (
         <div className="couple" style={{ position: 'relative', width: coupleWidth }}>
           {renderPersonCard(person, true, undefined, mainLinkedTo)}
-          {/* Connector lines from husband to each wife */}
+          {/* One colour-coded marriage connector per wife, fanned from the
+              husband to each wife at a staggered height. The lines sit BEHIND
+              the cards (rendered before the wife cards, and the cards carry an
+              opaque backing — see `.person` in tree-global.css), so each line
+              shows only in the inter-card gaps and is tucked out of sight where
+              it meets a card. Multiple wives ⇒ multiple distinct lines. */}
           {spouses.map(({ color }, index) => {
             const lineWidth = wifeLeft(index) - NODE_WIDTH;
+            if (lineWidth <= 0) return null;
             return (
               <div
                 key={`line-${index}`}
@@ -388,7 +395,11 @@ function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
   const savedViewportRef = useRef<{ x: number; y: number; zoom: number } | null>(null);
 
   useEffect(() => {
-    const mql = window.matchMedia('(max-width: 768px)');
+    // Reactive (re-renders the canvas on resize) — distinct from viewport.ts's
+    // one-shot event-time reads, so it keeps its own listener. The 768 threshold
+    // is single-sourced from DRAWER_MAX_WIDTH (this is the "is there a drawer"
+    // tier, unchanged — NOT the phone/tablet collapse line).
+    const mql = window.matchMedia(`(max-width: ${DRAWER_MAX_WIDTH}px)`);
     const update = () => setIsMobile(mql.matches);
     update();
     mql.addEventListener('change', update);

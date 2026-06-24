@@ -1,23 +1,21 @@
 import { describe, test, expect } from 'vitest';
 import type { GedcomData, Individual, Family } from '@/lib/gedcom/types';
-import { projectPerson, PRIVATE_PLACEHOLDER, type PersonProjection, type ProjectOptions } from '@/lib/tree/person-projection';
+import { projectPerson, PRIVATE_PLACEHOLDER, MEMBER_PROJECT_OPTIONS, type PersonProjection, type ProjectOptions } from '@/lib/tree/person-projection';
 
-// MEMBER-style options: the cross-workspace boundary is the `_pointed` marker
-// (raw, un-redacted fixtures carry it); deep female-line recursion; the
-// patriline CONTINUES through a private ancestor (team-lead ruling for members).
-const MEMBER_OPTS: ProjectOptions = {
-  maternalRecursionDepth: Infinity,
-  isBoundary: (ind) => ind._pointed === true,
-  continueThroughPrivateAncestor: true,
-};
+// MEMBER options: the SHIPPED member predicate (so this guard tests production,
+// not a copy). The cross-workspace boundary is the TOP of a borrowed branch — a
+// `_pointed` node whose father is NOT `_pointed`. In every fixture here the
+// borrowed node's secret parent is non-`_pointed`, so the borrowed node IS the
+// boundary and its ancestry is never climbed (G2 holds under the new rule too).
+const MEMBER_OPTS: ProjectOptions = MEMBER_PROJECT_OPTIONS;
 
-// PUBLIC-style options: same `_pointed` boundary, female-line depth 1, and —
-// per the security review of §4.4 — the patriline STOPS at a private ancestor
-// (continueThroughPrivateAncestor left false), so a private person's father is
-// NOT revealed on the public page.
+// PUBLIC-style options: same shipped boundary, female-line depth 1, and — per the
+// security review of §4.4 — the patriline STOPS at a private ancestor
+// (continueThroughPrivateAncestor false), so a private person's father is NOT
+// revealed on the public page.
 const PUBLIC_OPTS: ProjectOptions = {
+  ...MEMBER_PROJECT_OPTIONS,
   maternalRecursionDepth: 1,
-  isBoundary: (ind) => ind._pointed === true,
   continueThroughPrivateAncestor: false,
 };
 

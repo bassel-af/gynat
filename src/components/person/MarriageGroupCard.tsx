@@ -9,8 +9,13 @@ import styles from './person.module.css';
 
 const ORDINALS = ['الزواج الأول', 'الزواج الثاني', 'الزواج الثالث', 'الزواج الرابع'];
 
-/** Arabic ordinal label for the nth marriage (1-based); falls back gracefully. */
-function marriageLabel(index: number): string {
+/**
+ * Arabic ordinal label for the nth marriage (1-based); falls back gracefully.
+ * With a SINGLE marriage there is nothing to order against, so it reads plainly
+ * «الزواج» — the ordinal «الأول» only makes sense when there are siblings.
+ */
+function marriageLabel(index: number, total: number): string {
+  if (total <= 1) return 'الزواج';
   return ORDINALS[index] ?? `الزواج ${index + 1}`;
 }
 
@@ -26,11 +31,14 @@ function marriageLabel(index: number): string {
 export function MarriageGroupCard({
   group,
   index,
+  total,
   hrefFor,
 }: {
   group: MarriageGroup;
   /** 0-based position among the subject's marriages — drives the ordinal label. */
   index: number;
+  /** Total marriages — a single marriage drops the «الأول» ordinal. */
+  total: number;
   hrefFor: (id: string) => string;
 }) {
   const { preference } = useCalendarPreference();
@@ -39,7 +47,7 @@ export function MarriageGroupCard({
   return (
     <div className={styles.marriageCard}>
       <div className={styles.marriageHead}>
-        <span className={styles.marriageLabel}>{marriageLabel(index)}</span>
+        <span className={styles.marriageLabel}>{marriageLabel(index, total)}</span>
         {group.spouse ? (
           <RelationChip chip={group.spouse} hrefFor={hrefFor} />
         ) : (

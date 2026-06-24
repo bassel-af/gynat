@@ -24,14 +24,21 @@ interface LinkableChip {
  * nothing to navigate to and no PII to leak.
  *
  * `kind="lead"` styles the subject (largest, brightest) at the head of the ribbon.
+ *
+ * The page's SUBJECT is rendered with `interactive={false}` — it keeps the lead
+ * visual (large gold gradient) but is a plain non-clickable element: linking the
+ * page to itself reads as a dead end. Ancestors stay clickable.
  */
 export function PersonLink({
   chip,
   kind = 'default',
+  interactive = true,
   hrefFor,
 }: {
   chip: LinkableChip;
   kind?: 'default' | 'lead';
+  /** When false, render the styled name as a non-clickable span (the subject). */
+  interactive?: boolean;
   /** Builds the navigation href for a non-private person. */
   hrefFor: (id: string) => string;
 }) {
@@ -43,11 +50,17 @@ export function PersonLink({
     );
   }
 
+  const className = `${styles.personLink} ${kind === 'lead' ? styles.personLinkLead : ''}`;
+
+  // The subject itself is not a navigation target — keep the lead styling but
+  // drop the link, href, hover-underline and pointer cursor (CSS targets the
+  // <span> variant via `:not(a)` so a plain span never shows link affordances).
+  if (!interactive) {
+    return <span className={className}>{chip.name}</span>;
+  }
+
   return (
-    <Link
-      href={hrefFor(chip.id)}
-      className={`${styles.personLink} ${kind === 'lead' ? styles.personLinkLead : ''}`}
-    >
+    <Link href={hrefFor(chip.id)} className={className}>
       {chip.name}
     </Link>
   );

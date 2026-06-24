@@ -17,6 +17,20 @@
   isolation: isolate;
 }
 
+/* Scroll container for the MEMBER person view. It lives inside the shared tree
+   shell's `.main-content`, which is a fixed, `overflow:hidden` viewport so the
+   React-Flow canvas never scrolls. The (tall) person page needs its own scroll,
+   so this fills the shell area and scrolls vertically on its own — the canvas is
+   untouched. (The public `/family/[slug]/person` route + the design preview
+   render `.root` directly in a normally-scrolling document, so they don't need
+   this wrapper.) */
+.scrollHost {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
 .root::before {
   content: '';
   position: fixed;
@@ -144,7 +158,9 @@
   opacity: 0.95;
 }
 
-/* Each name is a readable, tappable link. Body font, NOT calligraphic. */
+/* Each name is a readable, tappable link. Body font, NOT calligraphic.
+   The subject renders as a <span> (not <a>) — same styling, no link
+   affordances; the hover rules below are scoped to the anchor variant only. */
 .personLink {
   font-family: var(--heritage-font-body);
   font-size: 22px;
@@ -153,7 +169,7 @@
   border-bottom: 1px solid transparent;
   transition: color 180ms ease, border-color 180ms ease, text-shadow 180ms ease;
 }
-.personLink:hover {
+a.personLink:hover {
   color: var(--heritage-gold-bright);
   border-bottom-color: rgba(200, 168, 101, 0.55);
   text-shadow: 0 0 18px rgba(200, 168, 101, 0.35);
@@ -169,7 +185,7 @@
   color: transparent;
   -webkit-text-fill-color: transparent;
 }
-.personLinkLead:hover {
+a.personLinkLead:hover {
   border-bottom-color: transparent;
   filter: brightness(1.12);
 }
@@ -288,6 +304,14 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: clamp(16px, 3vw, 36px);
+}
+
+/* Only one bloodline column is present (the other side has no documented
+   ancestors). Collapse to a single centered column instead of leaving an empty
+   half-width grid cell. */
+.bloodlinesGridSingle {
+  grid-template-columns: minmax(0, 520px);
+  justify-content: center;
 }
 
 .lineageColumn {

@@ -54,8 +54,10 @@ const NOW = new Date('2026-06-23T00:00:00Z')
 
 /**
  * A rich family with every state:
- *  - focal: LIVING (born 2000, not deceased) with a birth date set
- *  - father: DECEASED (born 1900) — full, dates visible
+ *  - focal: LIVING (born 2000, not deceased) — birth set in DB, never emitted
+ *  - father: DECEASED (born 1900) — `publicDisplay==='full'`; note the feed is
+ *    DATELESS so even his date is NOT emitted in the JSON-LD (it stays on the
+ *    human page only)
  *  - mother: PRIVATE
  *  - spouse: LIVING with a birth date
  *  - child: LIVING

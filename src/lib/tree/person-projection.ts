@@ -12,8 +12,11 @@ import { getDisplayName } from '@/lib/gedcom/display';
 //   - `maternalRecursionDepth`: how deep to drill the female (mother-of-mother)
 //     line. Member passes Infinity (capped by the sanity ceiling); public 1.
 //   - `isBoundary`: the predicate that marks a node whose ANCESTRY must NOT be
-//     walked. Member: `ind => ind._pointed === true` (borrowed branch). Public:
-//     `ind => !homeIndividualIds.has(ind.id)` (anything outside this home tree).
+//     walked. Member: the TOP of a borrowed branch — a `_pointed` node whose own
+//     father is NOT `_pointed` (so a fully-shared borrowed lineage is climbed in
+//     full, but the borrowed root's unshared cross-workspace parent is never
+//     read). Public: `ind => !homeIndividualIds.has(ind.id)` (outside this home
+//     tree). The predicate receives `data` so it can inspect the node's father.
 //
 // TWO HARD INVARIANTS (both tested):
 //
@@ -43,8 +46,13 @@ export const PROJECTION_NODE_CEILING = 200;
 export interface ProjectOptions {
   /** Female-line (mother-of-mother) recursion depth. Member: Infinity; public: 1. */
   maternalRecursionDepth: number;
-  /** True ⇒ a node whose ancestry must NOT be walked (emit it, never climb past). */
-  isBoundary: (ind: Individual) => boolean;
+  /**
+   * True ⇒ a node whose ancestry must NOT be walked (emit it, never climb past).
+   * Receives `data` so a surface can inspect the node's own father (e.g. the
+   * member surface stops at the TOP of a borrowed branch, not at every borrowed
+   * node).
+   */
+  isBoundary: (ind: Individual, data: GedcomData) => boolean;
   /**
    * Whether a private PATRILINEAL ancestor mid-chain is a continuation point.
    * `true`  → emit the nameless «خاص» placeholder and KEEP climbing to his
@@ -60,14 +68,16 @@ export interface ProjectOptions {
 
 /**
  * MEMBER defaults — used when `projectPerson` is called without explicit opts.
- * Member walks the female line unbounded (capped only by the sanity ceiling) and
- * treats only borrowed (`_pointed`) nodes as cross-workspace boundaries. The
- * public surface MUST pass its own opts (`{ maternalRecursionDepth: 1, isBoundary:
- * id-not-in-home }`).
+ * Member walks the female line unbounded (capped only by the sanity ceiling). The
+ * cross-workspace boundary is the TOP of a borrowed branch: a `_pointed` node
+ * whose own father is NOT `_pointed`. This climbs a fully-shared borrowed lineage
+ * in full (e.g. a نسب chain borrowed in its entirety) while still never reading
+ * the borrowed root's unshared parent in the source workspace. The public surface
+ * MUST pass its own opts (`{ maternalRecursionDepth: 1, isBoundary: id-not-in-home }`).
  */
 export const MEMBER_PROJECT_OPTIONS: ProjectOptions = {
   maternalRecursionDepth: Infinity,
-  isBoundary: (ind) => ind._pointed === true,
+  isBoundary: (ind, data) => ind._pointed === true && !fatherIsPointed(data, ind),
   // Member surface continues the patriline through a private ancestor (nameless
   // «خاص» placeholder), matching the member tree. (Team-lead ruling; the public
   // surface passes the conservative stop pending a security review.)
@@ -197,6 +207,16 @@ function getMother(data: GedcomData, ind: Individual): Individual | null {
 }
 
 /**
+ * True when `ind`'s father is ALSO a borrowed (`_pointed`) node — i.e. `ind` is
+ * an INTERNAL node of a borrowed branch, not its top. The member boundary uses
+ * this to climb a fully-shared borrowed lineage in full and stop only at the
+ * branch's root (whose father is the native anchor, or absent).
+ */
+function fatherIsPointed(data: GedcomData, ind: Individual): boolean {
+  return getFather(data, ind)?._pointed === true;
+}
+
+/**
  * Build a `PersonChip`.
  *
  * - A NON-private person → a full chip (raw dates carried, `private: false`).
@@ -297,16 +317,16 @@ function buildPaternalSpine(
       nearestToOldest.push(toChip(father, true)); // «خاص» placeholder
       // Stop when this is also a boundary, OR when the surface opts out of
       // climbing past a private ancestor (public default, pending security).
-      if (opts.isBoundary(father) || !opts.continueThroughPrivateAncestor) break;
+      if (opts.isBoundary(father, data) || !opts.continueThroughPrivateAncestor) break;
       current = father; // member: continue up the patriline through the placeholder
       continue;
     }
 
     const node: SpineChip = toChip(father);
-    if (!opts.isBoundary(father)) attachMother(data, father, node, opts);
+    if (!opts.isBoundary(father, data)) attachMother(data, father, node, opts);
     nearestToOldest.push(node);
 
-    if (opts.isBoundary(father)) break; // emit boundary node, never climb past it
+    if (opts.isBoundary(father, data)) break; // emit boundary node, never climb past it
     current = father;
   }
 
@@ -329,13 +349,13 @@ function buildMaternalSpine(
   if (!mother || isPrivate(mother)) return [];
 
   // The mother's own fathers spine (each man carrying his married-in mother).
-  const fatherSpine = opts.isBoundary(mother)
+  const fatherSpine = opts.isBoundary(mother, data)
     ? []
     : buildPaternalSpine(data, mother, opts);
 
   // The mother node itself — female, carrying her own female-line recursion.
   const motherNode: SpineChip = toChip(mother);
-  if (!opts.isBoundary(mother) && opts.maternalRecursionDepth > 0) {
+  if (!opts.isBoundary(mother, data) && opts.maternalRecursionDepth > 0) {
     const line = buildMotherLine(data, mother, opts.maternalRecursionDepth, opts);
     if (line) motherNode.mother = line;
   }
@@ -365,7 +385,7 @@ function buildMotherLine(
   if (isPrivate(mother)) {
     return { ...toChip(mother, true), gender: 'female', fathers: [] };
   }
-  if (opts.isBoundary(mother)) {
+  if (opts.isBoundary(mother, data)) {
     return { ...toChip(mother), gender: 'female', fathers: [] };
   }
 
@@ -394,7 +414,7 @@ function buildFathersChain(
   opts: ProjectOptions,
 ): PersonChip[] {
   const out: PersonChip[] = [];
-  if (opts.isBoundary(woman)) return out; // don't climb into a boundary's parents
+  if (opts.isBoundary(woman, data)) return out; // don't climb into a boundary's parents
 
   const guard = new WalkGuard();
   guard.enter(woman.id);
@@ -409,7 +429,7 @@ function buildFathersChain(
       break;
     }
     out.push(toChip(father));
-    if (opts.isBoundary(father)) break; // emit boundary, do not climb past it
+    if (opts.isBoundary(father, data)) break; // emit boundary, do not climb past it
     current = father;
   }
 
@@ -458,6 +478,12 @@ function buildMarriages(data: GedcomData, subject: Individual): MarriageGroup[] 
       const child = visible(data, childId);
       if (child) children.push(toChip(child));
     }
+
+    // An empty family — no visible spouse AND no visible children — carries no
+    // information; emitting it would render a meaningless «غير مذكورة» card with
+    // a blank body. Skip it. (A visible spouse with no children, or children
+    // with a private/unknown spouse, still carries content and is kept.)
+    if (!spouse && children.length === 0) continue;
 
     const group: MarriageGroup = {
       familyId,
@@ -535,7 +561,7 @@ function buildUnclesAndCousins(
 ): { uncles: PersonChip[]; cousins: PersonChip[] } {
   const uncles: PersonChip[] = [];
   const cousins: PersonChip[] = [];
-  if (!parent || isPrivate(parent) || opts.isBoundary(parent)) return { uncles, cousins };
+  if (!parent || isPrivate(parent) || opts.isBoundary(parent, data)) return { uncles, cousins };
   if (!parent.familyAsChild) return { uncles, cousins };
 
   const grandFamily = data.families[parent.familyAsChild];
@@ -545,7 +571,7 @@ function buildUnclesAndCousins(
   // borrowed ancestry — never enumerate them.
   const grandFather = grandFamily.husband ? data.individuals[grandFamily.husband] : null;
   const grandMother = grandFamily.wife ? data.individuals[grandFamily.wife] : null;
-  if ((grandFather && opts.isBoundary(grandFather)) || (grandMother && opts.isBoundary(grandMother))) {
+  if ((grandFather && opts.isBoundary(grandFather, data)) || (grandMother && opts.isBoundary(grandMother, data))) {
     return { uncles, cousins };
   }
 
@@ -555,7 +581,7 @@ function buildUnclesAndCousins(
     if (!uncle) continue; // private uncle omitted (and his cousins skipped)
     uncles.push(toChip(uncle));
 
-    if (opts.isBoundary(uncle)) continue; // a boundary uncle's children are borrowed
+    if (opts.isBoundary(uncle, data)) continue; // a boundary uncle's children are borrowed
     for (const uncleFamId of uncle.familiesAsSpouse) {
       const uncleFam = data.families[uncleFamId];
       if (!uncleFam) continue;

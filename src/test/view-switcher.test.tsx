@@ -4,6 +4,7 @@ import {
   TREE_VIEW_MODES,
   getViewMode,
   getNextViewMode,
+  viewModeFromPathname,
   FOCUS_PARAM,
 } from '@/lib/tree/view-modes';
 import { ViewSwitcherIconButton } from '@/components/tree/ViewSwitcherIconButton/ViewSwitcherIconButton';
@@ -48,6 +49,28 @@ describe('view-modes href builders', () => {
   it('getNextViewMode flips between the two modes', () => {
     expect(getNextViewMode('tree').id).toBe('person');
     expect(getNextViewMode('person').id).toBe('tree');
+  });
+});
+
+// The sidebar renders on BOTH views (they share the shell), so its view-switcher
+// and person-click behavior must reflect the CURRENT view, derived from the
+// route. (Bugs 2 + 3.)
+describe('viewModeFromPathname — current view from the route', () => {
+  it('is "person" on the person route', () => {
+    expect(viewModeFromPathname('/workspaces/al-saeed/tree/person/I7')).toBe('person');
+  });
+
+  it('is "person" on the person route even with a trailing extra-tree query in the path string', () => {
+    expect(viewModeFromPathname('/workspaces/al-saeed/tree/person/I7/')).toBe('person');
+  });
+
+  it('is "tree" on the canvas route', () => {
+    expect(viewModeFromPathname('/workspaces/al-saeed/tree')).toBe('tree');
+  });
+
+  it('is "tree" for null / undefined (defensive default)', () => {
+    expect(viewModeFromPathname(null)).toBe('tree');
+    expect(viewModeFromPathname(undefined)).toBe('tree');
   });
 });
 

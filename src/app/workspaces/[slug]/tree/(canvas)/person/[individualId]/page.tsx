@@ -4,8 +4,11 @@ import { Suspense, useEffect, useState, type ComponentProps } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { PersonPage } from '@/components/person';
+import personStyles from '@/components/person/person.module.css';
 import { useOptionalWorkspaceTree } from '@/context/WorkspaceTreeContext';
+import { useTree } from '@/context/TreeContext';
 import { getViewMode, type ViewModeContext } from '@/lib/tree/view-modes';
+import { shouldCollapseDrawerOnPersonView } from '@/lib/utils/viewport';
 import { apiFetch } from '@/lib/api/client';
 import { Spinner } from '@/components/ui/Spinner';
 
@@ -32,6 +35,25 @@ function PersonView() {
   // The member person endpoint reads the workspace MAIN tree (branch pointers
   // only anchor there); treeId is still threaded into nav hrefs for continuity.
   const workspaceId = workspace?.workspaceId;
+
+  // Keep the shared sidebar in sync with the person being viewed: it then shows
+  // THIS person's PersonDetail (relationships one tap away) instead of a generic
+  // search list, and a relationship-click navigates the page (the same shell as
+  // the canvas, so this is just a context update — no remount).
+  //
+  // Also collapse the mobile drawer on every person-page entry — but ONLY at
+  // TABLET width. The drawer is a full-screen overlay at ≤768px and not every
+  // path here closes it (e.g. the canvas view-switcher is a bare <Link>), so on
+  // a tablet landing here with it open strands the dark overlay over the page.
+  // This single route-level chokepoint guarantees it's shut on tablet however we
+  // arrived. On a PHONE (≤480px) we DELIBERATELY leave it open — the member
+  // browses person→person inside the drawer (`shouldCollapseDrawerOnPersonView`).
+  // Runs only on navigation, so a later FAB re-open on this page is not undone.
+  const { setSelectedPersonId, setMobileSidebarOpen } = useTree();
+  useEffect(() => {
+    setSelectedPersonId(individualId);
+    if (shouldCollapseDrawerOnPersonView()) setMobileSidebarOpen(false);
+  }, [individualId, setSelectedPersonId, setMobileSidebarOpen]);
 
   const [projection, setProjection] = useState<Projection | null>(null);
   const [loading, setLoading] = useState(true);
@@ -95,14 +117,20 @@ function PersonView() {
     );
   }
 
+  // The person view lives inside the shared tree shell's fixed, non-scrolling
+  // `.main-content` (kept that way for the React-Flow canvas). Give the (tall)
+  // person page its own scroll container so it scrolls top-to-bottom without
+  // touching the canvas viewport.
   return (
-    <PersonPage
-      projection={projection}
-      hrefFor={hrefFor}
-      backHref={backHref}
-      treeHref={treeHref}
-      enableKunya={workspace?.enableKunya}
-    />
+    <div className={personStyles.scrollHost}>
+      <PersonPage
+        projection={projection}
+        hrefFor={hrefFor}
+        backHref={backHref}
+        treeHref={treeHref}
+        enableKunya={workspace?.enableKunya}
+      />
+    </div>
   );
 }
 

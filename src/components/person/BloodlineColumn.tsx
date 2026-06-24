@@ -86,6 +86,11 @@ export function BloodlineColumn({
   subject: PersonSubject;
   hrefFor: (id: string) => string;
 }) {
+  // "If there is nothing to show, do not show it." With no documented ancestors
+  // on this side, the column would be just the subject's own card under a kicker
+  // — redundant with the hero. Collapse the whole column instead.
+  if (chain.length === 0) return null;
+
   const columnClass = variant === 'paternal' ? styles.colPaternal : styles.colMaternal;
   const badgeLabel = variant === 'paternal' ? 'الأب' : 'الأم';
   // The subject node on the maternal column reads as a softer, muted terminus.

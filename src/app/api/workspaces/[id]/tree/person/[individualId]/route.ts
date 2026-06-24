@@ -11,9 +11,18 @@ import { createHash } from 'crypto';
 
 type RouteParams = { params: Promise<{ id: string; individualId: string }> };
 
+// Salts the ETag with the projection's logic version. The ETag is otherwise
+// keyed ONLY on tree mtime + individual id, so a change to projection LOGIC
+// (which leaves the tree data — and thus lastModifiedAt — untouched) keeps the
+// SAME ETag, and a client holding a cached body gets a 304 and never sees the
+// new output. Bump this whenever the PersonProjection shape/logic changes.
+//  - v2: borrowed-lineage nasab fix (climb a fully-borrowed patriline in full;
+//        stop at the borrowed root, not the first `_pointed` ancestor).
+const PROJECTION_ETAG_VERSION = 'v2';
+
 function computeETag(lastModifiedAt: Date, individualId: string): string {
   const hash = createHash('sha1')
-    .update(`${lastModifiedAt.toISOString()}|${individualId}`)
+    .update(`${PROJECTION_ETAG_VERSION}|${lastModifiedAt.toISOString()}|${individualId}`)
     .digest('hex')
     .slice(0, 16);
   return `"${hash}"`;

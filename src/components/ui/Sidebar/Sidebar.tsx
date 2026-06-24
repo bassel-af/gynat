@@ -2,12 +2,15 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import clsx from 'clsx';
+import { useParams, usePathname, useRouter } from 'next/navigation';
 import { useTree } from '@/context/TreeContext';
 import { useWorkspaceTree } from '@/context/WorkspaceTreeContext';
 import { getDisplayNameWithNasab, DEFAULT_NASAB_DEPTH, findTopmostAncestor, resolveNavigationRoot } from '@/lib/gedcom';
 import { shouldHideBirthDate } from '@/lib/tree/birth-date-privacy';
+import { getViewMode, viewModeFromPathname } from '@/lib/tree/view-modes';
 import { PersonDetail } from './PersonDetail';
 import { matchesSearch, searchRelevance } from '@/lib/utils/search';
+import { shouldCollapseDrawerOnPersonView, isDrawerViewport } from '@/lib/utils/viewport';
 import styles from './Sidebar.module.css';
 
 interface PersonItem {
@@ -37,7 +40,16 @@ export function Sidebar() {
     setMobileSidebarOpen,
   } = useTree();
 
-  const { description, hideBirthDateForFemale, hideBirthDateForMale } = useWorkspaceTree();
+  const { description, hideBirthDateForFemale, hideBirthDateForMale, activeTreeId } = useWorkspaceTree();
+
+  // The canvas and the person page share this sidebar. On the person page a
+  // search-result click navigates the page to that person (Bug 2) rather than
+  // re-rooting the canvas; on the canvas the behavior is unchanged.
+  const routeParams = useParams<{ slug: string }>();
+  const slug = routeParams?.slug;
+  const pathname = usePathname();
+  const router = useRouter();
+  const isPersonView = viewModeFromPathname(pathname) === 'person';
 
   const [searchFilter, setSearchFilter] = useState('');
   const [rootDropdownOpen, setRootDropdownOpen] = useState(false);
@@ -48,7 +60,7 @@ export function Sidebar() {
 
   // Prevent body scroll when sidebar is open on mobile
   useEffect(() => {
-    if (isMobileSidebarOpen && window.innerWidth <= 768) {
+    if (isMobileSidebarOpen && isDrawerViewport()) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
@@ -58,12 +70,28 @@ export function Sidebar() {
     };
   }, [isMobileSidebarOpen]);
 
-  // On mobile, intercept the back button while viewing person info in the
-  // sidebar so it closes the sidebar instead of navigating away.
+  // On mobile, intercept the back button while the overlay drawer is OPEN on the
+  // canvas so back closes the drawer instead of navigating away.
+  //
+  // Keyed on the drawer open/close + view ONLY — NOT selectedPersonId. The
+  // interception arms whenever the drawer is open (list OR detail), so:
+  //   - a person RESELECT (X→Y) does NOT re-run this effect (selectedPersonId is
+  //     neither a dependency nor read here). Re-running would tear down (the
+  //     cleanup's own `history.back()`) and re-`pushState` + re-register the
+  //     handler, and the async popstate from that back() would be caught by the
+  //     fresh handler → it would wrongly close the drawer (the reselect race);
+  //   - it arms even with no person selected, so back closes a list-only drawer
+  //     too (and tapping a person while already open needs no re-arm).
+  // We push the sentinel ONCE when the drawer opens and tear it down ONCE on close.
+  //
+  // NOT on the person page: there the sidebar DRIVES real URL navigation (a
+  // relationship click pushes `/tree/person/<id>`), and this cleanup's back()
+  // would CANCEL that router.push.
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (window.innerWidth > 768) return;
-    if (!isMobileSidebarOpen || !selectedPersonId) return;
+    if (!isDrawerViewport()) return;
+    if (isPersonView) return;
+    if (!isMobileSidebarOpen) return;
 
     let poppedByBrowser = false;
     window.history.pushState({ mobileSidebarDetail: true }, '');
@@ -81,7 +109,7 @@ export function Sidebar() {
         window.history.back();
       }
     };
-  }, [isMobileSidebarOpen, selectedPersonId, setMobileSidebarOpen]);
+  }, [isMobileSidebarOpen, isPersonView, setMobileSidebarOpen]);
 
   // Get selected root display text
   const selectedRoot = rootsList.find((r) => r.id === selectedRootId);
@@ -172,22 +200,39 @@ export function Sidebar() {
     setSelectedRootId(id);
     setRootFilter(text);
     setRootDropdownOpen(false);
-    // Close sidebar on mobile after selecting root
-    if (window.innerWidth <= 768) {
-      setMobileSidebarOpen(false);
-    }
+    // Reveal the re-rooted tree behind the overlay on a tablet; keep the drawer
+    // open on a phone. Same centralized rule as a person click.
+    if (shouldCollapseDrawerOnPersonView()) setMobileSidebarOpen(false);
+  };
+
+  // TABLET (overlay drawer): collapse it so the navigated-to person / focused
+  // canvas is revealed. PHONE: keep it open (browse inside the drawer). One rule
+  // for EVERY person-click branch below — previously the "already-visible" branch
+  // forgot to close, so on a tablet the overlay stayed stuck for some people but
+  // not others (= the intermittent stuck overlay).
+  const collapseDrawer = () => {
+    if (shouldCollapseDrawerOnPersonView()) setMobileSidebarOpen(false);
   };
 
   const rerootAndFocus = (rootId: string, focusId: string) => {
     setSelectedRootId(rootId);
     setSelectedPersonId(null);
     setFocusPersonId(focusId);
-    if (typeof window !== 'undefined' && window.innerWidth <= 768) {
-      setMobileSidebarOpen(false);
-    }
+    collapseDrawer();
   };
 
   const handlePersonClick = (id: string) => {
+    // On the person page, a sidebar click navigates the page to that person
+    // (preserving the active extra tree). Keep the sidebar showing that person.
+    if (isPersonView && slug) {
+      setSelectedPersonId(id);
+      setHighlightedPersonId(id);
+      router.push(
+        getViewMode('person').href({ slug, individualId: id, treeId: activeTreeId }),
+      );
+      collapseDrawer();
+      return;
+    }
     if (data && graftPersonIds.has(id)) {
       // An inline in-law (graft) — expand into their own family, as before.
       rerootAndFocus(findTopmostAncestor(data, id) ?? id, id);
@@ -204,6 +249,7 @@ export function Sidebar() {
     setSelectedPersonId(id);
     setFocusPersonId(id);
     setHighlightedPersonId(id);
+    collapseDrawer();
   };
 
   return (

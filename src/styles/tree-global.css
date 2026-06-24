@@ -396,6 +396,25 @@
   position: relative;
 }
 
+/* Opaque backing behind every card. The cards are translucent glass; the
+   husband→wife marriage connectors (`.spouse-line`) are drawn BEHIND the cards
+   so each line shows only in the inter-card gaps. Without an opaque base the
+   lines bleed THROUGH the glass — this fills the card footprint with the
+   canvas-blended base colour so a line is fully hidden where it meets a card,
+   while the glass surface (its own translucent background + blur) still paints
+   on top unchanged. As the card's first paint layer it sits above the sibling
+   connector lines but below the card's own background + content, and matches
+   the card radius so corners stay clean. */
+.person-card-wrapper::before,
+.spouse-card-wrapper::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 22px;
+  background: #121b2e;
+  pointer-events: none;
+}
+
 /* ============================================
    NODE-ATTACHED DETAIL FAB (mobile only)
    ============================================ */

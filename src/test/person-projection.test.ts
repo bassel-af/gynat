@@ -281,6 +281,38 @@ describe('projectPerson — cross-workspace boundary', () => {
     // foreign is emitted (it's the boundary) but its parents are never climbed.
     expect(ids(chain)).toEqual(['foreign', 'fa']);
   });
+
+  // Regression (quraish): a workspace borrows an ENTIRE upper lineage — the
+  // subject AND every patrilineal ancestor up to the borrowed root are
+  // `_pointed`, and the root is stitched under a NATIVE anchor. The boundary is
+  // the TOP of the borrowed branch (root's father is native), so the climb walks
+  // the whole shared lineage instead of stopping at the first `_pointed` node.
+  // Before the fix this truncated to just the immediate father.
+  test('climbs a fully-borrowed lineage and stops at the borrowed root (not the first _pointed node)', () => {
+    const d = data(
+      [
+        makeIndividual({ id: 'anchor', givenName: 'عبدمناف', familiesAsSpouse: ['AF'] }), // NATIVE
+        makeIndividual({ id: 'bRoot', givenName: 'هاشم', _pointed: true, familyAsChild: 'AF', familiesAsSpouse: ['RF'] }),
+        makeIndividual({ id: 'bMid', givenName: 'عبدالمطلب', _pointed: true, familyAsChild: 'RF', familiesAsSpouse: ['MF'] }),
+        makeIndividual({ id: 'uncle', givenName: 'أبوطالب', _pointed: true, familyAsChild: 'MF' }),
+        makeIndividual({ id: 'bFa', givenName: 'عبدالله', _pointed: true, familyAsChild: 'MF', familiesAsSpouse: ['FF'] }),
+        makeIndividual({ id: 'p', givenName: 'محمد', _pointed: true, familyAsChild: 'FF' }),
+      ],
+      [
+        makeFamily({ id: 'AF', husband: 'anchor', children: ['bRoot'] }),
+        makeFamily({ id: 'RF', husband: 'bRoot', children: ['bMid'] }),
+        makeFamily({ id: 'MF', husband: 'bMid', children: ['bFa', 'uncle'] }),
+        makeFamily({ id: 'FF', husband: 'bFa', children: ['p'] }),
+      ],
+    );
+    const proj = projectPerson(d, 'p', MEMBER)!;
+    // The whole borrowed lineage is climbed; it stops AT the borrowed root
+    // (bRoot) — the native anchor above it is not pulled into the نسب ribbon.
+    expect(ids(proj.paternalChain)).toEqual(['bRoot', 'bMid', 'bFa']);
+    expect(proj.paternalChain.some((c) => c.id === 'anchor')).toBe(false);
+    // Uncles are enumerated through the borrowed grandfather (was empty before).
+    expect(ids(proj.paternalUncles)).toEqual(['uncle']);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -446,6 +478,31 @@ describe('projectPerson — marriages', () => {
     const { marriages } = projectPerson(d, 'p', MEMBER)!;
     expect(marriages[0].spouse).toBeNull();
     expect(ids(marriages[0].children)).toEqual(['c1']);
+  });
+
+  test('skips an empty marriage (no visible spouse AND no visible children)', () => {
+    const d = data(
+      [
+        makeIndividual({ id: 'p', sex: 'M', givenName: 'باسل', familiesAsSpouse: ['M1', 'M2', 'M3'] }),
+        makeIndividual({ id: 'w1', sex: 'F', givenName: 'ليلى', familiesAsSpouse: ['M1'] }),
+        makeIndividual({ id: 'wp', sex: 'F', isPrivate: true, familiesAsSpouse: ['M3'] }),
+        makeIndividual({ id: 'c3', givenName: 'عمر', familyAsChild: 'M3' }),
+      ],
+      [
+        // M1: visible spouse, no children — KEPT (a real recorded marriage).
+        makeFamily({ id: 'M1', husband: 'p', wife: 'w1' }),
+        // M2: no spouse, no children — DROPPED (carries no information).
+        makeFamily({ id: 'M2', husband: 'p' }),
+        // M3: private spouse (→ null) but a visible child — KEPT («غير مذكورة» + child).
+        makeFamily({ id: 'M3', husband: 'p', wife: 'wp', children: ['c3'] }),
+      ],
+    );
+    const { marriages } = projectPerson(d, 'p', MEMBER)!;
+    expect(marriages.map((m) => m.familyId)).toEqual(['M1', 'M3']);
+    expect(marriages[0].spouse?.id).toBe('w1');
+    expect(marriages[0].children).toHaveLength(0);
+    expect(marriages[1].spouse).toBeNull();
+    expect(ids(marriages[1].children)).toEqual(['c3']);
   });
 
   test('grandchildren carry parentId → the subject\'s own child', () => {

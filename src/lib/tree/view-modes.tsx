@@ -50,15 +50,26 @@ function buildTreeQuery(ctx: ViewModeContext, extra?: Record<string, string>): s
   return qs ? `?${qs}` : '';
 }
 
-/** Crosshair / target — "look at this in the spatial tree". */
-const TreeIcon: ComponentType<SVGProps<SVGSVGElement>> = (props) => (
+/**
+ * A hierarchical org-chart — one parent node up top, two child nodes below,
+ * joined by a vertical drop and a horizontal busbar. Stroke-based with
+ * currentColor so it matches its sibling action buttons. NOT a botanical tree.
+ */
+export const TreeIcon: ComponentType<SVGProps<SVGSVGElement>> = (props) => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" {...props}>
-    <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
+    {/* parent node */}
+    <rect x="9" y="2" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="2" />
+    {/* child nodes */}
+    <rect x="2" y="16" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="2" />
+    <rect x="16" y="16" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="2" />
+    {/* connectors: parent drop + busbar splitting to each child */}
+    <path d="M12 8v3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     <path
-      d="M12 2V5M12 19V22M2 12H5M19 12H22"
+      d="M5 16v-3a1 1 0 011-1h12a1 1 0 011 1v3"
       stroke="currentColor"
       strokeWidth="2"
       strokeLinecap="round"
+      strokeLinejoin="round"
     />
   </svg>
 );
@@ -106,4 +117,15 @@ export function getViewMode(id: TreeViewModeId): TreeViewMode {
 /** The mode the switcher should navigate TO from the given current mode. */
 export function getNextViewMode(current: TreeViewModeId): TreeViewMode {
   return current === 'tree' ? getViewMode('person') : getViewMode('tree');
+}
+
+/**
+ * The view the member is CURRENTLY looking at, derived from the route. The
+ * person view lives at `…/tree/person/<id>`; everything else under the shared
+ * shell is the canvas. The sidebar (which renders on BOTH views) uses this so
+ * its view-switcher is a true toggle and so a person-click navigates the page
+ * when on the person view rather than only re-centering the canvas.
+ */
+export function viewModeFromPathname(pathname: string | null | undefined): TreeViewModeId {
+  return pathname && /\/tree\/person\//.test(pathname) ? 'person' : 'tree';
 }

@@ -90,10 +90,6 @@ export function PersonPage({
     rada.mothers.length > 0 ||
     rada.siblings.length > 0;
 
-  // Suppress the kunya everywhere when the workspace toggle is off (blank it on
-  // the record subject too, so السجل drops its الكنية field).
-  const recordSubject = showKunya ? subject : { ...subject, kunya: '' };
-
   return (
     <main className={styles.root}>
       <div className={styles.page}>
@@ -121,14 +117,14 @@ export function PersonPage({
             {subjectYears && <span className={styles.dates}>{subjectYears}</span>}
           </div>
 
-          <div className={styles.tagRow}>
-            {subject.living ? (
-              <span className={styles.tagEmerald}>على قيد الحياة</span>
-            ) : (
-              <span className={styles.tagMuted}>رحمه الله</span>
-            )}
-            {subject.surname && <span className={styles.tagMuted}>من بيت {subject.surname}</span>}
-          </div>
+          {(subject.living || subject.surname) && (
+            <div className={styles.tagRow}>
+              {subject.living && (
+                <span className={styles.tagEmerald}>على قيد الحياة</span>
+              )}
+              {subject.surname && <span className={styles.tagMuted}>من بيت {subject.surname}</span>}
+            </div>
+          )}
         </header>
 
         {/* ============ TWO BLOODLINES BAND ============ */}
@@ -137,12 +133,20 @@ export function PersonPage({
             <div className={styles.sectionHead}>
               <h2 className={styles.sectionTitle}>سلسلتا النسب</h2>
               <p className={styles.sectionHint}>
-                نسب الأب ونسب الأم جنبا إلى جنب. ولكل جد على السلسلة أمٌّ تزوجت في العائلة — افتح
-                «نسب أمه» لترى اسمها ونسب آبائها.
+                نسب الأب ونسب الأم جنبا إلى جنب.
               </p>
             </div>
 
-            <div className={styles.bloodlinesGrid}>
+            <div
+              className={`${styles.bloodlinesGrid} ${
+                // Only one side has documented ancestors → collapse to a single
+                // column so the present column isn't left at half width with an
+                // empty grid cell beside it.
+                paternalChain.length === 0 || maternalChain.length === 0
+                  ? styles.bloodlinesGridSingle
+                  : ''
+              }`}
+            >
               <BloodlineColumn
                 variant="paternal"
                 kicker="نسب الأب"
@@ -179,6 +183,7 @@ export function PersonPage({
                       key={group.familyId}
                       group={group}
                       index={i}
+                      total={marriages.length}
                       hrefFor={hrefFor}
                     />
                   ))}
@@ -235,7 +240,7 @@ export function PersonPage({
         )}
 
         {/* ============ THE RECORD ============ */}
-        <PersonRecord subject={recordSubject} />
+        <PersonRecord subject={subject} />
 
         {/* ============ VIEW IN TREE ============ */}
         <ViewInTreeButton href={treeHref} />

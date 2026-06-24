@@ -43,6 +43,7 @@ export function NasabRibbon({
         <PersonLink
           chip={{ id: subject.id, name: subject.givenName }}
           kind="lead"
+          interactive={false}
           hrefFor={hrefFor}
         />
         {reversed.map((anc, i) => {
@@ -53,10 +54,16 @@ export function NasabRibbon({
             <span key={anc.id ?? `anc-${i}`} className={styles.ribbonSegment}>
               {!hideConnector && (
                 <span className={styles.nasabConnector}>
-                  {anc.gender === 'female' ? 'بنت' : 'بن'}
+                  {/* بن/بنت reflects the YOUNGER person (son/daughter OF the
+                      ancestor), not the ancestor — so a female subject reads
+                      «رندة بنت بشر», not «رندة بن بشر». */}
+                  {younger.gender === 'female' ? 'بنت' : 'بن'}
                 </span>
               )}
-              <PersonLink chip={anc} hrefFor={hrefFor} />
+              {/* Ancestors show only their GIVEN name — the shared family name
+                  (surname) prints ONCE at the end of the ribbon, so repeating it
+                  on every father would read «… بن محمد سعيّد بن عمر سعيّد سعيّد». */}
+              <PersonLink chip={{ ...anc, name: anc.givenName }} hrefFor={hrefFor} />
             </span>
           );
         })}

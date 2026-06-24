@@ -2,9 +2,10 @@
 
 import clsx from 'clsx';
 import { useMemo, useState, useCallback, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, usePathname, useRouter } from 'next/navigation';
 import { useTree } from '@/context/TreeContext';
 import { ViewSwitcherIconButton } from '@/components/tree/ViewSwitcherIconButton/ViewSwitcherIconButton';
+import { getViewMode, viewModeFromPathname } from '@/lib/tree/view-modes';
 import { useOptionalWorkspaceTree } from '@/context/WorkspaceTreeContext';
 import { useOptionalUndoStack } from '@/context/UndoStackContext';
 import { getDisplayName, getDisplayNameWithNasab, getPersonRelationships, getRadaRelationships, getAllDescendants, findTopmostAncestor, hasExternalFamily } from '@/lib/gedcom';
@@ -41,6 +42,7 @@ import {
 import { MoveSubtreeModal, type MoveSubtreeOption } from '@/components/tree/MoveSubtreeModal';
 import type { AddParentResult } from '@/lib/person-detail-helpers';
 import { apiFetch } from '@/lib/api/client';
+import { shouldCollapseDrawerOnPersonView } from '@/lib/utils/viewport';
 import { shouldHideBirthDate } from '@/lib/tree/birth-date-privacy';
 import styles from './PersonDetail.module.css';
 
@@ -423,6 +425,15 @@ export function PersonDetail({ personId }: PersonDetailProps) {
   const undoStack = useOptionalUndoStack();
   const routeParams = useParams<{ slug: string }>();
   const slug = routeParams?.slug;
+  const pathname = usePathname();
+  const router = useRouter();
+  // The canvas + person page share one shell, so PersonDetail renders on both.
+  // The view-switcher must reflect the CURRENT view: on `/tree/person/<id>` it
+  // flips to the tree icon (back to the canvas); on the canvas it offers the
+  // person page. We also use this to know that a sidebar person-click should
+  // navigate the person page (Bug 2) rather than only focus a canvas node.
+  const currentViewMode = viewModeFromPathname(pathname);
+  const isPersonView = currentViewMode === 'person';
   const canEdit = workspace?.canEdit ?? false;
   const enableRadaa = workspace?.enableRadaa ?? false;
   const { preference: calendarPreference, setPreference: setCalendarPreference } = useCalendarPreference();
@@ -542,32 +553,52 @@ export function PersonDetail({ personId }: PersonDetailProps) {
   }, [setSelectedPersonId]);
 
   const handlePersonClick = useCallback((id: string) => {
+    // On the person page, the sidebar drives the page: clicking a relationship
+    // (or search result) navigates the person view to that person. We still set
+    // the TreeContext selection so the sidebar itself swaps to the clicked
+    // person, then push `/tree/person/<id>` (preserving the active extra tree).
+    // On a TABLET the drawer is an overlay over the page/canvas, so every "view
+    // this person" path collapses it to reveal the result; on a PHONE the drawer
+    // stays open (the member keeps browsing inside it) — one rule for all branches.
+    const collapseDrawer = () => {
+      if (shouldCollapseDrawerOnPersonView()) setMobileSidebarOpen(false);
+    };
+    if (isPersonView && slug) {
+      setSelectedPersonId(id);
+      setHighlightedPersonId(id);
+      router.push(
+        getViewMode('person').href({ slug, individualId: id, treeId: workspace?.activeTreeId }),
+      );
+      collapseDrawer();
+      return;
+    }
     if (graftPersonIds.has(id) && data) {
       const topAncestorId = findTopmostAncestor(data, id) ?? id;
       setSelectedRootId(topAncestorId);
       setSelectedPersonId(null);
+      collapseDrawer();
       return;
     }
     setSelectedPersonId(id);
     setFocusPersonId(id);
     setHighlightedPersonId(id);
-  }, [graftPersonIds, data, setSelectedPersonId, setFocusPersonId, setHighlightedPersonId, setSelectedRootId]);
+    collapseDrawer();
+  }, [isPersonView, slug, router, workspace?.activeTreeId, graftPersonIds, data, setSelectedPersonId, setFocusPersonId, setHighlightedPersonId, setSelectedRootId, setMobileSidebarOpen]);
 
   const handleFocusInTree = useCallback(() => {
     setFocusPersonId(personId);
-    if (typeof window !== 'undefined' && window.innerWidth <= 768) {
-      setMobileSidebarOpen(false);
-    }
+    // Reveal the canvas behind the overlay on a tablet; keep the drawer open on
+    // a phone (its primary surface). Same centralized rule as a person click.
+    if (shouldCollapseDrawerOnPersonView()) setMobileSidebarOpen(false);
   }, [personId, setFocusPersonId, setMobileSidebarOpen]);
 
   const handleViewFamilyTree = useCallback(() => {
     if (!externalFamilyInfo) return;
     setSelectedRootId(externalFamilyInfo.topAncestorId);
     setSelectedPersonId(null);
-    // Close mobile sidebar so the new tree is visible
-    if (typeof window !== 'undefined' && window.innerWidth <= 768) {
-      setMobileSidebarOpen(false);
-    }
+    // Reveal the new tree behind the overlay on a tablet; keep the drawer open
+    // on a phone.
+    if (shouldCollapseDrawerOnPersonView()) setMobileSidebarOpen(false);
   }, [externalFamilyInfo, setSelectedRootId, setSelectedPersonId, setMobileSidebarOpen]);
 
   // -------------------------------------------------------------------------
@@ -891,7 +922,7 @@ export function PersonDetail({ personId }: PersonDetailProps) {
           </button>
           {slug && (
             <ViewSwitcherIconButton
-              currentMode="tree"
+              currentMode={currentViewMode}
               ctx={{ slug, individualId: personId, treeId: workspace?.activeTreeId }}
               className={styles.focusButton}
             />

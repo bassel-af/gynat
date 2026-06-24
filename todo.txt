@@ -48,5 +48,23 @@ Make people close together. Do not make them this much far away.
 
 إخفاء الملاحظات
 افتراح تعديلات
-وصف للشخص
+وصف للشخص 
+سيرة الشخص
 all person search picker shall contain person birth date.
+
+وجعلناكم شعوبا وقبائل لتعارفوا. اجعلها مكان وَمِنْ آيَاتِهِ أَنْ خَلَقَ لَكُم مِّنْ أَنفُسِكُمْ أَزْوَاجًا
+
+المحارم
+من يجب أن يكونوا في الميراث
+صفحة الشخص
+نعوة الشخص
+عبد الله أو عبدالله نفس الشيء بالبحث، مو بس عبد الله لكن أي اسم مشابه مثل عبدالرحمن وعبدالله وعبدالخالق وغير ذلك
+
+
+عدم ذكر الدولة في الأشجار التاريخية أو بشكل عام والاكتفاء بالمدينة بالنسبة للميلاد
+
+when a person is added as link from another space, he is assigned to his father only without mother.
+e.g. فدوى in sharbek family
+
+scrolling tree doesn't work in ipad or tablets size. There are small laptops and even tablets can
+have trackpad.

@@ -8,8 +8,9 @@ import styles from './person.module.css';
 
 /**
  * السجل — the factual record. Birth (place + dates), optional death (ONLY for the
- * deceased — never show الوفاة with a dash for a living person), kunya, house,
- * and الملاحظات taken from the person's notes.
+ * deceased — never show الوفاة with a dash for a living person), house, and
+ * الملاحظات taken from the person's notes. The kunya is NOT shown here — the hero
+ * already displays it prominently, so repeating it in السجل reads as a duplicate.
  *
  * Dates honor the user's calendar preference (formatted client-side from the
  * raw hijri/gregorian strings the projection provides).
@@ -22,6 +23,15 @@ export function PersonRecord({ subject }: { subject: PersonSubject }) {
 
   const birthDates = subjectBirth(subject, preference);
   const deathDates = subjectDeath(subject, preference);
+
+  // "If there is nothing to show, do not show it." Each field below renders
+  // only when it has content (and الوفاة only for the deceased). When NONE of
+  // them would render, the whole section — heading, hint, and ornament —
+  // collapses to nothing instead of a titled box with an empty body.
+  const hasBirth = !!(subject.birthPlace || birthDates);
+  const hasDeath = !subject.living && !!(subject.deathPlace || deathDates);
+  const hasAnyField = hasBirth || hasDeath || !!subject.surname || !!subject.notes;
+  if (!hasAnyField) return null;
 
   return (
     <section className={styles.record}>
@@ -47,13 +57,6 @@ export function PersonRecord({ subject }: { subject: PersonSubject }) {
             <div className={styles.recordLabel}>الوفاة</div>
             {subject.deathPlace && <div className={styles.recordValue}>{subject.deathPlace}</div>}
             {deathDates && <div className={styles.recordHint}>{deathDates}</div>}
-          </div>
-        )}
-
-        {subject.kunya && (
-          <div className={styles.recordField}>
-            <div className={styles.recordLabel}>الكنية</div>
-            <div className={styles.recordValue}>{subject.kunya}</div>
           </div>
         )}
 

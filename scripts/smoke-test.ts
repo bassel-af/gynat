@@ -72,6 +72,12 @@ const ENDPOINTS: Endpoint[] = [
   // (401/404), NOT 500 — catches a broken tree-id resolver in the GET path.
   { method: 'GET', path: '/api/workspaces/00000000-0000-4000-a000-000000000000/tree?treeId=00000000-0000-4000-a000-000000000001', label: 'Tree GET with treeId selector (anon → 401/404)', allowUnauth: true },
 
+  // Person Page (Surface 1): the member person-projection route loads the tree
+  // GET pipeline (load → pointer merge → projectPerson). Anon GET must load the
+  // route and reject at the member gate (401/404), NOT 500 — catches a broken
+  // import or runtime error in the projection pipeline.
+  { method: 'GET', path: '/api/workspaces/00000000-0000-4000-a000-000000000000/tree/person/00000000-0000-4000-a000-000000000002', label: 'Person projection (anon → 401/404)', allowUnauth: true },
+
   // Extra-tree publish (Collections Chunk 3, Slice B): the visibility route now
   // accepts an optional `treeId` body field. Anon PATCH must load the route and
   // reject at the admin gate (401), NOT 500 — catches a broken treeId resolver
