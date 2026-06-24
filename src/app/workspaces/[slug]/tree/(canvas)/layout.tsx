@@ -1,7 +1,8 @@
 'use client';
 
 import { Suspense, useEffect, useState, useCallback, useRef } from 'react';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams, useSearchParams, usePathname } from 'next/navigation';
+import { viewModeFromPathname } from '@/lib/tree/view-modes';
 import { TreeProvider, useTree } from '@/context/TreeContext';
 import { WorkspaceTreeProvider, useWorkspaceTree } from '@/context/WorkspaceTreeContext';
 import { UndoStackProvider, useUndoStack } from '@/context/UndoStackContext';
@@ -206,9 +207,27 @@ function TreeShell({
   children: React.ReactNode;
 }) {
   const { canEdit, isAdmin, activeTreeId } = useWorkspaceTree();
+  const { setMobileSidebarOpen } = useTree();
   const undoStack = useUndoStack();
   const { showToast } = useToast();
   const [publishOpen, setPublishOpen] = useState(false);
+
+  // Close the mobile sidebar drawer whenever the member TOGGLES between the two
+  // views (tree ↔ person) via the in-sidebar switcher. Keyed on the view mode
+  // flipping — so a person→person navigation inside the drawer (mode stays
+  // 'person') deliberately keeps it open, and canvas-internal navigation (mode
+  // stays 'tree') is untouched. Runs AFTER the route commits, so it never races
+  // the Sidebar's back-button history sentinel (closing during navigation would
+  // trigger that effect's cleanup `history.back()` and strand the drawer open).
+  const pathname = usePathname();
+  const isPersonView = viewModeFromPathname(pathname) === 'person';
+  const prevIsPersonView = useRef(isPersonView);
+  useEffect(() => {
+    if (prevIsPersonView.current !== isPersonView) {
+      prevIsPersonView.current = isPersonView;
+      setMobileSidebarOpen(false);
+    }
+  }, [isPersonView, setMobileSidebarOpen]);
   // Publishing is an admin-only capability.
   const canPublish = isAdmin;
 
