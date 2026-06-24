@@ -6,11 +6,32 @@ import { encryptFieldNullable } from '@/lib/crypto/workspace-encryption';
 // Types
 // ---------------------------------------------------------------------------
 
+/**
+ * Describes the anchor's existing REAL family that a child/parent copy should be
+ * attached to — mirrors the live-merge reuse so a frozen copy shows both parents
+ * exactly as the GET-tree merge did. Computed by the caller (which has the target
+ * tree) via {@link computeAnchorReuse}.
+ *
+ * - child reuse: `{ familyId }` — copied root joins this family's children.
+ * - parent reuse: `{ familyId, role }` — copied parent fills the empty `role` slot.
+ */
+export interface AnchorReuse {
+  familyId: string;
+  role?: 'husband' | 'wife';
+}
+
 export interface DeepCopyConfig {
   anchorIndividualId: string;
   relationship: 'child' | 'sibling' | 'spouse' | 'parent';
   pointerId: string;
+  /** Optional: attach the copied root/parent into the anchor's existing real family. */
+  anchorReuse?: AnchorReuse | null;
 }
+
+/** Instruction to stitch the copy into an EXISTING (real) anchor family. */
+export type ReuseStitch =
+  | { familyId: string; childId: string }
+  | { familyId: string; role: 'husband' | 'wife'; parentId: string };
 
 export interface DeepCopyResult {
   /** Copied individuals keyed by new UUID */
@@ -19,8 +40,10 @@ export interface DeepCopyResult {
   families: Record<string, Family>;
   /** Map from old IDs to new UUIDs */
   idMap: Map<string, string>;
-  /** Synthetic family to stitch the copied root to the anchor */
+  /** Synthetic family to stitch the copied root to the anchor (null when reusing a real family) */
   stitchFamily: Family | null;
+  /** Instruction to attach the copy into an existing real anchor family (null when a synthetic stitch was minted) */
+  reuseStitch: ReuseStitch | null;
 }
 
 /**
@@ -121,47 +144,118 @@ export function prepareDeepCopy(
   const pointedRootOldId = findPointedRoot(pointed);
   const pointedRootNewId = pointedRootOldId ? idMap.get(pointedRootOldId) : undefined;
 
-  // Step 5: Create stitch family
+  // Step 5: Create stitch family — OR, when the caller resolved an anchorReuse,
+  // attach the copy into the anchor's existing real family (mirrors the live merge
+  // so the frozen copy shows both parents instead of a single-parent synthetic).
   let stitchFamily: Family | null = null;
+  let reuseStitch: ReuseStitch | null = null;
+  const anchorReuse = config.anchorReuse ?? null;
+
   if (pointedRootNewId) {
     const rootInd = pointed.individuals[pointedRootOldId!];
-    const stitchFamId = crypto.randomUUID();
 
-    switch (relationship) {
-      case 'child': {
-        stitchFamily = makeStitchFamily(stitchFamId, {
-          husband: anchorIndividualId, // simplified — anchor's sex determines role
-          children: [pointedRootNewId],
-        });
-        break;
-      }
-      case 'sibling': {
-        stitchFamily = makeStitchFamily(stitchFamId, {
-          children: [anchorIndividualId, pointedRootNewId],
-        });
-        break;
-      }
-      case 'spouse': {
-        const anchorRole = rootInd?.sex === 'F' ? 'husband' : 'wife';
-        const rootRole = rootInd?.sex === 'F' ? 'wife' : 'husband';
-        stitchFamily = makeStitchFamily(stitchFamId, {
-          [anchorRole]: anchorIndividualId,
-          [rootRole]: pointedRootNewId,
-        });
-        break;
-      }
-      case 'parent': {
-        const parentRole = rootInd?.sex === 'F' ? 'wife' : 'husband';
-        stitchFamily = makeStitchFamily(stitchFamId, {
-          [parentRole]: pointedRootNewId,
-          children: [anchorIndividualId],
-        });
-        break;
+    if (anchorReuse && relationship === 'child') {
+      // Copied root joins the existing real family's children.
+      reuseStitch = { familyId: anchorReuse.familyId, childId: pointedRootNewId };
+      individuals[pointedRootNewId] = {
+        ...individuals[pointedRootNewId],
+        familyAsChild: anchorReuse.familyId,
+      };
+    } else if (anchorReuse && relationship === 'parent' && anchorReuse.role) {
+      // Copied parent fills the empty parent slot of the anchor's real family.
+      reuseStitch = { familyId: anchorReuse.familyId, role: anchorReuse.role, parentId: pointedRootNewId };
+      individuals[pointedRootNewId] = {
+        ...individuals[pointedRootNewId],
+        familiesAsSpouse: [...individuals[pointedRootNewId].familiesAsSpouse, anchorReuse.familyId],
+      };
+    } else {
+      const stitchFamId = crypto.randomUUID();
+      switch (relationship) {
+        case 'child': {
+          stitchFamily = makeStitchFamily(stitchFamId, {
+            husband: anchorIndividualId, // simplified — anchor's sex determines role
+            children: [pointedRootNewId],
+          });
+          break;
+        }
+        case 'sibling': {
+          stitchFamily = makeStitchFamily(stitchFamId, {
+            children: [anchorIndividualId, pointedRootNewId],
+          });
+          break;
+        }
+        case 'spouse': {
+          const anchorRole = rootInd?.sex === 'F' ? 'husband' : 'wife';
+          const rootRole = rootInd?.sex === 'F' ? 'wife' : 'husband';
+          stitchFamily = makeStitchFamily(stitchFamId, {
+            [anchorRole]: anchorIndividualId,
+            [rootRole]: pointedRootNewId,
+          });
+          break;
+        }
+        case 'parent': {
+          const parentRole = rootInd?.sex === 'F' ? 'wife' : 'husband';
+          stitchFamily = makeStitchFamily(stitchFamId, {
+            [parentRole]: pointedRootNewId,
+            children: [anchorIndividualId],
+          });
+          break;
+        }
       }
     }
   }
 
-  return { individuals, families, idMap, stitchFamily };
+  return { individuals, families, idMap, stitchFamily, reuseStitch };
+}
+
+// ---------------------------------------------------------------------------
+// computeAnchorReuse
+// ---------------------------------------------------------------------------
+
+/**
+ * Decide whether a child/parent deep-copy should attach into the anchor's
+ * EXISTING real family — mirrors the live-merge reuse rule in
+ * `branch-pointer-merge.ts` so a frozen copy matches what the merge view showed.
+ *
+ * - child: reuse when the anchor has EXACTLY ONE spousal family.
+ * - parent: reuse when the anchor has a single `familyAsChild` that LACKS a parent
+ *   of `pointedRootSex` (fill the empty slot, never overwrite a real parent).
+ * - sibling / spouse: never reuse here (the merge handles those without the
+ *   single-parent defect).
+ *
+ * Returns null when no unambiguous reuse applies → caller mints the synthetic
+ * stitch family (current fallback behavior).
+ *
+ * Pure function — does not mutate input.
+ */
+export function computeAnchorReuse(
+  targetData: GedcomData,
+  anchorIndividualId: string,
+  relationship: 'child' | 'sibling' | 'spouse' | 'parent',
+  pointedRootSex: 'M' | 'F' | string,
+): AnchorReuse | null {
+  const anchor = targetData.individuals[anchorIndividualId];
+  if (!anchor) return null;
+
+  if (relationship === 'child') {
+    const spousal = anchor.familiesAsSpouse.filter((famId) => targetData.families[famId]);
+    if (spousal.length === 1) {
+      return { familyId: spousal[0] };
+    }
+    return null;
+  }
+
+  if (relationship === 'parent') {
+    const famId = anchor.familyAsChild;
+    if (!famId || !targetData.families[famId]) return null;
+    const role: 'husband' | 'wife' = pointedRootSex === 'F' ? 'wife' : 'husband';
+    if (targetData.families[famId][role] === null) {
+      return { familyId: famId, role };
+    }
+    return null;
+  }
+
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -262,6 +356,22 @@ export async function persistDeepCopy(
     for (const childId of sf.children) {
       await tx.familyChild.create({
         data: { familyId: sf.id, individualId: childId },
+      });
+    }
+  }
+
+  // Reuse stitch: attach the copy into the anchor's EXISTING real family so the
+  // frozen copy shows both parents (mirrors the live merge). No new family row.
+  if (copyResult.reuseStitch) {
+    const rs = copyResult.reuseStitch;
+    if ('childId' in rs) {
+      await tx.familyChild.create({
+        data: { familyId: rs.familyId, individualId: rs.childId },
+      });
+    } else {
+      await tx.family.update({
+        where: { id: rs.familyId },
+        data: rs.role === 'wife' ? { wifeId: rs.parentId } : { husbandId: rs.parentId },
       });
     }
   }

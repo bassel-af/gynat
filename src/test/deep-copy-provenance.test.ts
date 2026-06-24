@@ -47,6 +47,7 @@ describe('persistDeepCopy provenance', () => {
       families: {},
       idMap: new Map([['oldRoot', 'newRoot']]),
       stitchFamily: null,
+      reuseStitch: null,
     };
     const tx = makeTx();
 
@@ -73,6 +74,7 @@ describe('persistDeepCopy provenance', () => {
       families: {},
       idMap: new Map(),
       stitchFamily: null,
+      reuseStitch: null,
     };
     const tx = makeTx();
 

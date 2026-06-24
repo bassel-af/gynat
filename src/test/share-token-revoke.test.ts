@@ -93,6 +93,7 @@ const mockPersistDeepCopy = vi.fn();
 vi.mock('@/lib/tree/branch-pointer-deep-copy', () => ({
   prepareDeepCopy: (...args: unknown[]) => mockPrepareDeepCopy(...args),
   persistDeepCopy: (...args: unknown[]) => mockPersistDeepCopy(...args),
+  computeAnchorReuse: vi.fn().mockReturnValue(null),
 }));
 
 // Phase 10b: stub workspace-key helpers.
@@ -323,9 +324,11 @@ describe('DELETE /api/workspaces/[id]/share-tokens/[tokenId] — revoke with aut
     );
     await DELETE(req, routeParams);
 
-    // Source tree fetched exactly once
+    // Source tree fetched exactly once (shared across all pointers)
     expect(mockGetTreeByWorkspaceId).toHaveBeenCalledTimes(1);
-    expect(mockDbTreeToGedcomData).toHaveBeenCalledTimes(1);
+    // dbTreeToGedcomData maps the source once + each pointer's target tree
+    // (target mapping drives the anchor-reuse decision so frozen copies show both parents)
+    expect(mockDbTreeToGedcomData).toHaveBeenCalledTimes(1 + 3);
   });
 
   test('deep-copy failure does not prevent token revocation', async () => {

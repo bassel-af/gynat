@@ -15,7 +15,7 @@ import { getTreeByWorkspaceId, getOrCreateTree } from '@/lib/tree/queries'
 import { getWorkspaceKey } from '@/lib/tree/encryption'
 import { dbTreeToGedcomData } from '@/lib/tree/mapper'
 import { extractPointedSubtree } from '@/lib/tree/branch-pointer-merge'
-import { prepareDeepCopy, persistDeepCopy } from '@/lib/tree/branch-pointer-deep-copy'
+import { prepareDeepCopy, persistDeepCopy, computeAnchorReuse } from '@/lib/tree/branch-pointer-deep-copy'
 import { isStitchablePointer } from '@/lib/tree/branch-pointer-guards'
 import { logSwallowedAuditError } from '@/lib/api/swallowed-error-log'
 import { copyBorrowedBranchIntoNewExtraTree } from '@/lib/collections/copy-borrowed'
@@ -89,14 +89,26 @@ export async function freezeDependentPointers(
         includeGrafts: pointer.includeGrafts,
       })
 
-      const copyResult = prepareDeepCopy(pointedSubtree, {
-        anchorIndividualId: pointer.anchorIndividualId,
-        relationship: pointer.relationship as 'child' | 'sibling' | 'spouse' | 'parent',
-        pointerId: pointer.id,
-      })
-
       const targetTree = await getOrCreateTree(pointer.targetWorkspaceId)
       const targetKey = await getWorkspaceKey(pointer.targetWorkspaceId)
+
+      // Mirror the live-merge reuse so the frozen copy shows both parents.
+      const relationship = pointer.relationship as 'child' | 'sibling' | 'spouse' | 'parent'
+      const targetData = dbTreeToGedcomData(targetTree, targetKey)
+      const pointedRootSex = pointedSubtree.individuals[pointer.rootIndividualId]?.sex ?? 'M'
+      const anchorReuse = computeAnchorReuse(
+        targetData,
+        pointer.anchorIndividualId,
+        relationship,
+        pointedRootSex,
+      )
+
+      const copyResult = prepareDeepCopy(pointedSubtree, {
+        anchorIndividualId: pointer.anchorIndividualId,
+        relationship,
+        pointerId: pointer.id,
+        anchorReuse,
+      })
       const copiedRootId =
         copyResult.idMap.get(pointer.rootIndividualId) ?? pointer.rootIndividualId
 

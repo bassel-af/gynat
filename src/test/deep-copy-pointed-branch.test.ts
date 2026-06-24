@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'vitest';
 import type { GedcomData, Individual, Family } from '@/lib/gedcom/types';
-import { prepareDeepCopy } from '@/lib/tree/branch-pointer-deep-copy';
+import { prepareDeepCopy, computeAnchorReuse } from '@/lib/tree/branch-pointer-deep-copy';
 
 // ---------------------------------------------------------------------------
 // Fixture builder helpers
@@ -330,6 +330,114 @@ describe('prepareDeepCopy', () => {
       expect(pointed.individuals[originalRootId]).toBeDefined();
       expect(pointed.individuals[originalRootId].givenName).toBe(originalRootName);
       expect(pointed.individuals[originalRootId]._pointed).toBe(true);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // computeAnchorReuse — mirrors the live-merge reuse rule so a frozen/copied
+  // result matches what the GET-tree merge showed (both parents).
+  // -------------------------------------------------------------------------
+  describe('computeAnchorReuse', () => {
+    /** Target tree: father + mother → f-target (with child1) */
+    function makeTargetData(): GedcomData {
+      return {
+        individuals: {
+          father: makeIndividual({ id: 'father', sex: 'M', familiesAsSpouse: ['f-target'] }),
+          mother: makeIndividual({ id: 'mother', sex: 'F', familiesAsSpouse: ['f-target'] }),
+          child1: makeIndividual({ id: 'child1', sex: 'M', familyAsChild: 'f-target' }),
+        },
+        families: {
+          'f-target': makeFamily({ id: 'f-target', husband: 'father', wife: 'mother', children: ['child1'] }),
+        },
+      };
+    }
+
+    test('child + one-spouse anchor → reuse the anchor real family', () => {
+      const target = makeTargetData();
+      const reuse = computeAnchorReuse(target, 'father', 'child', 'F');
+      expect(reuse).toEqual({ familyId: 'f-target' });
+    });
+
+    test('child + zero-spouse anchor → null (no reuse, fall back to synthetic)', () => {
+      const target = makeTargetData();
+      const reuse = computeAnchorReuse(target, 'child1', 'child', 'F');
+      expect(reuse).toBeNull();
+    });
+
+    test('child + polygamous anchor (2 spousal families) → null', () => {
+      const target = makeTargetData();
+      target.families['f-second'] = makeFamily({ id: 'f-second', husband: 'father', children: [] });
+      target.individuals['father'].familiesAsSpouse = ['f-target', 'f-second'];
+      const reuse = computeAnchorReuse(target, 'father', 'child', 'F');
+      expect(reuse).toBeNull();
+    });
+
+    test('parent + anchor parent family missing the pointed-sex slot → reuse with role', () => {
+      const target = makeTargetData();
+      target.families['f-target'].wife = null; // female slot free
+      const reuse = computeAnchorReuse(target, 'child1', 'parent', 'F');
+      expect(reuse).toEqual({ familyId: 'f-target', role: 'wife' });
+    });
+
+    test('parent + anchor parent family already has the pointed-sex parent → null', () => {
+      const target = makeTargetData(); // wife = mother already
+      const reuse = computeAnchorReuse(target, 'child1', 'parent', 'F');
+      expect(reuse).toBeNull();
+    });
+
+    test('spouse / sibling relationships → null (no child/parent reuse applies)', () => {
+      const target = makeTargetData();
+      expect(computeAnchorReuse(target, 'father', 'spouse', 'F')).toBeNull();
+      expect(computeAnchorReuse(target, 'child1', 'sibling', 'F')).toBeNull();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // prepareDeepCopy with anchorReuse — emits a reuse stitch (attach into the
+  // anchor's existing real family) instead of a fresh single-parent stitch.
+  // -------------------------------------------------------------------------
+  describe('prepareDeepCopy with anchorReuse', () => {
+    test('child reuse → no fresh stitch family; reuseStitch attaches copied root into the real family', () => {
+      const pointed = makePointedSubtree();
+      const result = prepareDeepCopy(pointed, {
+        anchorIndividualId: 'father',
+        relationship: 'child',
+        pointerId: 'bp-1',
+        anchorReuse: { familyId: 'f-target' },
+      });
+
+      // No standalone stitch family — the copied root is attached to the existing real family
+      expect(result.stitchFamily).toBeNull();
+      const copiedRootId = result.idMap.get('src-root')!;
+      expect(result.reuseStitch).toEqual({ familyId: 'f-target', childId: copiedRootId });
+      // Copied root's familyAsChild points at the reused real family
+      expect(result.individuals[copiedRootId].familyAsChild).toBe('f-target');
+    });
+
+    test('parent reuse → no fresh stitch family; reuseStitch fills the empty parent slot', () => {
+      const pointed = makePointedSubtree(); // src-root is sex F
+      const result = prepareDeepCopy(pointed, {
+        anchorIndividualId: 'child1',
+        relationship: 'parent',
+        pointerId: 'bp-1',
+        anchorReuse: { familyId: 'f-target', role: 'wife' },
+      });
+
+      expect(result.stitchFamily).toBeNull();
+      const copiedParentId = result.idMap.get('src-root')!;
+      expect(result.reuseStitch).toEqual({ familyId: 'f-target', role: 'wife', parentId: copiedParentId });
+    });
+
+    test('without anchorReuse, the child stitch family is still minted (fallback unchanged)', () => {
+      const pointed = makePointedSubtree();
+      const result = prepareDeepCopy(pointed, {
+        anchorIndividualId: 'child1',
+        relationship: 'child',
+        pointerId: 'bp-1',
+      });
+
+      expect(result.stitchFamily).not.toBeNull();
+      expect(result.reuseStitch).toBeNull();
     });
   });
 });

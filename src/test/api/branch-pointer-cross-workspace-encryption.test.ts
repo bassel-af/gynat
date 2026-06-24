@@ -215,6 +215,7 @@ describe('branch pointer deep copy — cross-workspace encryption', () => {
       families: {},
       idMap: new Map<string, string>(),
       stitchFamily: null,
+      reuseStitch: null,
     };
 
     const individualCreateMany = vi.fn();

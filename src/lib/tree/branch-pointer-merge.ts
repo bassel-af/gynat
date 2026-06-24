@@ -469,7 +469,19 @@ function makeSyntheticFamily(
   };
 }
 
-/** child: anchor is parent, pointed root is child */
+/**
+ * child: anchor is parent, pointed root is child.
+ *
+ * When the anchor has EXACTLY ONE spousal family, the borrowed child is added to
+ * that existing REAL family so BOTH of the anchor's spouses show as parents (the
+ * فدوى fix). The reused real family keeps its real UUID and is NOT relabeled
+ * `_pointed` — read-only enforcement of the borrowed child comes from the
+ * child's `_pointed` flag, not the family id.
+ *
+ * Zero spousal families → mint a single-parent synthetic family (anchor only).
+ * 2+ spousal families (polygamy) → ambiguous; fall back to the synthetic family
+ * rather than guess which marriage the child belongs to.
+ */
 function stitchAsChild(
   individuals: Record<string, Individual>,
   families: Record<string, Family>,
@@ -481,6 +493,23 @@ function stitchAsChild(
   sourceWorkspaceId: string,
   pointerId: string,
 ): void {
+  const spousalFamilies = anchor.familiesAsSpouse.filter((famId) => families[famId]);
+
+  // Reuse the anchor's single existing marriage so both parents show.
+  if (spousalFamilies.length === 1) {
+    const familyId = spousalFamilies[0];
+    families[familyId] = {
+      ...families[familyId],
+      children: [...families[familyId].children, pointedRootId],
+    };
+    individuals[pointedRootId] = {
+      ...individuals[pointedRootId],
+      familyAsChild: familyId,
+    };
+    return;
+  }
+
+  // Zero or 2+ spousal families → single-parent synthetic family (no guessing).
   const parentRole = anchor.sex === 'F' ? 'wife' : 'husband';
   families[syntheticFamId] = makeSyntheticFamily(syntheticFamId, sourceWorkspaceId, pointerId, {
     [parentRole]: anchorId,
@@ -601,12 +630,24 @@ function stitchAsSpouse(
   };
 }
 
-/** parent: pointed root is parent, anchor is child */
+/**
+ * parent: pointed root is parent, anchor is child.
+ *
+ * Mirror of the child reuse. When the anchor already has EXACTLY ONE
+ * `familyAsChild` that LACKS a parent of the pointed person's sex, the borrowed
+ * parent fills that empty slot in the anchor's REAL family (so the anchor shows
+ * both real parents alongside the linked one). The reused real family keeps its
+ * UUID and is NOT relabeled `_pointed` — only the borrowed parent carries the flag.
+ *
+ * Otherwise (no familyAsChild, the matching-sex slot already filled by a real
+ * parent, or anything ambiguous) → mint the single-parent synthetic family.
+ * Never overwrite an existing real parent.
+ */
 function stitchAsParent(
   individuals: Record<string, Individual>,
   families: Record<string, Family>,
   syntheticFamId: string,
-  _anchor: Individual,
+  anchor: Individual,
   anchorId: string,
   pointedRoot: Individual,
   pointedRootId: string,
@@ -614,6 +655,25 @@ function stitchAsParent(
   pointerId: string,
 ): void {
   const parentRole = pointedRoot.sex === 'F' ? 'wife' : 'husband';
+
+  // Reuse the anchor's single existing parent family when the matching-sex slot is free.
+  const anchorFamilyAsChild = anchor.familyAsChild;
+  if (anchorFamilyAsChild && families[anchorFamilyAsChild]) {
+    const realFam = families[anchorFamilyAsChild];
+    if (realFam[parentRole] === null) {
+      families[anchorFamilyAsChild] = {
+        ...realFam,
+        [parentRole]: pointedRootId,
+      };
+      individuals[pointedRootId] = {
+        ...individuals[pointedRootId],
+        familiesAsSpouse: [...individuals[pointedRootId].familiesAsSpouse, anchorFamilyAsChild],
+      };
+      // anchor.familyAsChild already points here — no change needed.
+      return;
+    }
+  }
+
   families[syntheticFamId] = makeSyntheticFamily(syntheticFamId, sourceWorkspaceId, pointerId, {
     [parentRole]: pointedRootId,
     children: [anchorId],

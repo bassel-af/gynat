@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'vitest';
 import type { GedcomData, Individual, Family } from '@/lib/gedcom/types';
-import { mergePointedSubtree } from '@/lib/tree/branch-pointer-merge';
+import { mergePointedSubtree, extractPointedSubtree } from '@/lib/tree/branch-pointer-merge';
 
 // ---------------------------------------------------------------------------
 // Fixture builder helpers
@@ -200,7 +200,10 @@ describe('mergePointedSubtree', () => {
   });
 
   describe('relationship: child', () => {
-    test('creates a synthetic family linking anchor as parent and pointed root as child', () => {
+    // Anchor `father` has exactly ONE spousal family (f-target with mother).
+    // The borrowed child must be added to that REAL family so BOTH parents show
+    // (the فدوى regression — previously a single-parent synthetic family dropped the mother).
+    test('reuses the anchor existing one-spouse family so both parents show', () => {
       const target = makeTargetTree();
       const pointed = makePointedSubtree();
       const config: MergePointerConfig = {
@@ -213,16 +216,16 @@ describe('mergePointedSubtree', () => {
 
       const result = mergePointedSubtree(target, pointed, config);
 
-      // A synthetic family should exist linking father -> ptr-root
-      const syntheticFamId = `ptr-bp-1-fam`;
-      const syntheticFam = result.families[syntheticFamId];
-      expect(syntheticFam).toBeDefined();
-      expect(syntheticFam.children).toContain('ptr-root');
-      // Anchor (father) should be a parent in the synthetic family
-      expect(syntheticFam.husband === 'father' || syntheticFam.wife === 'father').toBe(true);
+      // No synthetic family is minted — the real family is reused
+      expect(result.families['ptr-bp-1-fam']).toBeUndefined();
+      // The pointed child is added to the anchor's real family, which keeps BOTH parents
+      const realFam = result.families['f-target'];
+      expect(realFam.children).toContain('ptr-root');
+      expect(realFam.husband).toBe('father');
+      expect(realFam.wife).toBe('mother');
     });
 
-    test('pointed root gets familyAsChild pointing to the synthetic family', () => {
+    test('pointed root gets familyAsChild pointing to the reused real family', () => {
       const target = makeTargetTree();
       const pointed = makePointedSubtree();
       const config: MergePointerConfig = {
@@ -235,11 +238,59 @@ describe('mergePointedSubtree', () => {
 
       const result = mergePointedSubtree(target, pointed, config);
 
+      expect(result.individuals['ptr-root'].familyAsChild).toBe('f-target');
+    });
+
+    test('reused real family is NOT relabeled as pointed', () => {
+      const target = makeTargetTree();
+      const pointed = makePointedSubtree();
+      const config: MergePointerConfig = {
+        pointerId: 'bp-1',
+        anchorIndividualId: 'father',
+        selectedIndividualId: 'ptr-root',
+        relationship: 'child',
+        sourceWorkspaceId: 'ws-source',
+      };
+
+      const result = mergePointedSubtree(target, pointed, config);
+
+      const realFam = result.families['f-target'];
+      expect(realFam._pointed).toBeUndefined();
+      expect(realFam._pointerId).toBeUndefined();
+      expect(realFam._sourceWorkspaceId).toBeUndefined();
+      // Only the borrowed child carries the pointed flags
+      expect(result.individuals['ptr-root']._pointed).toBe(true);
+      expect(result.individuals['ptr-root']._pointerId).toBe('bp-1');
+    });
+
+    test('falls back to a single-parent synthetic family when the anchor has zero spousal families', () => {
+      const target = makeTargetTree();
+      const pointed = makePointedSubtree();
+      // Anchor child1 has no familiesAsSpouse
+      const config: MergePointerConfig = {
+        pointerId: 'bp-1',
+        anchorIndividualId: 'child1',
+        selectedIndividualId: 'ptr-root',
+        relationship: 'child',
+        sourceWorkspaceId: 'ws-source',
+      };
+
+      const result = mergePointedSubtree(target, pointed, config);
+
+      const syntheticFam = result.families['ptr-bp-1-fam'];
+      expect(syntheticFam).toBeDefined();
+      expect(syntheticFam.children).toContain('ptr-root');
+      expect(syntheticFam.husband === 'child1' || syntheticFam.wife === 'child1').toBe(true);
       expect(result.individuals['ptr-root'].familyAsChild).toBe('ptr-bp-1-fam');
     });
 
-    test('anchor individual gets the synthetic family in familiesAsSpouse', () => {
+    test('falls back to a single-parent synthetic family when the anchor is polygamous (2+ spousal families)', () => {
       const target = makeTargetTree();
+      // Give father a second spousal family — ambiguous which one to reuse
+      target.families['f-second'] = makeFamily({
+        id: 'f-second', husband: 'father', wife: null, children: [],
+      });
+      target.individuals['father'].familiesAsSpouse = ['f-target', 'f-second'];
       const pointed = makePointedSubtree();
       const config: MergePointerConfig = {
         pointerId: 'bp-1',
@@ -251,7 +302,11 @@ describe('mergePointedSubtree', () => {
 
       const result = mergePointedSubtree(target, pointed, config);
 
-      expect(result.individuals['father'].familiesAsSpouse).toContain('ptr-bp-1-fam');
+      // No guessing — synthetic single-parent family minted, neither real family touched
+      expect(result.families['ptr-bp-1-fam']).toBeDefined();
+      expect(result.families['ptr-bp-1-fam'].children).toContain('ptr-root');
+      expect(result.families['f-target'].children).not.toContain('ptr-root');
+      expect(result.families['f-second'].children).not.toContain('ptr-root');
     });
   });
 
@@ -403,6 +458,67 @@ describe('mergePointedSubtree', () => {
 
       expect(result.individuals['father'].familyAsChild).toBe('ptr-bp-4-fam');
     });
+
+    // Mirror of the child fix. Anchor `child1` already has familyAsChild = f-target
+    // (father+mother). Linking a parent should only reuse that family when it has
+    // exactly one familyAsChild AND lacks a parent of the pointed person's sex.
+    test('reuses the anchor existing parent family when it lacks a parent of the pointed sex', () => {
+      const target = makeTargetTree();
+      // Remove mother so f-target lacks a wife (female-parent slot is free)
+      target.families['f-target'].wife = null;
+      target.individuals['mother'].familiesAsSpouse = [];
+      const pointed: GedcomData = {
+        individuals: {
+          'ptr-grandma': makeIndividual({ id: 'ptr-grandma', sex: 'F' }),
+        },
+        families: {},
+      };
+      const config: MergePointerConfig = {
+        pointerId: 'bp-6',
+        anchorIndividualId: 'child1',
+        selectedIndividualId: 'ptr-grandma',
+        relationship: 'parent',
+        sourceWorkspaceId: 'ws-source',
+      };
+
+      const result = mergePointedSubtree(target, pointed, config);
+
+      // No synthetic family — the pointed parent fills the empty wife slot of f-target
+      expect(result.families['ptr-bp-6-fam']).toBeUndefined();
+      const realFam = result.families['f-target'];
+      expect(realFam.wife).toBe('ptr-grandma');
+      expect(realFam.husband).toBe('father');
+      expect(realFam.children).toContain('child1');
+      // Reused real family must NOT be relabeled pointed; only the borrowed parent is
+      expect(realFam._pointed).toBeUndefined();
+      expect(result.individuals['ptr-grandma']._pointed).toBe(true);
+      expect(result.individuals['child1'].familyAsChild).toBe('f-target');
+    });
+
+    test('falls back to a synthetic family when the anchor parent family already has a parent of the pointed sex', () => {
+      const target = makeTargetTree();
+      // f-target already has wife = mother; linking another female parent is ambiguous
+      const pointed: GedcomData = {
+        individuals: {
+          'ptr-grandma': makeIndividual({ id: 'ptr-grandma', sex: 'F' }),
+        },
+        families: {},
+      };
+      const config: MergePointerConfig = {
+        pointerId: 'bp-6',
+        anchorIndividualId: 'child1',
+        selectedIndividualId: 'ptr-grandma',
+        relationship: 'parent',
+        sourceWorkspaceId: 'ws-source',
+      };
+
+      const result = mergePointedSubtree(target, pointed, config);
+
+      // Synthetic minted; the existing real wife (mother) is never overwritten
+      expect(result.families['ptr-bp-6-fam']).toBeDefined();
+      expect(result.families['ptr-bp-6-fam'].children).toContain('child1');
+      expect(result.families['f-target'].wife).toBe('mother');
+    });
   });
 
   describe('no ID collisions', () => {
@@ -511,9 +627,10 @@ describe('mergePointedSubtree', () => {
     test('synthetic stitching family is marked _pointed', () => {
       const target = makeTargetTree();
       const pointed = makePointedSubtree();
+      // child1 has zero spousal families → fallback mints a synthetic family
       const config: MergePointerConfig = {
         pointerId: 'bp-1',
-        anchorIndividualId: 'father',
+        anchorIndividualId: 'child1',
         selectedIndividualId: 'ptr-root',
         relationship: 'child',
         sourceWorkspaceId: 'ws-source',
@@ -524,6 +641,52 @@ describe('mergePointedSubtree', () => {
       const syntheticFam = result.families['ptr-bp-1-fam'];
       expect(syntheticFam._pointed).toBe(true);
       expect(syntheticFam._sourceWorkspaceId).toBe('ws-source');
+    });
+  });
+
+  describe('depth-limited subtree composes with one-spouse reuse', () => {
+    test('a depth-limited pointed subtree links into the anchor real family with both parents', () => {
+      // Source: ptr-root + ptr-spouse → ptr-child → ptr-grandchild (2 generations)
+      const source: GedcomData = {
+        individuals: {
+          'ptr-root': makeIndividual({ id: 'ptr-root', sex: 'M', familiesAsSpouse: ['ptr-fam'] }),
+          'ptr-spouse': makeIndividual({ id: 'ptr-spouse', sex: 'F', familiesAsSpouse: ['ptr-fam'] }),
+          'ptr-child': makeIndividual({ id: 'ptr-child', sex: 'M', familyAsChild: 'ptr-fam', familiesAsSpouse: ['ptr-fam2'] }),
+          'ptr-child-spouse': makeIndividual({ id: 'ptr-child-spouse', sex: 'F', familiesAsSpouse: ['ptr-fam2'] }),
+          'ptr-grandchild': makeIndividual({ id: 'ptr-grandchild', sex: 'M', familyAsChild: 'ptr-fam2' }),
+        },
+        families: {
+          'ptr-fam': makeFamily({ id: 'ptr-fam', husband: 'ptr-root', wife: 'ptr-spouse', children: ['ptr-child'] }),
+          'ptr-fam2': makeFamily({ id: 'ptr-fam2', husband: 'ptr-child', wife: 'ptr-child-spouse', children: ['ptr-grandchild'] }),
+        },
+      };
+
+      // Limit to depth 1: grandchild pruned out
+      const pointed = extractPointedSubtree(source, {
+        rootIndividualId: 'ptr-root',
+        depthLimit: 1,
+        includeGrafts: false,
+      });
+      expect(pointed.individuals['ptr-grandchild']).toBeUndefined();
+
+      const target = makeTargetTree();
+      const result = mergePointedSubtree(target, pointed, {
+        pointerId: 'bp-7',
+        anchorIndividualId: 'father',
+        selectedIndividualId: 'ptr-root',
+        relationship: 'child',
+        sourceWorkspaceId: 'ws-source',
+      });
+
+      // Reuse path holds even with a depth-limited subtree
+      expect(result.families['ptr-bp-7-fam']).toBeUndefined();
+      const realFam = result.families['f-target'];
+      expect(realFam.children).toContain('ptr-root');
+      expect(realFam.husband).toBe('father');
+      expect(realFam.wife).toBe('mother');
+      // Pruned descendants stay pruned; surviving pointed person carries the flag
+      expect(result.individuals['ptr-grandchild']).toBeUndefined();
+      expect(result.individuals['ptr-root']._pointed).toBe(true);
     });
   });
 });

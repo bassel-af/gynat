@@ -144,6 +144,7 @@ describe('persistDeepCopy', () => {
         ['old-fam', 'new-fam'],
       ]),
       stitchFamily: null,
+      reuseStitch: null,
     };
   }
 
@@ -269,6 +270,7 @@ describe('persistDeepCopy', () => {
       families: {},
       idMap: new Map(),
       stitchFamily: null,
+      reuseStitch: null,
     };
 
     await persistDeepCopy(tx, treeId, copyResult, TEST_TARGET_KEY);

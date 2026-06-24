@@ -52,6 +52,7 @@ vi.mock('@/lib/tree/branch-pointer-deep-copy', () => ({
     stitchFamily: null,
   }),
   persistDeepCopy: (...a: unknown[]) => mockPersistDeepCopy(...a),
+  computeAnchorReuse: vi.fn().mockReturnValue(null),
 }));
 
 vi.mock('@/lib/api/swallowed-error-log', () => ({

@@ -5,7 +5,7 @@ import { getTreeByWorkspaceId, getOrCreateTree, touchTreeTimestamp } from '@/lib
 import { dbTreeToGedcomData } from '@/lib/tree/mapper';
 import { getWorkspaceKey, encryptSnapshot } from '@/lib/tree/encryption';
 import { extractPointedSubtree } from '@/lib/tree/branch-pointer-merge';
-import { prepareDeepCopy, persistDeepCopy } from '@/lib/tree/branch-pointer-deep-copy';
+import { prepareDeepCopy, persistDeepCopy, computeAnchorReuse } from '@/lib/tree/branch-pointer-deep-copy';
 import { snapshotBranchPointer, encryptAuditDescription } from '@/lib/tree/audit';
 
 type RouteParams = { params: Promise<{ id: string; pointerId: string }> };
@@ -68,13 +68,27 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     includeGrafts: pointer.includeGrafts,
   });
 
+  const targetTree = await getOrCreateTree(workspaceId);
+
+  // Mirror the live-merge reuse: a child/parent copy attaches into the anchor's
+  // existing real family (both parents) when unambiguous — so the frozen copy
+  // matches what the GET-tree merge showed.
+  const relationship = pointer.relationship as 'child' | 'sibling' | 'spouse' | 'parent';
+  const targetData = dbTreeToGedcomData(targetTree, targetKey);
+  const pointedRootSex = pointedSubtree.individuals[pointer.rootIndividualId]?.sex ?? 'M';
+  const anchorReuse = computeAnchorReuse(
+    targetData,
+    pointer.anchorIndividualId,
+    relationship,
+    pointedRootSex,
+  );
+
   const copyResult = prepareDeepCopy(pointedSubtree, {
     anchorIndividualId: pointer.anchorIndividualId,
-    relationship: pointer.relationship as 'child' | 'sibling' | 'spouse' | 'parent',
+    relationship,
     pointerId: pointer.id,
+    anchorReuse,
   });
-
-  const targetTree = await getOrCreateTree(workspaceId);
 
   await prisma.$transaction(async (tx) => {
     const txPrisma = tx as typeof prisma;

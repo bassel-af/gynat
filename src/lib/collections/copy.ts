@@ -65,7 +65,7 @@ export function prepareTreeSnapshot(source: GedcomData): DeepCopyResult {
     families[newId] = copied;
   }
 
-  return { individuals, families, idMap, stitchFamily: null };
+  return { individuals, families, idMap, stitchFamily: null, reuseStitch: null };
 }
 
 /**
