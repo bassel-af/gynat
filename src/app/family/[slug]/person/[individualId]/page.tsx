@@ -102,6 +102,8 @@ export default async function PublicPersonPage({ params }: PageParams) {
   // his father — the conservative posture from the security review of §4.4.
   const projection = projectPerson(payload.data, individualId, {
     maternalRecursionDepth: 1,
+    // Public boundary is the home-tree edge; `climbBoundary` defaults to this same
+    // `isBoundary`, so outside-home ancestry is never climbed nor enumerated.
     isBoundary: (ind) => !payload.homeIndividualIds.has(ind.id),
     continueThroughPrivateAncestor: false,
   });

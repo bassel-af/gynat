@@ -111,8 +111,8 @@ function allIds(obj: unknown): string[] {
 //     father SECRET_GGF surfaces ONLY under MEMBER opts (continue past private);
 //     under PUBLIC opts the climb STOPS at PRIV_GF so SECRET_GGF stays hidden.
 //   mother MOTHER — her father is a borrowed _pointed ancestor (POINTED_MGF)
-//     whose secret parent SECRET_PARENT must NEVER surface (cross-workspace
-//     boundary terminates regardless of surface).
+//     whose parent is ABSENT from the payload (downward-only extract): the climb
+//     terminates at the borrowed root and no cross-workspace ancestry surfaces.
 //   a PRIVATE sibling PRIV_SIB
 //   a PRIVATE spouse PRIV_SPOUSE with a child CHILD (visible)
 //   a borrowed _pointed paternal grandfather... reused as POINTED_MGF above.
@@ -130,8 +130,12 @@ function worstCaseTree(): GedcomData {
     SECRET_GGF: ind({ id: 'SECRET_GGF', name: 'سر_جد_الجد', givenName: 'سر_جد_الجد', familiesAsSpouse: ['F_SECRET_PGGF'] }),
 
     // Borrowed (_pointed) maternal grandfather — emitted as boundary, NOT climbed.
-    POINTED_MGF: ind({ id: 'POINTED_MGF', name: 'مستعار', givenName: 'مستعار', _pointed: true, _sourceWorkspaceId: 'OTHER_WS', familyAsChild: 'F_SECRET_PARENT', familiesAsSpouse: ['F_MGF'] }),
-    SECRET_PARENT: ind({ id: 'SECRET_PARENT', name: 'سر_الأصل', givenName: 'سر_الأصل', familiesAsSpouse: ['F_SECRET_PARENT'] }),
+    // His parent is ABSENT from the payload (the downward-only extract never pulls
+    // a borrowed root's father) — `familyAsChild: null`. This is the REALISTIC
+    // shape: the merge stamps EVERY foreign node `_pointed`, so a present
+    // non-`_pointed` ancestor cannot occur; cross-workspace ancestry is absent,
+    // and the climb stops at getFather===null.
+    POINTED_MGF: ind({ id: 'POINTED_MGF', name: 'مستعار', givenName: 'مستعار', _pointed: true, _sourceWorkspaceId: 'OTHER_WS', familyAsChild: null, familiesAsSpouse: ['F_MGF'] }),
 
     PRIV_SIB: ind({ id: 'PRIV_SIB', name: 'سر_الأخت', givenName: 'سر_الأخت', sex: 'F', isPrivate: true, familyAsChild: 'F_PARENTS' }),
 
@@ -143,7 +147,6 @@ function worstCaseTree(): GedcomData {
     F_PGF: fam({ id: 'F_PGF', husband: 'PRIV_GF', children: ['FATHER'] }),
     F_SECRET_PGGF: fam({ id: 'F_SECRET_PGGF', husband: 'SECRET_GGF', children: ['PRIV_GF'] }),
     F_MGF: fam({ id: 'F_MGF', husband: 'POINTED_MGF', children: ['MOTHER'] }),
-    F_SECRET_PARENT: fam({ id: 'F_SECRET_PARENT', husband: 'SECRET_PARENT', children: ['POINTED_MGF'] }),
     F_MARRIAGE: fam({ id: 'F_MARRIAGE', husband: 'S', wife: 'PRIV_SPOUSE', children: ['CHILD'] }),
   };
   return { individuals, families };
@@ -216,13 +219,39 @@ describe('projectPerson — security invariant G2: no borrowed ancestry escapes'
   test('nothing ABOVE the _pointed boundary appears (its secret cross-workspace parents)', () => {
     // The cross-workspace boundary is the load-bearing guarantee I own: a
     // borrowed (_pointed) node is emitted, but its ancestry — which lives in
-    // ANOTHER workspace — is NEVER climbed. SECRET_PARENT (POINTED_MGF's father)
-    // and the source workspace id must never surface.
+    // ANOTHER workspace — is NEVER climbed. POINTED_MGF's parent is absent from
+    // the payload (downward-only extract), so the climb stops at getFather===null;
+    // the former secret parent id/name and the source workspace id never surface.
     const idSet = new Set(allIds(proj));
     const strings = allStrings(proj);
     expect(idSet.has('SECRET_PARENT')).toBe(false);
     expect(strings).not.toContain('سر_الأصل');
     expect(strings).not.toContain('OTHER_WS'); // _sourceWorkspaceId never leaked
+  });
+
+  // POSITIVE counterpart to the boundary guarantee: the split predicate must NOT
+  // over-block. A `_pointed` node whose father is NATIVE (present, non-`_pointed`)
+  // — the قريش shape (محمد…هاشم borrowed, عبدمناف… native) — MUST climb into that
+  // native father. Guards against a silent revert to the old single predicate,
+  // which would dead-end at the borrowed root and still pass the negative tests.
+  test('a _pointed node with a NATIVE present father DOES climb into the native lineage', () => {
+    const data: GedcomData = {
+      individuals: {
+        // subject (borrowed) → borrowed father → NATIVE grandfather → NATIVE g-grandfather
+        kid: ind({ id: 'kid', _pointed: true, familyAsChild: 'BF1' }),
+        borrowedFather: ind({ id: 'borrowedFather', _pointed: true, familyAsChild: 'NF1', familiesAsSpouse: ['BF1'] }),
+        nativeGF: ind({ id: 'nativeGF', familyAsChild: 'NF0', familiesAsSpouse: ['NF1'] }),
+        nativeGGF: ind({ id: 'nativeGGF', familiesAsSpouse: ['NF0'] }),
+      },
+      families: {
+        BF1: fam({ id: 'BF1', husband: 'borrowedFather', _pointed: true, children: ['kid'] }),
+        NF1: fam({ id: 'NF1', husband: 'nativeGF', children: ['borrowedFather'] }),
+        NF0: fam({ id: 'NF0', husband: 'nativeGGF', children: ['nativeGF'] }),
+      },
+    };
+    const p = projectPerson(data, 'kid', MEMBER_OPTS) as PersonProjection;
+    // Climbs through the borrowed father into BOTH native ancestors.
+    expect(p.paternalChain.map((c) => c.id)).toEqual(['nativeGGF', 'nativeGF', 'borrowedFather']);
   });
 
   // §4.4 PATERNAL private ancestor — resolved per-surface by the security review:

@@ -240,15 +240,20 @@ describe('projectPerson — paternal chain', () => {
 
 describe('projectPerson — cross-workspace boundary', () => {
   test('emits a _pointed ancestor but never climbs into its borrowed parents', () => {
+    // Borrow-ancestors shape: native subject p → native fa → BORROWED grandfather
+    // bGf, stitched in from another workspace. Its parent is ABSENT from the
+    // payload — the downward-only extract never pulls a borrowed node's father,
+    // and the merge stamps every foreign node `_pointed`, so a present
+    // non-`_pointed` parent here is an impossible payload. The climb therefore
+    // stops at bGf because getFather===null (`srcGreat` below documents the
+    // source-side ancestor that must never surface).
     const d = data(
       [
-        makeIndividual({ id: 'srcGreat', givenName: 'سلف-بعيد', familiesAsSpouse: ['SF'] }),
-        makeIndividual({ id: 'bGf', givenName: 'الجد-المستعار', _pointed: true, familyAsChild: 'SF', familiesAsSpouse: ['F1'] }),
+        makeIndividual({ id: 'bGf', givenName: 'الجد-المستعار', _pointed: true, familyAsChild: null, familiesAsSpouse: ['F1'] }),
         makeIndividual({ id: 'fa', givenName: 'خالد', familyAsChild: 'F1', familiesAsSpouse: ['F2'] }),
         makeIndividual({ id: 'p', givenName: 'باسل', familyAsChild: 'F2' }),
       ],
       [
-        makeFamily({ id: 'SF', husband: 'srcGreat', children: ['bGf'] }),
         makeFamily({ id: 'F1', husband: 'bGf', children: ['fa'] }),
         makeFamily({ id: 'F2', husband: 'fa', children: ['p'] }),
       ],
@@ -284,11 +289,14 @@ describe('projectPerson — cross-workspace boundary', () => {
 
   // Regression (quraish): a workspace borrows an ENTIRE upper lineage — the
   // subject AND every patrilineal ancestor up to the borrowed root are
-  // `_pointed`, and the root is stitched under a NATIVE anchor. The boundary is
-  // the TOP of the borrowed branch (root's father is native), so the climb walks
-  // the whole shared lineage instead of stopping at the first `_pointed` node.
-  // Before the fix this truncated to just the immediate father.
-  test('climbs a fully-borrowed lineage and stops at the borrowed root (not the first _pointed node)', () => {
+  // `_pointed`, and the root is stitched under a NATIVE anchor that itself has
+  // native ancestry. The climb walks the whole borrowed lineage AND continues
+  // into the native anchor above the borrowed root (his father is absent here,
+  // so it stops at him). The vertical climb boundary fires ONLY at a borrowed
+  // node whose father is genuinely absent — a present native father is climbed.
+  // (Earlier the climb dead-ended at the borrowed root, hiding native نسب — the
+  // remaining half of the quraish truncation.)
+  test('climbs a fully-borrowed lineage THROUGH the borrowed root into the native anchor above it', () => {
     const d = data(
       [
         makeIndividual({ id: 'anchor', givenName: 'عبدمناف', familiesAsSpouse: ['AF'] }), // NATIVE
@@ -306,10 +314,11 @@ describe('projectPerson — cross-workspace boundary', () => {
       ],
     );
     const proj = projectPerson(d, 'p', MEMBER)!;
-    // The whole borrowed lineage is climbed; it stops AT the borrowed root
-    // (bRoot) — the native anchor above it is not pulled into the نسب ribbon.
-    expect(ids(proj.paternalChain)).toEqual(['bRoot', 'bMid', 'bFa']);
-    expect(proj.paternalChain.some((c) => c.id === 'anchor')).toBe(false);
+    // The whole borrowed lineage is climbed AND the native anchor (عبدمناف) above
+    // the borrowed root is now included in the نسب ribbon; it stops at the anchor
+    // only because HIS father is absent from the payload.
+    expect(ids(proj.paternalChain)).toEqual(['anchor', 'bRoot', 'bMid', 'bFa']);
+    expect(proj.paternalChain.some((c) => c.id === 'anchor')).toBe(true);
     // Uncles are enumerated through the borrowed grandfather (was empty before).
     expect(ids(proj.paternalUncles)).toEqual(['uncle']);
   });

@@ -47,12 +47,26 @@ export interface ProjectOptions {
   /** Female-line (mother-of-mother) recursion depth. Member: Infinity; public: 1. */
   maternalRecursionDepth: number;
   /**
-   * True ⇒ a node whose ancestry must NOT be walked (emit it, never climb past).
-   * Receives `data` so a surface can inspect the node's own father (e.g. the
-   * member surface stops at the TOP of a borrowed branch, not at every borrowed
-   * node).
+   * LATERAL boundary: a node whose SIBLINGS / married-in mother line must NOT be
+   * enumerated (uncles, cousins, a spine man's married-in mother). Emit the node
+   * itself, but never read its lateral relatives — they live across a workspace
+   * boundary. The member surface marks the TOP of a borrowed branch here (a
+   * `_pointed` node whose father is NOT `_pointed`), so a borrowed root's
+   * SOURCE-side siblings are never listed.
    */
   isBoundary: (ind: Individual, data: GedcomData) => boolean;
+  /**
+   * VERTICAL boundary for the UPWARD nasab climb (paternal spine, a woman's
+   * fathers chain, the maternal spine + female-line recursion): stop the climb
+   * HERE, do not read this node's father. DISTINCT from `isBoundary`.
+   *
+   * OPTIONAL — defaults to `isBoundary` (resolved in `projectPerson`). The safe
+   * fallback: a surface that forgets it never climbs past a node it refuses to
+   * read laterally, so omission can't leak cross-workspace ancestry. Only the
+   * MEMBER surface overrides it (to climb WIDER than the lateral gate); see
+   * `MEMBER_PROJECT_OPTIONS` for why a present father is authorized to climb.
+   */
+  climbBoundary?: (ind: Individual, data: GedcomData) => boolean;
   /**
    * Whether a private PATRILINEAL ancestor mid-chain is a continuation point.
    * `true`  → emit the nameless «خاص» placeholder and KEEP climbing to his
@@ -66,6 +80,11 @@ export interface ProjectOptions {
   continueThroughPrivateAncestor: boolean;
 }
 
+/** Internal options with `climbBoundary` resolved (defaulted to `isBoundary`). */
+type ResolvedOptions = ProjectOptions & {
+  climbBoundary: (ind: Individual, data: GedcomData) => boolean;
+};
+
 /**
  * MEMBER defaults — used when `projectPerson` is called without explicit opts.
  * Member walks the female line unbounded (capped only by the sanity ceiling). The
@@ -77,7 +96,15 @@ export interface ProjectOptions {
  */
 export const MEMBER_PROJECT_OPTIONS: ProjectOptions = {
   maternalRecursionDepth: Infinity,
+  // LATERAL boundary — the TOP of a borrowed branch (`_pointed`, native father):
+  // never enumerate its source-side siblings/uncles/cousins or married-in mother.
   isBoundary: (ind, data) => ind._pointed === true && !fatherIsPointed(data, ind),
+  // VERTICAL (climb) boundary — stop the nasab climb ONLY when a borrowed node's
+  // father is genuinely ABSENT from the payload (the downward-only extract never
+  // pulled it in). A present father is native or explicitly-shared → climb. This
+  // is the fix for the قريش regression: a borrowed branch ON TOP of native نسب
+  // climbs its full native lineage instead of dead-ending at the borrowed root.
+  climbBoundary: (ind, data) => ind._pointed === true && getFather(data, ind) === null,
   // Member surface continues the patriline through a private ancestor (nameless
   // «خاص» placeholder), matching the member tree. (Team-lead ruling; the public
   // surface passes the conservative stop pending a security review.)
@@ -302,7 +329,7 @@ class WalkGuard {
 function buildPaternalSpine(
   data: GedcomData,
   start: Individual,
-  opts: ProjectOptions,
+  opts: ResolvedOptions,
 ): SpineChip[] {
   const nearestToOldest: SpineChip[] = [];
   const guard = new WalkGuard();
@@ -315,18 +342,19 @@ function buildPaternalSpine(
 
     if (isPrivate(father)) {
       nearestToOldest.push(toChip(father, true)); // «خاص» placeholder
-      // Stop when this is also a boundary, OR when the surface opts out of
+      // Stop when this is also a climb boundary, OR when the surface opts out of
       // climbing past a private ancestor (public default, pending security).
-      if (opts.isBoundary(father, data) || !opts.continueThroughPrivateAncestor) break;
+      if (opts.climbBoundary(father, data) || !opts.continueThroughPrivateAncestor) break;
       current = father; // member: continue up the patriline through the placeholder
       continue;
     }
 
     const node: SpineChip = toChip(father);
+    // Married-in mother is a LATERAL relation → gated by `isBoundary`.
     if (!opts.isBoundary(father, data)) attachMother(data, father, node, opts);
     nearestToOldest.push(node);
 
-    if (opts.isBoundary(father, data)) break; // emit boundary node, never climb past it
+    if (opts.climbBoundary(father, data)) break; // emit boundary node, never climb past it
     current = father;
   }
 
@@ -343,19 +371,19 @@ function buildPaternalSpine(
 function buildMaternalSpine(
   data: GedcomData,
   subject: Individual,
-  opts: ProjectOptions,
+  opts: ResolvedOptions,
 ): SpineChip[] {
   const mother = getMother(data, subject);
   if (!mother || isPrivate(mother)) return [];
 
-  // The mother's own fathers spine (each man carrying his married-in mother).
-  const fatherSpine = opts.isBoundary(mother, data)
-    ? []
-    : buildPaternalSpine(data, mother, opts);
+  // The mother's own fathers spine (each man carrying his married-in mother) —
+  // a vertical nasab climb → gated by `climbBoundary`.
+  const motherIsClimbBoundary = opts.climbBoundary(mother, data);
+  const fatherSpine = motherIsClimbBoundary ? [] : buildPaternalSpine(data, mother, opts);
 
   // The mother node itself — female, carrying her own female-line recursion.
   const motherNode: SpineChip = toChip(mother);
-  if (!opts.isBoundary(mother, data) && opts.maternalRecursionDepth > 0) {
+  if (!motherIsClimbBoundary && opts.maternalRecursionDepth > 0) {
     const line = buildMotherLine(data, mother, opts.maternalRecursionDepth, opts);
     if (line) motherNode.mother = line;
   }
@@ -377,7 +405,7 @@ function buildMotherLine(
   data: GedcomData,
   man: Individual,
   depth: number,
-  opts: ProjectOptions,
+  opts: ResolvedOptions,
 ): MotherLine | undefined {
   const mother = getMother(data, man);
   if (!mother) return undefined;
@@ -411,7 +439,7 @@ function buildMotherLine(
 function buildFathersChain(
   data: GedcomData,
   woman: Individual,
-  opts: ProjectOptions,
+  opts: ResolvedOptions,
 ): PersonChip[] {
   const out: PersonChip[] = [];
   if (opts.isBoundary(woman, data)) return out; // don't climb into a boundary's parents
@@ -429,7 +457,7 @@ function buildFathersChain(
       break;
     }
     out.push(toChip(father));
-    if (opts.isBoundary(father, data)) break; // emit boundary, do not climb past it
+    if (opts.climbBoundary(father, data)) break; // emit boundary, do not climb past it
     current = father;
   }
 
@@ -441,7 +469,7 @@ function attachMother(
   data: GedcomData,
   person: Individual,
   node: SpineChip,
-  opts: ProjectOptions,
+  opts: ResolvedOptions,
 ): void {
   if (opts.maternalRecursionDepth <= 0) return;
   const line = buildMotherLine(data, person, opts.maternalRecursionDepth, opts);
@@ -557,7 +585,7 @@ function buildSiblings(data: GedcomData, subject: Individual): PersonChip[] {
 function buildUnclesAndCousins(
   data: GedcomData,
   parent: Individual | null,
-  opts: ProjectOptions,
+  opts: ResolvedOptions,
 ): { uncles: PersonChip[]; cousins: PersonChip[] } {
   const uncles: PersonChip[] = [];
   const cousins: PersonChip[] = [];
@@ -625,10 +653,17 @@ function buildRada(data: GedcomData, subject: Individual): PersonProjection['rad
 export function projectPerson(
   data: GedcomData,
   individualId: string,
-  opts: ProjectOptions = MEMBER_PROJECT_OPTIONS,
+  rawOpts: ProjectOptions = MEMBER_PROJECT_OPTIONS,
 ): PersonProjection | null {
   const subject = data.individuals[individualId];
   if (!subject || isPrivate(subject)) return null;
+
+  // `climbBoundary` defaults to the lateral `isBoundary` — the safe fallback
+  // (a surface that omits it never climbs past a node it won't read laterally).
+  const opts: ResolvedOptions = {
+    ...rawOpts,
+    climbBoundary: rawOpts.climbBoundary ?? rawOpts.isBoundary,
+  };
 
   const surname = subject.surname?.trim() ?? '';
   const subjectOut: PersonSubject = {
