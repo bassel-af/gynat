@@ -1155,6 +1155,13 @@ export function PersonDetail({ personId }: PersonDetailProps) {
           hideNonVisible
         />
         <RelationshipSection
+          title="الإخوة غير الأشقاء"
+          people={relationships.halfSiblings}
+          visiblePersonIds={visiblePersonIds}
+          onPersonClick={handlePersonClick}
+          hideNonVisible
+        />
+        <RelationshipSection
           title={(() => {
             if (person.sex === 'M') return 'الزوجة';
             const allUmmWalad = person.familiesAsSpouse.length > 0 &&

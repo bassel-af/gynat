@@ -3,6 +3,7 @@ import type { Individual, GedcomData } from './types';
 export interface PersonRelationships {
   parents: Individual[];
   siblings: Individual[];
+  halfSiblings: Individual[];
   paternalUncles: Individual[];
   spouses: Individual[];
   children: Individual[];
@@ -17,12 +18,13 @@ export function getPersonRelationships(
 
   const parents: Individual[] = [];
   const siblings: Individual[] = [];
+  const halfSiblings: Individual[] = [];
   const paternalUncles: Individual[] = [];
   const spouses: Individual[] = [];
   const children: Individual[] = [];
 
   if (!person) {
-    return { parents, siblings, paternalUncles, spouses, children };
+    return { parents, siblings, halfSiblings, paternalUncles, spouses, children };
   }
 
   // Parents & siblings from familyAsChild
@@ -40,6 +42,39 @@ export function getPersonRelationships(
           siblings.push(individuals[childId]);
         }
       }
+    }
+  }
+
+  // Half-siblings: children of the person's father OR mother from a DIFFERENT
+  // family (polygamy / remarriage), excluding the person and full siblings.
+  if (person.familyAsChild) {
+    const birthFamily = families[person.familyAsChild];
+    if (birthFamily) {
+      const fatherId = birthFamily.husband;
+      const motherId = birthFamily.wife;
+      const fullSiblingIds = new Set<string>(birthFamily.children); // includes personId
+      const seenHalf = new Set<string>();
+      const collectFrom = (parentId: string | null | undefined) => {
+        if (!parentId) return;
+        const parent = individuals[parentId];
+        if (!parent) return;
+        for (const familyId of parent.familiesAsSpouse) {
+          if (familyId === person.familyAsChild) continue;
+          const fam = families[familyId];
+          if (!fam) continue;
+          for (const childId of fam.children) {
+            if (childId === personId) continue;
+            if (fullSiblingIds.has(childId)) continue;
+            if (seenHalf.has(childId)) continue;
+            const child = individuals[childId];
+            if (!child || child.isPrivate) continue;   // SECURITY R1: mandatory privacy filter
+            seenHalf.add(childId);
+            halfSiblings.push(child);
+          }
+        }
+      };
+      collectFrom(fatherId);   // paternal first
+      collectFrom(motherId);   // maternal second
     }
   }
 
@@ -84,7 +119,7 @@ export function getPersonRelationships(
     }
   }
 
-  return { parents, siblings, paternalUncles, spouses, children };
+  return { parents, siblings, halfSiblings, paternalUncles, spouses, children };
 }
 
 // ---------------------------------------------------------------------------
