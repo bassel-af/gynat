@@ -70,7 +70,7 @@ describe('RadaaFamilyForm', () => {
 
   it('shows add child button and allows adding another child slot', () => {
     render(<RadaaFamilyForm {...defaultProps} preselectedChildId="@I1@" />);
-    const addButton = screen.getByText('إضافة طفل');
+    const addButton = screen.getByText('إضافة ابن/ابنة');
     fireEvent.click(addButton);
     // Should now have 2 child rows (one pre-populated, one empty)
     const comboboxes = screen.getAllByRole('combobox');
