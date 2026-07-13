@@ -365,7 +365,9 @@
 .footerAyah {
   font-family: var(--heritage-font-script);
   font-size: 14px;
-  color: rgba(200, 168, 101, 0.45);
+  color: #8a7647;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .footerMobileLink {

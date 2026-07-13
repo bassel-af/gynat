@@ -753,7 +753,7 @@ export default function DesignPreviewPage() {
         </section>
 
         <div className={styles.footnote}>
-          ﴾ وَمِنْ آيَاتِهِ أَنْ خَلَقَ لَكُم مِّنْ أَنفُسِكُمْ أَزْوَاجًا ﴿
+          ﴾ وَجَعَلْنَاكُمْ شُعُوبًا وَقَبَائِلَ لِتَعَارَفُوا ﴿
         </div>
       </div>
     </main>
