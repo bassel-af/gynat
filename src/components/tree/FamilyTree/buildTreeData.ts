@@ -62,60 +62,115 @@ export interface PersonNodeData {
    *  as a spouse — used to pan on link badge click. Presence implies
    *  "linked"; no separate boolean flag. */
   linkedTo?: string;
+  /** ALL node ids where this person appears as a spouse-card (a man married
+   *  to two cousins appears on both wives' nodes). `linkedTo` is always the
+   *  first entry; the link badge cycles through these on repeated clicks. */
+  linkedToNodes?: string[];
   /** Populated when one or more shared families with a spouse have all
    *  children claimed by the spouse's canonical placement. */
   childrenElsewhere?: ChildrenElsewhere[];
   onPersonClick: (personId: string) => void;
   onOpenSidebar: () => void;
   onRerootToAncestor: (ancestorId: string, focusId?: string) => void;
-  onJumpToNode?: (nodeId: string) => void;
-  onSetHoveredOccurrence?: (id: string | null) => void;
+  onJumpToNode?: (nodeId: string, focusPersonId?: string) => void;
+  onSetHoveredOccurrence?: (occurrence: HoveredOccurrence | null) => void;
   [key: string]: unknown;
 }
 
+/** The specific card occurrence the mouse is over: `personId` is the person,
+ *  `hostNodeId` is the node rendering the hovered card — equal to `personId`
+ *  for their main card, or the spouse-hosting node's id for a spouse-card. */
+export interface HoveredOccurrence {
+  personId: string;
+  hostNodeId: string;
+}
+
 /**
- * Build the dashed gold "same person" connector edge between the two
+ * Build the dashed gold "same person" connector edges between the
  * occurrences of a hovered linked-occurrence person (cousin marriage).
  *
- * Returns null when the hovered person isn't a linked occurrence — i.e.
+ * Returns [] when the hovered person isn't a linked occurrence — i.e.
  * doesn't appear as both a main-node AND a spouse-card on another node.
  *
- * Source: bottom-center of the hovered person's main-node card.
- * Target: top of the spouse-card on the OTHER node where this person
- *         appears as a spouse.
+ * EVERY edge originates from the HOVERED card (not always the main card):
+ * lines fan out from under the user's mouse to each other occurrence, so
+ * none of them looks like a stray line between two unrelated far-away nodes.
+ *
+ * - Hovering the main card → main card → each spouse-card occurrence.
+ * - Hovering a spouse-card → that card → the main card + every OTHER
+ *   spouse-card occurrence (via the `occurrence-src-{idx}` handle under it).
  */
-export function computeOccurrenceLinkEdge(
+export function computeOccurrenceLinkEdges(
   nodes: Node[],
-  hoveredOccurrenceId: string | null,
-): Edge | null {
-  if (!hoveredOccurrenceId) return null;
+  hovered: HoveredOccurrence | null,
+): Edge[] {
+  if (!hovered) return [];
+  const { personId, hostNodeId } = hovered;
 
-  const mainNode = nodes.find((n) => n.id === hoveredOccurrenceId);
-  if (!mainNode) return null;
+  const mainNode = nodes.find((n) => n.id === personId);
+  if (!mainNode) return [];
 
-  const spouseHostNode = nodes.find((n) => {
-    const d = n.data as PersonNodeData;
-    return d.spouses?.some((s) => s.spouse.id === hoveredOccurrenceId);
-  });
-  if (!spouseHostNode) return null;
+  // Every node hosting this person as a spouse-card, with the card's index.
+  const spouseOccurrences: Array<{ nodeId: string; spouseIdx: number }> = [];
+  for (const node of nodes) {
+    if (node.id === personId) continue;
+    const spouseIdx = ((node.data as PersonNodeData).spouses ?? []).findIndex(
+      (s) => s.spouse.id === personId,
+    );
+    if (spouseIdx >= 0) spouseOccurrences.push({ nodeId: node.id, spouseIdx });
+  }
+  if (spouseOccurrences.length === 0) return [];
 
-  const spouseIdx = (spouseHostNode.data as PersonNodeData).spouses.findIndex(
-    (s) => s.spouse.id === hoveredOccurrenceId,
-  );
-  if (spouseIdx < 0) return null;
-
-  return {
-    id: `occurrence-link-${hoveredOccurrenceId}`,
-    source: mainNode.id,
-    sourceHandle: 'default',
-    target: spouseHostNode.id,
-    targetHandle: `spouse-target-${spouseIdx}`,
+  const linkEdge = (edge: Pick<Edge, 'id' | 'source' | 'sourceHandle' | 'target' | 'targetHandle'>): Edge => ({
+    ...edge,
     type: 'straight',
     className: 'occurrence-link',
     selectable: false,
     focusable: false,
     zIndex: 1000,
-  };
+  });
+
+  // Hovering the main card: fan out from it to every spouse-card occurrence.
+  if (hostNodeId === personId) {
+    return spouseOccurrences.map((occ) =>
+      linkEdge({
+        id: `occurrence-link-${personId}-${occ.nodeId}`,
+        source: personId,
+        sourceHandle: 'default',
+        target: occ.nodeId,
+        targetHandle: `spouse-target-${occ.spouseIdx}`,
+      }),
+    );
+  }
+
+  // Hovering a spouse-card: fan out from THAT card to the main card and to
+  // every other spouse-card occurrence.
+  const hoveredOcc = spouseOccurrences.find((occ) => occ.nodeId === hostNodeId);
+  if (!hoveredOcc) return [];
+
+  const sourceHandle = `occurrence-src-${hoveredOcc.spouseIdx}`;
+  const edges: Edge[] = [
+    linkEdge({
+      id: `occurrence-link-${personId}-${hostNodeId}-main`,
+      source: hostNodeId,
+      sourceHandle,
+      target: personId,
+      targetHandle: null,
+    }),
+  ];
+  for (const occ of spouseOccurrences) {
+    if (occ.nodeId === hostNodeId) continue;
+    edges.push(
+      linkEdge({
+        id: `occurrence-link-${personId}-${hostNodeId}-${occ.nodeId}`,
+        source: hostNodeId,
+        sourceHandle,
+        target: occ.nodeId,
+        targetHandle: `spouse-target-${occ.spouseIdx}`,
+      }),
+    );
+  }
+  return edges;
 }
 
 // Heritage-palette colors for distinguishing children of different mothers
@@ -133,8 +188,8 @@ export interface BuildTreeDataCallbacks {
   onPersonClick: (personId: string) => void;
   onOpenSidebar: () => void;
   onRerootToAncestor: (ancestorId: string, focusId?: string) => void;
-  onJumpToNode?: (nodeId: string) => void;
-  onSetHoveredOccurrence?: (id: string | null) => void;
+  onJumpToNode?: (nodeId: string, focusPersonId?: string) => void;
+  onSetHoveredOccurrence?: (occurrence: HoveredOccurrence | null) => void;
 }
 
 interface SisterWifeCluster {
@@ -654,17 +709,20 @@ export function buildTreeData(
   // sides get a `linkedTo` pointing at the OTHER node id, so the dot-click
   // handler can pan to it.
   //
-  // First appearance only for spouse-card mapping — in cousin marriage each
-  // cousin appears as a spouse exactly once (on the other cousin's row), so
-  // first-write wins is well-defined.
+  // A person can appear as a spouse-card on MULTIPLE nodes (married to two
+  // cousins → a card on each wife's node), so we keep every host node id;
+  // the main card's badge cycles through them via `linkedToNodes`.
   const mainNodeIds = new Set<string>();
-  const spouseAppearances = new Map<string, string>();
+  const spouseAppearances = new Map<string, string[]>();
   for (const node of nodes) {
     mainNodeIds.add(node.id);
     const nodeData = node.data as PersonNodeData;
     for (const sp of nodeData.spouses) {
-      if (!spouseAppearances.has(sp.spouse.id)) {
-        spouseAppearances.set(sp.spouse.id, node.id);
+      const hosts = spouseAppearances.get(sp.spouse.id);
+      if (hosts) {
+        hosts.push(node.id);
+      } else {
+        spouseAppearances.set(sp.spouse.id, [node.id]);
       }
     }
   }
@@ -674,9 +732,12 @@ export function buildTreeData(
     const personId = node.id;
 
     // Mark main-card if this person also appears as a spouse-card elsewhere.
-    const spouseHostId = spouseAppearances.get(personId);
-    if (spouseHostId && spouseHostId !== personId) {
-      nodeData.linkedTo = spouseHostId;
+    const spouseHostIds = (spouseAppearances.get(personId) ?? []).filter(
+      (hostId) => hostId !== personId,
+    );
+    if (spouseHostIds.length > 0) {
+      nodeData.linkedTo = spouseHostIds[0];
+      nodeData.linkedToNodes = spouseHostIds;
     }
 
     // Mark spouse-cards whose underlying person also has a main-node.

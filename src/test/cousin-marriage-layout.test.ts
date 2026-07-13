@@ -1,8 +1,8 @@
 import { describe, test, expect } from 'vitest';
 import type { Node, Edge } from '@xyflow/react';
 
-import { buildTreeData, computeOccurrenceLinkEdge, type HighlightState, type PersonNodeData, type SpouseWithColor, type ChildrenElsewhere } from '@/components/tree/FamilyTree/buildTreeData';
-import { buildCousinMarriageFixture, buildEarlyMarriageFixture } from './fixtures/cousin-marriage';
+import { buildTreeData, computeOccurrenceLinkEdges, type HighlightState, type PersonNodeData, type SpouseWithColor, type ChildrenElsewhere } from '@/components/tree/FamilyTree/buildTreeData';
+import { buildCousinMarriageFixture, buildDoubleCousinMarriageFixture, buildEarlyMarriageFixture } from './fixtures/cousin-marriage';
 
 const noHighlight: HighlightState = {
   ancestors: new Set(),
@@ -171,42 +171,127 @@ describe('buildTreeData — early marriage explosion (stress)', () => {
   });
 });
 
-describe('computeOccurrenceLinkEdge', () => {
-  test('returns null when no person is hovered', () => {
+describe('computeOccurrenceLinkEdges', () => {
+  test('returns no edges when no occurrence is hovered', () => {
     const data = buildCousinMarriageFixture();
     const { nodes } = buildTreeData(data, 'G', 50, '', noHighlight, null, noopCallbacks);
-    expect(computeOccurrenceLinkEdge(nodes, null)).toBeNull();
+    expect(computeOccurrenceLinkEdges(nodes, null)).toEqual([]);
   });
 
-  test('returns null when hovered person has no spouse-card occurrence (non-cousin)', () => {
+  test('returns no edges when hovered person has no spouse-card occurrence (non-cousin)', () => {
     const data = buildCousinMarriageFixture();
     const { nodes } = buildTreeData(data, 'G', 50, '', noHighlight, null, noopCallbacks);
-    expect(computeOccurrenceLinkEdge(nodes, 'X')).toBeNull();
-    expect(computeOccurrenceLinkEdge(nodes, 'C1')).toBeNull();
+    expect(computeOccurrenceLinkEdges(nodes, { personId: 'X', hostNodeId: 'X' })).toEqual([]);
+    expect(computeOccurrenceLinkEdges(nodes, { personId: 'C1', hostNodeId: 'C1' })).toEqual([]);
   });
 
-  test('returns null when hovered person id is not in the tree', () => {
+  test('returns no edges when hovered person id is not in the tree', () => {
     const data = buildCousinMarriageFixture();
     const { nodes } = buildTreeData(data, 'G', 50, '', noHighlight, null, noopCallbacks);
-    expect(computeOccurrenceLinkEdge(nodes, 'NOT_A_PERSON')).toBeNull();
+    expect(computeOccurrenceLinkEdges(nodes, { personId: 'NOT_A_PERSON', hostNodeId: 'NOT_A_PERSON' })).toEqual([]);
   });
 
-  test('builds a link edge from the cousin main node to the spouse-card on the other cousin', () => {
+  test('hovering the MAIN card links from it to the spouse-card on the other cousin', () => {
     const data = buildCousinMarriageFixture();
     const { nodes } = buildTreeData(data, 'G', 50, '', noHighlight, null, noopCallbacks);
 
-    const linkA = computeOccurrenceLinkEdge(nodes, 'A');
-    expect(linkA).not.toBeNull();
-    expect(linkA!.source).toBe('A');
-    expect(linkA!.target).toBe('B');
-    expect(linkA!.sourceHandle).toBe('default');
-    expect(linkA!.targetHandle).toBe('spouse-target-0');
-    expect(linkA!.className).toBe('occurrence-link');
-    expect(linkA!.type).toBe('straight');
+    const linksA = computeOccurrenceLinkEdges(nodes, { personId: 'A', hostNodeId: 'A' });
+    expect(linksA.length).toBe(1);
+    const linkA = linksA[0];
+    expect(linkA.source).toBe('A');
+    expect(linkA.target).toBe('B');
+    expect(linkA.sourceHandle).toBe('default');
+    expect(linkA.targetHandle).toBe('spouse-target-0');
+    expect(linkA.className).toBe('occurrence-link');
+    expect(linkA.type).toBe('straight');
 
-    const linkB = computeOccurrenceLinkEdge(nodes, 'B');
-    expect(linkB).not.toBeNull();
-    expect(linkB!.source).toBe('B');
-    expect(linkB!.target).toBe('A');
+    const linksB = computeOccurrenceLinkEdges(nodes, { personId: 'B', hostNodeId: 'B' });
+    expect(linksB.length).toBe(1);
+    expect(linksB[0].source).toBe('B');
+    expect(linksB[0].target).toBe('A');
+  });
+
+  test('hovering the SPOUSE-CARD links from ITS host node back to the main card', () => {
+    const data = buildCousinMarriageFixture();
+    const { nodes } = buildTreeData(data, 'G', 50, '', noHighlight, null, noopCallbacks);
+
+    // Hover B's spouse-card, which lives on A's node.
+    const links = computeOccurrenceLinkEdges(nodes, { personId: 'B', hostNodeId: 'A' });
+    expect(links.length).toBe(1);
+    expect(links[0].source).toBe('A');
+    expect(links[0].sourceHandle).toBe('occurrence-src-0');
+    expect(links[0].target).toBe('B');
+  });
+});
+
+describe('buildTreeData — double cousin marriage (two wives, different uncles)', () => {
+  test('husband main node carries linkedToNodes listing BOTH wives\' nodes', () => {
+    const data = buildDoubleCousinMarriageFixture();
+    const { nodes } = buildTreeData(data, 'G', 50, '', noHighlight, null, noopCallbacks);
+
+    const hNode = getPersonNode(nodes, 'H');
+    expect(hNode).toBeDefined();
+    expect(nodeData(hNode!).linkedToNodes).toEqual(['W1', 'W2']);
+    expect(nodeData(hNode!).linkedTo).toBe('W1');
+  });
+
+  test('husband spouse-card on EACH wife node carries linkedTo to his main node', () => {
+    const data = buildDoubleCousinMarriageFixture();
+    const { nodes } = buildTreeData(data, 'G', 50, '', noHighlight, null, noopCallbacks);
+
+    for (const wifeId of ['W1', 'W2']) {
+      const wifeNode = getPersonNode(nodes, wifeId);
+      const hCard = nodeData(wifeNode!).spouses.find((s) => s.spouse.id === 'H');
+      expect(hCard?.linkedTo).toBe('H');
+    }
+  });
+
+  test('hovering the husband\'s MAIN card fans one edge FROM IT to each spouse-card occurrence', () => {
+    const data = buildDoubleCousinMarriageFixture();
+    const { nodes } = buildTreeData(data, 'G', 50, '', noHighlight, null, noopCallbacks);
+
+    const links = computeOccurrenceLinkEdges(nodes, { personId: 'H', hostNodeId: 'H' });
+    expect(links.length).toBe(2);
+    const targets = links.map((e) => e.target).sort();
+    expect(targets).toEqual(['W1', 'W2']);
+    for (const link of links) {
+      expect(link.source).toBe('H');
+      expect(link.sourceHandle).toBe('default');
+      expect(link.targetHandle).toBe('spouse-target-0');
+      expect(link.className).toBe('occurrence-link');
+    }
+    // Edge ids must be unique so React Flow renders both lines
+    expect(new Set(links.map((e) => e.id)).size).toBe(2);
+  });
+
+  test('hovering the husband\'s SPOUSE-CARD on one wife fans edges FROM THAT CARD to his main card AND the other wife\'s card', () => {
+    const data = buildDoubleCousinMarriageFixture();
+    const { nodes } = buildTreeData(data, 'G', 50, '', noHighlight, null, noopCallbacks);
+
+    // Hover H's spouse-card hosted on W2's node.
+    const links = computeOccurrenceLinkEdges(nodes, { personId: 'H', hostNodeId: 'W2' });
+    expect(links.length).toBe(2);
+    // EVERY line originates from the hovered card's host node (W2)
+    for (const link of links) {
+      expect(link.source).toBe('W2');
+      expect(link.sourceHandle).toBe('occurrence-src-0');
+    }
+    const targets = links.map((e) => e.target).sort();
+    expect(targets).toEqual(['H', 'W1']);
+    const toOtherWife = links.find((e) => e.target === 'W1')!;
+    expect(toOtherWife.targetHandle).toBe('spouse-target-0');
+    expect(new Set(links.map((e) => e.id)).size).toBe(2);
+  });
+
+  test('hovering a wife\'s spouse-card on H\'s node links from H\'s node back to her main card', () => {
+    const data = buildDoubleCousinMarriageFixture();
+    const { nodes } = buildTreeData(data, 'G', 50, '', noHighlight, null, noopCallbacks);
+
+    // W2 is spouse index 1 on H's node — the line must leave from HER card's handle.
+    const links = computeOccurrenceLinkEdges(nodes, { personId: 'W2', hostNodeId: 'H' });
+    expect(links.length).toBe(1);
+    expect(links[0].source).toBe('H');
+    expect(links[0].sourceHandle).toBe('occurrence-src-1');
+    expect(links[0].target).toBe('W2');
   });
 });

@@ -150,6 +150,111 @@ export function buildCousinMarriageFixture(): GedcomData {
 }
 
 /**
+ * Double-cousin-marriage fixture: H marries TWO cousins from DIFFERENT
+ * uncles (no sister-wife cluster — the wives have different parents).
+ *
+ * Structure:
+ *   GRANDPA (G)
+ *   ├── UNCLE_X (X) ── H (son, the husband)
+ *   ├── UNCLE_Y (Y) ── W1 (daughter)
+ *   └── UNCLE_Z (Z) ── W2 (daughter)
+ *
+ *   H married to W1 AND W2 (all three are blood descendants of G).
+ *
+ * Expected: H has a main node (child of X) plus a spouse-card occurrence on
+ * BOTH W1's and W2's nodes — three occurrences total.
+ */
+export function buildDoubleCousinMarriageFixture(): GedcomData {
+  const individuals: Record<string, Individual> = {
+    'G': makeIndividual({
+      id: 'G',
+      name: 'جد',
+      sex: 'M',
+      familiesAsSpouse: ['F_G'],
+    }),
+    'X': makeIndividual({
+      id: 'X',
+      name: 'عم1',
+      sex: 'M',
+      familiesAsSpouse: ['F_X'],
+      familyAsChild: 'F_G',
+    }),
+    'Y': makeIndividual({
+      id: 'Y',
+      name: 'عم2',
+      sex: 'M',
+      familiesAsSpouse: ['F_Y'],
+      familyAsChild: 'F_G',
+    }),
+    'Z': makeIndividual({
+      id: 'Z',
+      name: 'عم3',
+      sex: 'M',
+      familiesAsSpouse: ['F_Z'],
+      familyAsChild: 'F_G',
+    }),
+    'H': makeIndividual({
+      id: 'H',
+      name: 'الزوج',
+      sex: 'M',
+      familiesAsSpouse: ['F_HW1', 'F_HW2'],
+      familyAsChild: 'F_X',
+    }),
+    'W1': makeIndividual({
+      id: 'W1',
+      name: 'الزوجة الأولى',
+      sex: 'F',
+      familiesAsSpouse: ['F_HW1'],
+      familyAsChild: 'F_Y',
+    }),
+    'W2': makeIndividual({
+      id: 'W2',
+      name: 'الزوجة الثانية',
+      sex: 'F',
+      familiesAsSpouse: ['F_HW2'],
+      familyAsChild: 'F_Z',
+    }),
+  };
+
+  const families: Record<string, Family> = {
+    'F_G': makeFamily({
+      id: 'F_G',
+      husband: 'G',
+      children: ['X', 'Y', 'Z'],
+    }),
+    'F_X': makeFamily({
+      id: 'F_X',
+      husband: 'X',
+      children: ['H'],
+    }),
+    'F_Y': makeFamily({
+      id: 'F_Y',
+      husband: 'Y',
+      children: ['W1'],
+    }),
+    'F_Z': makeFamily({
+      id: 'F_Z',
+      husband: 'Z',
+      children: ['W2'],
+    }),
+    'F_HW1': makeFamily({
+      id: 'F_HW1',
+      husband: 'H',
+      wife: 'W1',
+      children: [],
+    }),
+    'F_HW2': makeFamily({
+      id: 'F_HW2',
+      husband: 'H',
+      wife: 'W2',
+      children: [],
+    }),
+  };
+
+  return { individuals, families };
+}
+
+/**
  * Early-marriage explosion fixture.
  *
  * Structure:

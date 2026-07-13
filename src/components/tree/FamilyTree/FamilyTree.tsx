@@ -26,7 +26,7 @@ import { shouldHideBirthDate } from '@/lib/tree/birth-date-privacy';
 import { DRAWER_MAX_WIDTH } from '@/lib/utils/viewport';
 import { NodeSilhouette } from '@/components/heritage/NodeSilhouette';
 import { NODE_WIDTH, NODE_HEIGHT, SPOUSE_WIDTH, SPOUSE_GAP, computeFocusX } from './layout';
-import { buildTreeData, computeOccurrenceLinkEdge, type HighlightState, type PersonNodeData } from './buildTreeData';
+import { buildTreeData, computeOccurrenceLinkEdges, type HighlightState, type HoveredOccurrence, type PersonNodeData } from './buildTreeData';
 
 function PersonNode({ data }: { data: PersonNodeData }) {
   const {
@@ -42,7 +42,7 @@ function PersonNode({ data }: { data: PersonNodeData }) {
     isInLawExpansion,
     hideSpouseBadge,
     spouseOffsets,
-    linkedTo: mainLinkedTo,
+    linkedToNodes,
     childrenElsewhere,
     onPersonClick,
     onOpenSidebar,
@@ -51,6 +51,10 @@ function PersonNode({ data }: { data: PersonNodeData }) {
     onSetHoveredOccurrence,
   } = data;
   const wsContext = useOptionalWorkspaceTree();
+  // Per-person cycle position for the link badge: when a person appears as a
+  // spouse-card on MORE than one node (married to two cousins), repeated
+  // clicks on their main-card badge visit each occurrence in turn.
+  const jumpCycleRef = useRef<Record<string, number>>({});
 
   const getHighlightClass = (_personId: string, isMainPerson: boolean) => {
     if (!hasHighlight) return '';
@@ -69,7 +73,7 @@ function PersonNode({ data }: { data: PersonNodeData }) {
     p: Individual,
     isMainPerson: boolean,
     spouseHighlightClass?: string,
-    linkedTo?: string,
+    linkedTargets?: string[],
   ) => {
     const displayName = getDisplayName(p);
     const sexClass = p.sex === 'M' ? 'male' : p.sex === 'F' ? 'female' : '';
@@ -95,16 +99,28 @@ function PersonNode({ data }: { data: PersonNodeData }) {
       onPersonClick(p.id);
     };
 
-    const handleHoverEnter = linkedTo && onSetHoveredOccurrence
-      ? () => onSetHoveredOccurrence(p.id)
+    const isLinked = !!linkedTargets && linkedTargets.length > 0;
+
+    // The hovered occurrence carries WHICH card is under the mouse (this
+    // node), so the connector lines fan out from it — not from the person's
+    // main card somewhere else on the canvas.
+    const handleHoverEnter = isLinked && onSetHoveredOccurrence
+      ? () => onSetHoveredOccurrence({ personId: p.id, hostNodeId: person.id })
       : undefined;
-    const handleHoverLeave = linkedTo && onSetHoveredOccurrence
+    const handleHoverLeave = isLinked && onSetHoveredOccurrence
       ? () => onSetHoveredOccurrence(null)
       : undefined;
 
     const handleJumpToOccurrence = (e: React.MouseEvent) => {
       e.stopPropagation();
-      if (linkedTo && onJumpToNode) onJumpToNode(linkedTo);
+      if (!isLinked || !onJumpToNode) return;
+      // Cycle through all occurrences on repeated clicks, and pass the
+      // person id so the viewport centres on THEIR card inside the target
+      // node — not the node's midpoint (which, on a multi-wife node, lands
+      // between the wives).
+      const cycleIdx = (jumpCycleRef.current[p.id] ?? 0) % linkedTargets!.length;
+      jumpCycleRef.current[p.id] = cycleIdx + 1;
+      onJumpToNode(linkedTargets![cycleIdx], p.id);
     };
 
     const isSelected = selectedPersonId === p.id;
@@ -148,11 +164,11 @@ function PersonNode({ data }: { data: PersonNodeData }) {
             </svg>
           </div>
         )}
-        {linkedTo && (
+        {isLinked && (
           <button
             type="button"
             className="linked-occurrence-badge"
-            title="نفس الشخص — يظهر في موضعين"
+            title={linkedTargets!.length > 1 ? 'نفس الشخص — يظهر في عدة مواضع' : 'نفس الشخص — يظهر في موضعين'}
             aria-label="انتقل إلى الموضع الآخر لهذا الشخص"
             onClick={handleJumpToOccurrence}
           >
@@ -207,12 +223,12 @@ function PersonNode({ data }: { data: PersonNodeData }) {
       <Handle type="target" position={Position.Top} style={{ opacity: 0, left: NODE_WIDTH / 2 }} />
       {spouses.length === 0 ? (
         <>
-          {renderPersonCard(person, true, undefined, mainLinkedTo)}
+          {renderPersonCard(person, true, undefined, linkedToNodes)}
           <Handle type="source" position={Position.Bottom} id="default" style={{ opacity: 0 }} />
         </>
       ) : (
         <div className="couple" style={{ position: 'relative', width: coupleWidth }}>
-          {renderPersonCard(person, true, undefined, mainLinkedTo)}
+          {renderPersonCard(person, true, undefined, linkedToNodes)}
           {/* One colour-coded marriage connector per wife, fanned from the
               husband to each wife at a staggered height. The lines sit BEHIND
               the cards (rendered before the wife cards, and the cards carry an
@@ -258,6 +274,18 @@ function PersonNode({ data }: { data: PersonNodeData }) {
                   top: 0,
                 }}
               />
+              {/* Source handle under this spouse card, so occurrence-link
+                  lines can ORIGINATE from the hovered spouse-card (cousin
+                  marriage) instead of from the person's main card. */}
+              <Handle
+                type="source"
+                position={Position.Bottom}
+                id={`occurrence-src-${spouseIdx}`}
+                style={{
+                  opacity: 0,
+                  left: 70,
+                }}
+              />
               {!hideSpouseBadge && hasExtFam && topAncestorId && (
                 <div
                   className="spouse-family-badge"
@@ -284,7 +312,7 @@ function PersonNode({ data }: { data: PersonNodeData }) {
                   </svg>
                 </div>
               )}
-              {renderPersonCard(spouse, false, highlightClass, spouseLinkedTo)}
+              {renderPersonCard(spouse, false, highlightClass, spouseLinkedTo ? [spouseLinkedTo] : undefined)}
             </div>
           ))}
           {/* "Children placed under your spouse" markers — appear when this
@@ -300,7 +328,7 @@ function PersonNode({ data }: { data: PersonNodeData }) {
                   title={`${entry.count} أبناء ظاهرون مع ${entry.spouseName}`}
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (onJumpToNode) onJumpToNode(entry.canonicalNodeId);
+                    if (onJumpToNode) onJumpToNode(entry.canonicalNodeId, entry.spouseId);
                   }}
                 >
                   <span className="children-elsewhere-arrow" aria-hidden="true">↗</span>
@@ -380,12 +408,13 @@ const nodeTypes = {
 
 function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
   const { data, selectedRootId, initialRootId, config, searchQuery, focusPersonId, selectedPersonId, highlightedPersonId, setHighlightedPersonId, setSelectedPersonId, setSelectedRootId, setFocusPersonId, setMobileSidebarOpen, viewMode } = useTree();
-  // Hover state for the cousin-marriage occurrence-link edge — kept local
+  // Hover state for the cousin-marriage occurrence-link edges — kept local
   // so its high-frequency updates don't ripple through every TreeContext
-  // consumer (Sidebar, every PersonNode...).
-  const [hoveredOccurrenceId, setHoveredOccurrenceIdState] = useState<string | null>(null);
-  const setHoveredOccurrenceId = useCallback((id: string | null) => {
-    setHoveredOccurrenceIdState(id);
+  // consumer (Sidebar, every PersonNode...). Tracks the specific CARD under
+  // the mouse (person + host node), not just the person.
+  const [hoveredOccurrence, setHoveredOccurrenceState] = useState<HoveredOccurrence | null>(null);
+  const setHoveredOccurrence = useCallback((occurrence: HoveredOccurrence | null) => {
+    setHoveredOccurrenceState(occurrence);
   }, []);
   const { setViewport, setCenter, getZoom, getViewport, fitView } = useReactFlow();
   const [isReady, setIsReady] = useState(false);
@@ -492,8 +521,8 @@ function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
   const nodesRef = useRef<Node[]>([]);
 
   const handleJumpToNode = useCallback(
-    (nodeId: string) => {
-      scrollToNode(nodeId, nodesRef.current, 'center', true);
+    (nodeId: string, focusPersonId?: string) => {
+      scrollToNode(nodeId, nodesRef.current, 'center', true, focusPersonId);
     },
     [scrollToNode],
   );
@@ -515,13 +544,13 @@ function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
         onOpenSidebar: handleOpenSidebar,
         onRerootToAncestor: handleRerootToAncestor,
         onJumpToNode: handleJumpToNode,
-        onSetHoveredOccurrence: setHoveredOccurrenceId,
+        onSetHoveredOccurrence: setHoveredOccurrence,
       },
       viewMode === 'multi'
     );
 
     return { initialNodes: nodes, initialEdges: edges };
-  }, [data, selectedRootId, config.maxDepth, searchQuery, highlightState, selectedPersonId, handlePersonClick, handleOpenSidebar, handleRerootToAncestor, handleJumpToNode, setHoveredOccurrenceId, viewMode]);
+  }, [data, selectedRootId, config.maxDepth, searchQuery, highlightState, selectedPersonId, handlePersonClick, handleOpenSidebar, handleRerootToAncestor, handleJumpToNode, setHoveredOccurrence, viewMode]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -538,17 +567,18 @@ function FamilyTreeInner({ hideMiniMap, hideControls }: FamilyTreeProps) {
     setEdges(initialEdges);
   }, [initialNodes, initialEdges, setNodes, setEdges]);
 
-  // Dashed gold connector between two occurrences of the same person
-  // (cousin marriage). Recomputed on hover state change — does NOT touch
-  // the underlying edges state, so the family tree edges stay stable.
-  const occurrenceLinkEdge = useMemo(
-    () => computeOccurrenceLinkEdge(nodes, hoveredOccurrenceId),
-    [nodes, hoveredOccurrenceId],
+  // Dashed gold connectors between the occurrences of the same person
+  // (cousin marriage) — all fanning out from the hovered card, one per other
+  // occurrence. Recomputed on hover state change — does NOT touch the
+  // underlying edges state, so the family tree edges stay stable.
+  const occurrenceLinkEdges = useMemo(
+    () => computeOccurrenceLinkEdges(nodes, hoveredOccurrence),
+    [nodes, hoveredOccurrence],
   );
 
   const displayEdges = useMemo(
-    () => (occurrenceLinkEdge ? [...edges, occurrenceLinkEdge] : edges),
-    [edges, occurrenceLinkEdge],
+    () => (occurrenceLinkEdges.length > 0 ? [...edges, ...occurrenceLinkEdges] : edges),
+    [edges, occurrenceLinkEdges],
   );
 
   // Center viewport on focused person (including spouses who are part of another node)
