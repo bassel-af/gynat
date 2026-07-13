@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState, type ComponentProps } from 'react';
+import { Suspense, useEffect, useRef, useState, type ComponentProps } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { PersonPage } from '@/components/person';
@@ -49,7 +49,13 @@ function PersonView() {
   // arrived. On a PHONE (≤480px) we DELIBERATELY leave it open — the member
   // browses person→person inside the drawer (`shouldCollapseDrawerOnPersonView`).
   // Runs only on navigation, so a later FAB re-open on this page is not undone.
-  const { setSelectedPersonId, setMobileSidebarOpen } = useTree();
+  // `treeData` is the shared TreeContext tree, refreshed by `refreshTree()` after
+  // every edit (add child/spouse/parent, etc.). We depend on its reference below
+  // so that a mutation made from the persistent sidebar — which re-fetches the
+  // tree but NOT this page's separate person projection — also re-pulls the
+  // projection. Without it, a newly added son never appears here until a full
+  // reload in a fresh tab.
+  const { setSelectedPersonId, setMobileSidebarOpen, data: treeData } = useTree();
   useEffect(() => {
     setSelectedPersonId(individualId);
     if (shouldCollapseDrawerOnPersonView()) setMobileSidebarOpen(false);
@@ -60,16 +66,29 @@ function PersonView() {
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState('');
 
+  // Tracks whether we already have content on screen, so a re-fetch triggered by
+  // an in-place edit (tree data changed) doesn't flash the full-page spinner —
+  // the current person stays visible and the fresh projection swaps in silently.
+  // Reset when the viewed person changes so switching people shows the spinner.
+  const hasContentRef = useRef(false);
+  useEffect(() => {
+    hasContentRef.current = false;
+  }, [individualId]);
+
   useEffect(() => {
     if (!workspaceId) return;
     let cancelled = false;
-    setLoading(true);
+    if (!hasContentRef.current) setLoading(true);
     setNotFound(false);
     setError('');
     (async () => {
       try {
+        // `no-cache` forces revalidation against the ETag (keyed on tree mtime)
+        // instead of trusting the `max-age=30` freshness window — otherwise a
+        // manual refresh right after an edit would still serve the stale body.
         const res = await apiFetch(
           `/api/workspaces/${workspaceId}/tree/person/${individualId}`,
+          { cache: 'no-cache' },
         );
         if (cancelled) return;
         if (res.status === 404) {
@@ -81,7 +100,10 @@ function PersonView() {
           return;
         }
         const data = (await res.json()) as Projection;
-        if (!cancelled) setProjection(data);
+        if (!cancelled) {
+          setProjection(data);
+          hasContentRef.current = true;
+        }
       } catch {
         if (!cancelled) setError('فشل في تحميل صفحة الشخص');
       } finally {
@@ -91,7 +113,7 @@ function PersonView() {
     return () => {
       cancelled = true;
     };
-  }, [workspaceId, individualId]);
+  }, [workspaceId, individualId, treeData]);
 
   // Single source of truth for both nav directions (`@/lib/tree/view-modes`).
   const ctx: ViewModeContext = { slug, individualId, treeId };
