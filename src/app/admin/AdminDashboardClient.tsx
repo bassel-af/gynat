@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { apiFetch } from '@/lib/api/client';
 import styles from './AdminDashboard.module.css';
 import type {
@@ -234,6 +235,7 @@ function GrowthSection({ state }: { state: SectionState<GrowthMetrics> }) {
             label="إجمالي المستخدمين"
             value={state.data.totalUsers}
             secondary="جميع الحسابات"
+            href="/admin/users"
           />
           <Card
             label="مستخدمون جدد"
@@ -533,14 +535,36 @@ function Card({
   value,
   secondary,
   variant,
+  href,
 }: {
   label: string;
   value: number | string;
   secondary?: string;
   variant?: 'lead';
+  /** When set, the whole card becomes a drill-down link. */
+  href?: string;
 }) {
-  const className =
+  let className =
     variant === 'lead' ? `${styles.card} ${styles.cardLead}` : styles.card;
+
+  if (href) {
+    className = `${className} ${styles.cardClickable}`;
+    return (
+      <Link href={href} className={className}>
+        <span className={styles.cardLabel}>{label}</span>
+        <span className={styles.cardValue}>{value}</span>
+        {secondary ? (
+          <span className={`${styles.cardSecondary} ${styles.cardLinkHint}`}>
+            {secondary}
+            <span className={styles.cardLinkArrow} aria-hidden>
+              ←
+            </span>
+          </span>
+        ) : null}
+      </Link>
+    );
+  }
+
   return (
     <div className={className}>
       <span className={styles.cardLabel}>{label}</span>
