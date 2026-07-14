@@ -235,15 +235,35 @@ describe('buildTreeData — double cousin marriage (two wives, different uncles)
     expect(nodeData(hNode!).linkedTo).toBe('W1');
   });
 
-  test('husband spouse-card on EACH wife node carries linkedTo to his main node', () => {
+  test('badges form a stateless ring over all occurrences: main → W1 → W2 → main', () => {
     const data = buildDoubleCousinMarriageFixture();
     const { nodes } = buildTreeData(data, 'G', 50, '', noHighlight, null, noopCallbacks);
 
-    for (const wifeId of ['W1', 'W2']) {
-      const wifeNode = getPersonNode(nodes, wifeId);
-      const hCard = nodeData(wifeNode!).spouses.find((s) => s.spouse.id === 'H');
-      expect(hCard?.linkedTo).toBe('H');
-    }
+    // Main card badge → first spouse-card occurrence (W1's node)
+    const hNode = getPersonNode(nodes, 'H');
+    expect(nodeData(hNode!).linkedTo).toBe('W1');
+
+    // H's spouse-card on W1 → NEXT occurrence (W2's node), not back to main
+    const w1Node = getPersonNode(nodes, 'W1');
+    const hCardOnW1 = nodeData(w1Node!).spouses.find((s) => s.spouse.id === 'H');
+    expect(hCardOnW1?.linkedTo).toBe('W2');
+
+    // H's spouse-card on W2 (last occurrence) → wraps to his main node
+    const w2Node = getPersonNode(nodes, 'W2');
+    const hCardOnW2 = nodeData(w2Node!).spouses.find((s) => s.spouse.id === 'H');
+    expect(hCardOnW2?.linkedTo).toBe('H');
+  });
+
+  test('wives (two occurrences each) keep the simple two-way link', () => {
+    const data = buildDoubleCousinMarriageFixture();
+    const { nodes } = buildTreeData(data, 'G', 50, '', noHighlight, null, noopCallbacks);
+
+    // W1's main card → her spouse-card host (H's node); her card there → back
+    const w1Node = getPersonNode(nodes, 'W1');
+    expect(nodeData(w1Node!).linkedTo).toBe('H');
+    const hNode = getPersonNode(nodes, 'H');
+    const w1CardOnH = nodeData(hNode!).spouses.find((s) => s.spouse.id === 'W1');
+    expect(w1CardOnH?.linkedTo).toBe('W1');
   });
 
   test('hovering the husband\'s MAIN card fans one edge FROM IT to each spouse-card occurrence', () => {

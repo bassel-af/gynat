@@ -42,6 +42,7 @@ function PersonNode({ data }: { data: PersonNodeData }) {
     isInLawExpansion,
     hideSpouseBadge,
     spouseOffsets,
+    linkedTo: mainLinkedTo,
     linkedToNodes,
     childrenElsewhere,
     onPersonClick,
@@ -51,10 +52,6 @@ function PersonNode({ data }: { data: PersonNodeData }) {
     onSetHoveredOccurrence,
   } = data;
   const wsContext = useOptionalWorkspaceTree();
-  // Per-person cycle position for the link badge: when a person appears as a
-  // spouse-card on MORE than one node (married to two cousins), repeated
-  // clicks on their main-card badge visit each occurrence in turn.
-  const jumpCycleRef = useRef<Record<string, number>>({});
 
   const getHighlightClass = (_personId: string, isMainPerson: boolean) => {
     if (!hasHighlight) return '';
@@ -73,7 +70,8 @@ function PersonNode({ data }: { data: PersonNodeData }) {
     p: Individual,
     isMainPerson: boolean,
     spouseHighlightClass?: string,
-    linkedTargets?: string[],
+    linkedTo?: string,
+    multiOccurrence?: boolean,
   ) => {
     const displayName = getDisplayName(p);
     const sexClass = p.sex === 'M' ? 'male' : p.sex === 'F' ? 'female' : '';
@@ -99,28 +97,24 @@ function PersonNode({ data }: { data: PersonNodeData }) {
       onPersonClick(p.id);
     };
 
-    const isLinked = !!linkedTargets && linkedTargets.length > 0;
-
     // The hovered occurrence carries WHICH card is under the mouse (this
     // node), so the connector lines fan out from it — not from the person's
     // main card somewhere else on the canvas.
-    const handleHoverEnter = isLinked && onSetHoveredOccurrence
+    const handleHoverEnter = linkedTo && onSetHoveredOccurrence
       ? () => onSetHoveredOccurrence({ personId: p.id, hostNodeId: person.id })
       : undefined;
-    const handleHoverLeave = isLinked && onSetHoveredOccurrence
+    const handleHoverLeave = linkedTo && onSetHoveredOccurrence
       ? () => onSetHoveredOccurrence(null)
       : undefined;
 
     const handleJumpToOccurrence = (e: React.MouseEvent) => {
       e.stopPropagation();
-      if (!isLinked || !onJumpToNode) return;
-      // Cycle through all occurrences on repeated clicks, and pass the
-      // person id so the viewport centres on THEIR card inside the target
-      // node — not the node's midpoint (which, on a multi-wife node, lands
-      // between the wives).
-      const cycleIdx = (jumpCycleRef.current[p.id] ?? 0) % linkedTargets!.length;
-      jumpCycleRef.current[p.id] = cycleIdx + 1;
-      onJumpToNode(linkedTargets![cycleIdx], p.id);
+      if (!linkedTo || !onJumpToNode) return;
+      // `linkedTo` is the NEXT occurrence in this person's ring, so repeated
+      // badge clicks tour every occurrence. The person id makes the viewport
+      // centre on THEIR card inside the target node — not the node's midpoint
+      // (which, on a multi-wife node, lands between the wives).
+      onJumpToNode(linkedTo, p.id);
     };
 
     const isSelected = selectedPersonId === p.id;
@@ -164,11 +158,11 @@ function PersonNode({ data }: { data: PersonNodeData }) {
             </svg>
           </div>
         )}
-        {isLinked && (
+        {linkedTo && (
           <button
             type="button"
             className="linked-occurrence-badge"
-            title={linkedTargets!.length > 1 ? 'نفس الشخص — يظهر في عدة مواضع' : 'نفس الشخص — يظهر في موضعين'}
+            title={multiOccurrence ? 'نفس الشخص — يظهر في عدة مواضع' : 'نفس الشخص — يظهر في موضعين'}
             aria-label="انتقل إلى الموضع الآخر لهذا الشخص"
             onClick={handleJumpToOccurrence}
           >
@@ -223,12 +217,12 @@ function PersonNode({ data }: { data: PersonNodeData }) {
       <Handle type="target" position={Position.Top} style={{ opacity: 0, left: NODE_WIDTH / 2 }} />
       {spouses.length === 0 ? (
         <>
-          {renderPersonCard(person, true, undefined, linkedToNodes)}
+          {renderPersonCard(person, true, undefined, mainLinkedTo, (linkedToNodes?.length ?? 0) > 1)}
           <Handle type="source" position={Position.Bottom} id="default" style={{ opacity: 0 }} />
         </>
       ) : (
         <div className="couple" style={{ position: 'relative', width: coupleWidth }}>
-          {renderPersonCard(person, true, undefined, linkedToNodes)}
+          {renderPersonCard(person, true, undefined, mainLinkedTo, (linkedToNodes?.length ?? 0) > 1)}
           {/* One colour-coded marriage connector per wife, fanned from the
               husband to each wife at a staggered height. The lines sit BEHIND
               the cards (rendered before the wife cards, and the cards carry an
@@ -255,7 +249,7 @@ function PersonNode({ data }: { data: PersonNodeData }) {
           })}
           {/* Wife cards — spread to sit over their own children when offsets are
               provided, else a default tight row via marginLeft. */}
-          {spouses.map(({ spouse, highlightClass, hasExternalFamily: hasExtFam, topAncestorId, linkedTo: spouseLinkedTo }, spouseIdx) => (
+          {spouses.map(({ spouse, highlightClass, hasExternalFamily: hasExtFam, topAncestorId, linkedTo: spouseLinkedTo, multiLinked }, spouseIdx) => (
             <div
               key={spouse.id}
               className="spouse-card-wrapper"
@@ -312,7 +306,7 @@ function PersonNode({ data }: { data: PersonNodeData }) {
                   </svg>
                 </div>
               )}
-              {renderPersonCard(spouse, false, highlightClass, spouseLinkedTo ? [spouseLinkedTo] : undefined)}
+              {renderPersonCard(spouse, false, highlightClass, spouseLinkedTo, multiLinked)}
             </div>
           ))}
           {/* "Children placed under your spouse" markers — appear when this

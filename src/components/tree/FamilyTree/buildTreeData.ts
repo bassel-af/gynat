@@ -25,10 +25,14 @@ export interface SpouseWithColor {
   hasExternalFamily: boolean;
   topAncestorId: string | null;
   /** When set: this spouse-card's underlying person ALSO appears as a main
-   *  card elsewhere in the tree (cousin marriage). The string is the OTHER
-   *  node id where they render — used to pan when the link badge is clicked.
-   *  Presence implies "linked"; no separate boolean flag. */
+   *  card elsewhere in the tree (cousin marriage). The string is the NEXT
+   *  occurrence in the person's ring (main → host1 → host2 → main) — used to
+   *  pan when the link badge is clicked, so repeated badge clicks tour every
+   *  occurrence without bouncing. Presence implies "linked". */
   linkedTo?: string;
+  /** True when the underlying person has MORE than two occurrences tree-wide
+   *  (main card + 2+ spouse-cards) — badge tooltip wording only. */
+  multiLinked?: boolean;
 }
 
 // Marker placed on a non-canonical co-parent who lost their children to the
@@ -58,13 +62,12 @@ export interface PersonNodeData {
    *  Indexed by spouse index. Absent → render wives in the default tight row. */
   spouseOffsets?: number[];
   /** When set: this person also appears as a spouse-card on another node
-   *  (cousin marriage). The string is the OTHER node id where they appear
-   *  as a spouse — used to pan on link badge click. Presence implies
-   *  "linked"; no separate boolean flag. */
+   *  (cousin marriage). The string is the FIRST spouse-card occurrence's node
+   *  id — the next stop in the occurrence ring (main → host1 → host2 → main).
+   *  Used to pan on link badge click. Presence implies "linked". */
   linkedTo?: string;
   /** ALL node ids where this person appears as a spouse-card (a man married
-   *  to two cousins appears on both wives' nodes). `linkedTo` is always the
-   *  first entry; the link badge cycles through these on repeated clicks. */
+   *  to two cousins appears on both wives' nodes), in ring order. */
   linkedToNodes?: string[];
   /** Populated when one or more shared families with a spouse have all
    *  children claimed by the spouse's canonical placement. */
@@ -732,6 +735,8 @@ export function buildTreeData(
     const personId = node.id;
 
     // Mark main-card if this person also appears as a spouse-card elsewhere.
+    // The badge target is the FIRST spouse-card occurrence — the next stop in
+    // the person's occurrence ring.
     const spouseHostIds = (spouseAppearances.get(personId) ?? []).filter(
       (hostId) => hostId !== personId,
     );
@@ -740,11 +745,19 @@ export function buildTreeData(
       nodeData.linkedToNodes = spouseHostIds;
     }
 
-    // Mark spouse-cards whose underlying person also has a main-node.
+    // Mark spouse-cards whose underlying person also has a main-node. Each
+    // card links to the NEXT occurrence in that person's ring: the following
+    // spouse-card host, or back to the main card after the last one. This
+    // keeps badge-clicking a forward tour (main → host1 → host2 → main)
+    // instead of every spouse-card bouncing back to the main card.
     for (const sp of nodeData.spouses) {
-      if (mainNodeIds.has(sp.spouse.id) && sp.spouse.id !== personId) {
-        sp.linkedTo = sp.spouse.id;
-      }
+      if (!mainNodeIds.has(sp.spouse.id) || sp.spouse.id === personId) continue;
+      const hosts = (spouseAppearances.get(sp.spouse.id) ?? []).filter(
+        (hostId) => hostId !== sp.spouse.id,
+      );
+      const hostIdx = hosts.indexOf(personId);
+      sp.linkedTo = hostIdx >= 0 && hostIdx < hosts.length - 1 ? hosts[hostIdx + 1] : sp.spouse.id;
+      sp.multiLinked = hosts.length > 1;
     }
 
     // Attach childrenElsewhere markers, filtering down to spouses whose
