@@ -175,7 +175,7 @@ export function buildInviteEmail({ workspaceName, inviterName, inviteUrl }: Invi
           <tr>
             <td style="padding: 8px 48px 40px 48px; text-align: center;" class="padding-mobile">
               <p style="margin: 0; font-family: 'Amiri', 'Reem Kufi', 'Noto Kufi Arabic', 'Segoe UI', Tahoma, serif; font-size: 14px; font-style: italic; color: rgba(200, 168, 101, 0.55); letter-spacing: 0.04em;">
-                &#65148; وَجَعَلْنَاكُمْ شُعُوبًا وَقَبَائِلَ لِتَعَارَفُوا &#65147;
+                وَجَعَلْنَاكُمْ شُعُوبًا وَقَبَائِلَ لِتَعَارَفُوا
               </p>
             </td>
           </tr>
@@ -208,7 +208,7 @@ ${safeUrl}
 ` : ''}
 إن لم تكن تتوقّع هذه الدعوة، يمكنك تجاهل هذه الرسالة بأمان.
 
-﴾ وَجَعَلْنَاكُمْ شُعُوبًا وَقَبَائِلَ لِتَعَارَفُوا ﴿`;
+وَجَعَلْنَاكُمْ شُعُوبًا وَقَبَائِلَ لِتَعَارَفُوا`;
 
   return { subject, html, text };
 }

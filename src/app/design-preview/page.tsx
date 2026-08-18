@@ -753,7 +753,7 @@ export default function DesignPreviewPage() {
         </section>
 
         <div className={styles.footnote}>
-          ﴾ وَجَعَلْنَاكُمْ شُعُوبًا وَقَبَائِلَ لِتَعَارَفُوا ﴿
+          وَجَعَلْنَاكُمْ شُعُوبًا وَقَبَائِلَ لِتَعَارَفُوا
         </div>
       </div>
     </main>

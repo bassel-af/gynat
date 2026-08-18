@@ -365,6 +365,7 @@
 .footerAyah {
   font-family: var(--heritage-font-script);
   font-size: 14px;
+  font-style: italic;
   color: #8a7647;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

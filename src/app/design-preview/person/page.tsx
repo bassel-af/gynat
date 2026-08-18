@@ -803,7 +803,7 @@ export default function PersonPreviewPage() {
         </div>
 
         <div className={styles.footnote}>
-          ﴿ وَجَعَلْنَاكُمْ شُعُوبًا وَقَبَائِلَ لِتَعَارَفُوا ﴾
+          وَجَعَلْنَاكُمْ شُعُوبًا وَقَبَائِلَ لِتَعَارَفُوا
         </div>
       </div>
     </main>

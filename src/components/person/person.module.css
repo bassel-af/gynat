@@ -825,6 +825,7 @@ a.relationChip:hover .relationName { color: var(--heritage-gold-bright); }
   border-top: 1px solid var(--heritage-glass-border);
   font-family: var(--heritage-font-script);
   font-size: 18px;
+  font-style: italic;
   color: var(--heritage-gold-deep);
   opacity: 0.85;
 }

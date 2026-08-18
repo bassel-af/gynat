@@ -149,7 +149,7 @@ export default function Home() {
           <div className={styles.footerMobileLink}>
             <a href="/islamic-gedcom">مرجع GEDCOM الإسلامي</a>
           </div>
-          <div className={styles.footerAyah}>﴿ وَجَعَلْنَاكُمْ شُعُوبًا وَقَبَائِلَ لِتَعَارَفُوا ﴾</div>
+          <div className={styles.footerAyah}>وَجَعَلْنَاكُمْ شُعُوبًا وَقَبَائِلَ لِتَعَارَفُوا</div>
         </footer>
       </div>
 
