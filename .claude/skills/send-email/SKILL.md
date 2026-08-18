@@ -21,11 +21,11 @@ while sending from `noreply@gynat.com` — it worked out because that address
 happens to be a Send-As alias on the authenticated Gmail account, but that
 was only confirmed after the fact by asking the user to check.
 
-**Confirmed monitored sender for this project: `contact@gynat.com`**
+**Known-good monitored sender for this project: `contact@gynat.com`**
 (also `SITE_CONTACT_EMAIL` in `src/lib/site.ts`) — a real alias, mail
-actually lands and gets read. Use this as the default outreach `from` going
-forward: `"فريق جينات" <contact@gynat.com>`. Only ask the user for a
-different sender if they request one explicitly.
+actually lands and gets read. This is the default to *propose*, as
+`"فريق جينات" <contact@gynat.com>` — but still confirm with the user before
+using it for a given send. Never pick a sender silently, even this one.
 
 Build the email with an explicit `from` override, calling
 `emailTransport.sendMail({ from, to, subject, html, text })` directly
