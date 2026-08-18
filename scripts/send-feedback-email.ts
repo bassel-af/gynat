@@ -4,10 +4,13 @@
  * Usage:
  *   npx tsx --env-file=.env.local --env-file-if-exists=.env scripts/send-feedback-email.ts <email> <name>
  */
-import { sendEmail } from '../src/lib/email/transport';
+import { emailTransport } from '../src/lib/email/transport';
 import { buildFeedbackRequestEmail } from '../src/lib/email/templates/feedback-request';
 
 const LOGO_URL = 'https://gynat.com/brand/avatar-400.png';
+// Monitored alias (also used as SITE_CONTACT_EMAIL) — NOT the transactional
+// noreply sender, since this email invites a reply.
+const FROM = '"فريق جينات" <contact@gynat.com>';
 
 async function main() {
   const [to, name] = process.argv.slice(2);
@@ -18,7 +21,7 @@ async function main() {
 
   const { subject, html, text } = buildFeedbackRequestEmail({ recipientName: name, logoSrc: LOGO_URL });
 
-  const info = await sendEmail({ to, subject, html, text });
+  const info = await emailTransport.sendMail({ from: FROM, to, subject, html, text });
   console.log('Sent:', info.messageId || info);
 }
 
