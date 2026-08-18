@@ -25,14 +25,13 @@ function renderFlow(overrides: Partial<Parameters<typeof PublishFlow>[0]> = {}) 
   );
 }
 
-// Walk: choose 'link' -> continue -> checkpoint -> type phrase -> publish.
+// Walk: choose 'link' -> continue -> checkpoint (no confirm input to fill anymore).
 async function proceedToPublish() {
   // Select the by-link level radio (the ladder renders the levels).
   fireEvent.click(screen.getByText(/عامة عبر الرابط/));
   fireEvent.click(screen.getByText('متابعة'));
-  // Now on checkpoint: type the family name into the confirm input.
-  const input = await screen.findByPlaceholderText(FAMILY);
-  fireEvent.change(input, { target: { value: FAMILY } });
+  // Now on the checkpoint — wait for it to mount before clicking publish.
+  await screen.findByText('تأكيد النشر');
 }
 
 describe('PublishFlow real-action wiring', () => {
@@ -41,7 +40,6 @@ describe('PublishFlow real-action wiring', () => {
     renderFlow({ onPublishConfirm });
 
     await proceedToPublish();
-    // The publish button becomes enabled once the phrase matches.
     fireEvent.click(screen.getByRole('button', { name: /نشر/ }));
 
     await waitFor(() => expect(onPublishConfirm).toHaveBeenCalledTimes(1));
@@ -58,8 +56,8 @@ describe('PublishFlow real-action wiring', () => {
     fireEvent.click(screen.getByRole('button', { name: /نشر/ }));
 
     await waitFor(() => expect(onPublishConfirm).toHaveBeenCalled());
-    // Still on the checkpoint — the confirm input is still present, no success link.
+    // Still on the checkpoint — no success link, the publish button is still there.
     expect(screen.queryByText(/https:\/\/gynat\.com\/family\/x/)).toBeNull();
-    expect(screen.getByPlaceholderText(FAMILY)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /نشر/ })).toBeTruthy();
   });
 });

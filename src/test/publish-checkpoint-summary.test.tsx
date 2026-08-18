@@ -1,19 +1,23 @@
-import { describe, test, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, test, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { PublishCheckpoint } from '@/components/public-tree/PublishCheckpoint/PublishCheckpoint';
 import type { PublishCheckpointData } from '@/components/public-tree/PublishCheckpoint/types';
 
-// Substring of the count-summary banner that should be conditionally shown.
-const SUMMARY_FRAGMENT = 'سيعرض';
-
-function renderCheckpoint(data: PublishCheckpointData) {
+function renderCheckpoint(data: PublishCheckpointData, onPublish = vi.fn()) {
   return render(
-    <PublishCheckpoint isOpen data={data} confirmPhrase="آل السعيد" onClose={() => {}} />,
+    <PublishCheckpoint
+      isOpen
+      data={data}
+      confirmPhrase="آل السعيد"
+      onClose={() => {}}
+      onPublish={onPublish}
+    />,
   );
 }
 
-describe('PublishCheckpoint living-count summary', () => {
-  test('shows the count summary when there are living people', () => {
+describe('PublishCheckpoint (simplified confirm-only step)', () => {
+  test('the publish button is enabled immediately, regardless of living count', () => {
+    const onPublish = vi.fn();
     const data: PublishCheckpointData = {
       livingCount: 3,
       attention: [],
@@ -21,26 +25,33 @@ describe('PublishCheckpoint living-count summary', () => {
         {
           id: 'h1',
           title: 'بيت أحمد',
-          members: [
-            { id: 'a', name: 'أحمد', gender: 'male', meta: 'وُلد ١٩٩٠' },
-            { id: 'b', name: 'سارة', gender: 'female', meta: 'وُلد ١٩٩٢' },
-            { id: 'c', name: 'علي', gender: 'male', meta: 'وُلد ٢٠١٠' },
-          ],
+          members: [{ id: 'a', name: 'أحمد', gender: 'male', meta: 'وُلد ١٩٩٠' }],
+        },
+      ],
+    };
+    renderCheckpoint(data, onPublish);
+    const button = screen.getByRole('button', { name: /نشر الشجرة/ });
+    expect(button).not.toBeDisabled();
+    fireEvent.click(button);
+    expect(onPublish).toHaveBeenCalledTimes(1);
+  });
+
+  test('never renders the living-people review list (count/search/person chips) or the type-to-confirm field', () => {
+    const data: PublishCheckpointData = {
+      livingCount: 3,
+      attention: [{ id: 'x', name: 'خالد', gender: 'male', meta: 'يحتاج انتباها', needsAttention: true }],
+      households: [
+        {
+          id: 'h1',
+          title: 'بيت أحمد',
+          members: [{ id: 'a', name: 'أحمد', gender: 'male', meta: 'وُلد ١٩٩٠' }],
         },
       ],
     };
     renderCheckpoint(data);
-    expect(screen.queryByText(new RegExp(SUMMARY_FRAGMENT))).not.toBeNull();
-  });
-
-  test('hides the count summary entirely when the living count is 0', () => {
-    const data: PublishCheckpointData = {
-      livingCount: 0,
-      attention: [],
-      households: [],
-    };
-    renderCheckpoint(data);
-    // The confusing "0 living people will be shown…" banner must not render.
-    expect(screen.queryByText(new RegExp(SUMMARY_FRAGMENT))).toBeNull();
+    expect(screen.queryByText('أحمد')).toBeNull();
+    expect(screen.queryByText('خالد')).toBeNull();
+    expect(screen.queryByRole('searchbox')).toBeNull();
+    expect(screen.queryByRole('textbox')).toBeNull();
   });
 });

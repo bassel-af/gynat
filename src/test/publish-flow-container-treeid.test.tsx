@@ -79,18 +79,17 @@ describe('PublishFlowContainer — preview fetch', () => {
 });
 
 describe('PublishFlowContainer — visibility PATCH', () => {
-  // Walk the real PublishFlow to going-public: choose link → continue → type phrase → publish.
-  async function walkToPublish(phrase: string) {
+  // Walk the real PublishFlow to going-public: choose link → continue → publish.
+  // (The checkpoint's type-to-confirm step is gone; publish is a plain click.)
+  async function walkToPublish() {
     fireEvent.click(await screen.findByText(/عامة عبر الرابط/));
     fireEvent.click(screen.getByText('متابعة'));
-    const input = await screen.findByPlaceholderText(phrase);
-    fireEvent.change(input, { target: { value: phrase } });
     // The publish/confirm button label in PublishFlow.
     const publishBtn = await screen.findByRole('button', { name: /نشر|تأكيد/ });
     fireEvent.click(publishBtn);
   }
 
-  test('PATCHes visibility with the extra treeId in the body and the typed phrase', async () => {
+  test('PATCHes visibility with the extra treeId in the body and the server confirmation phrase', async () => {
     mockApiFetch.mockImplementation((_url: string, opts?: { method?: string }) =>
       opts?.method === 'PATCH'
         ? Promise.resolve(patchResponse())
@@ -105,7 +104,7 @@ describe('PublishFlowContainer — visibility PATCH', () => {
         onChanged={onChanged}
       />,
     );
-    await walkToPublish('فرع بني تميم');
+    await walkToPublish();
 
     await waitFor(() => {
       const patchCall = mockApiFetch.mock.calls.find((c) => c[1]?.method === 'PATCH');
@@ -130,7 +129,7 @@ describe('PublishFlowContainer — visibility PATCH', () => {
     render(
       <PublishFlowContainer workspaceId="ws-1" onClose={vi.fn()} />,
     );
-    await walkToPublish('فرع بني تميم');
+    await walkToPublish();
 
     await waitFor(() => {
       const patchCall = mockApiFetch.mock.calls.find((c) => c[1]?.method === 'PATCH');
@@ -141,12 +140,11 @@ describe('PublishFlowContainer — visibility PATCH', () => {
     expect(body.treeId).toBeUndefined();
   });
 
-  // Regression: the server validates the typed phrase against the ACTIVE tree's
+  // Regression: the server validates the phrase against the ACTIVE tree's
   // `tree.nameAr || workspace.nameAr` (returned as `confirmationPhrase`). The
-  // container MUST drive the type-to-confirm gate + the sent phrase from
-  // `preview.confirmationPhrase` (the server's source of truth) — there is no
-  // client-supplied name to diverge from anymore.
-  test('uses the server confirmation phrase (preview) for the type-to-confirm gate', async () => {
+  // container MUST send `preview.confirmationPhrase` (the server's source of
+  // truth) on publish — there is no client-supplied name to diverge from.
+  test('sends the server confirmation phrase (preview), not a client-supplied one', async () => {
     const SERVER_PHRASE = 'شجرة الفرع'; // = tree.nameAr || workspace.nameAr
     mockApiFetch.mockImplementation((_url: string, opts?: { method?: string }) =>
       opts?.method === 'PATCH'
@@ -163,8 +161,7 @@ describe('PublishFlowContainer — visibility PATCH', () => {
         onClose={vi.fn()}
       />,
     );
-    // The type-to-confirm field is keyed off the SERVER phrase, not the prop.
-    await walkToPublish(SERVER_PHRASE);
+    await walkToPublish();
 
     await waitFor(() => {
       const patchCall = mockApiFetch.mock.calls.find((c) => c[1]?.method === 'PATCH');
