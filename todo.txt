@@ -1,3 +1,14 @@
+- Public person pages are invisible to Google. The /family/[slug] page renders all names as plain
+text with no links, so 0 of the 130 person pages in the published Quraysh tree are reachable by a
+crawler (sitemap has only 6 URLs). The person pages themselves are already indexable, carry Person
+JSON-LD, and each links to ~42 others — so one entry point cascades to the whole graph.
+Fix = (1) link the names on the tree page to their person pages, (2) add person pages to the sitemap.
+Both gated on the same non-redacted rule the JSON-LD already uses, so a private individual never
+gets a link (the link itself would reveal that a hidden person exists).
+DECIDE FIRST: every published tree, or opt-in per tree? It makes each relative separately
+searchable by name — free upside for historical trees, a real change for a living family.
+
+
 - When first name is only provided, expoerted gedcom has first name as first and surname i believe.
 - أولاد العم children visualizaiton issue.
 - Complete SEO improvements
@@ -7,7 +18,6 @@
 - A way to list workspaces and view their numbers.
 - List how many online users other than bassel@gynat.com or bassel.saeed9@gmail.com
 
-- See person full Nasab.
 - Search for families and ask to join (maybe through public family description). Also user can
 describe himself for the admins.
 - SSO for the landing page.
@@ -68,4 +78,10 @@ have trackpad.
 Scrollbar style doesn't look good in person page view.
 
 
-In case of public sharing what is the title for a person?س
+In case of public sharing what is the title for a person page tab?
+
+إظهار الإخوة غير الإشقاء
+
+Islam vs kofr vs child UI Indicator
+
+Find solution when the father/mother is not known but brother/sister is known
