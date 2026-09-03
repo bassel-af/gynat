@@ -94,14 +94,14 @@ export const metadata: Metadata = {
 };
 
 // Site-wide Organization schema for brand disambiguation in search.
-// `logo` and `sameAs` deliberately omitted until a real icon asset (Phase 4)
-// and public social profiles exist — never reference non-existent URLs.
 const organizationSchema = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
   name: SITE_NAME,
   alternateName: 'gynat',
   url: SITE_URL,
+  logo: `${SITE_URL}/brand/avatar-1000.png`,
+  sameAs: ['https://x.com/_gynat'],
   description:
     'جينات منصّة عربية لبناء شجرة العائلة وتوثيق الأنساب، بدعم التقويم الهجري وعلاقات الرضاعة، مع تشفير مزدوج يحفظ خصوصية بيانات العائلة.',
   inLanguage: 'ar',
