@@ -104,7 +104,6 @@ const organizationSchema = {
   sameAs: ['https://x.com/_gynat'],
   description:
     'جينات منصّة عربية لبناء شجرة العائلة وتوثيق الأنساب، بدعم التقويم الهجري وعلاقات الرضاعة، مع تشفير مزدوج يحفظ خصوصية بيانات العائلة.',
-  inLanguage: 'ar',
   contactPoint: {
     '@type': 'ContactPoint',
     email: SITE_CONTACT_EMAIL,
