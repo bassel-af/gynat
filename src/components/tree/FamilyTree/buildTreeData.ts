@@ -204,7 +204,6 @@ interface SisterWifeCluster {
 function detectSisterWifeClusters(
   parentFamilies: import('@/lib/gedcom').Family[],
   data: GedcomData,
-  claimedDescendants: Set<string>,
 ): SisterWifeCluster[] {
   const childIds: string[] = [];
   const seen = new Set<string>();
@@ -247,9 +246,6 @@ function detectSisterWifeClusters(
     if (siblings.length < 2) continue;
     const husband = data.individuals[husbandId];
     if (!husband || husband.isPrivate) continue;
-    // Bail when H is already a blood descendant claimed via another path —
-    // sisters render as his normal spouse-cards under that path's claim.
-    if (claimedDescendants.has(husbandId)) continue;
 
     const sortedSisters = [...siblings].sort((a, b) => {
       const ya = birthYear(a);
@@ -280,6 +276,10 @@ function detectSisterWifeClusters(
  * Tiebreaker rule: first BFS dequeue wins. Documented intentionally — do
  * NOT replace with husband-preference or any other heuristic. Determinism
  * matters more than a "correct" parent.
+ *
+ * That rule arbitrates between a child's two REAL parents only. A non-parent
+ * path (sister-wife surrogate, pointed-spouse source family) never claims a
+ * blood descendant of the root — see `mayClaimAsNonChild`.
  */
 export function buildTreeData(
   data: GedcomData,
@@ -306,6 +306,15 @@ export function buildTreeData(
   // parent-edge, double subtree-width allocation, and position overwrite
   // that drove the cousin-marriage explosion.
   const claimedDescendants = new Set<string>();
+
+  // Claim rule for NON-parent paths (sister-wife surrogates, pointed-spouse
+  // source-family children): a blood descendant of the root belongs under his
+  // real father and may only be claimed there, regardless of BFS order (a
+  // sisters' parent dequeued before the husband's father used to steal him —
+  // the عثمان بن عفان case). A descendant beyond `maxDepth` is therefore no
+  // longer surfaced through these paths either. Nobody is claimed twice.
+  const mayClaimAsNonChild = (id: string) =>
+    !rootDescendants.has(id) && !claimedDescendants.has(id);
 
   // Sister-wives clustering (A.2): when a man H marries multiple sisters, H
   // is promoted to a main BFS node (surrogate child of their shared parent
@@ -355,7 +364,9 @@ export function buildTreeData(
 
     // Detect sister-wife clusters at this parent. For each cluster, register
     // a surrogate H child (in lieu of S1, S2…) and queue H's BFS visit.
-    const clusters = detectSisterWifeClusters(personFamilies, data, claimedDescendants);
+    const clusters = detectSisterWifeClusters(personFamilies, data).filter((c) =>
+      mayClaimAsNonChild(c.husbandId),
+    );
     const sisterIdsToSkipAsChildren = new Set<string>();
     // Surrogate husband id → the sisters' mother (this parent's spouse), so the
     // cluster groups under HER handle in the layout and its edge draws from her.
@@ -549,7 +560,7 @@ export function buildTreeData(
         for (const childId of fam.children) {
           const child = data.individuals[childId];
           if (!child || child.isPrivate) continue;
-          if (claimedDescendants.has(childId)) continue;
+          if (!mayClaimAsNonChild(childId)) continue;
           claimedDescendants.add(childId);
           allChildren.push({ childId, spouseIndex, edgeColor, sourceHandle });
         }

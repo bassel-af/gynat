@@ -687,3 +687,105 @@ export function buildSisterWivesTiebreakFixture(): GedcomData {
 
   return { individuals, families };
 }
+
+/**
+ * Sister-wives husband who is HIMSELF a blood descendant of the root
+ * (the قريش production case — see the matching test in
+ * sister-wives-layout.test.ts for the failure mode).
+ *
+ * Structure (root G):
+ *   G
+ *   ├── A
+ *   │     └── P ── (no wife)    → daughters S1, S2 (the sister-wives)
+ *   └── B
+ *         └── FH ── (no wife)   → son H (married S1 and S2); H + S1 → HC
+ *
+ * `bfsOrder` sets G's children order, i.e. which line BFS reaches first:
+ * 'sistersParentFirst' → [A, B] (P dequeued before FH);
+ * 'husbandFatherFirst' → [B, A] (FH dequeued before P).
+ */
+export function buildSisterWivesBloodHusbandFixture(
+  bfsOrder: 'sistersParentFirst' | 'husbandFatherFirst',
+): GedcomData {
+  const individuals: Record<string, Individual> = {
+    'G': makeIndividual({
+      id: 'G',
+      name: 'الجد الأعلى',
+      sex: 'M',
+      familiesAsSpouse: ['F_G'],
+    }),
+    'A': makeIndividual({
+      id: 'A',
+      name: 'الابن الأول',
+      sex: 'M',
+      familiesAsSpouse: ['F_A'],
+      familyAsChild: 'F_G',
+    }),
+    'B': makeIndividual({
+      id: 'B',
+      name: 'الابن الثاني',
+      sex: 'M',
+      familiesAsSpouse: ['F_B'],
+      familyAsChild: 'F_G',
+    }),
+    'P': makeIndividual({
+      id: 'P',
+      name: 'أبو الأختين',
+      sex: 'M',
+      familiesAsSpouse: ['F_P'],
+      familyAsChild: 'F_A',
+    }),
+    'FH': makeIndividual({
+      id: 'FH',
+      name: 'أبو الزوج',
+      sex: 'M',
+      familiesAsSpouse: ['F_FH'],
+      familyAsChild: 'F_B',
+    }),
+    'S1': makeIndividual({
+      id: 'S1',
+      name: 'الأخت الأولى',
+      sex: 'F',
+      birth: '1900',
+      familiesAsSpouse: ['F_S1H'],
+      familyAsChild: 'F_P',
+    }),
+    'S2': makeIndividual({
+      id: 'S2',
+      name: 'الأخت الثانية',
+      sex: 'F',
+      birth: '1905',
+      familiesAsSpouse: ['F_S2H'],
+      familyAsChild: 'F_P',
+    }),
+    'H': makeIndividual({
+      id: 'H',
+      name: 'الزوج',
+      sex: 'M',
+      familiesAsSpouse: ['F_S1H', 'F_S2H'],
+      familyAsChild: 'F_FH',
+    }),
+    'HC': makeIndividual({
+      id: 'HC',
+      name: 'ابن الزوج',
+      sex: 'M',
+      familyAsChild: 'F_S1H',
+    }),
+  };
+
+  const families: Record<string, Family> = {
+    'F_G': makeFamily({
+      id: 'F_G',
+      husband: 'G',
+      children: bfsOrder === 'sistersParentFirst' ? ['A', 'B'] : ['B', 'A'],
+    }),
+    'F_A': makeFamily({ id: 'F_A', husband: 'A', children: ['P'] }),
+    'F_B': makeFamily({ id: 'F_B', husband: 'B', children: ['FH'] }),
+    'F_P': makeFamily({ id: 'F_P', husband: 'P', children: ['S1', 'S2'] }),
+    'F_FH': makeFamily({ id: 'F_FH', husband: 'FH', children: ['H'] }),
+    'F_S1H': makeFamily({ id: 'F_S1H', husband: 'H', wife: 'S1', children: ['HC'] }),
+    'F_S2H': makeFamily({ id: 'F_S2H', husband: 'H', wife: 'S2', children: [] }),
+  };
+
+  return { individuals, families };
+}

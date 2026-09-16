@@ -8,6 +8,7 @@ import {
   buildThreeSisterWivesFixture,
   buildMixedClusterFixture,
   buildSisterWivesTiebreakFixture,
+  buildSisterWivesBloodHusbandFixture,
 } from './fixtures/cousin-marriage';
 
 const noHighlight: HighlightState = {
@@ -192,5 +193,39 @@ describe('buildTreeData — sister-wife daughters link to their MOTHER', () => {
     const fToH = edges.filter((e) => e.source === 'F' && e.target === 'H');
     expect(fToH.length).toBe(2);
     for (const e of fToH) expect(e.sourceHandle).toBe('default');
+  });
+});
+
+/**
+ * Production repro (قريش tree): عثمان بن عفان married two sisters, رقية and
+ * أم كلثوم, daughters of the Prophet ﷺ — and both lines descend from the same
+ * root. The tree showed عفان with NO son and عثمان with NO father: BFS reached
+ * the sisters' parent before عفان, the sister-wives clustering claimed عثمان as
+ * a SURROGATE child there, and when عفان was dequeued later his son was already
+ * claimed, so the father→son edge was silently dropped (no childrenElsewhere
+ * marker either — عفان has no spouse in the tree).
+ *
+ * Invariant: a blood descendant is always attached to his real father,
+ * regardless of BFS order.
+ */
+describe('buildTreeData — sister-wives husband who is a blood descendant (عثمان بن عفان case)', () => {
+  test.each(['sistersParentFirst', 'husbandFatherFirst'] as const)(
+    'every parent-edge into H comes from his real father FH (%s)',
+    (bfsOrder) => {
+      const data = buildSisterWivesBloodHusbandFixture(bfsOrder);
+      const { edges } = buildTreeData(data, 'G', 50, '', noHighlight, null, noopCallbacks);
+      const sources = edges.filter((e) => e.target === 'H').map((e) => e.source);
+      expect(new Set(sources)).toEqual(new Set(['FH']));
+    },
+  );
+
+  test('H is rendered once; his child by S1 follows the claim-once rule (S1 is dequeued first) and H is told where', () => {
+    const data = buildSisterWivesBloodHusbandFixture('sistersParentFirst');
+    const { nodes, edges } = buildTreeData(data, 'G', 50, '', noHighlight, null, noopCallbacks);
+
+    expect(countMainNodes(nodes, 'H')).toBe(1);
+    expect(edges.filter((e) => e.target === 'HC').map((e) => e.source)).toEqual(['S1']);
+    const h = nodes.find((n) => n.id === 'H')!;
+    expect(nodeData(h).childrenElsewhere?.map((m) => m.canonicalNodeId)).toEqual(['S1']);
   });
 });
