@@ -127,7 +127,7 @@ The app wraps the entire application in `<TreeProvider>` via `src/app/providers.
 - `getPreferredDate()`, `getSecondaryDate()`, `getDateSuffix()` — select display date based on user preference
 
 **Person detail helpers** (`src/lib/person-detail-helpers.ts`):
-- Form data builders: `buildEditInitialData()`, `buildFamilyEventInitialData()`, `serializeIndividualForm()`
+- Form data builders: `buildEditInitialData()`, `buildFamilyEventInitialData()`, `serializeIndividualForm()`, `getSurnamePrefill()` (patrilineal family-name default for create modes; see `docs/implementation.md` §4.4)
 - Validation: `validateAddParent()`, `canMoveChild()`, `needsFamilyPickerForAddChild()`
 - Display: `formatDateWithPlace()`, `getDeceasedLabel()`
 - Family picker: `getFamiliesForPicker()`, `getAlternativeFamilies()`
