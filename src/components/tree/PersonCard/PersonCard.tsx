@@ -49,6 +49,7 @@ export function PersonCard({ person, isRoot = false }: PersonCardProps) {
       })}
     >
       <div className={styles.personName}>{displayName}</div>
+      {person.kunya && <div className={styles.personKunya}>{person.kunya}</div>}
       {dates && <div className={styles.personDates}>{dates}</div>}
     </div>
   );

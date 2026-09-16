@@ -16,6 +16,10 @@
   --heritage-gold: #c8a865;
   --heritage-gold-bright: #e6cf9e;
   --heritage-gold-deep: #8c7441;
+  /* Gold as INK — for gold-family text sitting on a light parchment surface
+     (tree cards), where every gold above is too light to read. Clears WCAG AA
+     on both card grounds: 7.2:1 on #fdf8ec (living), 4.8:1 on #d8cdaa (deceased). */
+  --heritage-gold-ink: #665122;
   --heritage-parchment: #f4ead4;
   --heritage-cream: #e8dfc8;
 

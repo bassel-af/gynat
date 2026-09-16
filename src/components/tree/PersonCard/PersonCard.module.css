@@ -36,6 +36,21 @@
   letter-spacing: 0.005em;
 }
 
+/* Kunya (الكنية) — same readable body face as the name; the gold ink is what
+   marks it as a distinct fact. Deliberately NOT softened on the deceased
+   card — the ink sits at 4.8:1 on that darker parchment, so any further fade
+   would drop it below AA. */
+.personKunya {
+  font-family: var(--heritage-font-body);
+  font-weight: 500;
+  font-size: var(--font-size-sm);
+  line-height: 1.3;
+  color: var(--heritage-gold-ink);
+  margin-bottom: var(--space-1);
+  word-wrap: break-word;
+  letter-spacing: 0.01em;
+}
+
 .personDates {
   color: rgba(26, 31, 46, 0.55);
   font-family: var(--heritage-font-body);

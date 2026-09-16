@@ -28,7 +28,8 @@ import { NodeSilhouette } from '@/components/heritage/NodeSilhouette';
 import { NODE_WIDTH, NODE_HEIGHT, SPOUSE_WIDTH, SPOUSE_GAP, computeFocusX } from './layout';
 import { buildTreeData, computeOccurrenceLinkEdges, type HighlightState, type HoveredOccurrence, type PersonNodeData } from './buildTreeData';
 
-function PersonNode({ data }: { data: PersonNodeData }) {
+/** Exported for tests — this is the card the tree canvas actually renders. */
+export function PersonNode({ data }: { data: PersonNodeData }) {
   const {
     person,
     spouses,
@@ -133,6 +134,7 @@ function PersonNode({ data }: { data: PersonNodeData }) {
             <NodeSilhouette sex={p.sex} size={48} />
           </div>
           <div className="person-name">{displayName}</div>
+          {p.kunya && <div className="person-kunya">{p.kunya}</div>}
           {((!hideBirth && p.birth) || p.death || p.isDeceased) && (
             <div className="person-dates-container">
               {!hideBirth && p.birth && (
