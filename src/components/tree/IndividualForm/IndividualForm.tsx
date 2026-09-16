@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, type FormEvent } from 'react';
+import { useState, useCallback, useRef, type FormEvent } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { PlaceComboBox } from '@/components/ui/PlaceComboBox';
@@ -192,6 +192,34 @@ export function IndividualForm({
     },
     [],
   );
+
+  /**
+   * Add-parent only: the patrilineal surname seeded by the caller, captured
+   * once. When the sex is not locked the user picks it here — choosing أنثى
+   * drops the seeded surname (a wife keeps her own father's name) and ذكر
+   * brings it back. Once the user types anything the field no longer matches
+   * the prefill, so it is never touched again.
+   */
+  const parentSurnamePrefillRef = useRef(
+    mode === 'create' && relationshipType === 'parent'
+      ? (initialData?.surname ?? '').trim()
+      : '',
+  );
+
+  const handleSexChoice = useCallback((sex: 'M' | 'F') => {
+    const prefill = parentSurnamePrefillRef.current;
+    setFormData((prev) => {
+      const next = { ...prev, sex };
+      if (prefill) {
+        if (sex === 'F' && prev.surname === prefill) {
+          next.surname = '';
+        } else if (sex === 'M' && prev.surname === '') {
+          next.surname = prefill;
+        }
+      }
+      return next;
+    });
+  }, []);
 
   // Client-side orphaned children detection from the preview subtree
   const detectOrphans = useCallback((personId: string) => {
@@ -493,7 +521,7 @@ export function IndividualForm({
                 name="sex"
                 value="M"
                 checked={formData.sex === 'M'}
-                onChange={() => updateField('sex', 'M')}
+                onChange={() => handleSexChoice('M')}
                 className={styles.radioInput}
                 disabled={!!lockedSex}
                 aria-label="ذكر"
@@ -506,7 +534,7 @@ export function IndividualForm({
                 name="sex"
                 value="F"
                 checked={formData.sex === 'F'}
-                onChange={() => updateField('sex', 'F')}
+                onChange={() => handleSexChoice('F')}
                 className={styles.radioInput}
                 disabled={!!lockedSex}
                 aria-label="أنثى"

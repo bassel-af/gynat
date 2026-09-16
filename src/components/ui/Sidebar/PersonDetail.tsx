@@ -38,6 +38,7 @@ import {
   buildEditInitialData,
   buildFamilyEventInitialData,
   getFamiliesForPicker,
+  getSurnamePrefill,
 } from '@/lib/person-detail-helpers';
 import { MoveSubtreeModal, type MoveSubtreeOption } from '@/components/tree/MoveSubtreeModal';
 import type { AddParentResult } from '@/lib/person-detail-helpers';
@@ -695,9 +696,15 @@ export function PersonDetail({ personId }: PersonDetailProps) {
               : undefined
     : undefined;
 
-  const formInitialData: Partial<IndividualFormData> | undefined = formMode?.kind === 'edit' && person
-    ? buildEditInitialData(person) as Partial<IndividualFormData>
-    : undefined;
+  // Edit mode seeds the whole record; create modes seed only the patrilineal
+  // family name, and only when there is one worth seeding.
+  let formInitialData: Partial<IndividualFormData> | undefined;
+  if (formMode?.kind === 'edit' && person) {
+    formInitialData = buildEditInitialData(person) as Partial<IndividualFormData>;
+  } else {
+    const prefilledSurname = getSurnamePrefill(data, person, formMode);
+    formInitialData = prefilledSurname ? { surname: prefilledSurname } : undefined;
+  }
 
   const formLockedSex = formMode?.kind === 'addParent' ? formMode.lockedSex
     : formMode?.kind === 'addSpouse' ? formMode.lockedSex

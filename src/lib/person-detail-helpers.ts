@@ -325,6 +325,79 @@ export function getSexFilterForSpouse(person: Individual): 'M' | 'F' | undefined
   return undefined;
 }
 
+// ---------------------------------------------------------------------------
+// Surname (family name) prefill for the create-person form
+// ---------------------------------------------------------------------------
+
+/**
+ * Redacted-name placeholder. Mirrors `PRIVATE_PERSON_PLACEHOLDER` in
+ * `src/lib/tree/mapper.ts` — declared locally on purpose: importing the mapper
+ * into this client-side module pulls server-only crypto into the client bundle.
+ */
+const PRIVATE_NAME = 'خاص';
+
+/**
+ * The form modes that can seed a surname. Every `FormMode` member in
+ * `src/hooks/usePersonActions.ts` is structurally assignable to this, so a
+ * `formMode` value passes straight through with no cast.
+ */
+export type SurnamePrefillMode =
+  | { kind: 'addChild'; targetFamilyId?: string }
+  | { kind: 'addSibling'; targetFamilyId?: string }
+  | { kind: 'addParent'; lockedSex?: 'M' | 'F' }
+  | { kind: 'edit' | 'addSpouse' | 'linkExistingSpouse' | 'editFamilyEvent' | 'addRadaa' | 'editRadaa' };
+
+/**
+ * A surname is usable only from a real, non-private person whose surname is a
+ * non-empty, non-placeholder string. Returns the trimmed value, else null.
+ */
+function usableSurname(person: Individual | undefined | null): string | null {
+  if (!person) return null;
+  if (person.isPrivate === true) return null;
+  const surname = (person.surname ?? '').trim();
+  if (!surname || surname === PRIVATE_NAME) return null;
+  return surname;
+}
+
+/** Surname of the husband of the given family, when usable. */
+function husbandSurname(data: GedcomData, familyId: string | undefined): string | null {
+  if (!familyId) return null;
+  const family = data.families[familyId];
+  if (!family?.husband) return null;
+  return usableSurname(data.individuals[family.husband]);
+}
+
+/**
+ * Default value for the "اسم العائلة" field when creating a new person.
+ *
+ * Arabic patrilineal naming: the family name comes from the father, so a child
+ * inherits the father's surname (for a female anchor, her husband's) and a
+ * sibling inherits the shared father's. A wife keeps her own father's name, so
+ * spouses get no prefill. Purely a default — the field stays editable.
+ */
+export function getSurnamePrefill(
+  data: GedcomData | null | undefined,
+  person: Individual | undefined,
+  mode: SurnamePrefillMode | null,
+): string | null {
+  if (!data || !person || !mode) return null;
+
+  switch (mode.kind) {
+    case 'addChild': {
+      if (person.sex !== 'F') return usableSurname(person);
+      // Mirrors the target-family resolution in `usePersonActions`.
+      const familyId = mode.targetFamilyId ?? getEditableSpouseFamilyIds(person, data)[0];
+      return husbandSurname(data, familyId);
+    }
+    case 'addSibling':
+      return husbandSurname(data, mode.targetFamilyId) ?? usableSurname(person);
+    case 'addParent':
+      return mode.lockedSex === 'F' ? null : usableSurname(person);
+    default:
+      return null;
+  }
+}
+
 /** Get families for family picker with spouse names */
 export function getFamiliesForPicker(
   person: Individual,
