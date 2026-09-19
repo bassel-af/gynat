@@ -72,7 +72,6 @@ export function VisibilityLadder({
   onPersonPagesIndexableChange,
   className,
 }: VisibilityLadderProps) {
-  const isPublic = level !== 'private';
   // Per-person pages only make sense once the tree itself is search-listed.
   const offerPersonPages = level === 'search';
 
@@ -124,15 +123,16 @@ export function VisibilityLadder({
         />
       )}
 
+      {/* Coming soon: always greyed out and unticked until the reuse channel is wired. */}
       <OptInRow
-        className={clsx({ [styles.reuseRowDisabled]: !isPublic })}
+        className={styles.reuseRowDisabled}
         checked={allowReuse}
-        disabled={!isPublic}
+        disabled
         onChange={onAllowReuseChange}
         label={
           <>
             السماح للآخرين بضم هذه الشجرة إلى مجموعاتهم
-            <span className={styles.seamTag}>يفعل مع ميزة المجموعات لاحقا</span>
+            <span className={styles.seamTag}>قريبا</span>
           </>
         }
         hint="(غير مفعل افتراضيا) — «أن يشاهد» شيء، و«أن يعاد استخدامه» في مواد الآخرين شيء آخر."

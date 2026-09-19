@@ -160,8 +160,11 @@
 }
 
 .reuseRowDisabled {
-  opacity: 0.55;
+  opacity: 0.5;
   cursor: not-allowed;
+  filter: grayscale(1);
+  /* no hover/focus color change — it's a coming-soon placeholder */
+  pointer-events: none;
 }
 
 .reuseCheckboxInput {
