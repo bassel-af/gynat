@@ -539,6 +539,10 @@
   border-radius: var(--heritage-radius-md);
   background: rgba(10, 14, 26, 0.45);
   border: 1px solid rgba(200, 168, 101, 0.08);
+  /* The section + page surface clip horizontal overflow, so a wide table
+     must scroll inside its own wrapper or its far columns are unreachable. */
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .tableCaption {
