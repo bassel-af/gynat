@@ -564,6 +564,31 @@ describe('getTargetFamiliesForMove', () => {
     expect(result[0].parentNames).toContain('+');
   });
 
+  it('labels each parent with father name + family name so same-named parents are distinguishable', () => {
+    const grandfather = makeIndividual({ id: '@GF@', name: 'خالد', givenName: 'خالد', surname: 'السعيد', sex: 'M', familiesAsSpouse: ['@F0@'] });
+    // Wife-less family: the father's own name alone ("محمد") is ambiguous
+    const father = makeIndividual({ id: '@P1@', name: 'محمد', givenName: 'محمد', surname: 'السعيد', sex: 'M', familyAsChild: '@F0@', familiesAsSpouse: ['@F1@'] });
+    const wifeFather = makeIndividual({ id: '@WF@', name: 'عمر', givenName: 'عمر', surname: 'شربك', sex: 'M', familiesAsSpouse: ['@F9@'] });
+    const husband2 = makeIndividual({ id: '@P2@', name: 'محمد', givenName: 'محمد', surname: 'السعيد', sex: 'M', familiesAsSpouse: ['@F2@'] });
+    const wife = makeIndividual({ id: '@W1@', name: 'فاطمة', givenName: 'فاطمة', surname: 'شربك', sex: 'F', familyAsChild: '@F9@', familiesAsSpouse: ['@F2@'] });
+    const orphan = makeIndividual({ id: '@C1@' });
+
+    const f0 = makeFamily({ id: '@F0@', husband: '@GF@', children: ['@P1@'] });
+    const f1 = makeFamily({ id: '@F1@', husband: '@P1@' });
+    const f9 = makeFamily({ id: '@F9@', husband: '@WF@', children: ['@W1@'] });
+    const f2 = makeFamily({ id: '@F2@', husband: '@P2@', wife: '@W1@' });
+
+    const data = makeGedcomData(
+      { '@GF@': grandfather, '@P1@': father, '@WF@': wifeFather, '@P2@': husband2, '@W1@': wife, '@C1@': orphan },
+      { '@F0@': f0, '@F1@': f1, '@F9@': f9, '@F2@': f2 },
+    );
+
+    const result = getTargetFamiliesForMove(orphan, data, new Set(['@C1@']));
+    const byId = Object.fromEntries(result.map((r) => [r.familyId, r.parentNames]));
+    expect(byId['@F1@']).toBe('محمد بن خالد السعيد');
+    expect(byId['@F2@']).toBe('محمد السعيد + فاطمة بنت عمر شربك');
+  });
+
   it('shows fallback label for family with no parents', () => {
     const child = makeIndividual({ id: '@C1@', familyAsChild: '@F1@' });
 

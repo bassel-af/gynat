@@ -1,5 +1,5 @@
 import type { Individual, Family, GedcomData } from '@/lib/gedcom/types';
-import { getDisplayName } from '@/lib/gedcom';
+import { getDisplayName, getDisplayNameWithNasab } from '@/lib/gedcom';
 import { getAllDescendants } from '@/lib/gedcom/graph';
 
 /** Format date with place for display */
@@ -120,14 +120,16 @@ export function getTargetFamiliesForMove(
     // Exclude families where the person is already a child
     if (family.children.includes(person.id)) continue;
 
+    // Name + father + family name: a bare given name is ambiguous in the picker,
+    // especially for a wife-less family where there is no second name to go by.
     const names: string[] = [];
     if (family.husband) {
       const h = data.individuals[family.husband];
-      if (h) names.push(getDisplayName(h));
+      if (h) names.push(getDisplayNameWithNasab(data, h));
     }
     if (family.wife) {
       const w = data.individuals[family.wife];
-      if (w) names.push(getDisplayName(w));
+      if (w) names.push(getDisplayNameWithNasab(data, w));
     }
     results.push({
       familyId: famId,
