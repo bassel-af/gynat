@@ -36,7 +36,10 @@ export interface PublishFlowProps {
    * public→public). The link↔search escalation's irreversibility acknowledge is
    * a client-side UX gate only. When omitted, the change is faked (static demo).
    */
-  onChangeVisibility?: (level: Exclude<VisibilityLevel, 'private'>) => Promise<void>;
+  onChangeVisibility?: (
+    level: Exclude<VisibilityLevel, 'private'>,
+    personPagesIndexable?: boolean,
+  ) => Promise<void>;
   /** Real make-private action. When omitted, the dialog just closes (static demo). */
   onMakePrivateConfirm?: () => Promise<void>;
   /** Where the make-private dialog's "request permanent removal" link points. */
@@ -159,9 +162,12 @@ export function PublishFlow({
   // (Escalation's irreversibility acknowledge was a client-side UX gate; the
   // server does not re-confirm public→public.) Escalation publishes straight to
   // success with no re-review; a downgrade applies silently and confirms too.
-  const applyManageChange = async (level: Exclude<VisibilityLevel, 'private'>) => {
+  const applyManageChange = async (
+    level: Exclude<VisibilityLevel, 'private'>,
+    personPages?: boolean,
+  ) => {
     const ok = await runAction(
-      onChangeVisibility && (() => onChangeVisibility(level)),
+      onChangeVisibility && (() => onChangeVisibility(level, personPages)),
       'تعذر تحديث الإعدادات',
     );
     if (!ok) return;
@@ -178,10 +184,9 @@ export function PublishFlow({
         <ManagePublicPanel
           currentLevel={currentLevel as Exclude<VisibilityLevel, 'private'>}
           shareUrl={shareUrl}
-          onChangeLevel={(level) => applyManageChange(level)}
-          onEscalateToSearch={() => applyManageChange('search')}
+          onChangeLevel={(level, personPages) => applyManageChange(level, personPages)}
+          onEscalateToSearch={(personPages) => applyManageChange('search', personPages)}
           personPagesIndexable={personPagesIndexable}
-          onPersonPagesIndexableChange={onPersonPagesIndexableChange}
           onGoPrivate={() => setStep('makePrivate')}
           onClose={onClose}
         />

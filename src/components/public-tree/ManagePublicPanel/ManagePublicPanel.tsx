@@ -15,22 +15,23 @@ export interface ManagePublicPanelProps {
   allowReuse?: boolean;
   onAllowReuseChange?: (allow: boolean) => void;
   /**
-   * Current "a page for each person in search results" opt-in. Offered here so
+   * Saved "a page for each person in search results" opt-in. Offered here so
    * an already search-listed tree can turn it on or off later without going
-   * through a fresh publish.
+   * through a fresh publish. Staged like the level: nothing is reported until
+   * the admin clicks «حفظ التغيير».
    */
   personPagesIndexable?: boolean;
-  onPersonPagesIndexableChange?: (indexable: boolean) => void;
   /**
-   * Apply a non-escalating visibility change (downgrade search→link, or no-op).
-   * The caller persists; this panel only reports intent.
+   * Apply a non-escalating change: a downgrade search→link, or the same level
+   * with a changed person-pages opt-in. The caller persists; this panel only
+   * reports intent.
    */
-  onChangeLevel?: (level: Exclude<VisibilityLevel, 'private'>) => void;
+  onChangeLevel?: (level: Exclude<VisibilityLevel, 'private'>, personPagesIndexable: boolean) => void;
   /**
-   * Confirm escalation link → search. Fired only after the admin acknowledges
-   * the inline irreversibility warning.
+   * Confirm escalation link → search (with the staged person-pages opt-in).
+   * Fired only after the admin acknowledges the inline irreversibility warning.
    */
-  onEscalateToSearch?: () => void;
+  onEscalateToSearch?: (personPagesIndexable: boolean) => void;
   /** Open the make-private dialog. */
   onGoPrivate?: () => void;
   /** Dismiss the whole dialog. */
@@ -62,7 +63,6 @@ export function ManagePublicPanel({
   allowReuse = false,
   onAllowReuseChange,
   personPagesIndexable = false,
-  onPersonPagesIndexableChange,
   onChangeLevel,
   onEscalateToSearch,
   onGoPrivate,
@@ -73,6 +73,7 @@ export function ManagePublicPanel({
   const [settingsOpen, setSettingsOpen] = useState(false);
   // The level the admin is selecting in the revealed control.
   const [pendingLevel, setPendingLevel] = useState<VisibilityLevel>(currentLevel);
+  const [pendingPersonPages, setPendingPersonPages] = useState(personPagesIndexable);
 
   const handleCopy = async () => {
     try {
@@ -87,9 +88,8 @@ export function ManagePublicPanel({
   // Did the admin pick a level that escalates exposure into search?
   const isEscalation = currentLevel === 'link' && pendingLevel === 'search';
   const wantsPrivate = pendingLevel === 'private';
-  const isLateralOrDown =
-    !isEscalation && !wantsPrivate && pendingLevel !== currentLevel;
-  const hasPendingChange = pendingLevel !== currentLevel;
+  const hasPendingChange =
+    pendingLevel !== currentLevel || pendingPersonPages !== personPagesIndexable;
 
   const handleApply = () => {
     if (wantsPrivate) {
@@ -100,8 +100,8 @@ export function ManagePublicPanel({
       // handled by the inline confirm button below, not here
       return;
     }
-    if (isLateralOrDown) {
-      onChangeLevel?.(pendingLevel as Exclude<VisibilityLevel, 'private'>);
+    if (hasPendingChange) {
+      onChangeLevel?.(pendingLevel as Exclude<VisibilityLevel, 'private'>, pendingPersonPages);
     }
   };
 
@@ -162,8 +162,8 @@ export function ManagePublicPanel({
             onLevelChange={setPendingLevel}
             allowReuse={allowReuse}
             onAllowReuseChange={onAllowReuseChange}
-            personPagesIndexable={personPagesIndexable}
-            onPersonPagesIndexableChange={onPersonPagesIndexableChange}
+            personPagesIndexable={pendingPersonPages}
+            onPersonPagesIndexableChange={setPendingPersonPages}
             className={styles.ladder}
           />
 
@@ -172,7 +172,11 @@ export function ManagePublicPanel({
 
           <div className={styles.settingsActions}>
             {isEscalation ? (
-              <button type="button" className={styles.confirmEscalate} onClick={onEscalateToSearch}>
+              <button
+                type="button"
+                className={styles.confirmEscalate}
+                onClick={() => onEscalateToSearch?.(pendingPersonPages)}
+              >
                 تأكيد الظهور في محركات البحث
               </button>
             ) : wantsPrivate ? (

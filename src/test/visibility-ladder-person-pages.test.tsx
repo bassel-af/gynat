@@ -110,10 +110,25 @@ describe('ManagePublicPanel — person-pages opt-in', () => {
     expect(personPagesCheckbox()).toBeNull();
   });
 
-  test('toggling it reports the change upward', () => {
-    const onPersonPagesIndexableChange = vi.fn();
-    renderPanel('search', { onPersonPagesIndexableChange });
+  test('ticking it only stages the change — nothing is reported until «حفظ التغيير»', () => {
+    const onChangeLevel = vi.fn();
+    renderPanel('search', { onChangeLevel });
+    const save = screen.getByText('حفظ التغيير') as HTMLButtonElement;
+    expect(save.disabled).toBe(true);
+
     fireEvent.click(personPagesCheckbox()!);
-    expect(onPersonPagesIndexableChange).toHaveBeenCalledWith(true);
+    expect(onChangeLevel).not.toHaveBeenCalled();
+    expect(save.disabled).toBe(false);
+
+    fireEvent.click(save);
+    expect(onChangeLevel).toHaveBeenCalledWith('search', true);
+  });
+
+  test('unticking a saved opt-in is staged the same way', () => {
+    const onChangeLevel = vi.fn();
+    renderPanel('search', { personPagesIndexable: true, onChangeLevel });
+    fireEvent.click(personPagesCheckbox()!);
+    fireEvent.click(screen.getByText('حفظ التغيير'));
+    expect(onChangeLevel).toHaveBeenCalledWith('search', false);
   });
 });

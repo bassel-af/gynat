@@ -228,13 +228,16 @@ describe('PublishFlowContainer — person-pages opt-in', () => {
     expect(box.checked).toBe(true);
   });
 
-  test('an already search-listed tree persists a toggle without republishing', async () => {
+  test('an already search-listed tree saves a toggle on «حفظ التغيير», not on tick', async () => {
     mockPreview({ ...PREVIEW, currentLevel: 'search', publicSlug: 'abc' });
     render(<PublishFlowContainer workspaceId="ws-1" onClose={vi.fn()} />);
     // The manage panel opens for an already-public tree; settings are collapsed.
     fireEvent.click(await screen.findByText('تعديل الإعدادات'));
     fireEvent.click(screen.getByRole('checkbox', { name: PERSON_PAGES_LABEL }));
+    expect(mockApiFetch.mock.calls.some((c) => c[1]?.method === 'PATCH')).toBe(false);
 
+    fireEvent.click(screen.getByText('حفظ التغيير'));
     await waitFor(() => expect(lastPatchBody().personPagesIndexable).toBe(true));
+    expect(lastPatchBody().level).toBe('search');
   });
 });

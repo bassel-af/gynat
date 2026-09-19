@@ -138,22 +138,6 @@ export function PublishFlowContainer({
   // the make-private dialog's "request permanent removal" link.
   const reportHref = effectiveSlug ? `/family/${effectiveSlug}/report` : undefined;
 
-  // An already-public tree has no "publish" button to carry the choice, so the
-  // toggle persists on the spot (same endpoint, no confirmation phrase). On a
-  // private tree the choice rides along with the publish PATCH instead. The
-  // flag changes no tree data, so no tree refetch.
-  const handlePersonPagesChange = async (next: boolean) => {
-    setPersonPagesChoice(next);
-    if (preview.currentLevel === 'private') return;
-    try {
-      await patchVisibility(preview.currentLevel, undefined, next);
-      showToast('تم تحديث الإعدادات', 'success');
-    } catch (e) {
-      setPersonPagesChoice(null); // revert to the saved value — the server rejected it
-      showToast(e instanceof Error ? e.message : 'تعذّر تحديث الإعدادات', 'error');
-    }
-  };
-
   return (
     <PublishFlow
       isOpen
@@ -168,7 +152,7 @@ export function PublishFlowContainer({
       shareUrl={shareUrl}
       reportHref={reportHref}
       personPagesIndexable={personPagesIndexable}
-      onPersonPagesIndexableChange={handlePersonPagesChange}
+      onPersonPagesIndexableChange={setPersonPagesChoice}
       onPublishConfirm={async (level, confirmationPhrase) => {
         const body = await patchVisibility(level, confirmationPhrase);
         if (body?.data?.publicSlug) setPublishedSlug(body.data.publicSlug);
@@ -176,10 +160,12 @@ export function PublishFlowContainer({
         onChanged?.(level);
         showToast('تم نشر الشجرة', 'success');
       }}
-      onChangeVisibility={async (level) => {
-        // Already-public level switch (link↔search): same endpoint, NO phrase.
-        // The server skips the phrase check on public→public and keeps the slug.
-        const body = await patchVisibility(level);
+      onChangeVisibility={async (level, nextPersonPages) => {
+        // Already-public settings save (link↔search and/or the person-pages
+        // opt-in): same endpoint, NO phrase. The server skips the phrase check
+        // on public→public and keeps the slug.
+        const body = await patchVisibility(level, undefined, nextPersonPages);
+        if (nextPersonPages !== undefined) setPersonPagesChoice(nextPersonPages);
         if (body?.data?.publicSlug) setPublishedSlug(body.data.publicSlug);
         await refreshTree?.();
         onChanged?.(level);
