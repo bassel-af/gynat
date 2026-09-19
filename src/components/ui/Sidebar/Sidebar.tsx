@@ -56,6 +56,16 @@ export function Sidebar() {
   const [rootFilter, setRootFilter] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
+  // Drawer opened from the search button: show the search list even though a
+  // person is still selected. The selection is deliberately KEPT — the tree card's
+  // «التفاصيل» button only exists while its person is selected.
+  const [showListOverDetail, setShowListOverDetail] = useState(false);
+  useEffect(() => {
+    if (!isMobileSidebarOpen) setShowListOverDetail(false);
+  }, [isMobileSidebarOpen]);
+  useEffect(() => {
+    setShowListOverDetail(false);
+  }, [selectedPersonId]);
 
 
   // Prevent body scroll when sidebar is open on mobile
@@ -222,6 +232,9 @@ export function Sidebar() {
   };
 
   const handlePersonClick = (id: string) => {
+    // Picking the ALREADY-selected person leaves selectedPersonId unchanged, so the
+    // reset effect wouldn't fire — drop the list override explicitly.
+    setShowListOverDetail(false);
     // On the person page, a sidebar click navigates the page to that person
     // (preserving the active extra tree). Keep the sidebar showing that person.
     if (isPersonView && slug) {
@@ -254,15 +267,32 @@ export function Sidebar() {
 
   return (
     <>
-      {/* Mobile Toggle Button */}
+      {/* Mobile Toggle Button. On the canvas it is a SEARCH button: it always lands
+          on the search list, even with a person selected (their details stay one tap
+          away on the card's own «التفاصيل» button). The person page has no cards, so
+          there it is the only way into that person's panel and wears the details
+          icon instead. */}
       <button
         className={clsx(styles.toggle, { [styles.isOpen]: isMobileSidebarOpen })}
-        onClick={() => setMobileSidebarOpen(!isMobileSidebarOpen)}
-        aria-label={isMobileSidebarOpen ? 'إغلاق القائمة' : 'فتح القائمة'}
+        onClick={() => {
+          if (!isMobileSidebarOpen && !isPersonView) setShowListOverDetail(true);
+          setMobileSidebarOpen(!isMobileSidebarOpen);
+        }}
+        aria-label={
+          isMobileSidebarOpen ? 'إغلاق القائمة' : isPersonView ? 'عرض تفاصيل الشخص' : 'البحث في العائلة'
+        }
       >
-        <span className={styles.toggleBar} />
-        <span className={styles.toggleBar} />
-        <span className={styles.toggleBar} />
+        {isPersonView ? (
+          <svg className={styles.toggleIcon} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M20 21V19C20 16.79 18.21 15 16 15H8C5.79 15 4 16.79 4 19V21" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="2.5"/>
+          </svg>
+        ) : (
+          <svg className={styles.toggleIcon} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2.5"/>
+            <path d="M20 20L16.5 16.5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
+          </svg>
+        )}
       </button>
 
       {/* Mobile Overlay */}
@@ -309,7 +339,7 @@ export function Sidebar() {
           )}
         </div>
 
-        {selectedPersonId ? (
+        {selectedPersonId && !showListOverDetail ? (
           <PersonDetail personId={selectedPersonId} />
         ) : (
           <>

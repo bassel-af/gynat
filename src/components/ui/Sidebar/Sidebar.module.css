@@ -39,15 +39,12 @@
   transform: scale(0.98);
 }
 
-.toggleBar {
+.toggleIcon {
   display: block;
   width: 22px;
-  height: 2.5px;
-  background: linear-gradient(90deg, var(--heritage-gold-bright) 0%, var(--heritage-gold) 100%);
-  border-radius: 2px;
-  transition: all var(--transition-slow);
-  transform-origin: center;
-  box-shadow: 0 0 8px rgba(200, 168, 101, 0.35);
+  height: 22px;
+  color: var(--heritage-gold-bright);
+  filter: drop-shadow(0 0 8px rgba(200, 168, 101, 0.35));
 }
 
 .toggle.isOpen {
@@ -713,8 +710,9 @@
     height: 44px;
   }
 
-  .toggleBar {
+  .toggleIcon {
     width: 20px;
+    height: 20px;
   }
 
   .sidebar {
