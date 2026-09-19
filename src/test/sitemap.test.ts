@@ -2,9 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockListTrees = vi.fn();
 const mockListCollections = vi.fn();
+const mockListPersonUrls = vi.fn();
 
 vi.mock('@/lib/tree/public-serve', () => ({
   listIndexableTreeSlugs: (...a: unknown[]) => mockListTrees(...a),
+  listIndexablePersonUrls: (...a: unknown[]) => mockListPersonUrls(...a),
 }));
 vi.mock('@/lib/collections/public-serve', () => ({
   listIndexableCollectionSlugs: (...a: unknown[]) => mockListCollections(...a),
@@ -15,8 +17,10 @@ import sitemap from '@/app/sitemap';
 beforeEach(() => {
   mockListTrees.mockReset();
   mockListCollections.mockReset();
+  mockListPersonUrls.mockReset();
   mockListTrees.mockResolvedValue([]);
   mockListCollections.mockResolvedValue([]);
+  mockListPersonUrls.mockResolvedValue([]);
 });
 
 describe('sitemap.ts', () => {
@@ -95,5 +99,26 @@ describe('sitemap.ts', () => {
     mockListTrees.mockResolvedValue([{ slug: 'alpha', lastModified: new Date() }]);
     const result = await sitemap();
     expect(result.find((e) => e.url === 'https://gynat.com/family/secret')).toBeUndefined();
+  });
+
+  it('appends a /family/[slug]/person/[id] entry per indexable person (priority 0.4, monthly)', async () => {
+    const ts = new Date('2026-06-03T00:00:00Z');
+    mockListPersonUrls.mockResolvedValue([
+      { slug: 'alpha', individualId: 'I1', lastModified: ts },
+    ]);
+
+    const result = await sitemap();
+    const entry = result.find((e) => e.url === 'https://gynat.com/family/alpha/person/I1');
+    expect(entry).toBeDefined();
+    expect(entry!.priority).toBe(0.4);
+    expect(entry!.changeFrequency).toBe('monthly');
+    expect(entry!.lastModified).toBe(ts);
+  });
+
+  it('emits no person URLs when nothing is person-indexable (opt-in, fail-closed)', async () => {
+    mockListTrees.mockResolvedValue([{ slug: 'alpha', lastModified: new Date() }]);
+    mockListPersonUrls.mockResolvedValue([]);
+    const result = await sitemap();
+    expect(result.some((e) => e.url.includes('/person/'))).toBe(false);
   });
 });

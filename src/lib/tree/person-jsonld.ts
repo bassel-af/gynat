@@ -11,7 +11,8 @@
  *  - INPUT is the ALREADY-redacted public GedcomData (post-`redactForPublic`),
  *    where every individual carries `publicDisplay`. We NEVER read raw records.
  *  - EMISSION GATE: returns the Person graph ONLY when `indexable` is true
- *    (the caller passes `isPublicTreeIndexable(record)` = main + public_listed).
+ *    (the caller passes `isPublicPersonPageIndexable(record)` = main +
+ *    public_listed + the per-tree `personPagesIndexable` opt-in).
  *    Otherwise -> null (no Person schema on by-link/extra/member/private pages).
  *  - Focal person resolving to `redacted` (private) or absent -> null (the page
  *    404s separately; the schema never describes a private person).
@@ -158,7 +159,7 @@ export interface PersonJsonLdArgs {
   focalId: string
   /** Absolute/relative canonical URL of the person page. */
   canonicalUrl: string
-  /** `isPublicTreeIndexable(record)` — main tree AND public_listed. */
+  /** `isPublicPersonPageIndexable(record)` — main + public_listed + per-tree opt-in. */
   indexable: boolean
 }
 

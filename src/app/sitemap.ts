@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next';
-import { listIndexableTreeSlugs } from '@/lib/tree/public-serve';
+import { listIndexableTreeSlugs, listIndexablePersonUrls } from '@/lib/tree/public-serve';
 import { listIndexableCollectionSlugs } from '@/lib/collections/public-serve';
 
 const BASE_URL = 'https://gynat.com';
@@ -9,9 +9,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // serve layer (tree = main && public_listed; collection = public_listed AND
   // fully-listable) — a tree/collection flipped private or by-link simply isn't
   // returned, so it vanishes from the sitemap. Fail-closed: no entry.
-  const [trees, collections] = await Promise.all([
+  // Person URLs carry a second gate on top of the tree one: the owner's
+  // per-person opt-in (`isPublicPersonPageIndexable`, mirrored as SQL).
+  const [trees, collections, people] = await Promise.all([
     listIndexableTreeSlugs(),
     listIndexableCollectionSlugs(),
+    listIndexablePersonUrls(),
   ]);
 
   return [
@@ -31,6 +34,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: c.lastModified,
       changeFrequency: 'weekly' as const,
       priority: 0.5,
+    })),
+    ...people.map((p) => ({
+      url: `${BASE_URL}/family/${p.slug}/person/${p.individualId}`,
+      lastModified: p.lastModified,
+      changeFrequency: 'monthly' as const,
+      priority: 0.4,
     })),
   ];
 }

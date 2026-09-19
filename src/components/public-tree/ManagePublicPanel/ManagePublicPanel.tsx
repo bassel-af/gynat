@@ -15,6 +15,13 @@ export interface ManagePublicPanelProps {
   allowReuse?: boolean;
   onAllowReuseChange?: (allow: boolean) => void;
   /**
+   * Current "a page for each person in search results" opt-in. Offered here so
+   * an already search-listed tree can turn it on or off later without going
+   * through a fresh publish.
+   */
+  personPagesIndexable?: boolean;
+  onPersonPagesIndexableChange?: (indexable: boolean) => void;
+  /**
    * Apply a non-escalating visibility change (downgrade search→link, or no-op).
    * The caller persists; this panel only reports intent.
    */
@@ -54,6 +61,8 @@ export function ManagePublicPanel({
   shareUrl,
   allowReuse = false,
   onAllowReuseChange,
+  personPagesIndexable = false,
+  onPersonPagesIndexableChange,
   onChangeLevel,
   onEscalateToSearch,
   onGoPrivate,
@@ -153,6 +162,8 @@ export function ManagePublicPanel({
             onLevelChange={setPendingLevel}
             allowReuse={allowReuse}
             onAllowReuseChange={onAllowReuseChange}
+            personPagesIndexable={personPagesIndexable}
+            onPersonPagesIndexableChange={onPersonPagesIndexableChange}
             className={styles.ladder}
           />
 

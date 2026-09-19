@@ -33,6 +33,7 @@ function record(overrides: Partial<PublicTreeRecord>): PublicTreeRecord {
     enableKunya: true,
     hideBirthDateForFemale: false,
     hideBirthDateForMale: false,
+    personPagesIndexable: false,
     ...overrides,
   };
 }

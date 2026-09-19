@@ -17,6 +17,8 @@ interface PreviewResponse {
   currentLevel: VisibilityLevel;
   publicSlug: string | null;
   allowReuse: boolean;
+  /** Saved "a page for each person in search results" opt-in. */
+  personPagesIndexable: boolean;
 }
 
 interface PublishFlowContainerProps {
@@ -61,6 +63,9 @@ export function PublishFlowContainer({
   // The public slug becomes known only after publishing; track it so the
   // success screen shows the real share link.
   const [publishedSlug, setPublishedSlug] = useState<string | null>(null);
+  // The admin's pending person-pages choice. `null` = untouched, so the saved
+  // value from the preview stands (no effect needed to seed it).
+  const [personPagesChoice, setPersonPagesChoice] = useState<boolean | null>(null);
 
   // Build the treeId-scoped endpoints once: the preview reads ?treeId, the PATCH
   // carries it in the body (which the visibility route already reads).
@@ -88,11 +93,25 @@ export function PublishFlowContainer({
     };
   }, [previewUrl]);
 
-  async function patchVisibility(level: VisibilityLevel, confirmationPhrase?: string) {
+  // The admin's pending choice wins; otherwise the saved value from the preview.
+  const personPagesIndexable = personPagesChoice ?? preview?.personPagesIndexable ?? false;
+
+  // Every PATCH carries the current person-pages choice (fresh publish, level
+  // switch, or the toggle alone); resending the saved value is a no-op server-side.
+  async function patchVisibility(
+    level: VisibilityLevel,
+    confirmationPhrase?: string,
+    nextPersonPages: boolean = personPagesIndexable,
+  ) {
     const res = await apiFetch(`/api/workspaces/${workspaceId}/tree/visibility`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ level, confirmationPhrase, treeId: treeId ?? undefined }),
+      body: JSON.stringify({
+        level,
+        confirmationPhrase,
+        personPagesIndexable: nextPersonPages,
+        treeId: treeId ?? undefined,
+      }),
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
@@ -119,6 +138,22 @@ export function PublishFlowContainer({
   // the make-private dialog's "request permanent removal" link.
   const reportHref = effectiveSlug ? `/family/${effectiveSlug}/report` : undefined;
 
+  // An already-public tree has no "publish" button to carry the choice, so the
+  // toggle persists on the spot (same endpoint, no confirmation phrase). On a
+  // private tree the choice rides along with the publish PATCH instead. The
+  // flag changes no tree data, so no tree refetch.
+  const handlePersonPagesChange = async (next: boolean) => {
+    setPersonPagesChoice(next);
+    if (preview.currentLevel === 'private') return;
+    try {
+      await patchVisibility(preview.currentLevel, undefined, next);
+      showToast('تم تحديث الإعدادات', 'success');
+    } catch (e) {
+      setPersonPagesChoice(null); // revert to the saved value — the server rejected it
+      showToast(e instanceof Error ? e.message : 'تعذّر تحديث الإعدادات', 'error');
+    }
+  };
+
   return (
     <PublishFlow
       isOpen
@@ -132,6 +167,8 @@ export function PublishFlowContainer({
       checkpointData={preview.checkpoint}
       shareUrl={shareUrl}
       reportHref={reportHref}
+      personPagesIndexable={personPagesIndexable}
+      onPersonPagesIndexableChange={handlePersonPagesChange}
       onPublishConfirm={async (level, confirmationPhrase) => {
         const body = await patchVisibility(level, confirmationPhrase);
         if (body?.data?.publicSlug) setPublishedSlug(body.data.publicSlug);

@@ -113,6 +113,7 @@ beforeEach(() => {
     visibility: data.visibility,
     publicSlug: data.publicSlug ?? null,
     allowReuse: data.allowReuse ?? false,
+    personPagesIndexable: data.personPagesIndexable ?? false,
     publishedAt: data.publishedAt ?? null,
   }));
   mockWorkspaceFindUnique.mockResolvedValue({
@@ -262,6 +263,44 @@ describe('PATCH visibility — going private', () => {
     await PATCH(req({ level: 'private' }), { params });
     const logArg = mockTreeEditLogCreate.mock.calls[0][0];
     expect(logArg.data.action).toBe('unpublish');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Per-person search pages opt-in (mirrors the allowReuse pattern)
+// ---------------------------------------------------------------------------
+
+describe('PATCH visibility — personPagesIndexable opt-in', () => {
+  test('persists and returns the flag when the body sets it true', async () => {
+    adminAuth();
+    const res = await PATCH(
+      req({ level: 'search', confirmationPhrase: 'آل السعيد', personPagesIndexable: true }),
+      { params },
+    );
+    expect(res.status).toBe(200);
+    const updateArg = mockFamilyTreeUpdate.mock.calls[0][0];
+    expect(updateArg.data.personPagesIndexable).toBe(true);
+    const json = await res.json();
+    expect(json.data.personPagesIndexable).toBe(true);
+  });
+
+  test('persists false when the body turns it off', async () => {
+    adminAuth();
+    const res = await PATCH(
+      req({ level: 'search', confirmationPhrase: 'آل السعيد', personPagesIndexable: false }),
+      { params },
+    );
+    expect(res.status).toBe(200);
+    const updateArg = mockFamilyTreeUpdate.mock.calls[0][0];
+    expect(updateArg.data.personPagesIndexable).toBe(false);
+  });
+
+  test('leaves the stored flag untouched when the body omits it', async () => {
+    adminAuth();
+    const res = await PATCH(req({ level: 'link', confirmationPhrase: 'آل السعيد' }), { params });
+    expect(res.status).toBe(200);
+    const updateArg = mockFamilyTreeUpdate.mock.calls[0][0];
+    expect('personPagesIndexable' in updateArg.data).toBe(false);
   });
 });
 

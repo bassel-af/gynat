@@ -95,6 +95,7 @@ const HOME_RECORD: PublicTreeRecord = {
   enableKunya: true,
   hideBirthDateForFemale: false,
   hideBirthDateForMale: false,
+  personPagesIndexable: false,
 };
 
 beforeEach(() => {

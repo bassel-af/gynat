@@ -4,6 +4,7 @@ import {
   getPublicTreeForRequest,
   buildPublicTreePayload,
   isPublicTreeIndexable,
+  isPublicPersonPageIndexable,
 } from '@/lib/tree/public-serve';
 import PublicTreePageClient from './PublicTreePageClient';
 import styles from './page.module.css';
@@ -64,6 +65,7 @@ export default async function PublicFamilyTreePage({ params }: PageParams) {
   // BreadcrumbList only — NO Person/genealogy schema (would leak redacted
   // living PII). All strings derive from the already-redacted record.
   const indexable = isPublicTreeIndexable(record);
+  const personPagesIndexable = isPublicPersonPageIndexable(record);
   const url = `/family/${slug}`;
   const jsonLd = indexable
     ? {
@@ -101,6 +103,14 @@ export default async function PublicFamilyTreePage({ params }: PageParams) {
         a short description, the stats, and the PUBLIC NAMES LIST are emitted
         here into the initial HTML. Visually hidden — the canvas below is the
         human view — but present for crawlers. One URL, both surfaces.
+
+        Each name becomes a LINK to that person's own page only when person
+        pages are indexable for this tree (listed + the owner's opt-in). With
+        the opt-in off the names stay plain text, so a crawler is never handed a
+        per-person URL the owner did not ask for. `payload.names` already
+        excludes private people, so no private id can become an href. Plain
+        <a>, not next/link: this list is for crawlers, so no client component
+        or prefetch per person.
       */}
       <section className={styles.srOnly} aria-hidden="false">
         <h1>{familyName}</h1>
@@ -109,7 +119,13 @@ export default async function PublicFamilyTreePage({ params }: PageParams) {
         <nav aria-label="أفراد العائلة">
           <ul>
             {payload.names.map((p) => (
-              <li key={p.id}>{p.name}</li>
+              <li key={p.id}>
+                {personPagesIndexable ? (
+                  <a href={`/family/${slug}/person/${p.id}`}>{p.name}</a>
+                ) : (
+                  p.name
+                )}
+              </li>
             ))}
           </ul>
         </nav>

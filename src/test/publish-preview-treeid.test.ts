@@ -94,6 +94,7 @@ describe('GET publish-preview — main tree (no treeId)', () => {
       visibility: 'private',
       publicSlug: null,
       allowReuse: false,
+      personPagesIndexable: false,
     });
     const res = await GET(req(), { params });
     expect(res.status).toBe(200);
@@ -103,6 +104,21 @@ describe('GET publish-preview — main tree (no treeId)', () => {
     expect(body.confirmationPhrase).toBe('آل السعيد');
     // Main tree → real withheld list flows through.
     expect(body.withheldBranches).toHaveLength(1);
+  });
+
+  test('returns the stored personPagesIndexable opt-in', async () => {
+    mockResolveTargetTreeOr404.mockResolvedValue({
+      id: 'main-tree',
+      kind: 'main',
+      nameAr: null,
+      visibility: 'public_listed',
+      publicSlug: 'alpha',
+      allowReuse: false,
+      personPagesIndexable: true,
+    });
+    const res = await GET(req(), { params });
+    const body = await res.json();
+    expect(body.personPagesIndexable).toBe(true);
   });
 });
 

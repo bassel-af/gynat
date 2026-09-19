@@ -60,4 +60,25 @@ describe('PublishFlow real-action wiring', () => {
     expect(screen.queryByText(/https:\/\/gynat\.com\/family\/x/)).toBeNull();
     expect(screen.getByRole('button', { name: /نشر/ })).toBeTruthy();
   });
+
+  // The person-pages opt-in is owned by the container; the flow only carries the
+  // value down to the ladder and the intent back up.
+  test('forwards the person-pages opt-in from the ladder to the caller', () => {
+    const onPersonPagesIndexableChange = vi.fn();
+    renderFlow({ onPersonPagesIndexableChange });
+
+    fireEvent.click(screen.getByText(/عامة وتظهر في محركات البحث/));
+    fireEvent.click(screen.getByRole('checkbox', { name: /صفحة لكل فرد في نتائج البحث/ }));
+
+    expect(onPersonPagesIndexableChange).toHaveBeenCalledWith(true);
+  });
+
+  test('shows the opt-in as already enabled when the tree has it on', () => {
+    renderFlow({ personPagesIndexable: true });
+
+    fireEvent.click(screen.getByText(/عامة وتظهر في محركات البحث/));
+    const box = screen.getByRole('checkbox', { name: /صفحة لكل فرد في نتائج البحث/ }) as HTMLInputElement;
+
+    expect(box.checked).toBe(true);
+  });
 });

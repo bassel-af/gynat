@@ -33,7 +33,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
   const parsed = await parseValidatedBody(request, visibilityPatchSchema)
   if (isParseError(parsed)) return parsed
-  const { level, confirmationPhrase, allowReuse, treeId } = parsed.data
+  const { level, confirmationPhrase, allowReuse, personPagesIndexable, treeId } = parsed.data
 
   const workspace = await prisma.workspace.findUnique({
     where: { id: workspaceId },
@@ -74,6 +74,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   // Build the update.
   const data: Record<string, unknown> = { visibility: targetVisibility }
   if (allowReuse !== undefined) data.allowReuse = allowReuse
+  if (personPagesIndexable !== undefined) data.personPagesIndexable = personPagesIndexable
 
   if (targetVisibility === 'private') {
     // Going private: setting visibility=private is the serving gate (the public
@@ -97,7 +98,14 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   const updated = await prisma.familyTree.update({
     where: { id: tree.id },
     data,
-    select: { id: true, visibility: true, publicSlug: true, allowReuse: true, publishedAt: true },
+    select: {
+      id: true,
+      visibility: true,
+      publicSlug: true,
+      allowReuse: true,
+      personPagesIndexable: true,
+      publishedAt: true,
+    },
   })
 
   // Going private must not silently break dependent collections (PRD §1.11):
@@ -160,6 +168,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       visibility: updated.visibility,
       publicSlug: updated.publicSlug,
       allowReuse: updated.allowReuse,
+      personPagesIndexable: updated.personPagesIndexable,
       publishedAt: updated.publishedAt,
     },
   })

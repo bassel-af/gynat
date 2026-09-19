@@ -13,6 +13,7 @@
  */
 
 import { prisma } from '@/lib/db'
+import type { Prisma } from '../../../generated/prisma/client'
 import type { GedcomData, Individual } from '@/lib/gedcom/types'
 import { cache } from 'react'
 import { dbTreeToGedcomData, PRIVATE_PERSON_PLACEHOLDER } from '@/lib/tree/mapper'
@@ -71,6 +72,8 @@ export interface PublicTreeRecord {
   enableKunya: boolean
   hideBirthDateForFemale: boolean
   hideBirthDateForMale: boolean
+  /** Owner opt-in: give every non-private person their own indexable page. */
+  personPagesIndexable: boolean
 }
 
 /**
@@ -83,24 +86,7 @@ export async function loadPublicTreeBySlug(
 ): Promise<PublicTreeRecord | null> {
   const tree = await prisma.familyTree.findUnique({
     where: { publicSlug: slug },
-    select: {
-      id: true,
-      workspaceId: true,
-      nameAr: true,
-      visibility: true,
-      lastModifiedAt: true,
-      publicSlug: true,
-      kind: true,
-      workspace: {
-        select: {
-          nameAr: true,
-          enableKunya: true,
-          enableCollections: true,
-          hideBirthDateForFemale: true,
-          hideBirthDateForMale: true,
-        },
-      },
-    },
+    select: PUBLIC_TREE_SELECT,
   })
 
   // Deny-by-default: must exist and be public. The MAIN tree is always
@@ -113,18 +99,47 @@ export async function loadPublicTreeBySlug(
     return null
   }
 
+  return toPublicTreeRecord(tree)
+}
+
+/** The one Prisma select shape that feeds `toPublicTreeRecord`. */
+const PUBLIC_TREE_SELECT = {
+  id: true,
+  workspaceId: true,
+  nameAr: true,
+  visibility: true,
+  lastModifiedAt: true,
+  publicSlug: true,
+  kind: true,
+  personPagesIndexable: true,
+  workspace: {
+    select: {
+      nameAr: true,
+      enableKunya: true,
+      enableCollections: true,
+      hideBirthDateForFemale: true,
+      hideBirthDateForMale: true,
+    },
+  },
+} as const
+
+type PublicTreeRow = Prisma.FamilyTreeGetPayload<{ select: typeof PUBLIC_TREE_SELECT }>
+
+/** Map a `PUBLIC_TREE_SELECT` row to the record. Callers gate kind/visibility first. */
+function toPublicTreeRecord(tree: PublicTreeRow): PublicTreeRecord {
   return {
     treeId: tree.id,
     workspaceId: tree.workspaceId,
     workspaceNameAr: tree.workspace.nameAr,
     nameAr: tree.nameAr,
-    kind: tree.kind,
-    visibility: tree.visibility,
+    kind: tree.kind as 'main' | 'extra',
+    visibility: tree.visibility as 'public_link' | 'public_listed',
     lastModifiedAt: tree.lastModifiedAt,
     publicSlug: tree.publicSlug as string,
     enableKunya: tree.workspace.enableKunya,
     hideBirthDateForFemale: tree.workspace.hideBirthDateForFemale,
     hideBirthDateForMale: tree.workspace.hideBirthDateForMale,
+    personPagesIndexable: tree.personPagesIndexable,
   }
 }
 
@@ -137,6 +152,24 @@ export async function loadPublicTreeBySlug(
  */
 export function isPublicTreeIndexable(record: PublicTreeRecord): boolean {
   return record.kind === 'main' && record.visibility === 'public_listed'
+}
+
+/**
+ * THE single "may this tree's individual person pages be indexed" gate.
+ *
+ * It is `isPublicTreeIndexable` (main + `public_listed`) AND the owner's
+ * explicit opt-in. Off by default: a published tree exposes its canvas and its
+ * names list, but a per-person page is only crawlable when the owner asks for
+ * it. Every consumer must go through this one predicate:
+ *   - the person page's robots `index`/`noindex` meta
+ *   - the person page's schema.org `Person` JSON-LD
+ *   - the crawlable name links on the public tree page
+ *   - the person URLs in the sitemap (`listIndexablePersonUrls` mirrors it as SQL)
+ * Fail-closed: an `extra` tree or a by-link tree is never person-indexable,
+ * whatever the flag says.
+ */
+export function isPublicPersonPageIndexable(record: PublicTreeRecord): boolean {
+  return isPublicTreeIndexable(record) && record.personPagesIndexable
 }
 
 /**
@@ -364,4 +397,71 @@ export async function buildPublicTreePayload(
 
   const names = buildPublicNamesList(data)
   return { record, data, names, homeIndividualIds }
+}
+
+// ---------------------------------------------------------------------------
+// Person-page sitemap source
+// ---------------------------------------------------------------------------
+
+/**
+ * Hard ceiling on person URLs emitted into the sitemap. A single sitemap file
+ * is capped at 50,000 URLs by the protocol; we stay well under it and stop
+ * adding past this point. Sharding the sitemap is a documented follow-up.
+ */
+export const MAX_SITEMAP_PERSON_URLS = 40000
+
+export interface IndexablePersonUrl {
+  slug: string
+  individualId: string
+  lastModified: Date
+}
+
+/**
+ * The sitemap data source for per-person pages. Mirrors
+ * `isPublicPersonPageIndexable` as a SQL `where` (main + `public_listed` + the
+ * owner opt-in), then derives the ids from `buildPublicTreePayload(...).names`
+ * — the SAME redacted payload the public serve uses, which is the only privacy
+ * gate allowed here. The `Individual` table is never queried directly, so a
+ * private person can't reach the sitemap.
+ *
+ * Re-queried LIVE per sitemap build: a tree flipped private/by-link, or with
+ * the opt-in turned off, simply vanishes (fail-closed: no entries).
+ */
+export async function listIndexablePersonUrls(): Promise<IndexablePersonUrl[]> {
+  const trees = await prisma.familyTree.findMany({
+    where: { kind: 'main', visibility: 'public_listed', personPagesIndexable: true },
+    select: PUBLIC_TREE_SELECT,
+  })
+
+  // Trees are independent; build their redacted payloads in parallel. A tree
+  // that fails to build contributes nothing (fail-closed).
+  const perTree = await Promise.all(
+    trees
+      .filter((t) => t.publicSlug)
+      .map(toPublicTreeRecord)
+      .map(async (record): Promise<IndexablePersonUrl[]> => {
+        try {
+          const { names } = await buildPublicTreePayload(record)
+          return names.map((entry) => ({
+            slug: record.publicSlug,
+            individualId: entry.id,
+            lastModified: record.lastModifiedAt,
+          }))
+        } catch (e) {
+          console.error('[sitemap] person URLs skipped for a tree', {
+            errorType: (e as Error)?.name,
+          })
+          return []
+        }
+      }),
+  )
+
+  const urls = perTree.flat()
+  if (urls.length > MAX_SITEMAP_PERSON_URLS) {
+    console.warn(
+      `[sitemap] person URL cap reached (${MAX_SITEMAP_PERSON_URLS}); remaining people omitted`,
+    )
+    return urls.slice(0, MAX_SITEMAP_PERSON_URLS)
+  }
+  return urls
 }

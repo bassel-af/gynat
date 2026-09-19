@@ -1,6 +1,7 @@
 'use client';
 
 import clsx from 'clsx';
+import type { ReactNode } from 'react';
 import styles from './VisibilityLadder.module.css';
 
 export type VisibilityLevel = 'private' | 'link' | 'search';
@@ -17,6 +18,13 @@ export interface VisibilityLadderProps {
   /** "Others may include this tree in their collections" opt-in. Controlled. */
   allowReuse: boolean;
   onAllowReuseChange?: (allow: boolean) => void;
+  /**
+   * "A page for each person in search results" opt-in. Controlled, off by
+   * default, and only offered on the `search` level — a per-person page that
+   * search engines can index is meaningless for a private or link-only tree.
+   */
+  personPagesIndexable: boolean;
+  onPersonPagesIndexableChange?: (indexable: boolean) => void;
   className?: string;
 }
 
@@ -42,7 +50,7 @@ const LEVELS: LevelDef[] = [
   {
     level: 'search',
     label: 'عامة وتظهر في محركات البحث',
-    desc: 'قد تظهر شجرة العائلة في نتائج محركات البحث مثل Google. قرار يصعب التراجع عنه تماما — يمر بمراجعة وتنبيه.',
+    desc: 'قد تظهر شجرة العائلة في نتائج محركات البحث مثل Google. قرار يصعب التراجع عنه تماما.',
     further: true,
   },
 ];
@@ -60,9 +68,13 @@ export function VisibilityLadder({
   onLevelChange,
   allowReuse,
   onAllowReuseChange,
+  personPagesIndexable,
+  onPersonPagesIndexableChange,
   className,
 }: VisibilityLadderProps) {
   const isPublic = level !== 'private';
+  // Per-person pages only make sense once the tree itself is search-listed.
+  const offerPersonPages = level === 'search';
 
   return (
     <div className={clsx(styles.panel, className)}>
@@ -102,31 +114,64 @@ export function VisibilityLadder({
         })}
       </div>
 
-      <label className={clsx(styles.reuseRow, { [styles.reuseRowDisabled]: !isPublic })}>
-        <input
-          type="checkbox"
-          className={styles.reuseCheckboxInput}
-          checked={allowReuse}
-          disabled={!isPublic}
-          onChange={(e) => onAllowReuseChange?.(e.target.checked)}
+      {offerPersonPages && (
+        <OptInRow
+          className={styles.personPagesRow}
+          checked={personPagesIndexable}
+          onChange={onPersonPagesIndexableChange}
+          label="صفحة لكل فرد في نتائج البحث"
+          hint="يمكن لأي شخص أن يجد كل فرد من الشجرة باسمه في Google. مناسب لأشجار الأنساب التاريخية."
         />
-        <span className={clsx(styles.checkbox, { [styles.checkboxChecked]: allowReuse })} aria-hidden="true">
-          {allowReuse && (
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-              <path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          )}
-        </span>
-        <span className={styles.reuseText}>
-          <span className={styles.reuseLabel}>
+      )}
+
+      <OptInRow
+        className={clsx({ [styles.reuseRowDisabled]: !isPublic })}
+        checked={allowReuse}
+        disabled={!isPublic}
+        onChange={onAllowReuseChange}
+        label={
+          <>
             السماح للآخرين بضم هذه الشجرة إلى مجموعاتهم
             <span className={styles.seamTag}>يفعل مع ميزة المجموعات لاحقا</span>
-          </span>
-          <span className={styles.reuseHint}>
-            (غير مفعل افتراضيا) — «أن يشاهد» شيء، و«أن يعاد استخدامه» في مواد الآخرين شيء آخر.
-          </span>
-        </span>
-      </label>
+          </>
+        }
+        hint="(غير مفعل افتراضيا) — «أن يشاهد» شيء، و«أن يعاد استخدامه» في مواد الآخرين شيء آخر."
+      />
     </div>
+  );
+}
+
+interface OptInRowProps {
+  checked: boolean;
+  disabled?: boolean;
+  onChange?: (checked: boolean) => void;
+  label: ReactNode;
+  hint: string;
+  className?: string;
+}
+
+/** One opt-in checkbox row under the ladder (custom-drawn tick, label + hint). */
+function OptInRow({ checked, disabled, onChange, label, hint, className }: OptInRowProps) {
+  return (
+    <label className={clsx(styles.reuseRow, className)}>
+      <input
+        type="checkbox"
+        className={styles.reuseCheckboxInput}
+        checked={checked}
+        disabled={disabled}
+        onChange={(e) => onChange?.(e.target.checked)}
+      />
+      <span className={clsx(styles.checkbox, { [styles.checkboxChecked]: checked })} aria-hidden="true">
+        {checked && (
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+            <path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )}
+      </span>
+      <span className={styles.reuseText}>
+        <span className={styles.reuseLabel}>{label}</span>
+        <span className={styles.reuseHint}>{hint}</span>
+      </span>
+    </label>
   );
 }

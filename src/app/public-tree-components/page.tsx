@@ -36,6 +36,7 @@ export default function PublicTreeComponentsPage() {
   const [makePrivateOpen, setMakePrivateOpen] = useState(false);
   const [visibility, setVisibility] = useState<VisibilityLevel>('private');
   const [allowReuse, setAllowReuse] = useState(false);
+  const [personPagesIndexable, setPersonPagesIndexable] = useState(false);
   const [checkpointOpen, setCheckpointOpen] = useState(false);
   const [checkpointSearchable, setCheckpointSearchable] = useState(false);
   const [checkpointZeroOpen, setCheckpointZeroOpen] = useState(false);
@@ -134,6 +135,8 @@ export default function PublicTreeComponentsPage() {
             onLevelChange={setVisibility}
             allowReuse={allowReuse}
             onAllowReuseChange={setAllowReuse}
+            personPagesIndexable={personPagesIndexable}
+            onPersonPagesIndexableChange={setPersonPagesIndexable}
           />
           <p className={styles.live}>
             الدرجة المختارة: {visibility === 'private' ? 'خاصّة' : visibility === 'link' ? 'عبر الرابط' : 'تظهر في محركات البحث'}

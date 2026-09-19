@@ -37,6 +37,7 @@ const PREVIEW = {
   currentLevel: 'private',
   publicSlug: null,
   allowReuse: false,
+  personPagesIndexable: false,
 };
 
 function previewResponse() {
@@ -169,5 +170,71 @@ describe('PublishFlowContainer — visibility PATCH', () => {
     });
     const patchCall = mockApiFetch.mock.calls.find((c) => c[1]?.method === 'PATCH')!;
     expect(JSON.parse(patchCall[1].body).confirmationPhrase).toBe(SERVER_PHRASE);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The person-pages opt-in ("a page for each person in search results"). It is
+// offered only on the search level, off by default, and must reach the server.
+// ---------------------------------------------------------------------------
+describe('PublishFlowContainer — person-pages opt-in', () => {
+  const PERSON_PAGES_LABEL = /صفحة لكل فرد في نتائج البحث/;
+
+  function mockPreview(preview: Record<string, unknown>) {
+    mockApiFetch.mockImplementation((_url: string, opts?: { method?: string }) =>
+      opts?.method === 'PATCH'
+        ? Promise.resolve(patchResponse())
+        : Promise.resolve({ ok: true, json: async () => preview }),
+    );
+  }
+
+  function lastPatchBody() {
+    const patchCall = mockApiFetch.mock.calls.filter((c) => c[1]?.method === 'PATCH').pop()!;
+    return JSON.parse(patchCall[1].body);
+  }
+
+  // Choose the search level, which is where the opt-in lives.
+  async function chooseSearchLevel() {
+    fireEvent.click(await screen.findByText(/عامة وتظهر في محركات البحث/));
+  }
+
+  test('carries the chosen opt-in to the server on a fresh publish', async () => {
+    mockPreview(PREVIEW);
+    render(<PublishFlowContainer workspaceId="ws-1" onClose={vi.fn()} />);
+    await chooseSearchLevel();
+    fireEvent.click(screen.getByRole('checkbox', { name: PERSON_PAGES_LABEL }));
+    fireEvent.click(screen.getByText('متابعة'));
+    fireEvent.click(await screen.findByRole('button', { name: /نشر|تأكيد/ }));
+
+    await waitFor(() => expect(lastPatchBody().personPagesIndexable).toBe(true));
+  });
+
+  test('publishes with the opt-in off when it is left untouched', async () => {
+    mockPreview(PREVIEW);
+    render(<PublishFlowContainer workspaceId="ws-1" onClose={vi.fn()} />);
+    await chooseSearchLevel();
+    fireEvent.click(screen.getByText('متابعة'));
+    fireEvent.click(await screen.findByRole('button', { name: /نشر|تأكيد/ }));
+
+    await waitFor(() => expect(lastPatchBody().personPagesIndexable).toBe(false));
+  });
+
+  test('pre-populates the checkbox from the saved setting', async () => {
+    mockPreview({ ...PREVIEW, personPagesIndexable: true });
+    render(<PublishFlowContainer workspaceId="ws-1" onClose={vi.fn()} />);
+    await chooseSearchLevel();
+
+    const box = screen.getByRole('checkbox', { name: PERSON_PAGES_LABEL }) as HTMLInputElement;
+    expect(box.checked).toBe(true);
+  });
+
+  test('an already search-listed tree persists a toggle without republishing', async () => {
+    mockPreview({ ...PREVIEW, currentLevel: 'search', publicSlug: 'abc' });
+    render(<PublishFlowContainer workspaceId="ws-1" onClose={vi.fn()} />);
+    // The manage panel opens for an already-public tree; settings are collapsed.
+    fireEvent.click(await screen.findByText('تعديل الإعدادات'));
+    fireEvent.click(screen.getByRole('checkbox', { name: PERSON_PAGES_LABEL }));
+
+    await waitFor(() => expect(lastPatchBody().personPagesIndexable).toBe(true));
   });
 });

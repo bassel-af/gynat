@@ -246,6 +246,10 @@ model FamilyTree {
   visibility            TreeVisibility @default(private)
   publicSlug            String?        @unique @map("public_slug") // auto-generated; null when private
   allowReuse            Boolean        @default(false) @map("allow_reuse")
+  // Owner opt-in: give every non-private person in this tree its own
+  // search-indexable page. Off by default; only meaningful on a `main` tree
+  // that is `public_listed` (see `isPublicPersonPageIndexable`).
+  personPagesIndexable  Boolean        @default(false) @map("person_pages_indexable")
   publishedAt           DateTime?      @map("published_at")
   publishedById         String?        @map("published_by") @db.Uuid
   searchListingApproved Boolean        @default(false) @map("search_listing_approved") // column only; not enforced in v1

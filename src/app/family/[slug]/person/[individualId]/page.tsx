@@ -1,10 +1,12 @@
+import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import {
   getPublicTreeForRequest,
   buildPublicTreePayload,
-  isPublicTreeIndexable,
+  isPublicPersonPageIndexable,
 } from '@/lib/tree/public-serve';
+import { getDisplayNameWithNasab, DEFAULT_NASAB_DEPTH } from '@/lib/gedcom/display';
 import { projectPerson } from '@/lib/tree/person-projection';
 import { buildPersonJsonLd } from '@/lib/tree/person-jsonld';
 import { PRIVATE_PERSON_PLACEHOLDER } from '@/lib/tree/mapper';
@@ -23,11 +25,16 @@ type PageParams = { params: Promise<{ slug: string; individualId: string }> };
  * (private). A private/absent individual is indistinguishable from a
  * nonexistent one — no existence oracle (PRD deny-by-default).
  *
- * NOTE: not React-cached because metadata + body both call it; the underlying
- * `getPublicTreeForRequest` IS cached, and the payload build is cheap relative
- * to the per-request render. Kept explicit to avoid memo bleed across requests.
+ * React-`cache()`d: `generateMetadata` and the body both resolve the same
+ * person, and the cache is per-request, so the tree loads and the payload is
+ * composed + redacted ONCE per request instead of twice. Same pattern as
+ * `getPublicTreeForRequest`. The cache is scoped to the request, so nothing
+ * bleeds between visitors.
  */
-async function resolvePublicPerson(slug: string, individualId: string) {
+const resolvePublicPerson = cache(async function resolvePublicPerson(
+  slug: string,
+  individualId: string,
+) {
   const record = await getPublicTreeForRequest(slug);
   if (!record) return null;
 
@@ -40,7 +47,7 @@ async function resolvePublicPerson(slug: string, individualId: string) {
   if (!focal.name || focal.name === PRIVATE_PERSON_PLACEHOLDER) return null;
 
   return { record, payload, focal };
-}
+});
 
 export async function generateMetadata({ params }: PageParams): Promise<Metadata> {
   const { slug, individualId } = await params;
@@ -49,18 +56,24 @@ export async function generateMetadata({ params }: PageParams): Promise<Metadata
     return { title: 'غير موجود', robots: { index: false, follow: false } };
   }
 
-  const { record } = resolved;
+  const { record, payload, focal } = resolved;
   const familyName = record.nameAr || record.workspaceNameAr;
-  // Only "findable in Google" (public_listed) MAIN trees are indexable. The
-  // person's own NAME is deliberately NOT in the title/OG (it would surface a
-  // living/private-adjacent individual's identity in search snippets) — the
-  // title is the family name, matching the tree page.
-  const indexable = isPublicTreeIndexable(record);
+  // The page is indexable only when the tree is listed AND the owner opted into
+  // per-person pages (`isPublicPersonPageIndexable`). The page itself still
+  // SERVES on any published tree — only search exposure is gated.
+  const indexable = isPublicPersonPageIndexable(record);
   const url = `/family/${slug}/person/${individualId}`;
-  const description = `فرد من شجرة عائلة ${familyName} الموثقة بالأنساب على جينات`;
+  // The person's name (with a two-generation nasab) IS the title: a person page
+  // that says only the family name is indistinguishable from every other person
+  // page in the tree, for both readers and search. Built from the ALREADY-
+  // redacted `payload.data`, so a private ancestor in the chain contributes the
+  // «خاص» placeholder instead of a real name — no PII can reach the title.
+  const personName = getDisplayNameWithNasab(payload.data, focal, DEFAULT_NASAB_DEPTH);
+  const title = `${personName} — شجرة عائلة ${familyName}`;
+  const description = `${personName}، فرد من شجرة عائلة ${familyName} الموثقة بالأنساب على جينات`;
 
   return {
-    title: familyName,
+    title,
     description,
     alternates: { canonical: url },
     openGraph: {
@@ -68,7 +81,7 @@ export async function generateMetadata({ params }: PageParams): Promise<Metadata
       locale: 'ar_SA',
       url,
       siteName: 'جينات',
-      title: familyName,
+      title,
       description,
     },
     robots: indexable
@@ -112,9 +125,11 @@ export default async function PublicPersonPage({ params }: PageParams) {
   if (!projection) notFound();
 
   // MACHINE view: schema.org Person/genealogy JSON-LD. Emitted ONLY on the
-  // indexable branch (public_listed MAIN). Built from the redacted data via the
-  // single guarded builder — never emits a living birth date or a private node.
-  const indexable = isPublicTreeIndexable(record);
+  // indexable branch — listed MAIN tree AND the owner's per-person opt-in, the
+  // same gate as the robots meta, so a noindex page never carries structured
+  // data. Built from the redacted data via the single guarded builder — never
+  // emits a living birth date or a private node.
+  const indexable = isPublicPersonPageIndexable(record);
   const jsonLd = buildPersonJsonLd({
     data: payload.data,
     focalId: individualId,

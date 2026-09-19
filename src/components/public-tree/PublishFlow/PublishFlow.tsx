@@ -41,6 +41,13 @@ export interface PublishFlowProps {
   onMakePrivateConfirm?: () => Promise<void>;
   /** Where the make-private dialog's "request permanent removal" link points. */
   reportHref?: string;
+  /**
+   * "A page for each person in search results" opt-in. Owned by the caller (the
+   * container persists it); this flow only carries the value down to the ladder
+   * / manage panel and the admin's intent back up.
+   */
+  personPagesIndexable?: boolean;
+  onPersonPagesIndexableChange?: (indexable: boolean) => void;
 }
 
 type Step = 'manage' | 'choose' | 'checkpoint' | 'success' | 'makePrivate';
@@ -71,6 +78,8 @@ export function PublishFlow({
   onChangeVisibility,
   onMakePrivateConfirm,
   reportHref,
+  personPagesIndexable = false,
+  onPersonPagesIndexableChange,
 }: PublishFlowProps) {
   const [step, setStep] = useState<Step>(() => initialStep(currentLevel));
   // The level the admin is selecting in the ladder (starts at current).
@@ -171,6 +180,8 @@ export function PublishFlow({
           shareUrl={shareUrl}
           onChangeLevel={(level) => applyManageChange(level)}
           onEscalateToSearch={() => applyManageChange('search')}
+          personPagesIndexable={personPagesIndexable}
+          onPersonPagesIndexableChange={onPersonPagesIndexableChange}
           onGoPrivate={() => setStep('makePrivate')}
           onClose={onClose}
         />
@@ -226,6 +237,8 @@ export function PublishFlow({
               level={pendingLevel}
               onLevelChange={setPendingLevel}
               allowReuse={false}
+              personPagesIndexable={personPagesIndexable}
+              onPersonPagesIndexableChange={onPersonPagesIndexableChange}
               className={styles.ladder}
             />
             {actionError && (

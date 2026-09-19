@@ -149,6 +149,16 @@
   cursor: pointer;
 }
 
+/* person-pages opt-in row — sits directly under the ladder, above the reuse
+   row, so the two read as one settings block rather than two stacked cards. */
+.personPagesRow {
+  border-color: rgba(200, 168, 101, 0.16);
+}
+
+.personPagesRow + .reuseRow {
+  margin-top: var(--space-5);
+}
+
 .reuseRowDisabled {
   opacity: 0.55;
   cursor: not-allowed;

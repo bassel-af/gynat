@@ -66,5 +66,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     currentLevel: mapVisibilityToUiLevel(tree.visibility),
     publicSlug: tree.publicSlug,
     allowReuse: tree.allowReuse,
+    personPagesIndexable: tree.personPagesIndexable,
   })
 }

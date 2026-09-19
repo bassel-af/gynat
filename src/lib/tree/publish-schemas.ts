@@ -8,11 +8,15 @@ import { z } from 'zod'
  * route recomputes the living set and validates the typed phrase server-side.
  * `allowReuse` is the separate "others may include this tree in collections"
  * opt-in (PRD §1.10).
+ * `personPagesIndexable` is the separate "every non-private person gets their
+ * own search-indexable page" opt-in — off by default, and only meaningful on a
+ * search-listed main tree.
  */
 export const visibilityPatchSchema = z.object({
   level: z.enum(['private', 'link', 'search']),
   confirmationPhrase: z.string().max(200).optional(),
   allowReuse: z.boolean().optional(),
+  personPagesIndexable: z.boolean().optional(),
   // Optional: scope the publish to a single `extra` tree (Collections, Slice B).
   // Absent → the workspace MAIN tree (backward-compatible).
   treeId: z.string().max(200).optional(),
