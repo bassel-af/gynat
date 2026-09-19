@@ -91,15 +91,17 @@ export function ManagePublicPanel({
   const hasPendingChange =
     pendingLevel !== currentLevel || pendingPersonPages !== personPagesIndexable;
 
+  const discardPending = () => {
+    setPendingLevel(currentLevel);
+    setPendingPersonPages(personPagesIndexable);
+  };
+
   const handleApply = () => {
     if (wantsPrivate) {
       onGoPrivate?.();
       return;
     }
-    if (isEscalation) {
-      // handled by the inline confirm button below, not here
-      return;
-    }
+    if (isEscalation) return; // the footer's confirm button handles escalation
     if (hasPendingChange) {
       onChangeLevel?.(pendingLevel as Exclude<VisibilityLevel, 'private'>, pendingPersonPages);
     }
@@ -169,8 +171,22 @@ export function ManagePublicPanel({
 
           {/* Escalation into search = the one change that still warns. */}
           {isEscalation && <SearchIrreversibleWarning as="h4" className={styles.irreversibleSlot} />}
+        </div>
+      )}
 
-          <div className={styles.settingsActions}>
+      {/*
+        ONE footer, ONE primary action. With nothing pending it is just «تم»
+        (close). Once the admin changes something, the primary becomes the save
+        (or the escalation / go-private confirm) and a plain «إلغاء» discards the
+        pending change — never two competing buttons.
+      */}
+      <footer className={styles.footer}>
+        {!hasPendingChange ? (
+          <button type="button" className={styles.doneBtn} onClick={onClose}>
+            تم
+          </button>
+        ) : (
+          <>
             {isEscalation ? (
               <button
                 type="button"
@@ -184,23 +200,15 @@ export function ManagePublicPanel({
                 متابعة إلى إيقاف النشر
               </button>
             ) : (
-              <button
-                type="button"
-                className={clsx(styles.applyBtn, { [styles.applyDisabled]: !hasPendingChange })}
-                onClick={handleApply}
-                disabled={!hasPendingChange}
-              >
+              <button type="button" className={styles.applyBtn} onClick={handleApply}>
                 حفظ التغيير
               </button>
             )}
-          </div>
-        </div>
-      )}
-
-      <footer className={styles.footer}>
-        <button type="button" className={styles.doneBtn} onClick={onClose}>
-          تم
-        </button>
+            <button type="button" className={styles.doneBtn} onClick={discardPending}>
+              إلغاء
+            </button>
+          </>
+        )}
       </footer>
     </div>
   );

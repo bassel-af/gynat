@@ -113,15 +113,29 @@ describe('ManagePublicPanel — person-pages opt-in', () => {
   test('ticking it only stages the change — nothing is reported until «حفظ التغيير»', () => {
     const onChangeLevel = vi.fn();
     renderPanel('search', { onChangeLevel });
-    const save = screen.getByText('حفظ التغيير') as HTMLButtonElement;
-    expect(save.disabled).toBe(true);
+    // One footer, one primary: with nothing pending it is just «تم».
+    expect(screen.getByText('تم')).toBeTruthy();
+    expect(screen.queryByText('حفظ التغيير')).toBeNull();
 
     fireEvent.click(personPagesCheckbox()!);
     expect(onChangeLevel).not.toHaveBeenCalled();
-    expect(save.disabled).toBe(false);
+    // A pending change swaps «تم» for save + discard — never both «تم» and save.
+    expect(screen.queryByText('تم')).toBeNull();
+    expect(screen.getByText('إلغاء')).toBeTruthy();
 
-    fireEvent.click(save);
+    fireEvent.click(screen.getByText('حفظ التغيير'));
     expect(onChangeLevel).toHaveBeenCalledWith('search', true);
+  });
+
+  test('«إلغاء» discards the pending tick and brings «تم» back', () => {
+    const onChangeLevel = vi.fn();
+    renderPanel('search', { onChangeLevel });
+    fireEvent.click(personPagesCheckbox()!);
+    fireEvent.click(screen.getByText('إلغاء'));
+    expect(onChangeLevel).not.toHaveBeenCalled();
+    expect((personPagesCheckbox() as HTMLInputElement).checked).toBe(false);
+    expect(screen.getByText('تم')).toBeTruthy();
+    expect(screen.queryByText('حفظ التغيير')).toBeNull();
   });
 
   test('unticking a saved opt-in is staged the same way', () => {

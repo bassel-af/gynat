@@ -201,14 +201,6 @@
 }
 
 /* ---- Settings actions ---- */
-.settingsActions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-4);
-  margin-top: var(--space-7);
-}
-
 .applyBtn,
 .confirmEscalate {
   padding: var(--space-5) var(--space-9);
@@ -234,17 +226,14 @@
     0 14px 30px rgba(200, 168, 101, 0.4);
 }
 
-.applyDisabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  filter: saturate(0.5);
-}
-
 /* ---- Footer ---- */
 .footer {
   margin-top: var(--space-10);
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   justify-content: flex-start;
+  gap: var(--space-4);
 }
 
 .doneBtn {
@@ -286,7 +275,7 @@
     padding: var(--space-9) var(--space-7) var(--space-8);
   }
 
-  .settingsActions {
+  .footer {
     flex-direction: column;
     align-items: stretch;
   }
