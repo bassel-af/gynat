@@ -73,7 +73,7 @@
   display: block;
   margin: 0 0 var(--space-5);
   font-family: var(--heritage-font-body);
-  font-size: 16px;
+  font-size: 13px;
   font-weight: 500;
   line-height: 1.4;
   color: var(--heritage-gold-bright);
@@ -1403,6 +1403,10 @@
 
   .heroName {
     font-size: 18px;
+  }
+
+  .heroKunya {
+    font-size: 12px;
   }
 
   .actionBar {
