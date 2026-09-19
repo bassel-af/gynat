@@ -218,7 +218,7 @@ The GEDCOM file (`public/saeed-family.ged`):
 
 ### Mobile Patterns
 
-- Sidebar has mobile overlay with FAB (floating action button) toggle
+- Sidebar has mobile overlay with FAB (floating action button) toggle. On the canvas the FAB is a SEARCH button (not a menu icon): it always opens the drawer on the search list, even with a person selected — via a Sidebar-local `showListOverDetail` override, NOT by clearing `selectedPersonId` (the card's details FAB only renders while its person is selected). On the person page there are no cards, so the same button is the only way into that person's panel: it opens the details and wears the person icon. Covered by `src/test/sidebar-search-toggle.test.tsx`
 - Node cards show details FAB on mobile when a person is selected
 - Body scroll is locked when mobile sidebar is open
 
