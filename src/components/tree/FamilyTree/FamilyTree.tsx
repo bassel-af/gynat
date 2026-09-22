@@ -46,6 +46,7 @@ export function PersonNode({ data }: { data: PersonNodeData }) {
     linkedTo: mainLinkedTo,
     linkedToNodes,
     childrenElsewhere,
+    topAncestorId: mainTopAncestorId,
     onPersonClick,
     onOpenSidebar,
     onRerootToAncestor,
@@ -66,6 +67,35 @@ export function PersonNode({ data }: { data: PersonNodeData }) {
     // This will be passed through the data
     return 'lineage-dimmed';
   };
+
+  // «عرض عائلة …» — re-root the canvas on a married-in person's topmost
+  // ancestor (docs/in-law-visibility.md, Solution 1).
+  const renderRerootBadge = (p: Individual, topAncestorId: string) => (
+    <div
+      className="spouse-family-badge"
+      role="button"
+      tabIndex={0}
+      aria-label={`عرض عائلة ${getDisplayName(p)}`}
+      onClick={(e) => {
+        e.stopPropagation();
+        onRerootToAncestor(topAncestorId, p.id);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          e.stopPropagation();
+          onRerootToAncestor(topAncestorId, p.id);
+        }
+      }}
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M6 3v12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        <path d="M18 9a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" strokeWidth="2"/>
+        <path d="M6 21a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" strokeWidth="2"/>
+        <path d="M15 6h-4a2 2 0 00-2 2v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+      </svg>
+    </div>
+  );
 
   const renderPersonCard = (
     p: Individual,
@@ -152,6 +182,7 @@ export function PersonNode({ data }: { data: PersonNodeData }) {
             </div>
           )}
         </div>
+        {isMainPerson && !hideSpouseBadge && mainTopAncestorId && renderRerootBadge(p, mainTopAncestorId)}
         {p._pointed && (
           <div className="pointed-badge" title="فرع مرتبط — للقراءة فقط">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -282,32 +313,7 @@ export function PersonNode({ data }: { data: PersonNodeData }) {
                   left: 70,
                 }}
               />
-              {!hideSpouseBadge && hasExtFam && topAncestorId && (
-                <div
-                  className="spouse-family-badge"
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`عرض عائلة ${getDisplayName(spouse)}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onRerootToAncestor(topAncestorId, spouse.id);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      onRerootToAncestor(topAncestorId, spouse.id);
-                    }
-                  }}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M6 3v12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                    <path d="M18 9a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" strokeWidth="2"/>
-                    <path d="M6 21a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" strokeWidth="2"/>
-                    <path d="M15 6h-4a2 2 0 00-2 2v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                  </svg>
-                </div>
-              )}
+              {!hideSpouseBadge && hasExtFam && topAncestorId && renderRerootBadge(spouse, topAncestorId)}
               {renderPersonCard(spouse, false, highlightClass, spouseLinkedTo, multiLinked)}
             </div>
           ))}

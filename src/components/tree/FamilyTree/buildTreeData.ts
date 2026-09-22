@@ -130,6 +130,11 @@ export interface PersonNodeData {
   /** Populated when one or more shared families with a spouse have all
    *  children claimed by the spouse's canonical placement. */
   childrenElsewhere?: ChildrenElsewhere[];
+  /** Shared-spouse cluster surrogate only (a married-in person promoted to a
+   *  main node because two siblings married them): set to their topmost
+   *  ancestor when they have external family, so the main card carries the
+   *  same «عرض عائلة …» re-root badge a spouse card would. */
+  topAncestorId?: string | null;
   onPersonClick: (personId: string) => void;
   onOpenSidebar: () => void;
   onRerootToAncestor: (ancestorId: string, focusId?: string) => void;
@@ -504,6 +509,13 @@ export function buildTreeData(
 
     // Create node for this person with highlight flags
     const isHighlightedPerson = personId === highlightState.highlightedId;
+    // A cluster surrogate is a married-in person drawn as a main node; give
+    // the card the re-root affordance its spouse-card occurrences carry.
+    const isClusterSurrogate = [...clusterSurrogates.values()].some((s) => s.has(personId));
+    const surrogateTopAncestorId =
+      isClusterSurrogate && hasExternalFamily(data, personId, rootDescendants)
+        ? (findTopmostAncestor(data, personId) ?? personId)
+        : null;
     const isAncestor = highlightState.ancestors.has(personId);
     const isDescendant = highlightState.descendants.has(personId);
     const hasHighlight = highlightState.highlightedId !== null;
@@ -523,6 +535,7 @@ export function buildTreeData(
         hasHighlight,
         selectedPersonId,
         hideSpouseBadge: useGrafts,
+        topAncestorId: surrogateTopAncestorId,
         onPersonClick,
         onOpenSidebar,
         onRerootToAncestor,
