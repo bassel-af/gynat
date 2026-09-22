@@ -21,7 +21,7 @@ type RouteParams = { params: Promise<{ id: string; individualId: string }> };
 //  - v3: borrowed-ON-native nasab fix (split lateral/climb boundary — a borrowed
 //        branch grafted onto native ancestry climbs its full native lineage
 //        instead of dead-ending at the borrowed root). قريش regression.
-const PROJECTION_ETAG_VERSION = 'v3';
+const PROJECTION_ETAG_VERSION = 'v4';
 
 function computeETag(lastModifiedAt: Date, individualId: string): string {
   const hash = createHash('sha1')

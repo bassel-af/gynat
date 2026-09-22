@@ -1,6 +1,6 @@
 import type { Individual, GedcomData } from './types';
 import { getDisplayName } from './display';
-import { buildChildrenGraph, calculateDescendantCounts } from './graph';
+import { buildChildrenGraph, calculateDescendantCounts, buildJumpIndex } from './graph';
 
 export function findRootAncestors(data: GedcomData): Individual[] {
   const { individuals } = data;
@@ -21,11 +21,23 @@ export function findRootAncestors(data: GedcomData): Individual[] {
 export function findDefaultRoot(data: GedcomData): Individual | null {
   const { individuals } = data;
 
+  // «قفزة نسب» is consulted UNCONDITIONALLY here (no `includeJumps` opt-in):
+  // a person with a jump has someone above him — an ancestor couple an unknown
+  // distance up — so he is not the top of the tree and must never be crowned
+  // the default root.
+  //
+  // The ROW is the truth, never the bare `ancestryJumpAsDescendant` flag: a
+  // borrowed branch carries the SOURCE workspace's jump id into a payload that
+  // has no such row, and trusting the flag would disqualify a legitimate root
+  // over an id that means nothing here.
+  const jumpIndex = buildJumpIndex(data);
+  const hasJump = (person: Individual) => jumpIndex.byDescendant.has(person.id);
+
   // Find all non-private individuals with no parents (true roots at top level)
   const trueRoots: Individual[] = [];
   for (const id in individuals) {
     const person = individuals[id];
-    if (!person.familyAsChild && !person.isPrivate) {
+    if (!person.familyAsChild && !hasJump(person) && !person.isPrivate) {
       trueRoots.push(person);
     }
   }
@@ -40,8 +52,10 @@ export function findDefaultRoot(data: GedcomData): Individual | null {
     return trueRoots[0];
   }
 
-  // Build graph and calculate descendants using topological sort + DP
-  const childrenOf = buildChildrenGraph(data);
+  // Build graph and calculate descendants using topological sort + DP. The
+  // count crosses «قفزة نسب» edges so the apex ancestor outranks everyone below
+  // him; on jump-free data this is identical to the jump-blind graph.
+  const childrenOf = buildChildrenGraph(data, { includeJumps: true });
   const descendantCount = calculateDescendantCounts(individuals, childrenOf);
 
   // Find the root with most descendants

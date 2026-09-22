@@ -56,6 +56,9 @@ The project is at Phase 5 (Branch Pointers) with Phases 1-5 complete.
 - `design-reroot-on-spouse-ancestor.md` - Re-root on spouse's ancestor design (Phase 4)
 - `design-multi-root-view.md` - Multi-root view design (Phase 4, DISABLED)
 - `design-branch-pointers.md` - Branch pointers design (Phase 5)
+- `ancestor-gap-research-notes.md` - «قفزة نسب» (ancestry jump) research + owner rulings
+- `specs/ancestry-jump-spec.md` - «قفزة نسب» implementation spec (data model, API, graph, nasab, GEDCOM, canvas)
+- `specs/ancestry-jump-security-review.md` - «قفزة نسب» security review (findings + fixes)
 - `gedcom-marriage-explainer.html` - Standalone HTML explainer for GEDCOM marriage concepts
 - `screenshots/` - Mobile UI screenshots (`mobile-fab-test.png`, `mobile-sidebar-open.png`)
 
@@ -140,6 +143,7 @@ The project is at Phase 5 (Branch Pointers) with Phases 1-5 complete.
 - `workspaces/` - Full workspace CRUD, members, invitations
   - `[id]/places/route.ts` - Place search and creation (workspace-scoped)
   - `[id]/tree/` - Tree CRUD (individuals, families, children, move)
+    - `ancestry-jumps/route.ts` + `ancestry-jumps/[jumpId]/route.ts` - «قفزة نسب» create / update / delete
   - `[id]/branch-pointers/` - Branch pointer CRUD (redeem, disconnect, deep copy)
   - `[id]/share-tokens/` - Share token CRUD (create, list, disable, revoke, preview)
 - `workspaces/by-slug/[slug]/route.ts` - Workspace lookup by slug
@@ -157,6 +161,7 @@ The project is at Phase 5 (Branch Pointers) with Phases 1-5 complete.
 - `IndividualForm/` - Form for creating/editing individuals
 - `FamilyEventForm/` - Form for marriage/divorce events
 - `FamilyPickerModal/` - Modal for selecting family (polygamy support)
+- `AncestryJumpForm/` - «قفزة نسب» two-path sheet (new person / existing person, range + notes)
 - `EmptyTreeState/` - Placeholder for workspaces with no tree data
 - `RootBackChip/` - Floating chip to navigate back to previous root after re-root (no index.ts)
 - `ViewModeToggle/` - Segmented pill for view mode switching, DISABLED (no index.ts)
@@ -271,6 +276,9 @@ Note: `CalendarPreferenceContext` is defined inside `src/hooks/useCalendarPrefer
 - `seed-helpers.ts` - Helpers for seeding tree data from GEDCOM
 - `seed-place-mapping.ts` - GEDCOM place string to Arabic name + Place ID resolution
 - `family-validators.ts` - Centralized gender validation for families
+- `ancestry-jump-schemas.ts` - Zod schemas for the «قفزة نسب» API (create / update)
+- `ancestry-jump-validators.ts` - Pure `validateAncestryJump` (rules J1–J8 incl. cycle check) + Arabic error map
+- `ancestry-jump-route-helpers.ts` - Jump response DTO + Prisma duplicate-error narrowing
 - `branch-pointer-merge.ts` - Subtree extraction and merge for branch pointers
 - `branch-pointer-deep-copy.ts` - Deep copy logic (new UUIDs + ID remapping + DB persistence)
 - `branch-pointer-schemas.ts` - Zod schemas for redeem token, share token creation
@@ -332,7 +340,7 @@ Note: `CalendarPreferenceContext` is defined inside `src/hooks/useCalendarPrefer
 - SEO (robots.ts, sitemap.ts)
 
 **Subdirectory:**
-- `fixtures/` - Test data files (`saeed-family.ged`, `test-family.ged`)
+- `fixtures/` - Test data files (`saeed-family.ged`, `test-family.ged`, `ancestry-jump.ged`)
 - `setup.ts` - Test setup configuration
 
 #### `/src/types/`

@@ -223,6 +223,7 @@ function mockDefaultTransaction() {
       branchPointer: { updateMany: mockBranchPointerUpdateMany },
       branchShareToken: { updateMany: mockBranchShareTokenUpdateMany },
       radaFamily: { updateMany: mockRadaFamilyUpdateMany },
+      ancestryJump: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },
       userTreeLink: { deleteMany: mockUserTreeLinkDeleteMany },
       workspaceInvitation: { updateMany: mockWorkspaceInvitationUpdateMany },
       treeEditLog: {

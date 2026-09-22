@@ -91,7 +91,7 @@ export function extractPointedSubtree(
 
   // Step 2: If no depth limit and no grafts, return as-is
   if (depthLimit === null && !includeGrafts) {
-    return fullSubtree;
+    return stripJumpBackReferences(fullSubtree);
   }
 
   // Step 3: Compute generation depth for each individual in the subtree
@@ -115,6 +115,40 @@ export function extractPointedSubtree(
     result = addGraftData(result, data, rootIndividualId, depthMap, depthLimit);
   }
 
+  return stripJumpBackReferences(result);
+}
+
+/**
+ * Drop «قفزة نسب» back-references on the way OUT of the source workspace.
+ *
+ * Every step above builds its records by spreading the source (`{...person}`),
+ * which carries `ancestryJumpAsDescendant` / `ancestryJumpsAsAncestor` along —
+ * and `GedcomData` leaves here with no `ancestryJumps` key at all, so the id
+ * would land in the target workspace's payload with no row behind it: a source
+ * -workspace id crossing a tenancy boundary, and a stale flag that wrongly
+ * disqualifies a borrowed branch root from `findDefaultRoot`.
+ *
+ * Mirrors what `prepareDeepCopy` and `prepareTreeSnapshot` already do.
+ */
+function stripJumpBackReferences(data: GedcomData): GedcomData {
+  const individuals: Record<string, Individual> = {};
+  for (const [id, person] of Object.entries(data.individuals)) {
+    const copy = { ...person };
+    delete copy.ancestryJumpAsDescendant;
+    individuals[id] = copy;
+  }
+
+  const families: Record<string, Family> = {};
+  for (const [id, family] of Object.entries(data.families)) {
+    const copy = { ...family };
+    delete copy.ancestryJumpsAsAncestor;
+    families[id] = copy;
+  }
+
+  // Any other key (rada'a families) rides along; `ancestryJumps` never does —
+  // a borrowed jump would point at an ancestor family outside the subtree.
+  const result: GedcomData = { ...data, individuals, families };
+  delete result.ancestryJumps;
   return result;
 }
 

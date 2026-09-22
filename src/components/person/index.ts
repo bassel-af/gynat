@@ -8,5 +8,7 @@ export { FamilyHighlightProvider, RelationChip } from './FamilyHighlight';
 export { ChipGroup } from './ChipGroup';
 export { MarriageGroupCard } from './MarriageGroupCard';
 export { RadaBlock } from './RadaBlock';
+export { AncestryJumpBlock } from './AncestryJumpBlock';
+export { JumpDivider } from './JumpDivider';
 export { PersonRecord } from './PersonRecord';
 export { ViewInTreeButton } from './ViewInTreeButton';

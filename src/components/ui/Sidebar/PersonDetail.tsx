@@ -14,6 +14,7 @@ import { IndividualForm, type IndividualFormData } from '@/components/tree/Indiv
 import { FamilyPickerModal } from '@/components/tree/FamilyPickerModal/FamilyPickerModal';
 import { FamilyEventForm } from '@/components/tree/FamilyEventForm/FamilyEventForm';
 import { RadaaFamilyForm } from '@/components/tree/RadaaFamilyForm/RadaaFamilyForm';
+import { AncestryJumpForm } from '@/components/tree/AncestryJumpForm';
 import { IndividualPicker } from '@/components/ui/IndividualPicker/IndividualPicker';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -39,6 +40,7 @@ import {
   buildFamilyEventInitialData,
   getFamiliesForPicker,
   getSurnamePrefill,
+  getAncestryJumpAction,
 } from '@/lib/person-detail-helpers';
 import { MoveSubtreeModal, type MoveSubtreeOption } from '@/components/tree/MoveSubtreeModal';
 import type { AddParentResult } from '@/lib/person-detail-helpers';
@@ -460,6 +462,9 @@ export function PersonDetail({ personId }: PersonDetailProps) {
     unlinkSpouse,
     handleRadaaSubmit,
     handleRadaaDelete,
+    handleAncestryJumpSubmit,
+    handleAncestryJumpUpdate,
+    handleAncestryJumpDelete,
     handleDeleteClick,
     handleCascadeConfirm,
     moveSubtree,
@@ -823,6 +828,14 @@ export function PersonDetail({ personId }: PersonDetailProps) {
   // free-floating individual) the editor can attach this person to.
   const showMoveSubtree = canEdit && !!person && moveOptions.length > 0;
 
+  // «قفزة نسب»: offered only at the top of a known line — never on a borrowed
+  // person, never beside recorded parents, and never to a viewer. Becomes
+  // «تعديل قفزة النسب» once this person already has one (v1 allows exactly one).
+  const ancestryJumpAction = getAncestryJumpAction(person, data, canEdit);
+  const existingJump = person?.ancestryJumpAsDescendant
+    ? data?.ancestryJumps?.[person.ancestryJumpAsDescendant]
+    : undefined;
+
   const orphanedPreviousParents = useMemo(() => {
     if (!person || !data) return [];
     return detectOrphanedPreviousParents(person, data);
@@ -1119,6 +1132,28 @@ export function PersonDetail({ personId }: PersonDetailProps) {
                 <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
               </svg>
               {getAddRelationshipLabel('parent', undefined)}
+            </button>
+          )}
+          {ancestryJumpAction && (
+            <button
+              className={styles.actionButton}
+              onClick={() => {
+                setFormError('');
+                const jumpId = person.ancestryJumpAsDescendant;
+                setFormMode(
+                  ancestryJumpAction === 'edit' && jumpId
+                    ? { kind: 'editAncestryJump', jumpId }
+                    : { kind: 'ancestryJump' },
+                );
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path d="M12 21V9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M12 3v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M9 7h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeDasharray="1 3"/>
+                <path d="M6 21h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+              {ancestryJumpAction === 'edit' ? 'تعديل قفزة النسب' : 'قفزة نسب'}
             </button>
           )}
           {showMoveSubtree && (
@@ -1551,6 +1586,40 @@ export function PersonDetail({ personId }: PersonDetailProps) {
           onCancel={() => { setFormMode(null); setFormError(''); }}
           isLoading={formLoading}
           error={formError}
+        />
+      )}
+
+      {(formMode?.kind === 'ancestryJump' || formMode?.kind === 'editAncestryJump') && person && (
+        <AncestryJumpForm
+          mode={formMode.kind === 'ancestryJump' ? 'create' : 'edit'}
+          person={person}
+          data={data}
+          initialData={
+            formMode.kind === 'editAncestryJump' && existingJump
+              ? {
+                  generationsMin: existingJump.generationsMin,
+                  generationsMax: existingJump.generationsMax,
+                  notes: existingJump.notes,
+                }
+              : undefined
+          }
+          onSubmit={handleAncestryJumpSubmit}
+          onUpdate={
+            formMode.kind === 'editAncestryJump'
+              ? (fields) => handleAncestryJumpUpdate(formMode.jumpId, fields)
+              : undefined
+          }
+          onDelete={
+            formMode.kind === 'editAncestryJump'
+              ? () => handleAncestryJumpDelete(formMode.jumpId)
+              : undefined
+          }
+          onCancel={() => { setFormMode(null); setFormError(''); }}
+          isLoading={formLoading}
+          error={formError}
+          workspaceId={workspace?.workspaceId}
+          enableKunya={workspace?.enableKunya}
+          defaultDeceased={workspace?.defaultNewPersonDeceased}
         />
       )}
 

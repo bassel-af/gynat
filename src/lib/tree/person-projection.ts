@@ -1,4 +1,4 @@
-import type { GedcomData, Individual, Family } from '@/lib/gedcom/types';
+import type { AncestryJump, GedcomData, Individual, Family } from '@/lib/gedcom/types';
 import { getRadaRelationships } from '@/lib/gedcom/relationships';
 import { getDisplayName } from '@/lib/gedcom/display';
 
@@ -141,15 +141,42 @@ export interface PersonChip {
 
 export interface MotherLine extends PersonChip {
   gender: 'female';
-  /** Her fathers-only chain, nearest→oldest, all male; EMPTY if she is private. */
-  fathers: PersonChip[];
+  /**
+   * Her fathers-only chain, nearest→oldest, all male; EMPTY if she is private.
+   * Typed as `SpineChip` for one reason: a man in this chain may have been
+   * reached by a «قفزة نسب», and that must be visible to whatever renders him
+   * (`.mother` is never populated here).
+   */
+  fathers: SpineChip[];
   /** Recursion into HER mother; absent when depth exhausted or she is private. */
   mother?: MotherLine;
+}
+
+/** Range of generations a «قفزة نسب» spans; both bounds independently optional. */
+export interface JumpRange {
+  generationsMin: number | null;
+  generationsMax: number | null;
 }
 
 export interface SpineChip extends PersonChip {
   /** This spine person's married-in mother (+ her line). */
   mother?: MotherLine;
+  /**
+   * Set when THIS node was reached from the node below it by a «قفزة نسب»
+   * rather than a father link. The UI renders a «قفزة نسب» divider (plus the
+   * range when stated) instead of a «بن» token at this position — a «بن» here
+   * would publish a parent claim the record does not make.
+   */
+  jump?: JumpRange;
+}
+
+export interface AncestryJumpProjection extends JumpRange {
+  /** The male ancestor — also the `jump`-marked head of `paternalChain`. */
+  father: PersonChip | null;
+  /** The female ancestor, if known. NEVER in the nasab chain (owner ruling). */
+  mother: PersonChip | null;
+  /** The scholarly note explaining the link; `''` when none was recorded. */
+  notes: string;
 }
 
 export interface MarriageEvent {
@@ -204,6 +231,12 @@ export interface PersonProjection {
   paternalCousins: PersonChip[];
   maternalCousins: PersonChip[];
   rada: { fathers: PersonChip[]; mothers: PersonChip[]; siblings: PersonChip[] };
+  /**
+   * The subject's own «قفزة نسب», if any. Present even when the ancestor is
+   * FEMALE-ONLY (she does not join the نسب chain but must appear everywhere
+   * else). Absent when the subject has no jump or it is fully suppressed.
+   */
+  ancestryJump?: AncestryJumpProjection;
 }
 
 // ---------------------------------------------------------------------------
@@ -241,6 +274,34 @@ function getMother(data: GedcomData, ind: Individual): Individual | null {
  */
 function fatherIsPointed(data: GedcomData, ind: Individual): boolean {
   return getFather(data, ind)?._pointed === true;
+}
+
+/**
+ * The MALE distant ancestor of `ind`'s «قفزة نسب», plus the jump row itself.
+ *
+ * Returns null when: he has no jump; the back-reference dangles; the ancestor
+ * family is missing; the family has no `husband` (a FEMALE-only distant
+ * ancestor is NOT part of the نسب chain — owner ruling; she surfaces only in
+ * `projection.ancestryJump`); or the husband is absent from the payload.
+ */
+function resolveJumpFather(
+  data: GedcomData,
+  ind: Individual,
+): { father: Individual; jump: AncestryJump } | null {
+  const jumpId = ind.ancestryJumpAsDescendant;
+  if (!jumpId) return null;
+  const jump = data.ancestryJumps?.[jumpId];
+  if (!jump) return null;
+  const family = data.families[jump.ancestorFamily];
+  if (!family?.husband) return null;
+  const father = data.individuals[family.husband];
+  if (!father) return null;
+  return { father, jump };
+}
+
+/** The range to stamp on a spine node that was REACHED BY `jump`. */
+function jumpRange(jump: AncestryJump): JumpRange {
+  return { generationsMin: jump.generationsMin, generationsMax: jump.generationsMax };
 }
 
 /**
@@ -337,11 +398,23 @@ function buildPaternalSpine(
 
   let current: Individual | null = start;
   while (current) {
-    const father = getFather(data, current);
-    if (!father || !guard.enter(father.id)) break;
+    // A recorded father always wins. Only when there is none does a «قفزة نسب»
+    // carry the climb across the gap — and the node it reaches is STAMPED, so
+    // the ribbon prints the «قفزة نسب» divider there instead of a «بن» token.
+    let father = getFather(data, current);
+    let reachedByJump: JumpRange | null = null;
+    if (!father) {
+      const resolved = resolveJumpFather(data, current);
+      if (!resolved) break;
+      father = resolved.father;
+      reachedByJump = jumpRange(resolved.jump);
+    }
+    if (!guard.enter(father.id)) break;
 
     if (isPrivate(father)) {
-      nearestToOldest.push(toChip(father, true)); // «خاص» placeholder
+      const placeholder: SpineChip = toChip(father, true); // «خاص» placeholder
+      if (reachedByJump) placeholder.jump = reachedByJump;
+      nearestToOldest.push(placeholder);
       // Stop when this is also a climb boundary, OR when the surface opts out of
       // climbing past a private ancestor (public default, pending security).
       if (opts.climbBoundary(father, data) || !opts.continueThroughPrivateAncestor) break;
@@ -350,6 +423,7 @@ function buildPaternalSpine(
     }
 
     const node: SpineChip = toChip(father);
+    if (reachedByJump) node.jump = reachedByJump;
     // Married-in mother is a LATERAL relation → gated by `isBoundary`.
     if (!opts.isBoundary(father, data)) attachMother(data, father, node, opts);
     nearestToOldest.push(node);
@@ -440,8 +514,8 @@ function buildFathersChain(
   data: GedcomData,
   woman: Individual,
   opts: ResolvedOptions,
-): PersonChip[] {
-  const out: PersonChip[] = [];
+): SpineChip[] {
+  const out: SpineChip[] = [];
   if (opts.isBoundary(woman, data)) return out; // don't climb into a boundary's parents
 
   const guard = new WalkGuard();
@@ -449,14 +523,28 @@ function buildFathersChain(
 
   let current: Individual | null = woman;
   while (current) {
-    const father = getFather(data, current);
-    if (!father || !guard.enter(father.id)) break;
+    // Same father-or-jump resolution as the paternal spine, and the same stamp:
+    // a woman's fathers chain must never read as an unbroken «بن» ladder when
+    // one of its links is a «قفزة نسب».
+    let father = getFather(data, current);
+    let reachedByJump: JumpRange | null = null;
+    if (!father) {
+      const resolved = resolveJumpFather(data, current);
+      if (!resolved) break;
+      father = resolved.father;
+      reachedByJump = jumpRange(resolved.jump);
+    }
+    if (!guard.enter(father.id)) break;
 
     if (isPrivate(father)) {
-      out.push(toChip(father, true)); // «خاص», terminates the fathers chain
+      const placeholder: SpineChip = toChip(father, true); // «خاص», terminates the chain
+      if (reachedByJump) placeholder.jump = reachedByJump;
+      out.push(placeholder);
       break;
     }
-    out.push(toChip(father));
+    const node: SpineChip = toChip(father);
+    if (reachedByJump) node.jump = reachedByJump;
+    out.push(node);
     if (opts.climbBoundary(father, data)) break; // emit boundary, do not climb past it
     current = father;
   }
@@ -640,6 +728,37 @@ function buildRada(data: GedcomData, subject: Individual): PersonProjection['rad
   return { fathers, mothers, siblings: radaSiblings.map((s) => toChip(s)) };
 }
 
+/**
+ * The subject's «قفزة نسب» as an ancestor COUPLE — built independently of the
+ * spine so a FEMALE-ONLY distant ancestor (who never joins the نسب chain) is
+ * still surfaced. This is a relation group, not a nasab position, so a private
+ * ancestor yields `null` in his slot rather than a «خاص» placeholder (§2 of the
+ * file header). Undefined when there is nothing left to show.
+ */
+function buildAncestryJump(
+  data: GedcomData,
+  subject: Individual,
+): AncestryJumpProjection | undefined {
+  const jumpId = subject.ancestryJumpAsDescendant;
+  if (!jumpId) return undefined;
+  const jump = data.ancestryJumps?.[jumpId];
+  if (!jump) return undefined;
+  const family = data.families[jump.ancestorFamily];
+  if (!family) return undefined;
+
+  const father = visible(data, family.husband);
+  const mother = visible(data, family.wife);
+  if (!father && !mother) return undefined;
+
+  return {
+    generationsMin: jump.generationsMin,
+    generationsMax: jump.generationsMax,
+    notes: jump.notes ?? '',
+    father: father ? toChip(father) : null,
+    mother: mother ? toChip(mother) : null,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Public entry point
 // ---------------------------------------------------------------------------
@@ -689,6 +808,7 @@ export function projectPerson(
   const mother = getMother(data, subject);
   const paternal = buildUnclesAndCousins(data, father, opts);
   const maternal = buildUnclesAndCousins(data, mother, opts);
+  const ancestryJump = buildAncestryJump(data, subject);
 
   return {
     subject: subjectOut,
@@ -702,5 +822,6 @@ export function projectPerson(
     paternalCousins: paternal.cousins,
     maternalCousins: maternal.cousins,
     rada: buildRada(data, subject),
+    ...(ancestryJump ? { ancestryJump } : {}),
   };
 }

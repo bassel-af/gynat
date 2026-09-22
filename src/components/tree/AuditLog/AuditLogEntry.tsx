@@ -55,6 +55,7 @@ const ENTITY_LABELS: Record<string, string> = {
   branch_pointer: 'ربط فرع',
   share_token: 'رمز مشاركة',
   tree: 'شجرة',
+  ancestry_jump: 'قفزة نسب',
 };
 
 function formatRelativeTime(isoString: string): string {

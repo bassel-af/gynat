@@ -10,6 +10,7 @@ import { FamilyHighlightProvider } from './FamilyHighlight';
 import { MarriageGroupCard } from './MarriageGroupCard';
 import { ChipGroup } from './ChipGroup';
 import { RadaBlock } from './RadaBlock';
+import { AncestryJumpBlock } from './AncestryJumpBlock';
 import { PersonRecord } from './PersonRecord';
 import { ViewInTreeButton } from './ViewInTreeButton';
 import { useCalendarPreference } from '@/hooks/useCalendarPreference';
@@ -54,6 +55,7 @@ export function PersonPage({
 
   const { subject, paternalChain, maternalChain, marriages, grandchildren, siblings } = projection;
   const { paternalUncles, maternalUncles, paternalCousins, maternalCousins, rada } = projection;
+  const { ancestryJump } = projection;
   const { preference } = useCalendarPreference();
 
   const showKunya = enableKunya && !!subject.kunya;
@@ -88,7 +90,10 @@ export function PersonPage({
     familyChips.length > 0 ||
     rada.fathers.length > 0 ||
     rada.mothers.length > 0 ||
-    rada.siblings.length > 0;
+    rada.siblings.length > 0 ||
+    // A «قفزة نسب» is reason enough on its own: the distant ancestor couple —
+    // and a female-only ancestor in particular — appears NOWHERE else.
+    !!ancestryJump;
 
   return (
     <main className={styles.root}>
@@ -234,6 +239,8 @@ export function PersonPage({
                 />
               </div>
             </FamilyHighlightProvider>
+
+            <AncestryJumpBlock jump={ancestryJump} hrefFor={hrefFor} />
 
             <RadaBlock rada={rada} hrefFor={hrefFor} />
           </section>

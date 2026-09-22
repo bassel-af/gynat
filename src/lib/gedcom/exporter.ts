@@ -1,4 +1,12 @@
-import type { GedcomData, Individual, Family, FamilyEvent, RadaFamily } from './types'
+import type {
+  GedcomData,
+  Individual,
+  Family,
+  FamilyEvent,
+  RadaFamily,
+  AncestryJump,
+} from './types'
+import { getDisplayName, JUMP_CONNECTOR } from './display'
 
 // ---------------------------------------------------------------------------
 // Reverse month maps (number → GEDCOM code)
@@ -24,6 +32,10 @@ const EXT_URIS: Record<string, string> = {
   '_RADA_WIFE': 'https://gynat.com/gedcom/ext/_RADA_WIFE',
   '_RADA_CHIL': 'https://gynat.com/gedcom/ext/_RADA_CHIL',
   '_RADA_FAMC': 'https://gynat.com/gedcom/ext/_RADA_FAMC',
+  '_ANCESTOR': 'https://gynat.com/gedcom/ext/_ANCESTOR',
+  '_GAP_MIN': 'https://gynat.com/gedcom/ext/_GAP_MIN',
+  '_GAP_MAX': 'https://gynat.com/gedcom/ext/_GAP_MAX',
+  '_ANC_FAM': 'https://gynat.com/gedcom/ext/_ANC_FAM',
 }
 
 // ---------------------------------------------------------------------------
@@ -109,12 +121,33 @@ function sanitizeLine(value: string): string {
   return value.replace(/[\r\n]/g, ' ').replace(/@/g, '')
 }
 
+/** GEDCOM 5.5.1 caps RELA at 25 characters. sanitizeLine does not truncate. */
+const RELA_MAX_LENGTH = 25
+
+export function sanitizeRela(value: string): string {
+  return sanitizeLine(value).slice(0, RELA_MAX_LENGTH)
+}
+
 // ---------------------------------------------------------------------------
 // Note serialization helper
 // ---------------------------------------------------------------------------
 
+/**
+ * Serialize free text as a NOTE with CONT continuations.
+ *
+ * THE ONE note path — every note in the file (individual, birth, death, family
+ * event, rada'a, «قفزة نسب») goes through here, so note text can never become
+ * GEDCOM structure:
+ *
+ * - A bare `\r` (and `\r\n`) is a line break to this repo's parser
+ *   (`/\r\n|\r|\n/`) and to most genealogy software. It is normalized to `\n`
+ *   FIRST, so it becomes a real CONT line instead of riding inside one and
+ *   re-parsing as forged records.
+ * - `@` is doubled — the 5.5.1 escape for a literal at-sign — so no note line
+ *   is read back as a cross-reference pointer. `parseGedcom` reverses it.
+ */
 function emitNote(lines: string[], level: number, text: string): void {
-  const parts = text.split('\n')
+  const parts = text.replace(/\r\n?/g, '\n').split('\n').map((part) => part.replace(/@/g, '@@'))
   lines.push(`${level} NOTE ${parts[0]}`)
   for (let i = 1; i < parts.length; i++) {
     lines.push(`${level + 1} CONT ${parts[i]}`)
@@ -177,6 +210,113 @@ function emitFamilyEvent(
 }
 
 // ---------------------------------------------------------------------------
+// Ancestry jump («قفزة نسب») serialization
+// ---------------------------------------------------------------------------
+
+/** 5.5.1: the relationship rides the standard ASSO/RELA mechanism. */
+const ANCESTOR_RELA = 'ancestor'
+/** 7.0: an extension value on the standard ASSO/ROLE enumeration (§1.5, §2.3). */
+const ANCESTOR_ROLE = '_ANCESTOR'
+
+/**
+ * Prose lead of the NOTE that always accompanies the extension (7.0 §1.5.3).
+ * Software that drops the extension shows only this line, so it names both ends
+ * itself. Names are the plain display names — no nasab, no honorifics, nothing
+ * invented. It also does NOT claim the skipped generations are unknown: a jump
+ * may skip people the family simply chose not to record.
+ */
+function jumpNoteLead(descendant: Individual, ancestor: Individual): string {
+  return sanitizeLine(
+    `قفزة نسب: ${getDisplayName(descendant)} ${JUMP_CONNECTOR} ${getDisplayName(ancestor)}، والأجيال بينهما مطويّة.`,
+  )
+}
+
+/** Range wording for the NOTE line, or null when neither bound is stated. */
+function jumpNoteRange(jump: AncestryJump): string | null {
+  const { generationsMin: min, generationsMax: max } = jump
+  if (min != null && max != null) return `بين ${min} و${max}`
+  if (min != null) return `لا تقل عن ${min}`
+  if (max != null) return `لا تزيد على ${max}`
+  return null
+}
+
+/** Range wording for the 7.0 `ROLE`/`PHRASE` line. */
+function jumpPhrase(jump: AncestryJump): string {
+  const { generationsMin: min, generationsMax: max } = jump
+  let range: string
+  if (min != null && max != null) range = `بين ${min} و${max} جيلاً`
+  else if (min != null) range = `لا تقل عن ${min} أجيال`
+  else if (max != null) range = `لا تزيد على ${max} جيلاً`
+  else range = 'عدد الأجيال بينهما غير محدد'
+  return sanitizeLine(`قفزة نسب — ${range}`)
+}
+
+function jumpNoteText(
+  jump: AncestryJump,
+  descendant: Individual,
+  ancestor: Individual,
+): string {
+  const parts = [jumpNoteLead(descendant, ancestor)]
+  const range = jumpNoteRange(jump)
+  if (range) parts.push(`عدد الأجيال بينهما: ${range}.`)
+  if (jump.notes) parts.push(jump.notes)
+  return parts.join('\n')
+}
+
+/**
+ * Emit the ONE ASSO that carries a jump, pointing at `husband ?? wife` of the
+ * ancestor family, with the couple itself in `_ANC_FAM` beside it — `ASSO` may
+ * only target an `INDI`, in both 5.5.1 and 7.0.
+ *
+ * Fail-closed: nothing is emitted unless the whole ancestor couple is present
+ * and exportable, so the file never carries a dangling cross-reference and
+ * never leaks a private person's existence.
+ */
+function emitAncestryJump(
+  lines: string[],
+  ind: Individual,
+  data: GedcomData,
+  version: '5.5.1' | '7.0',
+): void {
+  const jumpId = ind.ancestryJumpAsDescendant
+  if (!jumpId) return
+
+  const jump = data.ancestryJumps?.[jumpId]
+  if (!jump) return
+
+  const family = data.families[jump.ancestorFamily]
+  if (!family || family._pointed) return
+
+  const spouseIds = [family.husband, family.wife].filter((v): v is string => !!v)
+  if (spouseIds.length === 0) return
+
+  for (const spouseId of spouseIds) {
+    const spouse = data.individuals[spouseId]
+    if (!spouse || spouse.isPrivate || spouse._pointed) return
+  }
+
+  const targetId = family.husband ?? family.wife
+  if (!targetId) return
+  const target = data.individuals[targetId]
+
+  lines.push(`1 ASSO ${wrapId(targetId)}`)
+  if (version === '7.0') {
+    lines.push(`2 ROLE ${ANCESTOR_ROLE}`)
+    lines.push(`3 PHRASE ${jumpPhrase(jump)}`)
+  } else {
+    lines.push(`2 RELA ${sanitizeRela(ANCESTOR_RELA)}`)
+  }
+  lines.push(`2 _ANC_FAM ${wrapId(family.id)}`)
+  if (jump.generationsMin != null) {
+    lines.push(`2 _GAP_MIN ${jump.generationsMin}`)
+  }
+  if (jump.generationsMax != null) {
+    lines.push(`2 _GAP_MAX ${jump.generationsMax}`)
+  }
+  emitNote(lines, 2, jumpNoteText(jump, ind, target))
+}
+
+// ---------------------------------------------------------------------------
 // Detect which custom tags are needed (for 7.0 SCHMA)
 // ---------------------------------------------------------------------------
 
@@ -215,6 +355,15 @@ function collectCustomTags(data: GedcomData): Set<string> {
     }
   }
 
+  if (data.ancestryJumps && Object.keys(data.ancestryJumps).length > 0) {
+    tags.add('_ANCESTOR')
+    tags.add('_ANC_FAM')
+    for (const jump of Object.values(data.ancestryJumps)) {
+      if (jump.generationsMin != null) tags.add('_GAP_MIN')
+      if (jump.generationsMax != null) tags.add('_GAP_MAX')
+    }
+  }
+
   return tags
 }
 
@@ -225,6 +374,8 @@ function collectCustomTags(data: GedcomData): Set<string> {
 function emitIndividual(
   lines: string[],
   ind: Individual,
+  data: GedcomData,
+  version: '5.5.1' | '7.0',
 ): void {
   lines.push(`0 ${wrapId(ind.id)} INDI`)
 
@@ -325,6 +476,9 @@ function emitIndividual(
   if (ind.familyAsChild) {
     lines.push(`1 FAMC ${wrapId(ind.familyAsChild)}`)
   }
+
+  // Ancestry jump («قفزة نسب»)
+  emitAncestryJump(lines, ind, data, version)
 
   // Rada'a family references
   if (ind.radaFamiliesAsChild) {
@@ -449,7 +603,7 @@ export function gedcomDataToGedcom(
   // Individuals (skip pointed)
   for (const ind of Object.values(data.individuals)) {
     if (ind._pointed) continue
-    emitIndividual(lines, ind)
+    emitIndividual(lines, ind, data, version)
   }
 
   // Families (skip pointed)

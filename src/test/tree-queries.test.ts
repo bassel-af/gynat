@@ -99,6 +99,8 @@ const TREE_INCLUDES = {
       children: true,
     },
   },
+  // «قفزة نسب» — no nested include; AncestryJump has no child table.
+  ancestryJumps: true,
 }
 
 const fakeDbTree = {

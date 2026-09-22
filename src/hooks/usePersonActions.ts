@@ -18,6 +18,9 @@ import {
   buildCreateRadaFamilyInverse,
   buildUpdateRadaFamilyInverse,
   buildDeleteRadaFamilyInverse,
+  buildCreateAncestryJumpInverse,
+  buildUpdateAncestryJumpInverse,
+  buildDeleteAncestryJumpInverse,
 } from '@/lib/tree/undo-builders';
 
 // ---------------------------------------------------------------------------
@@ -51,7 +54,32 @@ export type FormMode =
   | { kind: 'addSibling'; targetFamilyId: string }
   | { kind: 'editFamilyEvent'; familyId: string; isUmmWalad?: boolean }
   | { kind: 'addRadaa' }
-  | { kind: 'editRadaa'; radaFamilyId: string };
+  | { kind: 'editRadaa'; radaFamilyId: string }
+  | { kind: 'ancestryJump' }
+  | { kind: 'editAncestryJump'; jumpId: string };
+
+// ---------------------------------------------------------------------------
+// «قفزة نسب» (ancestry jump) form data
+//
+// The link always points at a FAMILY — a single known ancestor is a one-spouse
+// family, exactly as `handleAddParentSubmit` already builds for a single known
+// parent. The three sources differ only in how that family comes to exist:
+//   newPerson      — create the ancestor, then his couple, then the jump;
+//   existingPerson — the ancestor is already in the tree but has no family, so
+//                    one is minted for him silently;
+//   existingFamily — the couple already exists; one call, nothing else touched.
+// ---------------------------------------------------------------------------
+
+export interface AncestryJumpFields {
+  generationsMin: number | null;
+  generationsMax: number | null;
+  notes: string;
+}
+
+export type AncestryJumpSubmitPayload =
+  | ({ source: 'newPerson'; individual: IndividualFormData } & AncestryJumpFields)
+  | ({ source: 'existingPerson'; ancestorPersonId: string } & AncestryJumpFields)
+  | ({ source: 'existingFamily'; ancestorFamilyId: string } & AncestryJumpFields);
 
 // ---------------------------------------------------------------------------
 // Rada'a form data
@@ -104,6 +132,9 @@ export interface UsePersonActionsReturn {
   handleLinkExistingSpouse: (existingPersonId: string) => Promise<void>;
   handleRadaaSubmit: (data: RadaaFormData) => Promise<void>;
   handleRadaaDelete: (radaFamilyId: string) => Promise<void>;
+  handleAncestryJumpSubmit: (payload: AncestryJumpSubmitPayload) => Promise<void>;
+  handleAncestryJumpUpdate: (jumpId: string, fields: AncestryJumpFields) => Promise<void>;
+  handleAncestryJumpDelete: (jumpId: string) => Promise<void>;
   handleDeleteClick: () => Promise<void>;
   handleCascadeConfirm: (confirmationName?: string) => Promise<void>;
   unlinkSpouse: (familyId: string) => Promise<void>;
@@ -864,6 +895,256 @@ export function usePersonActions({
   }, [workspace, isPointed, withFormAction, data, activeTreeId, deleteInit, onPushUndo]);
 
   // -------------------------------------------------------------------------
+  // «قفزة نسب» (ancestry jump)
+  // -------------------------------------------------------------------------
+
+  const createAncestryJump = useCallback(async (body: Record<string, unknown>) => {
+    if (!workspace) throw new Error('No workspace context');
+    const res = await apiFetch(`/api/workspaces/${workspace.workspaceId}/tree/ancestry-jumps`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(withTreeId(body)),
+    });
+    if (!res.ok) {
+      const json = await res.json();
+      throw new Error(json.error ?? 'حدث خطأ');
+    }
+    const json = await res.json();
+    return json.data as { id: string };
+  }, [workspace, withTreeId]);
+
+  /**
+   * Link this person to a distant ancestor couple.
+   *
+   * Two of the three sources are multi-call (individual → family → jump, or
+   * family → jump). They push exactly ONE composite undo entry with a
+   * hand-rolled inverse — the same shape `handleAddParentSubmit` uses — because
+   * a partial undo would leave a stranded ancestor or an empty couple behind.
+   */
+  const handleAncestryJumpSubmit = useCallback(async (payload: AncestryJumpSubmitPayload) => {
+    if (!workspace || !person || isPointed) return;
+    const wsId = workspace.workspaceId;
+
+    let succeeded = false;
+    let createdIndividualId: string | null = null;
+    let createdFamilyId: string | null = null;
+    let createdJumpId: string | null = null;
+    let mintedFamilyOpts: { husbandId?: string; wifeId?: string } | null = null;
+    let ancestorFamilyId: string | null =
+      payload.source === 'existingFamily' ? payload.ancestorFamilyId : null;
+
+    const jumpPayload = (familyId: string): Record<string, unknown> => ({
+      descendantId: personId,
+      ancestorFamilyId: familyId,
+      generationsMin: payload.generationsMin,
+      generationsMax: payload.generationsMax,
+      notes: payload.notes || null,
+    });
+
+    // For the undo label: the ancestor the user is naming.
+    let ancestorName: string | undefined;
+    if (payload.source === 'newPerson') {
+      ancestorName = payload.individual.givenName;
+    } else if (payload.source === 'existingPerson') {
+      const ancestor = data?.individuals[payload.ancestorPersonId];
+      ancestorName = ancestor?.givenName || ancestor?.name;
+    } else {
+      const fam = data?.families[payload.ancestorFamilyId];
+      const spouseId = fam?.husband ?? fam?.wife ?? null;
+      const spouse = spouseId ? data?.individuals[spouseId] : undefined;
+      ancestorName = spouse?.givenName || spouse?.name;
+    }
+
+    await withFormAction(async () => {
+      if (payload.source === 'newPerson') {
+        const newPerson = await createIndividual(payload.individual);
+        createdIndividualId = newPerson.id;
+        mintedFamilyOpts = payload.individual.sex === 'F'
+          ? { wifeId: newPerson.id }
+          : { husbandId: newPerson.id };
+        const fam = await createFamily(mintedFamilyOpts);
+        createdFamilyId = fam.id;
+        ancestorFamilyId = fam.id;
+      } else if (payload.source === 'existingPerson') {
+        const ancestor = data?.individuals[payload.ancestorPersonId];
+        mintedFamilyOpts = ancestor?.sex === 'F'
+          ? { wifeId: payload.ancestorPersonId }
+          : { husbandId: payload.ancestorPersonId };
+        const fam = await createFamily(mintedFamilyOpts);
+        createdFamilyId = fam.id;
+        ancestorFamilyId = fam.id;
+      }
+      if (!ancestorFamilyId) throw new Error('حدث خطأ');
+      const created = await createAncestryJump(jumpPayload(ancestorFamilyId));
+      createdJumpId = created.id;
+      setFormMode(null);
+      succeeded = true;
+    });
+
+    if (!succeeded || !onPushUndo || !createdJumpId || !ancestorFamilyId) return;
+    const label = buildUndoLabel({ kind: 'addAncestryJump', name: ancestorName });
+
+    // Single-call path: the couple already existed, so the jump row is the only
+    // thing this action created.
+    if (!createdFamilyId) {
+      const inverse = buildCreateAncestryJumpInverse({
+        workspaceId: wsId,
+        createdId: createdJumpId,
+        createPayload: jumpPayload(ancestorFamilyId),
+        treeId: activeTreeId,
+      });
+      onPushUndo({ label, workspaceId: wsId, undo: inverse.undo, redo: inverse.redo });
+      return;
+    }
+
+    // Composite path. Undo reverses jump → couple → person; redo replays them in
+    // creation order, re-capturing the new ids each time.
+    const individualForm = payload.source === 'newPerson' ? payload.individual : null;
+    const famOpts: { husbandId?: string; wifeId?: string } = mintedFamilyOpts ?? {};
+    let currentIndividualId: string | null = createdIndividualId;
+    let currentFamilyId: string = createdFamilyId;
+    let currentJumpId: string = createdJumpId;
+
+    const undoDelete = async (path: string) => {
+      const res = await apiFetch(`/api/workspaces/${wsId}/tree/${path}`, {
+        method: 'DELETE',
+        isUndo: true,
+        ...deleteInit,
+      });
+      if (!res.ok && res.status !== 204) throw new Error(`undo API error: ${res.status}`);
+    };
+    const undoPost = async (path: string, body: Record<string, unknown>) => {
+      const res = await apiFetch(`/api/workspaces/${wsId}/tree/${path}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(withTreeId(body)),
+        isUndo: true,
+      });
+      if (!res.ok) throw new Error(`undo API error: ${res.status}`);
+      return ((await res.json())?.data ?? {}) as { id?: string };
+    };
+
+    onPushUndo({
+      label,
+      workspaceId: wsId,
+      undo: async () => {
+        await undoDelete(`ancestry-jumps/${currentJumpId}`);
+        await undoDelete(`families/${currentFamilyId}`);
+        if (currentIndividualId) await undoDelete(`individuals/${currentIndividualId}`);
+      },
+      redo: async () => {
+        const opts = { ...famOpts };
+        if (individualForm) {
+          const ind = await undoPost('individuals', serializeIndividualForm(individualForm));
+          if (ind.id) {
+            currentIndividualId = ind.id;
+            if (individualForm.sex === 'F') opts.wifeId = ind.id;
+            else opts.husbandId = ind.id;
+          }
+        }
+        const fam = await undoPost('families', opts);
+        if (fam.id) currentFamilyId = fam.id;
+        const jump = await undoPost('ancestry-jumps', jumpPayload(currentFamilyId));
+        if (jump.id) currentJumpId = jump.id;
+      },
+    });
+  }, [
+    workspace, person, personId, data, isPointed, withFormAction, withTreeId, deleteInit,
+    createIndividual, createFamily, createAncestryJump, setFormMode, activeTreeId, onPushUndo,
+  ]);
+
+  const handleAncestryJumpUpdate = useCallback(async (jumpId: string, fields: AncestryJumpFields) => {
+    if (!workspace || isPointed) return;
+    const existing = data?.ancestryJumps?.[jumpId];
+    const before: Record<string, unknown> | null = existing ? {
+      generationsMin: existing.generationsMin,
+      generationsMax: existing.generationsMax,
+      notes: existing.notes || null,
+    } : null;
+    const after: Record<string, unknown> = {
+      generationsMin: fields.generationsMin,
+      generationsMax: fields.generationsMax,
+      notes: fields.notes || null,
+    };
+
+    let succeeded = false;
+    await withFormAction(async () => {
+      const res = await apiFetch(
+        `/api/workspaces/${workspace.workspaceId}/tree/ancestry-jumps/${jumpId}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(withTreeId(after)),
+        },
+      );
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.error ?? 'حدث خطأ');
+      }
+      setFormMode(null);
+      succeeded = true;
+    });
+
+    if (succeeded && onPushUndo && before) {
+      const inverse = buildUpdateAncestryJumpInverse({
+        workspaceId: workspace.workspaceId,
+        jumpId,
+        before,
+        after,
+        treeId: activeTreeId,
+      });
+      onPushUndo({
+        label: buildUndoLabel({ kind: 'updateAncestryJump' }),
+        workspaceId: workspace.workspaceId,
+        undo: inverse.undo,
+        redo: inverse.redo,
+      });
+    }
+  }, [workspace, isPointed, data, withFormAction, withTreeId, setFormMode, activeTreeId, onPushUndo]);
+
+  /** Removes the jump ROW only — never the ancestor, never his couple. */
+  const handleAncestryJumpDelete = useCallback(async (jumpId: string) => {
+    if (!workspace || isPointed) return;
+    const existing = data?.ancestryJumps?.[jumpId];
+    const snapshot: Record<string, unknown> | null = existing ? {
+      descendantId: existing.descendant,
+      ancestorFamilyId: existing.ancestorFamily,
+      generationsMin: existing.generationsMin,
+      generationsMax: existing.generationsMax,
+      notes: existing.notes || null,
+    } : null;
+
+    let succeeded = false;
+    await withFormAction(async () => {
+      const res = await apiFetch(
+        `/api/workspaces/${workspace.workspaceId}/tree/ancestry-jumps/${jumpId}`,
+        { method: 'DELETE', ...deleteInit },
+      );
+      if (!res.ok && res.status !== 204) {
+        const json = await res.json();
+        throw new Error(json.error ?? 'حدث خطأ');
+      }
+      setFormMode(null);
+      succeeded = true;
+    });
+
+    if (succeeded && onPushUndo && snapshot) {
+      const inverse = buildDeleteAncestryJumpInverse({
+        workspaceId: workspace.workspaceId,
+        deletedId: jumpId,
+        snapshot,
+        treeId: activeTreeId,
+      });
+      onPushUndo({
+        label: buildUndoLabel({ kind: 'deleteAncestryJump' }),
+        workspaceId: workspace.workspaceId,
+        undo: inverse.undo,
+        redo: inverse.redo,
+      });
+    }
+  }, [workspace, isPointed, data, withFormAction, deleteInit, setFormMode, activeTreeId, onPushUndo]);
+
+  // -------------------------------------------------------------------------
   // Move subtree
   // -------------------------------------------------------------------------
 
@@ -1234,6 +1515,9 @@ export function usePersonActions({
     handleFamilyEventSubmit,
     handleRadaaSubmit,
     handleRadaaDelete,
+    handleAncestryJumpSubmit,
+    handleAncestryJumpUpdate,
+    handleAncestryJumpDelete,
     handleDeleteClick,
     handleCascadeConfirm,
     unlinkSpouse,

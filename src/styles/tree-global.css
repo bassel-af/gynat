@@ -754,3 +754,31 @@
   font-weight: 500;
   color: var(--heritage-gold);
 }
+
+/* «قفزة نسب» (ancestry jump): a certain descent across an unrecorded — or
+   deliberately skipped — number of generations. Dashed, because the distance
+   is not drawn to scale; the stroke colour comes from the edge itself, so it
+   follows the user's tree colour settings exactly like a sibling parent edge.
+   The chip sits on the line and carries the stated range, when there is one. */
+.react-flow__edge.ancestry-jump .react-flow__edge-path {
+  stroke-linecap: round;
+}
+
+/* React Flow sizes the chip's background rect from the text's own `getBBox()`
+   and anchors both at the same origin. A `direction: rtl` on the text moves its
+   box to the other side of that origin, leaving the pill next to the words
+   instead of behind them — so the label stays in the LTR box and the Arabic
+   reorders itself through the bidi algorithm, which it does correctly here. */
+.react-flow__edge.ancestry-jump .react-flow__edge-text {
+  font-family: var(--heritage-font-arabic, inherit);
+  font-size: 11px;
+  fill: var(--heritage-gold, #c8a865);
+}
+
+.react-flow__edge.ancestry-jump .react-flow__edge-textbg {
+  fill: rgba(10, 14, 26, 0.85);
+  stroke: rgba(200, 168, 101, 0.55);
+  stroke-width: 1;
+  rx: 8;
+  ry: 8;
+}

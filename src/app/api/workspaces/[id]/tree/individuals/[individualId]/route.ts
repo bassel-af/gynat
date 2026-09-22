@@ -6,6 +6,7 @@ import {
   resolveTargetTreeOr404,
   getTreeIndividualDecrypted,
   touchTreeTimestamp,
+  pruneEmptyAncestryJumps,
 } from '@/lib/tree/queries';
 import { updateIndividualSchema } from '@/lib/tree/schemas';
 import { isPointedIndividualInWorkspace } from '@/lib/tree/branch-pointer-queries';
@@ -268,6 +269,12 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         children: { none: {} },
       },
     });
+
+    // 8b. «قفزة نسب»: a jump whose ancestor couple lost BOTH spouses now points
+    // at nothing. Step 8 only sweeps empty families that are also childless, so
+    // an ancestor family that still has children survives with two null slots.
+    // Prune inside the same transaction — covers the single AND cascade paths.
+    await pruneEmptyAncestryJumps(tree.id, tx as unknown as Parameters<typeof pruneEmptyAncestryJumps>[1]);
 
     // 9. Audit log
     const deleteAction = affectedIds.size > 0 ? 'cascade_delete' : 'delete';

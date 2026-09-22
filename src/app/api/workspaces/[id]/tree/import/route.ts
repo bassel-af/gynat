@@ -107,6 +107,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             individualCount: seedResult.individualCount,
             familyCount: seedResult.familyCount,
             radaFamilyCount: seedResult.radaFamilyCount,
+            ancestryJumpCount: seedResult.ancestryJumpCount,
           },
           workspaceKey,
         ),
@@ -120,6 +121,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       individualCount: seedResult.individualCount,
       familyCount: seedResult.familyCount,
       radaFamilyCount: seedResult.radaFamilyCount,
+      ancestryJumpCount: seedResult.ancestryJumpCount,
     },
     { status: 201 },
   )

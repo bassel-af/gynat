@@ -1,6 +1,6 @@
 import type { Node, Edge } from '@xyflow/react';
 
-import type { GedcomData, Individual } from '@/lib/gedcom';
+import type { AncestryJump, GedcomData, Individual } from '@/lib/gedcom';
 import {
   getDisplayName,
   getAllDescendants,
@@ -8,7 +8,65 @@ import {
   hasExternalFamily,
   computeGraftDescriptors,
 } from '@/lib/gedcom';
+import { buildJumpIndex } from '@/lib/gedcom/graph';
 import { getLayoutedElements, type GraftNodeBuilder } from './layout';
+
+// ---------------------------------------------------------------------------
+// «قفزة نسب» (ancestry jump) on the canvas
+//
+// A jump contributes exactly ONE extra edge, from the ancestor couple's node to
+// the jump descendant. `getLayoutedElements` derives its parent→children map
+// from the `edges` array and finds the root as "the node with no incoming
+// edge", so that single edge is enough to hang the descendant one generation
+// under the distant ancestor — with no change to `layout.ts` whatsoever.
+//
+// The ancestor renders as an ordinary `PersonCard` and HIS real children render
+// as ordinary siblings of the jump descendant, which is genealogically true:
+// they are the descendant's distant uncles.
+// ---------------------------------------------------------------------------
+
+/** The feature's name, verbatim. Never says the intermediate names are unknown. */
+const JUMP_LABEL = 'قفزة نسب';
+
+/**
+ * Arabic number-noun agreement for «جيل»: 3–10 take the broken plural «أجيال»,
+ * everything else the accusative singular «جيلاً». Plain Western digits, as
+ * everywhere else in the app.
+ */
+function generationWord(n: number): string {
+  return n >= 3 && n <= 10 ? 'أجيال' : 'جيلاً';
+}
+
+/**
+ * The edge chip: «قفزة نسب», plus the stated gap when there is one. An unstated
+ * range is the honest default and simply leaves the chip bare.
+ */
+export function formatAncestryJumpLabel(range: {
+  generationsMin: number | null;
+  generationsMax: number | null;
+}): string {
+  const { generationsMin: min, generationsMax: max } = range;
+  if (min != null && max != null) return `${JUMP_LABEL} · بين ${min} و${max} ${generationWord(max)}`;
+  if (min != null) return `${JUMP_LABEL} · ${min} ${generationWord(min)} فأكثر`;
+  if (max != null) return `${JUMP_LABEL} · حتى ${max} ${generationWord(max)}`;
+  return JUMP_LABEL;
+}
+
+/**
+ * The root the canvas actually draws from.
+ *
+ * A «قفزة نسب» puts someone ABOVE the requested person, so opening the tree on
+ * عدنان must show إسماعيل over him. We climb ONLY when a jump is actually
+ * crossed: when the jump-aware climb lands where the ordinary one does, the
+ * requested root is returned untouched, so every jump-free tree behaves exactly
+ * as it does today.
+ */
+export function resolveCanvasRoot(data: GedcomData, rootId: string): string {
+  const withJumps = findTopmostAncestor(data, rootId, { includeJumps: true });
+  if (!withJumps) return rootId;
+  const withoutJumps = findTopmostAncestor(data, rootId) ?? rootId;
+  return withJumps === withoutJumps ? rootId : withJumps;
+}
 
 // Highlight state for lineage tracing
 export interface HighlightState {
@@ -283,7 +341,7 @@ function detectSisterWifeClusters(
  */
 export function buildTreeData(
   data: GedcomData,
-  rootId: string,
+  requestedRootId: string,
   maxDepth: number,
   searchQuery: string,
   highlightState: HighlightState,
@@ -296,8 +354,15 @@ export function buildTreeData(
   const edges: Edge[] = [];
   const visited = new Set<string>();
 
-  // Compute root descendants once for badge detection
-  const rootDescendants = getAllDescendants(data, rootId);
+  // A «قفزة نسب» puts someone above the requested person — the canvas (and only
+  // the canvas) climbs it. Unchanged for every jump-free tree.
+  const rootId = resolveCanvasRoot(data, requestedRootId);
+  const jumpIndex = buildJumpIndex(data);
+
+  // Compute root descendants once for badge detection. Jump-aware here too, so
+  // a person hanging under a jump counts as part of this canvas rather than as
+  // an outsider with an "external family".
+  const rootDescendants = getAllDescendants(data, rootId, { includeJumps: true });
   rootDescendants.add(rootId);
 
   // Tree-wide claim set for descendants. When a child is claimed by the
@@ -567,6 +632,29 @@ export function buildTreeData(
       }
     }
 
+    // «قفزة نسب»: every jump naming one of this person's families as its
+    // distant-ancestor couple hangs its descendant here, one generation down,
+    // beside that family's real children — who are, truthfully, the jump
+    // descendant's distant uncles. The jump object is kept aside so the edge
+    // loop below draws the dashed chipped edge instead of a parent edge.
+    const jumpChildren = new Map<string, AncestryJump>();
+    for (const fam of personFamilies) {
+      const jumps = jumpIndex.byAncestorFamily.get(fam.id);
+      if (!jumps || jumps.length === 0) continue;
+      const spouseId = fam.husband === personId ? fam.wife : fam.husband;
+      const spouseIndex = spouseId ? spouseIds.indexOf(spouseId) : -1;
+      const edgeColor = SPOUSE_EDGE_COLORS[Math.max(0, spouseIndex) % SPOUSE_EDGE_COLORS.length];
+      const sourceHandle = spouseIndex >= 0 ? `spouse-${spouseIndex}` : 'default';
+      for (const jump of jumps) {
+        const descendant = data.individuals[jump.descendant];
+        if (!descendant || descendant.isPrivate) continue;
+        if (claimedDescendants.has(jump.descendant)) continue;
+        claimedDescendants.add(jump.descendant);
+        jumpChildren.set(jump.descendant, jump);
+        allChildren.push({ childId: jump.descendant, spouseIndex, edgeColor, sourceHandle });
+      }
+    }
+
     // Sort children by spouse index first, then by birth year. Cluster
     // surrogate husbands use their eldest sister's birth year as their
     // ordering key (clusterBirthYearOverride) so they slot into F's siblings
@@ -591,6 +679,29 @@ export function buildTreeData(
     // Create edges and add children to queue (BFS)
     const surrogatesHere = clusterSurrogates.get(personId);
     for (const { childId, spouseIndex, edgeColor, sourceHandle } of allChildren) {
+      // «قفزة نسب»: one dashed, chipped, built-in bezier — never a parent edge.
+      // `source` is the dequeued spouse who owns this family, which IS
+      // `family.husband ?? family.wife` in the ordinary husband-rooted case and
+      // is always a node that exists on this canvas.
+      const jump = jumpChildren.get(childId);
+      if (jump) {
+        edges.push({
+          id: `jump-${jump.id}`,
+          source: personId,
+          sourceHandle,
+          target: childId,
+          type: 'bezier',
+          className: 'ancestry-jump',
+          label: formatAncestryJumpLabel(jump),
+          style: { stroke: edgeColor, strokeWidth: 1.6, opacity: 0.6, strokeDasharray: '7 6' },
+          selectable: false,
+          focusable: false,
+          pathOptions: { borderRadius: 8 },
+        } as Edge);
+        queue.push([childId, depth + 1]);
+        continue;
+      }
+
       // Cap offset to avoid exceeding the vertical gap between generations
       const edgeOffset = Math.min(20 + spouseIndex * 15, 50);
 

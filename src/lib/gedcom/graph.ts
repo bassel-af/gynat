@@ -1,20 +1,75 @@
-import type { Individual, Family, GedcomData } from './types';
+import type { Individual, Family, GedcomData, AncestryJump } from './types';
 import { stripArabicDiacritics } from '../utils/search';
+
+// ---------------------------------------------------------------------------
+// «قفزة نسب» (ancestry jump) traversal support
+// ---------------------------------------------------------------------------
+
+/**
+ * Options shared by the graph traversals. Every flag DEFAULTS OFF, so a caller
+ * that knows nothing about jumps keeps exactly today's behavior — fail-closed:
+ * the worst case is a missing link, never a false parent claim.
+ */
+export interface TraversalOptions {
+  /**
+   * Walk «قفزة نسب» edges as if they were parent→child edges.
+   * DEFAULT false. Only surfaces that deliberately opt in see the link.
+   */
+  includeJumps?: boolean;
+}
+
+/**
+ * Two lookups every jump-aware consumer needs, built once in O(J) rather than
+ * rescanning `data.ancestryJumps` inside a traversal loop.
+ */
+export interface JumpIndex {
+  /** descendant individual id -> the jump */
+  byDescendant: Map<string, AncestryJump>;
+  /** ancestor family id -> jumps hanging off it */
+  byAncestorFamily: Map<string, AncestryJump[]>;
+}
+
+/** Build a {@link JumpIndex} from a payload. Pure; empty when there are none. */
+export function buildJumpIndex(data: GedcomData): JumpIndex {
+  const byDescendant = new Map<string, AncestryJump>();
+  const byAncestorFamily = new Map<string, AncestryJump[]>();
+
+  for (const jump of Object.values(data.ancestryJumps ?? {})) {
+    // v1 allows at most one jump per descendant; if malformed data carries
+    // more, the first one wins (deterministic, matches the parser's rule).
+    if (!byDescendant.has(jump.descendant)) {
+      byDescendant.set(jump.descendant, jump);
+    }
+    const list = byAncestorFamily.get(jump.ancestorFamily) ?? [];
+    list.push(jump);
+    byAncestorFamily.set(jump.ancestorFamily, list);
+  }
+
+  return { byDescendant, byAncestorFamily };
+}
 
 /**
  * Get all ancestors of a person (parents, grandparents, etc.)
  * Returns a Set of individual IDs (does not include the person themselves)
  */
-export function getAllAncestors(data: GedcomData, personId: string): Set<string> {
+export function getAllAncestors(
+  data: GedcomData,
+  personId: string,
+  opts: TraversalOptions = {},
+): Set<string> {
   const ancestors = new Set<string>();
   const { individuals, families } = data;
+  const jumpIndex = opts.includeJumps ? buildJumpIndex(data) : null;
 
   function traverse(currentId: string) {
     const person = individuals[currentId];
     if (!person) return;
 
-    // Get the family where this person is a child
-    const familyId = person.familyAsChild;
+    // Get the family where this person is a child. When there is none, a
+    // «قفزة نسب» may still name an ancestor COUPLE above him — the jump
+    // ancestors ARE ancestors, they are simply an unknown distance away.
+    const familyId =
+      person.familyAsChild ?? jumpIndex?.byDescendant.get(currentId)?.ancestorFamily ?? null;
     if (!familyId) return;
 
     const family = families[familyId];
@@ -38,9 +93,15 @@ export function getAllAncestors(data: GedcomData, personId: string): Set<string>
  * Get all descendants of a person (children, grandchildren, etc.)
  * Returns a Set of individual IDs
  */
-export function getAllDescendants(data: GedcomData, rootId: string): Set<string> {
+export function getAllDescendants(
+  data: GedcomData,
+  rootId: string,
+  opts: TraversalOptions = {},
+): Set<string> {
   const descendants = new Set<string>();
   const { individuals, families } = data;
+  // Built once per call, not per node. Empty (and unused) unless opted in.
+  const jumpIndex = opts.includeJumps ? buildJumpIndex(data) : null;
 
   function traverse(personId: string) {
     const person = individuals[personId];
@@ -55,6 +116,18 @@ export function getAllDescendants(data: GedcomData, rootId: string): Set<string>
         if (!descendants.has(childId)) {
           descendants.add(childId);
           traverse(childId);
+        }
+      }
+
+      // «قفزة نسب»: anyone whose jump names THIS family as their distant
+      // ancestor couple is a descendant of this person, across the gap. The
+      // `descendants` visited-set below makes the walk cycle-safe even when
+      // the stored jumps form a loop.
+      if (!jumpIndex) continue;
+      for (const jump of jumpIndex.byAncestorFamily.get(familyId) ?? []) {
+        if (!descendants.has(jump.descendant)) {
+          descendants.add(jump.descendant);
+          traverse(jump.descendant);
         }
       }
     }
@@ -72,7 +145,8 @@ export function getAllDescendants(data: GedcomData, rootId: string): Set<string>
 export function getTreeVisibleIndividuals(
   data: GedcomData,
   rootId: string,
-  excludePrivate = false
+  excludePrivate = false,
+  opts: TraversalOptions = {},
 ): Set<string> {
   const visible = new Set<string>();
   const { individuals, families } = data;
@@ -86,8 +160,8 @@ export function getTreeVisibleIndividuals(
   // Add root
   visible.add(rootId);
 
-  // Get all descendants
-  const descendants = getAllDescendants(data, rootId);
+  // Get all descendants (crossing «قفزة نسب» edges only when opted in)
+  const descendants = getAllDescendants(data, rootId, opts);
   for (const id of descendants) {
     visible.add(id);
   }
@@ -134,10 +208,15 @@ export function getTreeVisibleIndividuals(
  *
  * Used to scope the side panel's people list and stat counts.
  */
-export function getConnectedIndividuals(data: GedcomData, rootId: string): Set<string> {
+export function getConnectedIndividuals(
+  data: GedcomData,
+  rootId: string,
+  opts: TraversalOptions = {},
+): Set<string> {
   const { individuals, families } = data;
   if (!individuals[rootId]) return new Set<string>();
 
+  const jumpIndex = opts.includeJumps ? buildJumpIndex(data) : null;
   const visited = new Set<string>([rootId]);
   const queue: string[] = [rootId];
 
@@ -150,12 +229,22 @@ export function getConnectedIndividuals(data: GedcomData, rootId: string): Set<s
     // child (blood). All members of those families are direct neighbours.
     const familyIds = [...person.familiesAsSpouse];
     if (person.familyAsChild) familyIds.push(person.familyAsChild);
+    // A «قفزة نسب» is the same kind of edge in both directions: the ancestor
+    // couple is a neighbouring family of its jump descendant, and every jump
+    // descendant hanging off one of this person's families is a neighbour too.
+    // Keeping both sides in step is what makes the sidebar people-list and the
+    // stat counts agree with the canvas.
+    const ownJump = jumpIndex?.byDescendant.get(currentId);
+    if (ownJump) familyIds.push(ownJump.ancestorFamily);
 
     for (const familyId of familyIds) {
       const family = families[familyId];
       if (!family) continue;
 
       const members = [family.husband, family.wife, ...family.children];
+      for (const jump of jumpIndex?.byAncestorFamily.get(familyId) ?? []) {
+        members.push(jump.descendant);
+      }
       for (const memberId of members) {
         if (memberId && individuals[memberId] && !visited.has(memberId)) {
           visited.add(memberId);
@@ -175,8 +264,12 @@ export function getConnectedIndividuals(data: GedcomData, rootId: string): Set<s
  * `TreeContext.visiblePersonIds` holds — kept here so navigation logic can ask
  * "would this person be on screen under root X?" without the React layer.
  */
-export function getCanvasVisibleIndividuals(data: GedcomData, rootId: string): Set<string> {
-  const visible = getTreeVisibleIndividuals(data, rootId);
+export function getCanvasVisibleIndividuals(
+  data: GedcomData,
+  rootId: string,
+  opts: TraversalOptions = {},
+): Set<string> {
+  const visible = getTreeVisibleIndividuals(data, rootId, false, opts);
   const grafts = computeGraftDescriptors(data, rootId);
   for (const descriptors of grafts.values()) {
     for (const graft of descriptors) {
@@ -250,9 +343,10 @@ export function resolveNavigationRoot(
   data: GedcomData,
   clickedId: string,
   currentRootId: string,
+  opts: TraversalOptions = {},
 ): string {
   const { individuals } = data;
-  const ownFamilyRoot = findTopmostAncestor(data, clickedId) ?? clickedId;
+  const ownFamilyRoot = findTopmostAncestor(data, clickedId, opts) ?? clickedId;
   if (!individuals[clickedId] || !individuals[currentRootId]) return ownFamilyRoot;
 
   const candidates: string[] = [];
@@ -261,21 +355,21 @@ export function resolveNavigationRoot(
   };
 
   // 1. The whole family currently in view.
-  add(findTopmostAncestor(data, currentRootId) ?? currentRootId);
+  add(findTopmostAncestor(data, currentRootId, opts) ?? currentRootId);
 
   // 2. Families along the chain from the current view toward the clicked person,
   //    added from the current-view side inward (most context first).
-  const currentVisible = getCanvasVisibleIndividuals(data, currentRootId);
+  const currentVisible = getCanvasVisibleIndividuals(data, currentRootId, opts);
   const path = shortestFamilyPath(data, clickedId, currentVisible);
   for (let i = path.length - 1; i >= 0; i--) {
-    add(findTopmostAncestor(data, path[i]) ?? path[i]);
+    add(findTopmostAncestor(data, path[i], opts) ?? path[i]);
   }
 
   // 3. Guaranteed fallback: the clicked person's own family always draws them.
   add(ownFamilyRoot);
 
   for (const root of candidates) {
-    if (getCanvasVisibleIndividuals(data, root).has(clickedId)) return root;
+    if (getCanvasVisibleIndividuals(data, root, opts).has(clickedId)) return root;
   }
   return ownFamilyRoot;
 }
@@ -308,7 +402,10 @@ export function isDisplayable(person: Individual | undefined | null): boolean {
 /**
  * Build adjacency list: personId -> [childIds]
  */
-export function buildChildrenGraph(data: GedcomData): Map<string, string[]> {
+export function buildChildrenGraph(
+  data: GedcomData,
+  opts: TraversalOptions = {},
+): Map<string, string[]> {
   const { individuals, families } = data;
   const childrenOf = new Map<string, string[]>();
 
@@ -332,6 +429,25 @@ export function buildChildrenGraph(data: GedcomData): Map<string, string[]> {
         }
       }
       childrenOf.set(parentId, children);
+    }
+  }
+
+  // «قفزة نسب»: the descendant hangs off BOTH spouses of the ancestor couple,
+  // exactly like a recorded child, so descendant counts (and therefore root
+  // selection) flow across the gap. Same de-dupe guard as the family loop — a
+  // person who is both a recorded child and a jump descendant appears once.
+  if (opts.includeJumps) {
+    for (const jump of Object.values(data.ancestryJumps ?? {})) {
+      const family = families[jump.ancestorFamily];
+      if (!family) continue;
+      for (const parentId of [family.husband, family.wife]) {
+        if (!parentId) continue;
+        const children = childrenOf.get(parentId) || [];
+        if (!children.includes(jump.descendant)) {
+          children.push(jump.descendant);
+        }
+        childrenOf.set(parentId, children);
+      }
     }
   }
 
@@ -491,13 +607,28 @@ export function extractSubtree(data: GedcomData, rootId: string): GedcomData {
  *
  * Uses a visited set and max depth of 100 to guard against circular references.
  */
-export function findTopmostAncestor(data: GedcomData, personId: string): string | null {
+export function findTopmostAncestor(
+  data: GedcomData,
+  personId: string,
+  opts: TraversalOptions = {},
+): string | null {
   const { individuals, families } = data;
   const person = individuals[personId];
   if (!person) return null;
 
-  // If person has no familyAsChild, they are already a root
-  if (!person.familyAsChild) return null;
+  const jumpIndex = opts.includeJumps ? buildJumpIndex(data) : null;
+
+  /** The one parent to climb to from `family`, preferring the husband. */
+  const climbableParent = (familyId: string | null | undefined): string | null => {
+    if (!familyId) return null;
+    const family = families[familyId];
+    if (!family) return null;
+    const parentId = family.husband ?? family.wife;
+    return parentId && individuals[parentId] ? parentId : null;
+  };
+
+  // If person has no familyAsChild AND no «قفزة نسب», they are already a root
+  if (!person.familyAsChild && !jumpIndex?.byDescendant.has(personId)) return null;
 
   const visited = new Set<string>();
   let currentId = personId;
@@ -509,22 +640,15 @@ export function findTopmostAncestor(data: GedcomData, personId: string): string 
 
     visited.add(currentId);
 
-    const familyId = current.familyAsChild;
-    if (!familyId) {
-      // Reached a person with no parents — this is the topmost ancestor
-      return currentId === personId ? null : currentId;
-    }
+    // A recorded parent wins; otherwise (no family, a dangling family, or a
+    // family with no surviving spouse) a «قفزة نسب» may still carry the climb
+    // across the gap to the distant ancestor couple.
+    const parentId =
+      climbableParent(current.familyAsChild) ??
+      climbableParent(jumpIndex?.byDescendant.get(currentId)?.ancestorFamily);
 
-    const family = families[familyId];
-    if (!family) {
-      // Family reference is dangling — treat current as topmost
-      return currentId === personId ? null : currentId;
-    }
-
-    // Pick a parent (prefer husband, fall back to wife)
-    const parentId = family.husband ?? family.wife;
-    if (!parentId || !individuals[parentId]) {
-      // Family has no parent records — treat current as topmost
+    if (!parentId) {
+      // Nothing above this person — they are the topmost ancestor
       return currentId === personId ? null : currentId;
     }
 

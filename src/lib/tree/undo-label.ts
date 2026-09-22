@@ -28,7 +28,10 @@ export type UndoAction =
   | { kind: 'updateRadaFamily' }
   | { kind: 'deleteRadaFamily' }
   | { kind: 'addRadaChild'; name?: string }
-  | { kind: 'removeRadaChild'; name?: string };
+  | { kind: 'removeRadaChild'; name?: string }
+  | { kind: 'addAncestryJump'; name?: string }
+  | { kind: 'updateAncestryJump' }
+  | { kind: 'deleteAncestryJump' };
 
 function withName(bareLabel: string, prefixWithName: string, name?: string): string {
   if (!name) return bareLabel;
@@ -100,5 +103,12 @@ function renderLabel(action: UndoAction): string {
       return withName('إضافة ابن رضاعة', 'إضافة ابن رضاعة', action.name);
     case 'removeRadaChild':
       return withName('إزالة ابن رضاعة', 'إزالة ابن رضاعة', action.name);
+
+    case 'addAncestryJump':
+      return action.name ? `قفزة نسب إلى ${action.name}` : 'إضافة قفزة نسب';
+    case 'updateAncestryJump':
+      return 'تعديل قفزة نسب';
+    case 'deleteAncestryJump':
+      return 'حذف قفزة نسب';
   }
 }

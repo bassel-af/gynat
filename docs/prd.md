@@ -189,7 +189,7 @@ The family tree belongs to the workspace and is shared by all workspace members.
 
 - **Import**: workspace admin or `tree_editor` can upload a `.ged` file to populate the tree (empty-tree only in v1)
 - **Export**: any workspace member can export the full tree as a `.ged` file at any time (GEDCOM 5.5.1 and 7.0)
-- Islamic extensions supported on both sides: `@#DHIJRI@` calendar escape, MARC/MARR/DIV, `_UMM_WALAD`, `_RADA_*`, `_KUNYA`
+- Islamic extensions supported on both sides: `@#DHIJRI@` calendar escape, MARC/MARR/DIV, `_UMM_WALAD`, `_RADA_*`, `_KUNYA`, and the «قفزة نسب» ancestry jump (standard `ASSO`/`RELA ancestor` or `ROLE _ANCESTOR` + custom `_ANC_FAM`, `_GAP_MIN`/`_GAP_MAX`; see §5.12)
 
 ### 5.5 Policy Page
 
@@ -236,8 +236,26 @@ The family tree belongs to the workspace and is shared by all workspace members.
 ### 5.11 Data Encryption
 
 - **Layer 1 (disk)**: LUKS2-encrypted volume for the app, database, and backups. Protects against stolen disks, leaked backups, physical theft.
-- **Layer 2 (application)**: per-workspace AES-256-GCM data keys wrapped by a master key held in `WORKSPACE_MASTER_KEY`. Sensitive Individual, Family, RadaFamily, and TreeEditLog fields are stored encrypted. Ciphertext never crosses workspace boundaries — branch pointer deep copies re-encrypt with the target workspace's key.
+- **Layer 2 (application)**: per-workspace AES-256-GCM data keys wrapped by a master key held in `WORKSPACE_MASTER_KEY`. Sensitive Individual, Family, RadaFamily, AncestryJump, and TreeEditLog fields are stored encrypted. Ciphertext never crosses workspace boundaries — branch pointer deep copies re-encrypt with the target workspace's key.
 - **Not end-to-end**: platform admins with live server access can still read data. This is explicit — see §1 of this PRD and the encryption runbook (`docs/encryption.md`).
+
+### 5.12 Ancestry Jump («قفزة نسب»)
+
+**Status: shipped in code 2026-09-22** (built test-first, security-reviewed, e2e-verified against real infrastructure); **not yet deployed to production**. Design record: `docs/specs/ancestry-jump-spec.md`; research and owner rulings: `docs/ancestor-gap-research-notes.md`.
+
+- **Problem**: a person's descent from a distant ancestor is certain, but the generations between are not recorded — or the family simply does not want them in its tree. The canonical case is Quraysh: عدنان ⋯ إسماعيل. Without a dedicated relation the only options were inventing filler people or drawing a false parent edge; both publish a claim nobody made.
+- **What it is**: a first-class link from a person to a distant ancestor couple — never a fake parent edge, never fabricated people. On the canvas: a dashed edge with a «قفزة نسب» chip, the ancestor drawn as an ordinary card above (spouse beside when known), the top of the tree becoming the furthest ancestor. On the person page: a «قفزة نسب» divider in the name chain plus a small ancestor block.
+- **Product rules** (owner decisions, 2026-09-22 — do not re-open):
+  - The name everywhere — feature, button, canvas chip, audit strings, GEDCOM note — is **«قفزة نسب»**. The label never claims the skipped names are unknown («أسماء لم تُحفظ» / «أجيال غير معروفة» were rejected): a user may jump over people whose names are known simply because they are not of interest in his tree. "Jump" is neutral about why.
+  - The name chain uses **«من وَلَد»** at the jump only when the distant **ancestor** is a man («… بن عدنان، من وَلَد إسماعيل»). The sex of the person being linked is irrelevant — a woman jumps to a male ancestor the same way. When only a female ancestor is known she is not put in the name chain, but appears everywhere else (canvas, person page, search, export).
+  - A woman or a couple is handled exactly like normal parents: both known → link to the couple; only one known → link to that one. Nothing new.
+  - Allowed only on a person with **no known father or mother** (the top of a known line); **one jump per person**.
+  - Optional generation range (min / max — either or both may be empty). No certainty label (صحيح/مقبول/…) — not asked for. No workspace toggle.
+  - The button opens two paths: «شخص جديد» and «شخص موجود في الشجرة» («إضافة/ربط» wording rejected — it implies one or the other). The new-ancestor form has a blank family name: the ancestor's house is not this family's.
+  - Public trees: search engines get schema.org `relatedTo` only, never `parent`. A jump is withheld from the public tree whenever the person or any spouse of the ancestor couple is private (fail-closed).
+  - GEDCOM: exported on 5.5.1 and 7.0 with a plain-Arabic `NOTE` so software that drops extensions still shows the claim as text, and never as a parent-child link. Documented on `/islamic-gedcom`.
+- **Scholarly framing**: the only line of scholarship used in product copy is **«الأمر عندنا الإمساك عمّا وراء عدنان إلى إسماعيل»**. Never use «كذب النسابون» (graded موضوع) or «إذا بلغ نسبي عدنان فأمسكوا» (unsourced).
+- **Later, separately**: register `_ANCESTOR` in the FamilySearch GEDCOM extension registry.
 
 ---
 
@@ -292,6 +310,11 @@ RadaFamily
 
 RadaFamilyChild
   rada_family_id, individual_id
+
+AncestryJump  -- «قفزة نسب»: descendant → distant ancestor COUPLE (always a Family)
+  id, tree_id, gedcom_id?, descendant_id, ancestor_family_id,
+  generations_min?, generations_max?, (encrypted) notes, created_by?, created_at
+  -- unique (tree_id, descendant_id): one jump per person
 
 BranchShareToken
   id, source_workspace_id, hashed_token (SHA-256), root_individual_id,

@@ -144,6 +144,7 @@ describe('persistDeepCopy', () => {
         ['old-fam', 'new-fam'],
       ]),
       stitchFamily: null,
+      ancestryJumps: {},
       reuseStitch: null,
     };
   }
@@ -270,6 +271,7 @@ describe('persistDeepCopy', () => {
       families: {},
       idMap: new Map(),
       stitchFamily: null,
+      ancestryJumps: {},
       reuseStitch: null,
     };
 

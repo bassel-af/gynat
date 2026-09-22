@@ -1,8 +1,9 @@
-import type { Individual, Family, GedcomData, RadaFamily } from '@/lib/gedcom/types'
+import type { Individual, Family, GedcomData, RadaFamily, AncestryJump } from '@/lib/gedcom/types'
 import {
   decryptIndividualRow,
   decryptFamilyRow,
   decryptRadaFamilyRow,
+  decryptAncestryJumpRow,
 } from '@/lib/tree/encryption'
 
 // ---------------------------------------------------------------------------
@@ -208,12 +209,38 @@ export interface DecryptedRadaFamily {
   children: DbRadaFamilyChild[]
 }
 
+export interface DbAncestryJump {
+  id: string
+  treeId: string
+  gedcomId: string | null
+  descendantId: string
+  ancestorFamilyId: string
+  generationsMin: number | null
+  generationsMax: number | null
+  notes: Enc
+  createdAt: Date
+}
+
+/** Plaintext shape after `decryptAncestryJumpRow`. Exported for test fixtures. */
+export interface DecryptedAncestryJump {
+  id: string
+  treeId: string
+  gedcomId: string | null
+  descendantId: string
+  ancestorFamilyId: string
+  generationsMin: number | null
+  generationsMax: number | null
+  notes: string | null
+  createdAt: Date
+}
+
 export interface DbTree {
   id: string
   workspaceId: string
   individuals: DbIndividual[]
   families: DbFamily[]
   radaFamilies?: DbRadaFamily[]
+  ancestryJumps?: DbAncestryJump[]
 }
 
 // ---------------------------------------------------------------------------
@@ -228,6 +255,22 @@ export function mapRadaFamily(dbRada: DecryptedRadaFamily): RadaFamily {
     fosterMother: dbRada.fosterMotherId ?? null,
     children: dbRada.children.map((c) => c.individualId),
     notes: dbRada.notes ?? '',
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Ancestry jump mapping
+// ---------------------------------------------------------------------------
+
+export function mapAncestryJump(row: DecryptedAncestryJump): AncestryJump {
+  return {
+    id: row.id,
+    type: '_ANC_JUMP',
+    descendant: row.descendantId,
+    ancestorFamily: row.ancestorFamilyId,
+    generationsMin: row.generationsMin,
+    generationsMax: row.generationsMax,
+    notes: row.notes ?? '',
   }
 }
 
@@ -285,6 +328,8 @@ export function dbTreeToGedcomData(
     families[dbFam.id] = mapFamily(decrypted)
   }
 
+  const result: GedcomData = { individuals, families }
+
   // Map rada families (optional)
   if (dbTree.radaFamilies && dbTree.radaFamilies.length > 0) {
     const radaFamilies: Record<string, RadaFamily> = {}
@@ -308,10 +353,37 @@ export function dbTreeToGedcomData(
       }
     }
 
-    return { individuals, families, radaFamilies }
+    result.radaFamilies = radaFamilies
   }
 
-  return { individuals, families }
+  // Map ancestry jumps («قفزة نسب») — optional
+  if (dbTree.ancestryJumps && dbTree.ancestryJumps.length > 0) {
+    const ancestryJumps: Record<string, AncestryJump> = {}
+
+    for (const dbJump of dbTree.ancestryJumps) {
+      const decrypted = decryptAncestryJumpRow(dbJump, workspaceKey) as unknown as DecryptedAncestryJump
+      const jump = mapAncestryJump(decrypted)
+      ancestryJumps[jump.id] = jump
+
+      // Back-references (mirrors radaFamiliesAsChild above). DANGLING-REFERENCE
+      // RULE: a jump whose descendant or ancestor family is absent from this
+      // payload (possible on a borrowed/extracted subtree) is still emitted,
+      // but leaves no back-reference. Every consumer resolves THROUGH the
+      // back-references, so a dangling jump is inert rather than a crash.
+      if (individuals[jump.descendant]) {
+        individuals[jump.descendant].ancestryJumpAsDescendant = jump.id
+      }
+      if (families[jump.ancestorFamily]) {
+        const list = families[jump.ancestorFamily].ancestryJumpsAsAncestor ?? []
+        list.push(jump.id)
+        families[jump.ancestorFamily].ancestryJumpsAsAncestor = list
+      }
+    }
+
+    result.ancestryJumps = ancestryJumps
+  }
+
+  return result
 }
 
 // ---------------------------------------------------------------------------
@@ -436,6 +508,11 @@ export function redactPrivateIndividuals(data: GedcomData): GedcomData {
 
   const result: GedcomData = { individuals: redacted, families: data.families }
   if (data.radaFamilies) result.radaFamilies = data.radaFamilies
+  // «قفزة نسب» passes through UNCHANGED on the member surface, exactly like
+  // radaFamilies: this redactor only blanks an individual's PII and keeps
+  // structure. Members are inside the workspace, so the jump and its notes
+  // stay. The PUBLIC surface is a different path with a fail-closed rule.
+  if (data.ancestryJumps) result.ancestryJumps = data.ancestryJumps
   return result
 }
 

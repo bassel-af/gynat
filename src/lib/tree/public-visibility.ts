@@ -13,7 +13,7 @@
  * deterministic given an explicit `now`.
  */
 
-import type { GedcomData, Individual } from '@/lib/gedcom/types'
+import type { GedcomData, Individual, Family, AncestryJump } from '@/lib/gedcom/types'
 import { INTERNAL_INDIVIDUAL_KEYS } from '@/lib/gedcom/types'
 import type {
   CheckpointPerson,
@@ -194,5 +194,55 @@ export function redactForPublic(
 
   const result: GedcomData = { individuals, families: data.families }
   if (data.radaFamilies) result.radaFamilies = data.radaFamilies
+
+  // «قفزة نسب» — FAIL-CLOSED. A jump is a published lineage CLAIM about three
+  // people (the descendant plus the ancestor couple), so the whole row is
+  // dropped unless every one of them survives redaction. A private person must
+  // never be inferable as the end of a published claim, and a half-drawn couple
+  // is a structural oracle: a surviving «من وَلَد إسماعيل» next to a hidden
+  // spouse publishes that the hidden person is إسماعيل's wife. Rather than
+  // half-publish, drop.
+  const kept: Record<string, AncestryJump> = {}
+  for (const [id, jump] of Object.entries(data.ancestryJumps ?? {})) {
+    const descendant = individuals[jump.descendant]
+    if (!descendant || descendant.publicDisplay === 'redacted') continue
+    const family = data.families[jump.ancestorFamily]
+    if (!family) continue
+    const spouses = [family.husband, family.wife].filter(Boolean) as string[]
+    if (spouses.length === 0) continue
+    if (spouses.some((sid) => !individuals[sid] || individuals[sid].publicDisplay === 'redacted')) {
+      continue
+    }
+    kept[id] = jump
+  }
+  if (Object.keys(kept).length > 0) result.ancestryJumps = kept
+
+  // Every back-reference to a jump that did NOT survive goes with it, or a
+  // public consumer dereferences an id that is not in the payload. Individuals
+  // are already per-person copies; families are shared with the input, so the
+  // affected ones are copied on write to keep this function pure.
+  for (const person of Object.values(individuals)) {
+    if (person.ancestryJumpAsDescendant && !kept[person.ancestryJumpAsDescendant]) {
+      delete person.ancestryJumpAsDescendant
+    }
+  }
+  let families = result.families
+  let familiesCopied = false
+  for (const [famId, family] of Object.entries(families)) {
+    const refs = family.ancestryJumpsAsAncestor
+    if (!refs) continue
+    const pruned = refs.filter((id) => kept[id])
+    if (pruned.length === refs.length) continue
+    if (!familiesCopied) {
+      families = { ...families }
+      familiesCopied = true
+    }
+    const next: Family = { ...family }
+    if (pruned.length > 0) next.ancestryJumpsAsAncestor = pruned
+    else delete next.ancestryJumpsAsAncestor
+    families[famId] = next
+  }
+  if (familiesCopied) result.families = families
+
   return result
 }

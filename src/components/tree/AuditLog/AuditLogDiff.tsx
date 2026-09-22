@@ -43,6 +43,10 @@ const FIELD_LABELS: Record<string, string> = {
   isUmmWalad: 'أم ولد',
   fosterFatherId: 'زوج المرضعة',
   fosterMotherId: 'المرضعة',
+  descendantId: 'الشخص',
+  ancestorFamilyId: 'الجدّ',
+  generationsMin: 'أقل عدد للأجيال',
+  generationsMax: 'أكثر عدد للأجيال',
 };
 
 const SEX_LABELS: Record<string, string> = {
@@ -59,6 +63,7 @@ const ID_FIELDS = new Set([
   'targetWorkspaceId', 'anchorIndividualId', 'shareTokenId',
   'husbandId', 'wifeId', 'fosterFatherId', 'fosterMotherId',
   'childrenIds', 'familyId', 'individualId', 'radaFamilyId',
+  'descendantId', 'ancestorFamilyId',
 ]);
 
 function formatValue(key: string, value: unknown): string {

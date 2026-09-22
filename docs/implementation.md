@@ -67,6 +67,7 @@ Types mirror `GedcomData`:
 - `Individual`: name, sex, birth/death (date + hijri + place + description + notes), kunya, `isPrivate`, `isDeceased`
 - `Family`: husband, wife, children, marriage contract (MARC), marriage (MARR), divorce (DIV) events, `isDivorced`, `isUmmWalad`
 - `RadaFamily` + `RadaFamilyChild`: milk kinship, completely separate from lineage
+- `AncestryJump`: «قفزة نسب» — a descendant linked to a distant ancestor couple across skipped generations (see §4.9)
 
 ### 4.2 Read path
 
@@ -95,6 +96,7 @@ Key endpoints:
 - Families: POST / PATCH / DELETE — gender validated by `validateFamilyGender()` (rejects known-same-sex spouse pairs, allows unknown); duplicate families rejected (`(h,w)` and `(w,h)`); self-marriage (`husbandId === wifeId`) rejected
 - Family children: POST (add) / DELETE (remove) / POST move
 - Rada'a families + children under `/tree/rada-families/`
+- Ancestry jumps («قفزة نسب») under `/tree/ancestry-jumps/` — POST / PATCH / DELETE (§4.9)
 - Export: `GET /tree/export?version=5.5.1|7.0`
 - Import: `POST /tree/import` (empty tree only, 7 MB file limit, 10K record cap, 409 on non-empty)
 - Audit log: `GET /tree/audit-log` (admin-only, feature-flag gated, paginated, rate-limited 60/min)
@@ -154,6 +156,32 @@ The `Place` table is a two-tier lookup: ~20K global seed entries from GeoNames (
 
 Place names are intentionally plaintext — global seed places are publicly known geography, and the privacy value of encrypting them is marginal.
 
+### 4.9 Ancestry jump («قفزة نسب»)
+
+A certain descent across an unrecorded (or deliberately skipped) run of generations — عدنان ⋯ إسماعيل. It is a relation row, not a parent edge and not filler people. Product rules and owner rulings: `docs/prd.md` §5.12; design record: `docs/specs/ancestry-jump-spec.md`; review: `docs/specs/ancestry-jump-security-review.md`.
+
+**Data model.** `AncestryJump` (`ancestry_jumps`, migration `20260922120000_add_ancestry_jumps`): `treeId`, `descendantId` (the nearer person), `ancestorFamilyId` — the distant ancestor **couple, always a `Family`**, never an individual column (a single known ancestor is a one-spouse `Family`, exactly what add-parent already mints; the female-only rule then falls out as `family.husband ?? null`), `generationsMin` / `generationsMax` (nullable; DB CHECK ≥ 1 and ordered — hand-added, not expressible in `schema.prisma`, so a regenerated migration would silently drop it), `notes` (`Bytes?`, AES-256-GCM under the workspace key like `RadaFamily.notes`), `createdById`. `@@unique([treeId, descendantId])` is the DB backstop for one-jump-per-person. FK cascade: deleting the descendant or the ancestor family deletes the jump. In `GedcomData`: `ancestryJumps?: Record<id, AncestryJump>` with back-references `Individual.ancestryJumpAsDescendant` and `Family.ancestryJumpsAsAncestor`, built by `dbTreeToGedcomData` (a dangling jump leaves no back-reference and is inert). The member redactor `redactPrivateIndividuals` passes jumps through unchanged.
+
+**API** (`/api/workspaces/[id]/tree/ancestry-jumps`; `tree_editor`/admin, `treeMutateLimiter`, treeId-aware via `resolveTargetTreeOr404`): `POST` create; `PATCH [jumpId]` — range + notes only, re-pointing is delete + create; `DELETE [jumpId]` — the jump row only, never the ancestor. Path ids and the DELETE-body `treeId` are uuid-guarded → 404 before anything reaches Prisma. Schemas in `ancestry-jump-schemas.ts` (`MAX_JUMP_GENERATIONS = 200`, notes ≤ 5000). `validateAncestryJump()` (`ancestry-jump-validators.ts`, pure over the resolved tree's own `GedcomData`, so a foreign id 404s server-side) checks in order: J1 descendant exists → J2 ancestor family exists → J3 descendant has no `familyAsChild` → J4 no existing jump → J5 family has ≥ 1 spouse → J6 range ordered (PATCH re-checks on the merged values) → J7 not self → J8 no cycle (`getAllDescendants(..., { includeJumps: true })` must not reach either spouse). A duplicate race surfaces as Prisma `P2002` → the same Arabic 409 (`isDuplicateJumpError`). Responses are a hand-listed DTO with plaintext `notes` (`jumpDto`, `ancestry-jump-route-helpers.ts`).
+
+**Graph — `includeJumps` is opt-in, default off.** `TraversalOptions.includeJumps` on `getAllAncestors`, `getAllDescendants`, `getTreeVisibleIndividuals`, `getConnectedIndividuals`, `getCanvasVisibleIndividuals`, `resolveNavigationRoot`, `buildChildrenGraph`, `findTopmostAncestor` walks a jump as if it were a parent→child edge; every existing caller keeps its behaviour, so code that does not know about jumps simply does not see the link — the worst case is a missing link, never a false parent claim. `buildJumpIndex()` is the shared O(J) lookup. Opted-in surfaces: the canvas (`buildTreeData`: root resolution + visible set), `TreeContext` (visible set + panel scope, so canvas-visible people are searchable), the person-page spine, and `findDefaultRoot` — which consults jumps unconditionally (a jump descendant is not a true root; the apex ancestor wins on descendant count) and resolves through the row, never the bare back-reference flag (a borrowed branch carries the source workspace's flag). `extractSubtree`, `computeGraftDescriptors`, `calculateDescendantCounts` are unchanged.
+
+**Nasab.** `getDisplayNameWithNasab` walks father links first; at the top of the known line it takes the jump only when the ancestor family has a **husband** (`JUMP_CONNECTOR = 'من وَلَد'`, comma appended to the preceding token: «عدنان، من وَلَد إسماعيل»). A jump costs `JUMP_GENERATION_COST = 2` depth slots, so at `DEFAULT_NASAB_DEPTH = 2` cards, sidebar and pickers read plain «عدنان»; only depth ≥ 3 and depth 0 (person page) spell the jump out. The **surname source freezes at the jump**: the ancestor's house is not this family's, so عدنان's line is never stamped with إسماعيل's surname — and the «شخص جديد» ancestor form has no surname prefill for the same reason.
+
+**Person page.** In `projectPerson`, `buildPaternalSpine` / `buildFathersChain` resolve father-or-jump (`resolveJumpFather`): the jump-reached `SpineChip` carries `jump: { generationsMin, generationsMax }` and the walk continues up the ancestor's own chain; the boundary and private invariants hold unchanged (a private jump ancestor is the id-less «خاص» placeholder). `projection.ancestryJump` (`{ father, mother, generationsMin, generationsMax }`) is built independently of the spine so a female-only ancestor still surfaces; a private spouse is `null` there, not a placeholder. `PROJECTION_ETAG_VERSION` is `v4`. UI: the shared `JumpDivider` («قفزة نسب» + the range wording when stated, Western digits; wording in `components/person/jumpRange.ts`) replaces the «بن» token in `NasabRibbon`, `MotherRibbon`/`MotherDisclosure` and `BloodlineColumn` (which does not badge a jump ancestor «الأب»); `AncestryJumpBlock` (sibling of `RadaBlock`) is the one place a female-only ancestor appears.
+
+**GEDCOM.** The relation rides the standard `ASSO` mechanism; only the structured metadata is custom. Export (`gedcomDataToGedcom`, under the descendant's `INDI` after `FAMC`): one `ASSO` pointing at `family.husband ?? family.wife` (`ASSO` may target an `INDI` only, in both versions), `2 RELA ancestor` (5.5.1; `RELA` truncated to 25 chars) or `2 ROLE _ANCESTOR` + `3 PHRASE` (7.0; `SCHMA` lists `_ANCESTOR`/`_ANC_FAM`/`_GAP_MIN`/`_GAP_MAX` under `https://gynat.com/gedcom/ext/`), `2 _ANC_FAM @F…@` carrying the couple, `_GAP_MIN`/`_GAP_MAX` when set, and always a `NOTE` whose lead is generated with names — «قفزة نسب: {descendant} من وَلَد {ancestor}، والأجيال بينهما مطويّة.» — then the range line, then the user's notes. Skipped for `_pointed`, private, or when either ancestor spouse is private. `emitNote` (every NOTE field, not only jumps) normalises `\r` and doubles `@` → `@@`; the parser reverses `@@`. Import (`parseGedcom`): an `ASSO` with `RELA ancestor` / `ROLE _ANCESTOR` becomes a jump — any other association is dropped silently, never misread. Ancestor-family fallback ladder: `_ANC_FAM` → the target's first `FAMS` → a synthesised one-spouse `FAM`. The same `validateAncestryJump` gate the API uses then runs over the parsed data and drops violators (cycle, self, spouse-less family, owner with `FAMC`, second jump); notes capped at 5000. `seedTreeFromGedcomData` persists them (step 11) and the import response reports `ancestryJumpCount`. `/islamic-gedcom` has a «قفزة نسب» section (standard badges for `ASSO`/`RELA`/`ROLE`/`NOTE`, custom for `_ANCESTOR`/`_ANC_FAM`/`_GAP_MIN`/`_GAP_MAX`, the GEDCOM X `AncestorDescendant` correspondence, and only the sourced scholarly line).
+
+**Public tree.** `redactForPublic` keeps a jump only when the descendant AND every spouse of the ancestor family are public; otherwise it is dropped and the orphaned back-references are deleted (families copy-on-write) — fail-closed, no structural residue. `composePublicGedcom` carries HOME jumps only; borrowed subtrees (`extractSubtree` / `extractPointedSubtree`) never carry an `ancestryJumps` key, and `extractPointedSubtree` strips the back-references as well (`stripJumpBackReferences`). JSON-LD (`buildPersonJsonLd`): the ancestor couple is emitted as schema.org **`relatedTo` only** — never `parent`/`children`/`spouse`/`sibling`; range and notes never enter the graph; the `indexable` gate is unchanged. Jump notes go public on publish like marriage notes (security-review L2, accepted).
+
+**Delete / copy / audit / undo.** `computeDeleteImpact` is jump-blind by design — a jump ancestor is a claim, not a dependent (locked by a comment + regression test); the version hash already covers jumps through `lastModifiedAt`. Deleting the descendant cascades the jump via FK; deleting the last ancestor individual leaves an empty couple, so the individual DELETE route runs `pruneEmptyAncestryJumps(treeId)` inside its transaction. Deep copy (`copyAncestryJumps`, used by `prepareDeepCopy`, `prepareTreeSnapshot` and both collection copy paths) copies a jump only when **both** endpoints landed in the copy, re-encrypting notes under the target key; back-references are deleted and regenerated on read. Audit: `entityType: 'ancestry_jump'`, `snapshotAncestryJump` before/after, label «قفزة نسب», `AuditLogDiff` labels for the four fields (raw UUIDs hidden). Undo: `buildCreate/Update/DeleteAncestryJumpInverse`; the «شخص جديد» path (create individual → family → jump) pushes ONE composite entry (undo reverses jump → family → individual, redo replays and recaptures ids); label «قفزة نسب إلى {name}».
+
+**Canvas.** `buildTreeData` pushes one extra built-in `bezier` edge `jump-<id>` from the ancestor node (husband ?? wife) to the descendant — `className: 'ancestry-jump'`, dashed, label «قفزة نسب» (+ the range via `formatAncestryJumpLabel`), styled in `tree-global.css`. Because `layout.ts` derives the tree from the edges array, the ancestor lands above the descendant with **no layout change**, and his real children render as the descendant's siblings (correct: distant uncles). The ancestor is an ordinary `PersonCard`.
+
+**UI entry.** `PersonDetail` offers «قفزة نسب» via `getAncestryJumpAction()` — only when `canEdit`, not `_pointed`, and no `familyAsChild`; with an existing jump the action becomes «تعديل قفزة النسب» (range + notes, delete). `AncestryJumpForm` is the two-path sheet: «شخص جديد» (blank-surname `IndividualForm`) or «شخص موجود في الشجرة» (person picker limited to valid targets → `FamilyPickerModal` when that person has several couples, otherwise a one-spouse family minted silently), then the optional «من»/«إلى» range and notes. Handlers `handleAncestryJumpSubmit` / `Update` / `Delete` in `usePersonActions`.
+
+**Security review** (2026-09-22): no Critical / High. Fixed: M1 GEDCOM note injection (`emitNote` sanitizer + parser unescape), M2 import bypassing the validators (import-side gate), L1 stale back-references across branch pointers (`stripJumpBackReferences` + row-based `hasJump`), L3 malformed uuid → 500 (uuid guard → 404). Accepted as-is: L2 — jump notes become public on publish, same as marriage notes.
+
 ---
 
 ## 5. Branch Pointers
@@ -185,6 +213,7 @@ At read time, the target's tree fetcher pulls the source subtree in parallel (de
 - `mergePointedSubtree()` stitches via a synthetic family at the anchor, applying Rule 3's `linkChildrenToAnchor`
 - Pointed rows are marked `_pointed: true` with `_sourceWorkspaceId` and `_pointerId`
 - Pointed edges get teal dashed styling; pointed cards get a teal badge and dashed border
+- A borrowed subtree never contributes `ancestryJumps` (downward-only extraction), and `extractPointedSubtree` strips the source workspace's jump back-references so no foreign jump id crosses the boundary (§4.9)
 
 Branch pointer logic (`branch-pointer-merge.ts`) operates only on plaintext `GedcomData` — decryption happens upstream. Ciphertext never crosses workspace boundaries; a test asserts that a row encrypted with key B throws when decrypted with key A.
 
@@ -264,6 +293,7 @@ Every workspace has an AES-256-GCM data key generated on create and stored wrapp
 - Individual (15 fields): `givenName`, `surname`, `fullName`, `kunya`, `notes`, plus birth/death `date`, `hijriDate`, `place`, `description`, `notes`
 - Family (15 fields): for each of MARC / MARR / DIV: `date`, `hijriDate`, `place`, `description`, `notes`
 - RadaFamily: `notes`
+- AncestryJump: `notes`
 - TreeEditLog: `description` and `payload` are `Bytes?` and encrypted as raw AES-256-GCM blobs. `snapshotBefore` / `snapshotAfter` stay `Json?` but wrapped in `{ _encrypted: true, data: "<base64>" }` envelopes. Top-level indexable columns (`action`, `entityType`, `entityId`, `userId`, `timestamp`) stay plaintext so queries work.
 
 Legacy plaintext rows coexist via a sentinel pass-through on `decryptSnapshot` — older audit rows keep rendering while new ones are encrypted.
@@ -301,7 +331,7 @@ Legacy plaintext rows coexist via a sentinel pass-through on `decryptSnapshot` �
 
 `usePersonActions` wires 14 handler variants through `useUndoableAction`. Entries are only pushed after both the action API call and the subsequent `refreshTree` succeed. On undo/redo, the inverse API call runs and `refreshTree` awaits — if refresh fails, both stacks drop and `ConflictDialog` surfaces. Any non-2xx on the inverse drops stacks; 401/403 shows an auth-specific dialog variant.
 
-**Inverse builders** (`src/lib/tree/undo-builders.ts`) cover 12 operations: individual create/update/delete, family create/update/delete, family children add/remove/move, rada'a family create/update/delete. Labels come from `buildUndoLabel()` (gendered variants, 40-char truncation).
+**Inverse builders** (`src/lib/tree/undo-builders.ts`) cover 15 operations: individual create/update/delete, family create/update/delete, family children add/remove/move, rada'a family create/update/delete, ancestry jump create/update/delete (the «شخص جديد» jump path pushes one hand-rolled composite entry, see §4.9). Labels come from `buildUndoLabel()` (gendered variants, 40-char truncation).
 
 **Server side**: `apiFetch({ isUndo: true })` sends `X-Gynat-Undo: true`. `isUndoRequest()` is read in 11 mutation routes and passed to `buildAuditDescription(..., { isUndo })`, which prefixes audit entries with "تراجع عن: ". No new action enum values, no schema changes — `restoreSnapshot` and `undoOfLogId` are deferred to Phase 15b.
 
@@ -313,7 +343,7 @@ UI: `UndoRedoButtons` in `CanvasToolbar` (icon-only, platform-aware tooltips wit
 
 ## 8. Audit Log
 
-Snapshot-based. Every mutation captures `snapshotBefore` and `snapshotAfter` as JSON via the `snapshotIndividual` / `snapshotFamily` / `snapshotRadaFamily` / `snapshotBranchPointer` extractors. `buildAuditDescription()` produces an Arabic human-readable one-liner.
+Snapshot-based. Every mutation captures `snapshotBefore` and `snapshotAfter` as JSON via the `snapshotIndividual` / `snapshotFamily` / `snapshotRadaFamily` / `snapshotAncestryJump` / `snapshotBranchPointer` extractors. `buildAuditDescription()` produces an Arabic human-readable one-liner.
 
 Gated by two workspace toggles:
 - `enableAuditLog` — gates the `/tree/audit` page and the `GET /tree/audit-log` endpoint (403 when off). Snapshots are captured regardless, so switching the toggle on retroactively exposes history.
@@ -338,15 +368,17 @@ Handles 5.5.1 with all Islamic extensions:
 - Level 2 `NOTE` under `BIRT`/`DEAT` with level 3 `CONT`/`CONC`
 - Standalone NOTE records (`0 @ID@ NOTE` + `1 CONT`) resolved via `1 NOTE @ID@` references
 - `_UMM_WALAD`, `_RADA_FAM` / `_RADA_WIFE` / `_RADA_HUSB` / `_RADA_CHIL`, `_RADA_FAMC`, `_KUNYA`
+- `ASSO` with `RELA ancestor` (5.5.1) or `ROLE _ANCESTOR` (7.0) + `_ANC_FAM` / `_GAP_MIN` / `_GAP_MAX` / `NOTE` → a «قفزة نسب» (any other `ASSO` is ignored); the parsed jumps pass the same `validateAncestryJump` gate as the API (§4.9)
+- `@@` in NOTE text unescaped back to a literal `@`
 - BOM stripping
 
 ### 9.2 Export (`src/lib/gedcom/exporter.ts`)
 
-`GET /tree/export?version=5.5.1|7.0` — any member can export. Output includes all Islamic extensions, GIVN / SURN sub-tags. Privacy redaction runs first; pointed data is excluded; every user string passes through GEDCOM-injection sanitization. Rate-limited.
+`GET /tree/export?version=5.5.1|7.0` — any member can export (`gedcomDataToGedcom`). Output includes all Islamic extensions, GIVN / SURN sub-tags, and the «قفزة نسب» `ASSO` block (§4.9). Privacy redaction runs first; pointed data is excluded; every user string passes through GEDCOM-injection sanitization — single-line fields via `sanitizeLine`, multi-line NOTE text via `emitNote` (`\r` normalised, `@` doubled to `@@`). Rate-limited.
 
 ### 9.3 Import
 
-`POST /tree/import` — tree_editor only, empty tree only (409 otherwise), multipart form, 7 MB file limit, 10K record cap. Seed helpers are reused for RadaFamily / RadaFamilyChild creation. Import is intentionally not Ctrl+Z-undoable.
+`POST /tree/import` — tree_editor only, empty tree only (409 otherwise), multipart form, 7 MB file limit, 10K record cap. Seed helpers are reused for RadaFamily / RadaFamilyChild and AncestryJump creation; the response reports `ancestryJumpCount` beside `radaFamilyCount`. Import is intentionally not Ctrl+Z-undoable.
 
 ---
 

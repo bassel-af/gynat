@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db';
 import { TREE_INCLUDES } from '@/lib/tree/queries';
 import { dbTreeToGedcomData } from '@/lib/tree/mapper';
 import { getWorkspaceKey } from '@/lib/tree/encryption';
-import { persistDeepCopy } from '@/lib/tree/branch-pointer-deep-copy';
+import { persistDeepCopy, copyAncestryJumps } from '@/lib/tree/branch-pointer-deep-copy';
 import type { DeepCopyResult } from '@/lib/tree/branch-pointer-deep-copy';
 import { assertExtraTreeCapacity } from '@/lib/collections/extra-tree-cap';
 import type { GedcomData, Individual, Family } from '@/lib/gedcom/types';
@@ -45,6 +45,9 @@ export function prepareTreeSnapshot(source: GedcomData): DeepCopyResult {
     delete copied.deathPlaceId;
     delete copied._pointed;
     delete copied._sourceWorkspaceId;
+    // The spread carries the OLD «قفزة نسب» id; back-references are regenerated
+    // from the persisted rows on the next read, so a stale one can only dangle.
+    delete copied.ancestryJumpAsDescendant;
     individuals[newId] = copied;
   }
 
@@ -62,10 +65,23 @@ export function prepareTreeSnapshot(source: GedcomData): DeepCopyResult {
     };
     delete copied._pointed;
     delete copied._sourceWorkspaceId;
+    // Stale jump back-reference — same reason as on individuals above.
+    delete copied.ancestryJumpsAsAncestor;
     families[newId] = copied;
   }
 
-  return { individuals, families, idMap, stitchFamily: null, reuseStitch: null };
+  // «قفزة نسب»: a whole-tree snapshot holds both endpoints, so its jumps
+  // travel. A BORROWED BRANCH reaches here already narrowed by
+  // `extractPointedSubtree`, so a jump pointing above the branch root has no
+  // ancestor family in the set and `copyAncestryJumps` drops it — fail-closed.
+  return {
+    individuals,
+    families,
+    ancestryJumps: copyAncestryJumps(source, idMap),
+    idMap,
+    stitchFamily: null,
+    reuseStitch: null,
+  };
 }
 
 /**

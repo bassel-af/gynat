@@ -5,11 +5,13 @@ import {
   decryptIndividualRow,
   decryptFamilyRow,
   decryptRadaFamilyRow,
+  decryptAncestryJumpRow,
 } from '@/lib/tree/encryption'
 import type {
   DecryptedIndividual,
   DecryptedFamily,
   DecryptedRadaFamily,
+  DecryptedAncestryJump,
 } from '@/lib/tree/mapper'
 
 // ---------------------------------------------------------------------------
@@ -51,6 +53,8 @@ export const TREE_INCLUDES = {
       children: true,
     },
   },
+  // «قفزة نسب» — no nested include; AncestryJump has no child table.
+  ancestryJumps: true,
 } as const
 
 // ---------------------------------------------------------------------------
@@ -194,6 +198,51 @@ export async function getTreeRadaFamily(treeId: string, radaFamilyId: string) {
   })
 }
 
+/**
+ * Get a single «قفزة نسب», verifying it belongs to the specified tree.
+ *
+ * SECURITY: scoped by `{ id, treeId }` — NEVER a bare `findUnique` by id, so a
+ * jump id from another workspace's tree reads as absent (the caller turns that
+ * into a 404) rather than being mutated across a tenancy boundary.
+ */
+export async function getTreeAncestryJump(treeId: string, jumpId: string) {
+  return prisma.ancestryJump.findFirst({
+    where: { id: jumpId, treeId },
+  })
+}
+
+/** The subset of the Prisma client `pruneEmptyAncestryJumps` needs. */
+type AncestryJumpDeleter = {
+  ancestryJump: {
+    deleteMany: (args: {
+      where: { treeId: string; ancestorFamily: { husbandId: null; wifeId: null } }
+    }) => Promise<{ count: number }>
+  }
+}
+
+/**
+ * Delete every AncestryJump in `treeId` whose ancestor family has lost BOTH
+ * spouses.
+ *
+ * `Family.husbandId`/`wifeId` are optional FKs (Prisma `SetNull`), so deleting
+ * the last ancestor INDIVIDUAL leaves the family row behind with an empty
+ * couple and the jump pointing at nothing. The individual DELETE route already
+ * sweeps families that are empty AND childless; one that still has children
+ * survives, which is exactly the case this covers.
+ *
+ * Pass the transaction client to keep the prune atomic with the delete.
+ * Returns the number of rows removed (0 in the normal case).
+ */
+export async function pruneEmptyAncestryJumps(
+  treeId: string,
+  client: AncestryJumpDeleter = prisma as unknown as AncestryJumpDeleter,
+): Promise<number> {
+  const { count } = await client.ancestryJump.deleteMany({
+    where: { treeId, ancestorFamily: { husbandId: null, wifeId: null } },
+  })
+  return count
+}
+
 // ---------------------------------------------------------------------------
 // Phase 10b: workspace-key-aware helpers
 //
@@ -268,4 +317,20 @@ export async function getTreeRadaFamilyDecrypted(
   return decryptRadaFamilyRow(row, key) as unknown as DecryptedRadaFamily & {
     children: { radaFamilyId: string; individualId: string }[]
   }
+}
+
+/**
+ * Fetch a single «قفزة نسب» by id AND decrypt its `notes` before returning.
+ * Returns null when the jump does not belong to the given tree (no key lookup
+ * happens in that case).
+ */
+export async function getTreeAncestryJumpDecrypted(
+  workspaceId: string,
+  treeId: string,
+  jumpId: string,
+): Promise<DecryptedAncestryJump | null> {
+  const row = await getTreeAncestryJump(treeId, jumpId)
+  if (!row) return null
+  const key = await getWorkspaceKey(workspaceId)
+  return decryptAncestryJumpRow(row, key) as unknown as DecryptedAncestryJump
 }

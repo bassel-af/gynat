@@ -254,10 +254,41 @@ export function snapshotBranchPointer(record: {
 }
 
 // ---------------------------------------------------------------------------
+// Ancestry jump («قفزة نسب») snapshot
+// ---------------------------------------------------------------------------
+
+export interface AncestryJumpSnapshot extends JsonObject {
+  id: string;
+  descendantId: string;
+  ancestorFamilyId: string;
+  generationsMin: number | null;
+  generationsMax: number | null;
+  notes: string | null;
+}
+
+export function snapshotAncestryJump(record: {
+  id: string;
+  descendantId: string;
+  ancestorFamilyId: string;
+  generationsMin?: number | null;
+  generationsMax?: number | null;
+  notes?: string | null;
+}): AncestryJumpSnapshot {
+  return {
+    id: record.id,
+    descendantId: record.descendantId,
+    ancestorFamilyId: record.ancestorFamilyId,
+    generationsMin: record.generationsMin ?? null,
+    generationsMax: record.generationsMax ?? null,
+    notes: record.notes ?? null,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Arabic description builder
 // ---------------------------------------------------------------------------
 
-type AuditEntityType = 'individual' | 'family' | 'family_child' | 'rada_family' | 'rada_family_child' | 'branch_pointer' | 'share_token' | 'tree';
+type AuditEntityType = 'individual' | 'family' | 'family_child' | 'rada_family' | 'rada_family_child' | 'branch_pointer' | 'share_token' | 'tree' | 'ancestry_jump';
 
 const ENTITY_LABELS: Record<AuditEntityType, string> = {
   individual: 'شخص',
@@ -268,6 +299,7 @@ const ENTITY_LABELS: Record<AuditEntityType, string> = {
   branch_pointer: 'ربط فرع',
   share_token: 'رمز مشاركة',
   tree: 'شجرة',
+  ancestry_jump: 'قفزة نسب',
 };
 
 export interface AuditDescriptionOptions {

@@ -33,6 +33,7 @@ export const AUDIT_ENTITY_TYPES = [
   'branch_pointer',
   'share_token',
   'tree',
+  'ancestry_jump',
 ] as const;
 
 // ---------------------------------------------------------------------------

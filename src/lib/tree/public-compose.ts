@@ -48,5 +48,15 @@ export function composePublicGedcom(
 
   const result: GedcomData = { individuals, families }
   if (Object.keys(radaFamilies).length > 0) result.radaFamilies = radaFamilies
+
+  // «قفزة نسب»: only the HOME tree's jumps travel. A jump is same-tree by
+  // definition, and a borrowed subtree is produced by the downward-only
+  // `extractPointedSubtree`, so any jump it appeared to carry would point at an
+  // ancestor family outside the borrowed set. Fail-closed: borrowed jumps are
+  // never composed in. The composed result is still pre-redaction — the
+  // caller's single `redactForPublic` pass decides which of these survive.
+  if (home.ancestryJumps && Object.keys(home.ancestryJumps).length > 0) {
+    result.ancestryJumps = { ...home.ancestryJumps }
+  }
   return result
 }

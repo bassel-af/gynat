@@ -2,6 +2,7 @@
 
 import type { PersonSubject, SpineChip } from '@/lib/tree/person-projection';
 import { PersonLink } from './PersonLink';
+import { JumpDivider } from './JumpDivider';
 import styles from './person.module.css';
 
 /**
@@ -52,13 +53,21 @@ export function NasabRibbon({
           const hideConnector = suppressLivingConnectors && bothLiving;
           return (
             <span key={anc.id ?? `anc-${i}`} className={styles.ribbonSegment}>
-              {!hideConnector && (
-                <span className={styles.nasabConnector}>
-                  {/* بن/بنت reflects the YOUNGER person (son/daughter OF the
-                      ancestor), not the ancestor — so a female subject reads
-                      «رندة بنت بشر», not «رندة بن بشر». */}
-                  {younger.gender === 'female' ? 'بنت' : 'بن'}
-                </span>
+              {anc.jump ? (
+                /* «قفزة نسب»: this ancestor was reached across an unrecorded
+                   (or deliberately skipped) number of generations. A «بن» here
+                   would assert a father→son link the record does not make, so
+                   the connector is replaced by the named divider. */
+                <JumpDivider range={anc.jump} />
+              ) : (
+                !hideConnector && (
+                  <span className={styles.nasabConnector}>
+                    {/* بن/بنت reflects the YOUNGER person (son/daughter OF the
+                        ancestor), not the ancestor — so a female subject reads
+                        «رندة بنت بشر», not «رندة بن بشر». */}
+                    {younger.gender === 'female' ? 'بنت' : 'بن'}
+                  </span>
+                )
               )}
               {/* Ancestors show only their GIVEN name — the shared family name
                   (surname) prints ONCE at the end of the ribbon, so repeating it

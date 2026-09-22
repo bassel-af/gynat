@@ -444,6 +444,14 @@ a.lineageNode:hover .lineageName { color: var(--heritage-gold-bright); }
   gap: 6px;
 }
 
+/* «قفزة نسب» standing in the spine: centered on the connective thread it
+   interrupts, above it in the stack so the gold line reads as broken there. */
+.lineageJump {
+  align-self: center;
+  position: relative;
+  z-index: 1;
+}
+
 /* Collapsed-by-default green disclosure for the ancestor's married-in mother. */
 .motherDisclosure {
   margin-inline-start: 46px; /* align under the name, clear of the avatar */
@@ -862,3 +870,89 @@ a.relationChip:hover .relationName { color: var(--heritage-gold-bright); }
   .relationChip { transition: none; }
   .motherBody { animation: none; }
 }
+
+/* ---------------- «قفزة نسب» (ancestry jump) ---------------- */
+
+/* «من وَلَد» REPLACES the بن/بنت connector at a jump-marked chip, and is dressed
+   exactly like it (see .nasabConnector) — a name reads as a name, never as a
+   badge. Its two words stay on one line: breaking «من / وَلَد» across lines would
+   read as two connectors. */
+.jumpConnector {
+  font-family: var(--heritage-font-body);
+  font-size: 0.82em;
+  color: var(--heritage-text-soft);
+  font-weight: 400;
+  padding: 0 3px;
+  opacity: 0.95;
+  white-space: nowrap;
+}
+/* The fixed small scale — matches .motherConnector, and carries the bloodline
+   column's standalone marker too. */
+.jumpConnectorInline {
+  font-size: 13px;
+  padding: 0;
+}
+/* The bloodline column's marker — the canvas edge chip, stood on end. Mirrors
+   `.react-flow__edge.ancestry-jump` in tree-global.css: the same gold on the
+   same near-black pill, at the same 11px, and dashed because the distance it
+   marks is not drawn to scale. Kept visually identical on purpose — the two are
+   the same statement about the same gap, so they must read as one thing. */
+.jumpChip {
+  display: inline-block;
+  font-family: var(--heritage-font-arabic, var(--heritage-font-body));
+  font-size: 11px;
+  color: var(--heritage-gold, #c8a865);
+  padding: 4px 12px;
+  border-radius: 8px;
+  border: 1px dashed rgba(200, 168, 101, 0.55);
+  background: rgba(10, 14, 26, 0.85);
+  white-space: nowrap;
+}
+
+/* The comma belongs to the name BEFORE it («عدنان، من وَلَد …»), so it closes
+   the ribbon's 6px flex gap instead of floating in it. */
+.jumpComma {
+  margin-inline-start: -6px;
+  font-family: var(--heritage-font-body);
+  font-size: 0.82em;
+  color: var(--heritage-text-soft);
+}
+
+/* The standalone card in the family section (sibling of the رضاعة block). */
+.jumpBlock {
+  margin-top: 30px;
+  padding: 24px clamp(16px, 3vw, 28px);
+  border-radius: var(--heritage-radius-lg);
+  border: 1px dashed rgba(46, 152, 118, 0.32);
+  background: rgba(46, 152, 118, 0.05);
+}
+.jumpHead { margin-bottom: 18px; }
+.jumpKicker {
+  display: block;
+  font-family: var(--heritage-font-display);
+  font-size: 18px;
+  color: var(--heritage-emerald-glow);
+}
+.jumpSub {
+  display: block;
+  font-size: 12px;
+  color: var(--heritage-text-muted);
+  margin-top: 4px;
+}
+.jumpBlockRange {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 3px 12px;
+  border-radius: var(--heritage-radius-pill);
+  border: 1px solid rgba(46, 152, 118, 0.3);
+  font-size: 12px;
+  color: var(--heritage-emerald-glow);
+}
+.jumpNotes {
+  margin: 16px 0 0;
+  font-size: 13px;
+  line-height: 1.9;
+  color: var(--heritage-text-soft);
+}
+.jumpBlock .familyGroupLabel { color: var(--heritage-emerald-glow); }
+

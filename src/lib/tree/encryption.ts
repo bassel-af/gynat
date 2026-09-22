@@ -2,7 +2,7 @@
  * Tree domain encryption adapter — Phase 10b Layer 2.
  *
  * Bridges the generic AES-256-GCM primitives in `src/lib/crypto/workspace-encryption.ts`
- * to the tree domain (Individual, Family, RadaFamily, TreeEditLog).
+ * to the tree domain (Individual, Family, RadaFamily, AncestryJump, TreeEditLog).
  *
  * Responsibilities:
  *   - Fetch/create per-workspace data keys (wrapped with the master key, stored
@@ -77,6 +77,10 @@ export type FamilyEncryptedField = (typeof FAMILY_ENCRYPTED_FIELDS)[number];
 export const RADA_FAMILY_ENCRYPTED_FIELDS = ['notes'] as const;
 
 export type RadaFamilyEncryptedField = (typeof RADA_FAMILY_ENCRYPTED_FIELDS)[number];
+
+export const ANCESTRY_JUMP_ENCRYPTED_FIELDS = ['notes'] as const;
+
+export type AncestryJumpEncryptedField = (typeof ANCESTRY_JUMP_ENCRYPTED_FIELDS)[number];
 
 // ---------------------------------------------------------------------------
 // Workspace key resolution
@@ -271,6 +275,24 @@ export function decryptRadaFamilyRow<T extends object>(
   key: Buffer,
 ): T {
   return decryptFieldsOf(row as unknown as Record<string, unknown>, RADA_FAMILY_ENCRYPTED_FIELDS, key) as unknown as T;
+}
+
+// ---------------------------------------------------------------------------
+// AncestryJump («قفزة نسب»)
+// ---------------------------------------------------------------------------
+
+export function encryptAncestryJumpInput<T extends Record<string, unknown>>(
+  input: T,
+  key: Buffer,
+): EncryptedOut<T, AncestryJumpEncryptedField> {
+  return encryptFieldsOf(input, ANCESTRY_JUMP_ENCRYPTED_FIELDS, key) as EncryptedOut<T, AncestryJumpEncryptedField>;
+}
+
+export function decryptAncestryJumpRow<T extends object>(
+  row: T,
+  key: Buffer,
+): T {
+  return decryptFieldsOf(row as unknown as Record<string, unknown>, ANCESTRY_JUMP_ENCRYPTED_FIELDS, key) as unknown as T;
 }
 
 // ---------------------------------------------------------------------------

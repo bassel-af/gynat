@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { NodeFigure } from '@/components/heritage/FigureCluster';
 import type { Gender, MotherLine, PersonChip } from '@/lib/tree/person-projection';
 import { useCalendarPreference } from '@/hooks/useCalendarPreference';
+import { JumpDivider } from './JumpDivider';
 import { chipYears } from './yearFormat';
 import styles from './person.module.css';
 
@@ -29,6 +30,10 @@ function MotherName({ chip, hrefFor }: { chip: PersonChip; hrefFor: (id: string)
  * fathers-only. The connector before the FIRST father is «بنت» (she is female);
  * deeper connectors are «بن» (descending from a male). A private father token
  * TERMINATES the chain (the projection emits no tokens past it).
+ *
+ * A father REACHED BY a «قفزة نسب» carries `jump`, and at that position the
+ * connector is replaced by the same divider the hero ribbon uses — «بن» there
+ * would claim a father→son link across a gap the record does not fill.
  */
 export function MotherRibbon({
   mother,
@@ -55,7 +60,11 @@ export function MotherRibbon({
       {years && <span className={styles.motherYears}>{years}</span>}
       {mother.fathers.map((f, i) => (
         <span key={f.id ?? `father-${i}`} className={styles.motherSeg}>
-          <span className={styles.motherConnector}>{i === 0 ? 'بنت' : 'بن'}</span>
+          {f.jump ? (
+            <JumpDivider range={f.jump} size="inline" />
+          ) : (
+            <span className={styles.motherConnector}>{i === 0 ? 'بنت' : 'بن'}</span>
+          )}
           <MotherName chip={f} hrefFor={hrefFor} />
         </span>
       ))}

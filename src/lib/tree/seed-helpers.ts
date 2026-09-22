@@ -17,6 +17,7 @@ export interface SeedTreeResult {
   individualCount: number
   familyCount: number
   radaFamilyCount: number
+  ancestryJumpCount: number
   skipped: boolean
   /** Mapping from GEDCOM ID (e.g. "@I123@") to the generated DB UUID */
   gedcomToDbId: Record<string, string>
@@ -102,6 +103,7 @@ export async function seedTreeFromGedcomData(
         individualCount: 0,
         familyCount: 0,
         radaFamilyCount: 0,
+        ancestryJumpCount: 0,
         skipped: true,
         gedcomToDbId: {},
       }
@@ -119,6 +121,7 @@ export async function seedTreeFromGedcomData(
         individualCount: 0,
         familyCount: 0,
         radaFamilyCount: 0,
+        ancestryJumpCount: 0,
         skipped: false,
         gedcomToDbId: {},
       }
@@ -265,11 +268,34 @@ export async function seedTreeFromGedcomData(
       }
     }
 
+    // 11. Ancestry jumps («قفزة نسب»)
+    const jumpEntries = Object.values(gedcomData.ancestryJumps ?? {})
+    let ancestryJumpCount = 0
+    if (jumpEntries.length > 0) {
+      const jumpRecords = jumpEntries
+        .map((jump) => ({
+          id: randomUUID(),
+          treeId,
+          gedcomId: jump.id,
+          descendantId: gedcomToDbId[jump.descendant],
+          ancestorFamilyId: familyGedcomToDbId[jump.ancestorFamily],
+          generationsMin: jump.generationsMin,
+          generationsMax: jump.generationsMax,
+          notes: enc(jump.notes || null),
+        }))
+        // drop any whose endpoints did not survive the id remap
+        .filter((record) => record.descendantId && record.ancestorFamilyId)
+
+      await tx.ancestryJump.createMany({ data: jumpRecords })
+      ancestryJumpCount = jumpRecords.length
+    }
+
     return {
       treeId,
       individualCount: individualEntries.length,
       familyCount: familyEntries.length,
       radaFamilyCount: radaFamilyEntries.length,
+      ancestryJumpCount,
       skipped: false,
       gedcomToDbId,
     }

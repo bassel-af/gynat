@@ -1,5 +1,11 @@
 import crypto from 'crypto';
-import type { GedcomData, Individual, Family, FamilyEvent } from '@/lib/gedcom/types';
+import type {
+  GedcomData,
+  Individual,
+  Family,
+  FamilyEvent,
+  AncestryJump,
+} from '@/lib/gedcom/types';
 import { encryptFieldNullable } from '@/lib/crypto/workspace-encryption';
 
 // ---------------------------------------------------------------------------
@@ -38,6 +44,12 @@ export interface DeepCopyResult {
   individuals: Record<string, Individual>;
   /** Copied families keyed by new UUID */
   families: Record<string, Family>;
+  /**
+   * Copied «قفزة نسب» rows keyed by new UUID. A jump is copied ONLY when BOTH
+   * endpoints landed in the copied set; dangling ones are dropped. Always
+   * present (possibly empty) so callers never have to null-check.
+   */
+  ancestryJumps: Record<string, AncestryJump>;
   /** Map from old IDs to new UUIDs */
   idMap: Map<string, string>;
   /** Synthetic family to stitch the copied root to the anchor (null when reusing a real family) */
@@ -65,6 +77,34 @@ export interface DeepCopyProvenance {
 // ---------------------------------------------------------------------------
 
 const EMPTY_EVENT: FamilyEvent = { date: '', hijriDate: '', place: '', description: '', notes: '' };
+
+/**
+ * Re-key the source's «قفزة نسب» rows into the new id space.
+ *
+ * BOTH ENDPOINTS OR NOTHING: a jump travels only when its descendant AND its
+ * ancestor family both landed in the copied set. `extractSubtree` /
+ * `extractPointedSubtree` are downward-only, so a jump ancestor sitting ABOVE
+ * the copied root is never in the set — dropping the row is the fail-closed
+ * answer, because a half-copied jump would point at a family that does not
+ * exist in the target workspace.
+ *
+ * Shared by both copiers (`prepareDeepCopy` and `prepareTreeSnapshot`) so the
+ * rule cannot drift between them. Pure — does not mutate the source.
+ */
+export function copyAncestryJumps(
+  source: GedcomData,
+  idMap: Map<string, string>,
+): Record<string, AncestryJump> {
+  const copied: Record<string, AncestryJump> = {};
+  for (const jump of Object.values(source.ancestryJumps ?? {})) {
+    const descendant = idMap.get(jump.descendant);
+    const ancestorFamily = idMap.get(jump.ancestorFamily);
+    if (!descendant || !ancestorFamily) continue;
+    const newId = crypto.randomUUID();
+    copied[newId] = { ...jump, id: newId, descendant, ancestorFamily };
+  }
+  return copied;
+}
 
 /**
  * Prepares a deep copy of a pointed subtree for independent storage in the
@@ -116,6 +156,11 @@ export function prepareDeepCopy(
     delete copied._pointed;
     delete copied._sourceWorkspaceId;
 
+    // The spread above carries the OLD jump id. Back-references are never
+    // remapped here — `dbTreeToGedcomData` regenerates them from the persisted
+    // rows on the next read, so carrying a stale one can only dangle.
+    delete copied.ancestryJumpAsDescendant;
+
     individuals[newId] = copied;
   }
 
@@ -136,6 +181,9 @@ export function prepareDeepCopy(
     // Remove _pointed flags
     delete copied._pointed;
     delete copied._sourceWorkspaceId;
+
+    // Stale jump back-reference — same reason as on individuals above.
+    delete copied.ancestryJumpsAsAncestor;
 
     families[newId] = copied;
   }
@@ -205,7 +253,14 @@ export function prepareDeepCopy(
     }
   }
 
-  return { individuals, families, idMap, stitchFamily, reuseStitch };
+  return {
+    individuals,
+    families,
+    ancestryJumps: copyAncestryJumps(pointed, idMap),
+    idMap,
+    stitchFamily,
+    reuseStitch,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -383,6 +438,23 @@ export async function persistDeepCopy(
         data: { familyId: fam.id, individualId: childId },
       });
     }
+  }
+
+  // Create copied «قفزة نسب» rows. `notes` is free text, so it is re-encrypted
+  // under the TARGET key exactly like every other sensitive field. Written last
+  // — both FK endpoints (descendant, ancestor family) exist by now.
+  const jumpData = Object.values(copyResult.ancestryJumps ?? {}).map((jump) => ({
+    id: jump.id,
+    treeId: targetTreeId,
+    descendantId: jump.descendant,
+    ancestorFamilyId: jump.ancestorFamily,
+    generationsMin: jump.generationsMin,
+    generationsMax: jump.generationsMax,
+    notes: enc(jump.notes || null),
+  }));
+
+  if (jumpData.length > 0) {
+    await tx.ancestryJump.createMany({ data: jumpData });
   }
 
   // Record provenance (raw UUIDs, no FK) so the admin global takedown can find

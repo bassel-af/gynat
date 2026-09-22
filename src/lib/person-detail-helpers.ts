@@ -71,6 +71,35 @@ export function validateAddParent(person: Individual, data: GedcomData): AddPare
   return { allowed: true };
 }
 
+/**
+ * Which «قفزة نسب» action, if any, this person's panel should offer.
+ *
+ * `null` — no action at all:
+ *   - the member cannot edit this tree;
+ *   - the person is borrowed through a branch pointer (`_pointed`, read-only);
+ *   - the person already has parents recorded. A jump states a certain descent
+ *     across an unrecorded gap, so it belongs at the TOP of a known line and
+ *     never beside a recorded father or mother (validator rule J3).
+ *
+ * `'edit'` once the person already has a jump — v1 allows exactly one per
+ * person, so the action becomes «تعديل قفزة النسب» / «حذف قفزة النسب».
+ */
+export type AncestryJumpAction = 'create' | 'edit' | null;
+
+export function getAncestryJumpAction(
+  person: Individual | undefined,
+  data: GedcomData | null | undefined,
+  canEdit: boolean,
+): AncestryJumpAction {
+  if (!canEdit || !person || !data) return null;
+  if (person._pointed) return null;
+  if (person.familyAsChild) return null;
+
+  const jumpId = person.ancestryJumpAsDescendant;
+  if (jumpId && data.ancestryJumps?.[jumpId]) return 'edit';
+  return 'create';
+}
+
 /** Add-sibling validation result */
 export type AddSiblingResult =
   | { allowed: true; targetFamilyId: string }
@@ -347,7 +376,17 @@ export type SurnamePrefillMode =
   | { kind: 'addChild'; targetFamilyId?: string }
   | { kind: 'addSibling'; targetFamilyId?: string }
   | { kind: 'addParent'; lockedSex?: 'M' | 'F' }
-  | { kind: 'edit' | 'addSpouse' | 'linkExistingSpouse' | 'editFamilyEvent' | 'addRadaa' | 'editRadaa' };
+  | {
+      kind:
+        | 'edit'
+        | 'addSpouse'
+        | 'linkExistingSpouse'
+        | 'editFamilyEvent'
+        | 'addRadaa'
+        | 'editRadaa'
+        | 'ancestryJump'
+        | 'editAncestryJump';
+    };
 
 /**
  * A surname is usable only from a real, non-private person whose surname is a

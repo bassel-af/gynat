@@ -1,4 +1,12 @@
-import type { Individual, Family, FamilyEvent, GedcomData, RadaFamily } from './types';
+import type {
+  Individual,
+  Family,
+  FamilyEvent,
+  GedcomData,
+  RadaFamily,
+  AncestryJump,
+} from './types';
+import { validateAncestryJump } from '../tree/ancestry-jump-validators';
 
 function emptyFamilyEvent(): FamilyEvent {
   return { date: '', hijriDate: '', place: '', description: '', notes: '' };
@@ -54,6 +62,50 @@ function formatGedcomDate(raw: string): string {
   return formatCalendarDate(raw, GEDCOM_MONTHS, 3);
 }
 
+// ---------------------------------------------------------------------------
+// Ancestry jump («قفزة نسب») — ASSO collection
+// ---------------------------------------------------------------------------
+
+/**
+ * One `ASSO` block read off an `INDI`, before we know whether it is a jump.
+ * Resolution is deferred to the end of the parse because `_ANC_FAM`, the
+ * target's `FAMS` and the `FAM` records themselves may all appear later.
+ */
+interface PendingAsso {
+  ownerId: string;
+  target: string;
+  rela: string | null;
+  role: string | null;
+  ancFam: string | null;
+  gapMin: number | null;
+  gapMax: number | null;
+  notes: string;
+}
+
+function parsePositiveInt(value: string | null): number | null {
+  const parsed = parseInt((value ?? '').trim(), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+/** Mirrors the API's `notes` ceiling so a crafted file cannot exceed it. */
+const MAX_JUMP_NOTES_LENGTH = 5000;
+
+// ---------------------------------------------------------------------------
+// Note text helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * A GEDCOM cross-reference pointer: `@XREF@`. An xref id never contains `@`,
+ * so text that merely opens with the escaped `@@` is NOT a pointer — checking
+ * only the first and last character would swallow it as a dangling NOTE ref.
+ */
+const POINTER_RE = /^@[^@]+@$/;
+
+/** Reverse the `@@` escape the exporter writes for a literal at-sign. */
+function unescapeNoteText(value: string): string {
+  return value.replace(/@@/g, '@');
+}
+
 export function parseGedcom(text: string): GedcomData {
   // Strip UTF-8 BOM if present
   const cleanText = text.startsWith('\uFEFF') ? text.slice(1) : text;
@@ -67,6 +119,20 @@ export function parseGedcom(text: string): GedcomData {
   let currentLevel1Tag: string | null = null;
   let currentLevel2Tag: string | null = null;
   let currentStandaloneNoteId: string | null = null;
+  const ancestryJumps: Record<string, AncestryJump> = {};
+  const collectedAssos: PendingAsso[] = [];
+  let pendingAsso: PendingAsso | null = null;
+
+  /** End the open ASSO block; resolution happens after the whole file is read. */
+  const flushPendingAsso = (): void => {
+    if (pendingAsso) {
+      // Level-3 CONT/CONC accumulation is unbounded, so the cap belongs here —
+      // the point where the note text is complete.
+      pendingAsso.notes = unescapeNoteText(pendingAsso.notes).slice(0, MAX_JUMP_NOTES_LENGTH);
+      collectedAssos.push(pendingAsso);
+    }
+    pendingAsso = null;
+  };
 
   for (const line of lines) {
     const trimmed = line.trim();
@@ -91,6 +157,7 @@ export function parseGedcom(text: string): GedcomData {
     }
 
     if (level === 0) {
+      flushPendingAsso();
       currentSubRecord = null;
       currentLevel1Tag = null;
       currentLevel2Tag = null;
@@ -161,12 +228,24 @@ export function parseGedcom(text: string): GedcomData {
       }
     } else if (currentRecord) {
       if (level === 1) {
+        flushPendingAsso();
         currentSubRecord = tag;
         currentLevel1Tag = tag;
         currentLevel2Tag = null;
         if (currentRecord.type === 'INDI') {
           const indi = currentRecord as Individual;
-          if (tag === 'NAME') {
+          if (tag === 'ASSO' && value) {
+            pendingAsso = {
+              ownerId: indi.id,
+              target: value,
+              rela: null,
+              role: null,
+              ancFam: null,
+              gapMin: null,
+              gapMax: null,
+              notes: '',
+            };
+          } else if (tag === 'NAME') {
             const rawName = value || '';
             const parsedName = rawName.replace(/\//g, '').trim();
             indi.name = parsedName;
@@ -251,7 +330,24 @@ export function parseGedcom(text: string): GedcomData {
       } else if (level === 2) {
         if (currentRecord.type === 'INDI') {
           const indi = currentRecord as Individual;
-          if (currentSubRecord === 'NAME') {
+          if (currentSubRecord === 'ASSO' && pendingAsso) {
+            if (tag === 'RELA') {
+              pendingAsso.rela = (value ?? '').trim().toLowerCase();
+            } else if (tag === 'ROLE') {
+              pendingAsso.role = (value ?? '').trim();
+            } else if (tag === '_ANC_FAM') {
+              pendingAsso.ancFam = value || null;
+            } else if (tag === '_GAP_MIN') {
+              pendingAsso.gapMin = parsePositiveInt(value);
+            } else if (tag === '_GAP_MAX') {
+              pendingAsso.gapMax = parsePositiveInt(value);
+            } else if (tag === 'NOTE') {
+              pendingAsso.notes = value || '';
+              currentLevel2Tag = 'NOTE';
+            } else {
+              currentLevel2Tag = tag;
+            }
+          } else if (currentSubRecord === 'NAME') {
             if (tag === 'GIVN') {
               indi.givenName = value || '';
             } else if (tag === 'SURN') {
@@ -339,7 +435,18 @@ export function parseGedcom(text: string): GedcomData {
           }
         }
       } else if (level === 3) {
-        if (currentRecord.type === 'INDI' && currentLevel2Tag === 'NOTE') {
+        if (
+          currentRecord.type === 'INDI' &&
+          currentSubRecord === 'ASSO' &&
+          currentLevel2Tag === 'NOTE' &&
+          pendingAsso
+        ) {
+          if (tag === 'CONT') {
+            pendingAsso.notes += '\n' + (value || '');
+          } else if (tag === 'CONC') {
+            pendingAsso.notes += (value || '');
+          }
+        } else if (currentRecord.type === 'INDI' && currentLevel2Tag === 'NOTE') {
           const indi = currentRecord as Individual;
           if (currentSubRecord === 'BIRT') {
             if (tag === 'CONT') {
@@ -374,38 +481,166 @@ export function parseGedcom(text: string): GedcomData {
     }
   }
 
-  // Resolve standalone NOTE references on individuals
-  for (const id in individuals) {
-    const indi = individuals[id];
-    if (indi.notes.startsWith('@') && indi.notes.endsWith('@')) {
-      const resolved = standaloneNotes[indi.notes];
-      indi.notes = resolved !== undefined ? resolved : '';
+  flushPendingAsso();
+
+  // -------------------------------------------------------------------------
+  // Resolve ancestry jumps («قفزة نسب»). Deferred to here so `_ANC_FAM`, the
+  // target's `FAMS` and the `FAM` records can appear anywhere in the file.
+  // -------------------------------------------------------------------------
+  let jumpCounter = 0;
+  let synthesizedFamilyCounter = 0;
+
+  for (const asso of collectedAssos) {
+    // Anything that is not an ancestry jump is an ordinary association: it is
+    // ignored, never re-read as a parent link.
+    const isJump = asso.rela === 'ancestor' || asso.role === '_ANCESTOR';
+    if (!isJump) continue;
+
+    const owner = individuals[asso.ownerId];
+    if (!owner) continue;
+    // Rule J3: recorded parents always win over an imported jump.
+    if (owner.familyAsChild) continue;
+    // v1: at most ONE jump per person — first in file wins.
+    if (owner.ancestryJumpAsDescendant) continue;
+
+    const target = individuals[asso.target];
+    if (!target) continue;
+
+    let familyId: string | null = null;
+    if (asso.ancFam && families[asso.ancFam]) {
+      // `_ANC_FAM` must CORROBORATE the ASSO: the target has to be one of the
+      // couple. A family naming someone else would render «من وَلَد ‹شخص آخر›»
+      // — a claim the file never made — so the whole jump is dropped rather
+      // than quietly re-pointed.
+      const claimed = families[asso.ancFam];
+      if (claimed.husband !== target.id && claimed.wife !== target.id) continue;
+      familyId = asso.ancFam;
+    } else {
+      familyId = target.familiesAsSpouse.find((id) => families[id]) ?? null;
     }
-    if (indi.birthNotes.startsWith('@') && indi.birthNotes.endsWith('@')) {
-      const resolved = standaloneNotes[indi.birthNotes];
-      indi.birthNotes = resolved !== undefined ? resolved : '';
+
+    if (!familyId) {
+      // No family to point at — mint the same one-spouse family the editor
+      // builds when only one ancestor is known.
+      familyId = `@_ANCF${++synthesizedFamilyCounter}@`;
+      families[familyId] = {
+        id: familyId,
+        type: 'FAM',
+        husband: target.sex === 'F' ? null : target.id,
+        wife: target.sex === 'F' ? target.id : null,
+        children: [],
+        marriageContract: emptyFamilyEvent(),
+        marriage: emptyFamilyEvent(),
+        divorce: emptyFamilyEvent(),
+        isDivorced: false,
+      };
+      target.familiesAsSpouse.push(familyId);
     }
-    if (indi.deathNotes.startsWith('@') && indi.deathNotes.endsWith('@')) {
-      const resolved = standaloneNotes[indi.deathNotes];
-      indi.deathNotes = resolved !== undefined ? resolved : '';
+
+    const jumpId = `@_ANCJ${++jumpCounter}@`;
+    ancestryJumps[jumpId] = {
+      id: jumpId,
+      type: '_ANC_JUMP',
+      descendant: owner.id,
+      ancestorFamily: familyId,
+      generationsMin: asso.gapMin,
+      generationsMax: asso.gapMax,
+      notes: asso.notes,
+    };
+    owner.ancestryJumpAsDescendant = jumpId;
+
+    const family = families[familyId];
+    if (!family.ancestryJumpsAsAncestor) family.ancestryJumpsAsAncestor = [];
+    family.ancestryJumpsAsAncestor.push(jumpId);
+  }
+
+  // -------------------------------------------------------------------------
+  // Enforce the API's jump rules on the IMPORT path.
+  //
+  // `POST /ancestry-jumps` rejects a cycle, a self-reference and a spouse-less
+  // ancestor couple with a 400. A crafted or corrupt file must not be able to
+  // write state the API forbids, because the projection and the nasab code
+  // rely on those invariants holding for EVERY write path — and the only two
+  // writers besides the API are the import route and the seeder, both of which
+  // reach the database through this function.
+  //
+  // Every assembled jump is checked against the FINISHED payload, then the
+  // violators are removed together: in an A↔B loop each jump is a cycle only
+  // while the other is present, so dropping them one at a time would leave one
+  // half of the loop standing.
+  // -------------------------------------------------------------------------
+  if (Object.keys(ancestryJumps).length > 0) {
+    const view: GedcomData = { individuals, families, ancestryJumps };
+    const violators = Object.values(ancestryJumps).filter(
+      (jump) =>
+        validateAncestryJump(
+          view,
+          {
+            descendantId: jump.descendant,
+            ancestorFamilyId: jump.ancestorFamily,
+            generationsMin: jump.generationsMin,
+            generationsMax: jump.generationsMax,
+          },
+          // The row being checked is already wired into `view`; J4 must not
+          // report it as the person's pre-existing jump.
+          { ignoreJumpId: jump.id },
+        ) !== null,
+    );
+
+    for (const jump of violators) {
+      delete ancestryJumps[jump.id];
+
+      const owner = individuals[jump.descendant];
+      if (owner?.ancestryJumpAsDescendant === jump.id) {
+        delete owner.ancestryJumpAsDescendant;
+      }
+
+      const family = families[jump.ancestorFamily];
+      if (family?.ancestryJumpsAsAncestor) {
+        const remaining = family.ancestryJumpsAsAncestor.filter((id) => id !== jump.id);
+        if (remaining.length > 0) {
+          family.ancestryJumpsAsAncestor = remaining;
+        } else {
+          delete family.ancestryJumpsAsAncestor;
+        }
+      }
     }
   }
 
-  // Resolve standalone NOTE references on family events
+  // Resolve a standalone NOTE reference, then reverse the `@@` escape. The
+  // order matters: `standaloneNotes` is keyed by the RAW `@XREF@`.
+  const resolveNote = (value: string): string => {
+    if (POINTER_RE.test(value)) {
+      const resolved = standaloneNotes[value];
+      return unescapeNoteText(resolved !== undefined ? resolved : '');
+    }
+    return unescapeNoteText(value);
+  };
+
+  for (const id in individuals) {
+    const indi = individuals[id];
+    indi.notes = resolveNote(indi.notes);
+    indi.birthNotes = resolveNote(indi.birthNotes);
+    indi.deathNotes = resolveNote(indi.deathNotes);
+  }
+
   for (const id in families) {
     const fam = families[id];
-    const events = [fam.marriageContract, fam.marriage, fam.divorce];
-    for (const event of events) {
-      if (event.notes.startsWith('@') && event.notes.endsWith('@')) {
-        const resolved = standaloneNotes[event.notes];
-        event.notes = resolved !== undefined ? resolved : '';
-      }
+    for (const event of [fam.marriageContract, fam.marriage, fam.divorce]) {
+      event.notes = resolveNote(event.notes);
     }
+  }
+
+  for (const id in radaFamilies) {
+    radaFamilies[id].notes = resolveNote(radaFamilies[id].notes);
   }
 
   const result: GedcomData = { individuals, families };
   if (Object.keys(radaFamilies).length > 0) {
     result.radaFamilies = radaFamilies;
+  }
+  if (Object.keys(ancestryJumps).length > 0) {
+    result.ancestryJumps = ancestryJumps;
   }
   return result;
 }

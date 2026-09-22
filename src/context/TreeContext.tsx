@@ -113,8 +113,10 @@ export function TreeProvider({ children, forcedRootId }: TreeProviderProps) {
       setSelectedRootIdState((prev) => {
         if (!prev || !newData.individuals[prev]) return targetRoot!.id;
         // If the current root now has parents (parent added above it),
-        // walk up to the new topmost ancestor
-        const topAncestor = findTopmostAncestor(newData, prev);
+        // walk up to the new topmost ancestor. A «قفزة نسب» also puts someone
+        // above him, and the canvas climbs it — so this must too, or the root
+        // and the canvas disagree about where the tree starts.
+        const topAncestor = findTopmostAncestor(newData, prev, { includeJumps: true });
         return topAncestor ?? prev;
       });
 
@@ -159,12 +161,16 @@ export function TreeProvider({ children, forcedRootId }: TreeProviderProps) {
 
   const { visiblePersonIds, graftPersonIds, panelScopeIds } = useMemo(() => {
     if (!data || !selectedRootId) return { visiblePersonIds: new Set<string>(), graftPersonIds: new Set<string>(), panelScopeIds: new Set<string>() };
-    const visible = getTreeVisibleIndividuals(data, selectedRootId);
+    // These two sets answer "what is on the canvas" and "who belongs to this
+    // tree" for the search list, the stat counts and PersonDetail. The canvas
+    // walks «قفزة نسب» edges, so both must walk them too — otherwise a person
+    // drawn on screen is missing from the list that is supposed to find him.
+    const visible = getTreeVisibleIndividuals(data, selectedRootId, false, { includeJumps: true });
 
     // Side-panel scope: everyone connected to the root by blood or marriage
     // (includes married-in families at any distance). Separate from `visible`
     // so the canvas and PersonDetail "is this on screen" checks are unaffected.
-    const panelScope = getConnectedIndividuals(data, selectedRootId);
+    const panelScope = getConnectedIndividuals(data, selectedRootId, { includeJumps: true });
 
     // Always include graft individuals (parents + siblings of married-in spouses)
     const graftOnly = new Set<string>();

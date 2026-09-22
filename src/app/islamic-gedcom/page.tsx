@@ -34,6 +34,12 @@ export const metadata: Metadata = {
     'Kunya GEDCOM',
     '_KUNYA',
     'Abu Umm',
+    'قفزة نسب',
+    'ancestry jump GEDCOM',
+    'ASSO RELA ancestor',
+    '_ANC_FAM',
+    'عدنان إسماعيل',
+    'missing generations genealogy',
   ],
   openGraph: {
     title: 'مرجع GEDCOM الإسلامي | Islamic GEDCOM Reference',
@@ -399,6 +405,217 @@ export default function IslamicGedcomPage() {
           </div>
         </section>
 
+        {/* ─── Ancestry Jump ─── */}
+        <section id="ancestry-jump" className={styles.section}>
+          <h2 className={styles.sectionTitle}>قفزة نسب</h2>
+          <p className={styles.desc}>
+            كثير من سلاسل النسب العربية تصل إلى جدٍّ بعيد معروف، بينما الأجيال
+            الواقعة بين الشخص وذلك الجد غير مسجّلة في الشجرة — إمّا لأنها لم
+            تُحفظ، وإمّا لأن العائلة لم ترَ حاجة إلى إدراجها. &laquo;قفزة نسب&raquo;
+            هي توثيق هذا الاتصال كما هو: انتساب مؤكَّد إلى الجد، مع الإقرار بأن
+            ما بينهما مطويّ.
+          </p>
+          <p className={styles.desc}>
+            القفزة ليست علاقة أبوة. استخدام{' '}
+            <span className={styles.inlineCode}>FAMC</span> لهذا الغرض يجعل
+            البرامج ترسم الشخص ابناً مباشراً للجد، وهذا خطأ في النسب وفي الرسم.
+            لذلك تُحمل العلاقة على آلية الارتباط القياسية{' '}
+            <span className={styles.inlineCode}>ASSO</span>، والبيانات المنظمة
+            وحدها هي المخصصة.
+          </p>
+          <div className={styles.note}>
+            المثال المرجعي في هذا الباب هو نسب عدنان إلى إسماعيل عليه السلام:
+            الانتساب ثابت، وعدد الآباء بينهما مختلَف فيه — قيل سبعة، وقيل ثلاثون،
+            وقيل أربعون. ومن هنا جاء قول من قال:{' '}
+            <strong>&laquo;الأمر عندنا الإمساك عمّا وراء عدنان إلى إسماعيل&raquo;</strong>.
+            القفزة تسجّل ما هو ثابت، وتترك المطويّ مطويّاً.
+          </div>
+
+          {/* ASSO */}
+          <div className={styles.tagBlock}>
+            <div className={styles.tagHeader}>
+              <span className={`${styles.tagBadge} ${styles.tagBadgeStandard}`}>ASSO</span>
+              <span className={styles.tagLabel}>قياسي</span>
+              <span className={styles.tagName}>الارتباط بالجد البعيد</span>
+            </div>
+            <p className={styles.tagDesc}>
+              يوضع على سجل الفرد الأقرب (صاحب القفزة) ويشير إلى الجد البعيد.
+              يُكتب <strong>ارتباط واحد فقط</strong> لكل قفزة، يشير إلى الزوج في
+              عائلة الجد، أو إلى الزوجة إن كانت هي المعروفة وحدها.
+            </p>
+            <p className={styles.tagDesc}>
+              السبب أن <span className={styles.inlineCode}>ASSO</span> لا يشير
+              إلا إلى سجل فرد (<span className={styles.inlineCode}>INDI</span>)،
+              في 5.5.1 وفي 7.0 على السواء، فلا يمكن أن يشير إلى سجل عائلة
+              (<span className={styles.inlineCode}>FAM</span>). ولأن الجد البعيد
+              قد يكون زوجين معاً، يُحمل الزوجان في{' '}
+              <span className={styles.inlineCode}>_ANC_FAM</span> بجانب الارتباط.
+              وهذا لا يفقد شيئاً: سجل العائلة مُصدَّر أصلاً ويحمل الزوجين.
+            </p>
+            <div className={styles.codeBlock}>
+              <span className={styles.codeComment}>{"// GEDCOM 5.5.1 — عدنان ⇠ إسماعيل"}</span>{'\n'}
+              <span className={styles.codeId}>0 @I1@ INDI</span>{'\n'}
+              <span className={styles.codeTag}>1 NAME</span> <span className={styles.codeVal}>عدنان /قريش/</span>{'\n'}
+              <span className={styles.codeTag}>1 SEX</span> <span className={styles.codeVal}>M</span>{'\n'}
+              <span className={styles.codeTag}>1 ASSO</span> <span className={styles.codeId}>@I2@</span>{'\n'}
+              <span className={styles.codeTag}>2 RELA</span> <span className={styles.codeVal}>ancestor</span>{'\n'}
+              <span className={styles.codeCustomTag}>2 _ANC_FAM</span> <span className={styles.codeId}>@F1@</span>{'\n'}
+              <span className={styles.codeCustomTag}>2 _GAP_MIN</span> <span className={styles.codeVal}>4</span>{'\n'}
+              <span className={styles.codeCustomTag}>2 _GAP_MAX</span> <span className={styles.codeVal}>40</span>{'\n'}
+              <span className={styles.codeTag}>2 NOTE</span> <span className={styles.codeVal}>قفزة نسب: عدنان قريش من وَلَد إسماعيل، والأجيال بينهما مطويّة.</span>{'\n'}
+              <span className={styles.codeTag}>3 CONT</span> <span className={styles.codeVal}>عدد الأجيال بينهما: بين 4 و40.</span>{'\n'}
+              {'\n'}
+              <span className={styles.codeComment}>{"// عائلة الجد — الزوجان معاً، والارتباط واحد"}</span>{'\n'}
+              <span className={styles.codeId}>0 @F1@ FAM</span>{'\n'}
+              <span className={styles.codeTag}>1 HUSB</span> <span className={styles.codeId}>@I2@</span>
+              <span className={styles.codeComment}>{"   // إسماعيل"}</span>{'\n'}
+              <span className={styles.codeTag}>1 WIFE</span> <span className={styles.codeId}>@I3@</span>
+              <span className={styles.codeComment}>{"   // هاجر"}</span>
+            </div>
+            <div className={styles.note}>
+              تشترط القفزة ألّا يكون للشخص أب مسجّل: وجود{' '}
+              <span className={styles.inlineCode}>FAMC</span> يعني أن نسبه القريب
+              معروف، فلا محل للقفزة. وعند استيراد ملف يخالف ذلك، تُرجَّح الأبوة
+              المسجّلة وتُهمل القفزة.
+            </div>
+          </div>
+
+          {/* RELA */}
+          <div className={styles.tagBlock}>
+            <div className={styles.tagHeader}>
+              <span className={`${styles.tagBadge} ${styles.tagBadgeStandard}`}>RELA</span>
+              <span className={styles.tagLabel}>قياسي</span>
+              <span className={styles.tagName}>نوع العلاقة (5.5.1)</span>
+            </div>
+            <p className={styles.tagDesc}>
+              القيمة <span className={styles.inlineCode}>ancestor</span> بحروف
+              صغيرة — بعض البرامج (مثل webtrees) تبحث عن القيمة بحروفها الصغيرة
+              لترجمتها. القيمة محايدة بالنسبة للجنس، فلا حاجة إلى قيمة أخرى حين
+              يكون الجد المعروف امرأة.
+            </p>
+            <div className={styles.note}>
+              الحد الأقصى لقيمة <span className={styles.inlineCode}>RELA</span>{' '}
+              في 5.5.1 هو ٢٥ حرفاً، فتُقتطع القيمة عند هذا الحد قبل الكتابة.
+            </div>
+          </div>
+
+          {/* ROLE */}
+          <div className={styles.tagBlock}>
+            <div className={styles.tagHeader}>
+              <span className={`${styles.tagBadge} ${styles.tagBadgeStandard}`}>ROLE</span>
+              <span className={styles.tagLabel}>قياسي</span>
+              <span className={styles.tagName}>دور الطرف المرتبط (7.0)</span>
+            </div>
+            <p className={styles.tagDesc}>
+              في GEDCOM 7.0 يحمل <span className={styles.inlineCode}>ROLE</span>{' '}
+              نوع العلاقة، ويوضع تحته{' '}
+              <span className={styles.inlineCode}>PHRASE</span> بوصف نصي مقروء
+              يذكر عدد الأجيال المطويّة إن كان محدداً.
+            </p>
+            <div className={styles.codeBlock}>
+              <span className={styles.codeComment}>{"// GEDCOM 7.0"}</span>{'\n'}
+              <span className={styles.codeId}>0 @I1@ INDI</span>{'\n'}
+              <span className={styles.codeTag}>1 NAME</span> <span className={styles.codeVal}>عدنان /قريش/</span>{'\n'}
+              <span className={styles.codeTag}>1 ASSO</span> <span className={styles.codeId}>@I2@</span>{'\n'}
+              <span className={styles.codeTag}>2 ROLE</span> <span className={styles.codeCustomTag}>_ANCESTOR</span>{'\n'}
+              <span className={styles.codeTag}>3 PHRASE</span> <span className={styles.codeVal}>قفزة نسب — بين 4 و40 جيلاً</span>{'\n'}
+              <span className={styles.codeCustomTag}>2 _ANC_FAM</span> <span className={styles.codeId}>@F1@</span>{'\n'}
+              <span className={styles.codeCustomTag}>2 _GAP_MIN</span> <span className={styles.codeVal}>4</span>{'\n'}
+              <span className={styles.codeCustomTag}>2 _GAP_MAX</span> <span className={styles.codeVal}>40</span>{'\n'}
+              <span className={styles.codeTag}>2 NOTE</span> <span className={styles.codeVal}>قفزة نسب: عدنان قريش من وَلَد إسماعيل، والأجيال بينهما مطويّة.</span>
+            </div>
+          </div>
+
+          {/* _ANCESTOR */}
+          <div className={styles.tagBlock}>
+            <div className={styles.tagHeader}>
+              <span className={`${styles.tagBadge} ${styles.tagBadgeCustom}`}>_ANCESTOR</span>
+              <span className={styles.tagLabel}>امتداد</span>
+              <span className={styles.tagName}>قيمة الدور المخصصة</span>
+            </div>
+            <p className={styles.tagDesc}>
+              قيمة مضافة إلى تعداد{' '}
+              <span className={styles.inlineCode}>ROLE</span>. يسمح معيار 7.0
+              للامتدادات بإضافة قيم جديدة إلى التعدادات القياسية، على أن يُعرَّف
+              عنوانها في كتلة <span className={styles.inlineCode}>SCHMA</span>{' '}
+              داخل الترويسة. وهي تقابل{' '}
+              <span className={styles.inlineCode}>AncestorDescendant</span> في
+              معيار GEDCOM X.
+            </p>
+            <div className={styles.codeBlock}>
+              <span className={styles.codeComment}>{"// تعريف الامتدادات في ترويسة GEDCOM 7.0"}</span>{'\n'}
+              <span className={styles.codeTag}>0 HEAD</span>{'\n'}
+              <span className={styles.codeTag}>1 SCHMA</span>{'\n'}
+              <span className={styles.codeTag}>2 TAG</span> <span className={styles.codeCustomTag}>_ANCESTOR</span> <span className={styles.codeVal}>https://gynat.com/gedcom/ext/_ANCESTOR</span>{'\n'}
+              <span className={styles.codeTag}>2 TAG</span> <span className={styles.codeCustomTag}>_ANC_FAM</span> <span className={styles.codeVal}>https://gynat.com/gedcom/ext/_ANC_FAM</span>{'\n'}
+              <span className={styles.codeTag}>2 TAG</span> <span className={styles.codeCustomTag}>_GAP_MIN</span> <span className={styles.codeVal}>https://gynat.com/gedcom/ext/_GAP_MIN</span>{'\n'}
+              <span className={styles.codeTag}>2 TAG</span> <span className={styles.codeCustomTag}>_GAP_MAX</span> <span className={styles.codeVal}>https://gynat.com/gedcom/ext/_GAP_MAX</span>
+            </div>
+          </div>
+
+          {/* _ANC_FAM */}
+          <div className={styles.tagBlock}>
+            <div className={styles.tagHeader}>
+              <span className={`${styles.tagBadge} ${styles.tagBadgeCustom}`}>_ANC_FAM</span>
+              <span className={styles.tagLabel}>امتداد</span>
+              <span className={styles.tagName}>عائلة الجد</span>
+            </div>
+            <p className={styles.tagDesc}>
+              يشير إلى سجل العائلة{' '}
+              (<span className={styles.inlineCode}>FAM</span>) الذي يجمع الجد
+              وزوجه، فيُحفظ الطرفان معاً دون الحاجة إلى ارتباطين منفصلين وإلى
+              تخمين أيّهما يخصّ نفس القفزة. وإذا كان المعروف جداً واحداً، فهو
+              سجل عائلة بطرف واحد.
+            </p>
+          </div>
+
+          {/* _GAP_MIN / _GAP_MAX */}
+          <div className={styles.tagBlock}>
+            <div className={styles.tagHeader}>
+              <span className={`${styles.tagBadge} ${styles.tagBadgeCustom}`}>_GAP_MIN</span>
+              <span className={`${styles.tagBadge} ${styles.tagBadgeCustom}`}>_GAP_MAX</span>
+              <span className={styles.tagLabel}>امتداد</span>
+              <span className={styles.tagName}>عدد الأجيال المطويّة</span>
+            </div>
+            <p className={styles.tagDesc}>
+              حدّان اختياريان لعدد الأجيال بين الشخص وجده، يستوعبان اختلاف
+              الروايات: في مثال عدنان، أقل ما قيل أربعة وأكثره أربعون. تُحذف
+              العلامة كلياً إذا لم يكن الحد معروفاً، ويجوز ذكر أحدهما دون الآخر.
+            </p>
+          </div>
+
+          {/* NOTE */}
+          <div className={styles.tagBlock}>
+            <div className={styles.tagHeader}>
+              <span className={`${styles.tagBadge} ${styles.tagBadgeStandard}`}>NOTE</span>
+              <span className={styles.tagLabel}>قياسي</span>
+              <span className={styles.tagName}>الوصف النصي</span>
+            </div>
+            <p className={styles.tagDesc}>
+              يُكتب مع كل قفزة دائماً. يبدأ بسطر ثابت يوضّح طبيعة العلاقة، ثم
+              سطر لعدد الأجيال إن ذُكر حدّ منها، ثم ملاحظات صاحب الشجرة نفسه
+              كأسطر <span className={styles.inlineCode}>CONT</span>.
+            </p>
+            <div className={styles.note}>
+              معيار 7.0 يوصي بأن يصاحب الامتدادَ ما يقابله من علامات قياسية.
+              و<span className={styles.inlineCode}>NOTE</span> هي الوحيدة التي
+              تصل إلى كل البرامج، فهي ضمان أن معنى القفزة يبقى مقروءاً ولو
+              أُسقطت بقية العلامات.
+            </div>
+          </div>
+
+          <div className={styles.note}>
+            <strong>ماذا تُظهر البرامج الأخرى؟</strong> البرامج التي لا تعرف
+            الامتدادات تُسقط العلامات التي تبدأ بشرطة سفلية (Gramps مثلاً)،
+            فيبقى ارتباط <span className={styles.inlineCode}>ASSO</span> مع{' '}
+            <span className={styles.inlineCode}>RELA ancestor</span> ظاهراً
+            كعلاقة &laquo;جدّ&raquo; صحيحة، ويبقى نص{' '}
+            <span className={styles.inlineCode}>NOTE</span> مقروءاً. والأهم أن
+            أيّ برنامج لا يرسم أبوة غير صحيحة: الشخص لا يظهر ابناً للجد في أي
+            حال.
+          </div>
+        </section>
+
         {/* ─── Kunya ─── */}
         <section id="kunya" className={styles.section}>
           <h2 className={styles.sectionTitle}>الكنية</h2>
@@ -520,8 +737,14 @@ export default function IslamicGedcomPage() {
                 <span className={styles.inlineCode}>_RADA_WIFE</span>,{' '}
                 <span className={styles.inlineCode}>_RADA_CHIL</span>,{' '}
                 <span className={styles.inlineCode}>_UMM_WALAD</span>,{' '}
-                <span className={styles.inlineCode}>_KUNYA</span>) تتبع
+                <span className={styles.inlineCode}>_KUNYA</span>,{' '}
+                <span className={styles.inlineCode}>_ANC_FAM</span>,{' '}
+                <span className={styles.inlineCode}>_GAP_MIN</span>,{' '}
+                <span className={styles.inlineCode}>_GAP_MAX</span>) تتبع
                 اتفاقية الشرطة السفلية المعتمدة.
+                وقفزة النسب تركب آلية <span className={styles.inlineCode}>ASSO</span>{' '}
+                مع <span className={styles.inlineCode}>RELA ancestor</span> القياسية،
+                فتبقى العلاقة مفهومة حتى في البرامج التي تُسقط الامتدادات.
               </p>
             </div>
             <div className={styles.compatItem}>
@@ -530,6 +753,10 @@ export default function IslamicGedcomPage() {
                 متوافق بالكامل. GEDCOM 7 يوفر آلية رسمية لتسجيل الامتدادات
                 المخصصة عبر{' '}
                 <span className={styles.inlineCode}>GEDCOM-registries</span>.
+                قيمة <span className={styles.inlineCode}>_ANCESTOR</span> تحت{' '}
+                <span className={styles.inlineCode}>ROLE</span> وسائر علامات قفزة
+                النسب مُعرَّفة في كتلة{' '}
+                <span className={styles.inlineCode}>SCHMA</span> في الترويسة.
               </p>
             </div>
           </div>

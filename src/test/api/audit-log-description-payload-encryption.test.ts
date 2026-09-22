@@ -281,6 +281,9 @@ describe('Phase 10b follow-up (task #22) — description + payload on write', ()
         radaFamily: {
           updateMany: vi.fn().mockResolvedValue({ count: 0 }),
         },
+        ancestryJump: {
+          deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
+        },
         userTreeLink: {
           deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
         },

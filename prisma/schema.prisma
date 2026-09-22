@@ -42,6 +42,7 @@ model User {
   eventRsvps           EventRsvp[]
   notifications        Notification[]
   createdIndividuals   Individual[]          @relation("IndividualCreator")
+  ancestryJumpsCreated AncestryJump[]        @relation("AncestryJumpCreator")
   uploadedMedia        AlbumMedia[]
   createdShareTokens   BranchShareToken[]
   createdPointers      BranchPointer[]
@@ -260,6 +261,7 @@ model FamilyTree {
   individuals  Individual[]
   families     Family[]
   radaFamilies RadaFamily[]
+  ancestryJumps AncestryJump[]
   editLogs     TreeEditLog[]
   collectionItems CollectionItem[]
 
@@ -333,6 +335,7 @@ model Individual {
   radaFamiliesAsFosterFather RadaFamily[]   @relation("RadaFamilyFosterFather")
   radaFamiliesAsFosterMother RadaFamily[]   @relation("RadaFamilyFosterMother")
   radaFamilyChildren         RadaFamilyChild[]
+  ancestryJumpAsDescendant   AncestryJump[]        @relation("AncestryJumpDescendant")
   collectionItemsAsRoot      CollectionItem[]
 
   @@unique([treeId, gedcomId]) // gedcomId is unique within a tree
@@ -386,6 +389,7 @@ model Family {
   marriagePlaceRef         Place?        @relation("FamilyMarriagePlace", fields: [marriagePlaceId], references: [id])
   divorcePlaceRef          Place?        @relation("FamilyDivorcePlace", fields: [divorcePlaceId], references: [id])
   children                 FamilyChild[]
+  ancestryJumpsAsAncestor  AncestryJump[] @relation("AncestryJumpAncestorFamily")
 
   @@unique([treeId, gedcomId])
   @@map("families")
@@ -431,6 +435,42 @@ model RadaFamilyChild {
 
   @@id([radaFamilyId, individualId])
   @@map("rada_family_children")
+}
+
+// =============================================================================
+// Ancestry jump («قفزة نسب») — a certain descent across an unrecorded (or
+// deliberately skipped) number of generations. NOT a parent edge: no traversal
+// crosses it unless it explicitly opts in (`includeJumps`), so code that does
+// not know about jumps simply does not see the link — fail-closed.
+// =============================================================================
+
+model AncestryJump {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  treeId           String   @map("tree_id") @db.Uuid
+  gedcomId         String?  @map("gedcom_id")
+  /// The nearer person — must have NO familyAsChild (rule J3).
+  descendantId     String   @map("descendant_id") @db.Uuid
+  /// The distant ancestor COUPLE. Always a Family; a single known ancestor is a
+  /// one-spouse Family, exactly as `handleAddParentSubmit` already builds.
+  ancestorFamilyId String   @map("ancestor_family_id") @db.Uuid
+  generationsMin   Int?     @map("generations_min")
+  generationsMax   Int?     @map("generations_max")
+  /// Phase 10b: AES-256-GCM ciphertext under the workspace data key.
+  notes            Bytes?
+  createdById      String?  @map("created_by") @db.Uuid
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  tree           FamilyTree @relation(fields: [treeId], references: [id], onDelete: Cascade)
+  descendant     Individual @relation("AncestryJumpDescendant", fields: [descendantId], references: [id], onDelete: Cascade)
+  ancestorFamily Family     @relation("AncestryJumpAncestorFamily", fields: [ancestorFamilyId], references: [id], onDelete: Cascade)
+  createdBy      User?      @relation("AncestryJumpCreator", fields: [createdById], references: [id])
+
+  /// v1: at most ONE jump per descendant.
+  @@unique([treeId, descendantId])
+  @@unique([treeId, gedcomId])
+  @@index([ancestorFamilyId])
+  @@map("ancestry_jumps")
 }
 
 // =============================================================================

@@ -30,6 +30,17 @@
  *  - FIRST-DEGREE ONLY: parent (father+mother), spouse, children, sibling.
  *    Uncles/cousins/grandchildren/rada'a are shown on the human page but are
  *    NEVER in the machine graph.
+ *  - «قفزة نسب» (ancestry jump) — LOCKED RULES, do not "improve" them:
+ *      * the jump's ancestor couple is emitted as `relatedTo` and NOTHING else.
+ *        NEVER `parent`, `children`, `spouse` or `sibling`. schema.org has no
+ *        "ancestor" property and `relatedTo` is its most generic familial
+ *        relation, making no generational claim. A `parent` edge across an
+ *        unrecorded gap would publish false precision into the knowledge graph
+ *        — exactly the failure this feature exists to prevent (see
+ *        docs/ancestor-gap-research-notes.md §A4).
+ *      * `generationsMin`/`generationsMax`/`notes` are NEVER emitted.
+ *      * the `indexable` gate is unchanged — a by-link/extra/member page still
+ *        emits nothing at all.
  */
 
 import type { GedcomData, Individual } from '@/lib/gedcom/types'
@@ -62,6 +73,8 @@ const FOCAL_KEYS = new Set([
   'children',
   'spouse',
   'sibling',
+  // «قفزة نسب» only — the generic, generation-free familial link.
+  'relatedTo',
 ])
 // Relation nodes carry name + gender ONLY — no dates, no structural keys.
 const RELATION_KEYS = new Set(['@type', 'name', 'gender'])
@@ -106,8 +119,9 @@ function collectRelations(data: GedcomData, focalId: string) {
   const siblings: Individual[] = []
   const spouses: Individual[] = []
   const children: Individual[] = []
+  const relatedTo: Individual[] = []
 
-  if (!focal) return { parents, siblings, spouses, children }
+  if (!focal) return { parents, siblings, spouses, children, relatedTo }
 
   // Parents + siblings from the focal's family-as-child.
   if (focal.familyAsChild) {
@@ -149,7 +163,23 @@ function collectRelations(data: GedcomData, focalId: string) {
     }
   }
 
-  return { parents, siblings, spouses, children }
+  // «قفزة نسب» — the distant ancestor couple, as `relatedTo` ONLY (see the
+  // locked rules in the file header). Gated per-node on `isPublicNode` as
+  // defense in depth even though `redactForPublic` already drops any jump with
+  // a redacted endpoint.
+  const jumpId = focal.ancestryJumpAsDescendant
+  const jump = jumpId ? data.ancestryJumps?.[jumpId] : undefined
+  if (jump) {
+    const ancestorFamily = families[jump.ancestorFamily]
+    if (ancestorFamily) {
+      for (const sid of [ancestorFamily.husband, ancestorFamily.wife]) {
+        const ancestor = sid ? individuals[sid] : undefined
+        if (isPublicNode(ancestor)) relatedTo.push(ancestor)
+      }
+    }
+  }
+
+  return { parents, siblings, spouses, children, relatedTo }
 }
 
 export interface PersonJsonLdArgs {
@@ -177,7 +207,7 @@ export function buildPersonJsonLd(args: PersonJsonLdArgs): Record<string, unknow
   // Focal private or absent -> no schema (page 404s; never describe a private).
   if (!isPublicNode(focal)) return null
 
-  const { parents, siblings, spouses, children } = collectRelations(data, focalId)
+  const { parents, siblings, spouses, children, relatedTo } = collectRelations(data, focalId)
 
   const person: Record<string, unknown> = {
     '@type': 'Person',
@@ -194,6 +224,8 @@ export function buildPersonJsonLd(args: PersonJsonLdArgs): Record<string, unknow
   if (children.length > 0) person.children = children.map(relationNode)
   if (spouses.length > 0) person.spouse = spouses.map(relationNode)
   if (siblings.length > 0) person.sibling = siblings.map(relationNode)
+  // «قفزة نسب» — generic relation only; never folded into the four above.
+  if (relatedTo.length > 0) person.relatedTo = relatedTo.map(relationNode)
 
   // Last-step allowlist prune on the focal node: any key not explicitly
   // permitted is dropped, so a future careless addition cannot leak.

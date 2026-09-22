@@ -9,22 +9,22 @@ DECIDE FIRST: every published tree, or opt-in per tree? It makes each relative s
 searchable by name — free upside for historical trees, a real change for a living family.
 
 
+- Ancestor "jump" / gap link: sometimes we know a distant grandfather for sure but not the
+generations in between (Quraysh: fathers known up to عدنان, then a gap, yet إسماعيل / إبراهيم /
+نوح / آدم are certain ancestors). Today we cannot add إسماعيل without inventing the missing
+fathers. Need a way to link "certain ancestor, unknown number of generations between".
+Needs the GEDCOM expert + internet research first (how the standard and other programs handle it).
 - When first name is only provided, expoerted gedcom has first name as first and surname i believe.
 - أولاد العم children visualizaiton issue.
 - Complete SEO improvements
 - مرجع gedcom الإسلامي button doesn't appear in mobile in the landing page.
-- Non admin users shall not see workspace page.
-- A way to list users and support them like reset password or change email.
-- A way to list workspaces and view their numbers.
-- List how many online users other than bassel@gynat.com or bassel.saeed9@gmail.com
-
+- Non admin users shall not see workspace page or at least some info there.
+- Support reset password or change email.
 - Search for families and ask to join (maybe through public family description). Also user can
 describe himself for the admins.
 - SSO for the landing page.
 - when searching for person to share branch pointer, put date as well. this shall be
 reusable component.
-- Woman in the tree hijab or niqab is not needed, just make the shape as men it's okay 
-
 
 
 - Data backup.
@@ -60,9 +60,6 @@ Make people close together. Do not make them this much far away.
 افتراح تعديلات
 وصف للشخص 
 سيرة الشخص
-all person search picker shall contain person birth date.
-
-وجعلناكم شعوبا وقبائل لتعارفوا. اجعلها مكان وَمِنْ آيَاتِهِ أَنْ خَلَقَ لَكُم مِّنْ أَنفُسِكُمْ أَزْوَاجًا
 
 المحارم
 من يجب أن يكونوا في الميراث
@@ -77,11 +74,15 @@ have trackpad.
 
 Scrollbar style doesn't look good in person page view.
 
-
-In case of public sharing what is the title for a person page tab?
-
-إظهار الإخوة غير الإشقاء
-
 Islam vs kofr vs child UI Indicator
 
 Find solution when the father/mother is not known but brother/sister is known
+
+- Add source field for info added and migrate ملاحظات if it’s source (ai handle). Allow uploading documents.
+- Show الكنية in the sidebar list.
+
+- Order siblings when birth date is not known but order is known or partially known. We shall think about it.
+- Set first person when tree opens as center of the tree, think per tree as default then per user as option perhaps?
+- عند تعيين كأب أو أم لأحد الأشخاص، أظهر مربع حوار يسأل المستخدم إن كان يريد أن يجعل هذا الأب أو الأم أبا لبقية الإخوة أم لا، لأنه حاليا مثلا تصبح أما لجميع الإخوة وإن كانوا ربما مولودين لأم أخرى.
+
+

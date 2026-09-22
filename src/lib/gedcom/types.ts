@@ -33,6 +33,8 @@ export interface Individual {
   familiesAsSpouse: string[];
   familyAsChild: string | null;
   radaFamiliesAsChild?: string[];  // _RADA_FAM IDs (can be in multiple rada'a families)
+  /** The ONE «قفزة نسب» whose descendant is this person (id into `ancestryJumps`). */
+  ancestryJumpAsDescendant?: string;
   /** Set on individuals merged from a branch pointer (read-only in target tree) */
   _pointed?: boolean;
   /** Source workspace ID for pointed individuals */
@@ -82,6 +84,8 @@ export interface Family {
   _sourceWorkspaceId?: string;
   /** Which pointer brought this family in (target tree) */
   _pointerId?: string;
+  /** «قفزة نسب» rows that name THIS family as the distant ancestor couple. */
+  ancestryJumpsAsAncestor?: string[];
 }
 
 export interface RadaFamily {
@@ -93,10 +97,31 @@ export interface RadaFamily {
   notes: string;
 }
 
+/**
+ * «قفزة نسب» — a certain descent across an unrecorded (or deliberately
+ * skipped) number of generations. NOT a parent edge: the link target is always
+ * a `Family` (the ancestor COUPLE), mirroring `Individual.familyAsChild`, so a
+ * single known ancestor is simply a one-spouse family.
+ */
+export interface AncestryJump {
+  id: string;
+  type: '_ANC_JUMP';
+  /** Individual ID of the nearer person (has no familyAsChild). */
+  descendant: string;
+  /** Family ID of the distant ancestor couple (husband and/or wife). */
+  ancestorFamily: string;
+  /** Inclusive lower bound on generations skipped; null = unstated. */
+  generationsMin: number | null;
+  /** Inclusive upper bound; null = unstated. */
+  generationsMax: number | null;
+  notes: string;
+}
+
 export interface GedcomData {
   individuals: Record<string, Individual>;
   families: Record<string, Family>;
   radaFamilies?: Record<string, RadaFamily>;
+  ancestryJumps?: Record<string, AncestryJump>;
 }
 
 export interface RootAncestor {

@@ -88,6 +88,14 @@ export function computeDeleteImpact(data: GedcomData, targetId: string): DeleteI
     return { hasImpact: false, affectedIds: new Set(), affectedNames: [], truncated: false };
   }
 
+  // «قفزة نسب» (ancestry jump): this BFS is jump-BLIND, DELIBERATELY. Do not
+  // add `data.ancestryJumps` to any traversal below. A jump ancestor is a CLAIM
+  // about descent, not a dependent of the descendant — walking it would sweep an
+  // entire apex lineage (إسماعيل and everyone under him) into the delete of one
+  // man. For the same reason the seed step below correctly treats a jump
+  // descendant as a root candidate: his `familyAsChild` is still null, so his
+  // line stands on its own. Locked by src/test/ancestry-jump-cascade-delete.ts.
+  //
   // Seed filtering: find root candidates (no familyAsChild, not target).
   //
   // When the target is a MID-TREE person (has familyAsChild), we exclude

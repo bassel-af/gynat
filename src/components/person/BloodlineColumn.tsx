@@ -1,10 +1,12 @@
 'use client';
 
+import { Fragment } from 'react';
 import Link from 'next/link';
 import { NodeFigure } from '@/components/heritage/FigureCluster';
 import type { PersonSubject, SpineChip } from '@/lib/tree/person-projection';
 import { useCalendarPreference } from '@/hooks/useCalendarPreference';
 import { MotherDisclosure } from './MotherDisclosure';
+import { JumpDivider } from './JumpDivider';
 import { chipYears } from './yearFormat';
 import styles from './person.module.css';
 
@@ -72,6 +74,11 @@ function LineageNode({
  * The LAST spine entry gets the «الأب» / «الأم» badge. For the maternal column
  * that last entry IS the subject's mother (female); for the paternal column it
  * is the father.
+ *
+ * UNLESS that entry carries a «قفزة نسب»: an ancestor reached across a gap is
+ * not the subject's parent, so the badge is withheld and the canvas's own
+ * dashed chip stands in the gap instead. Badging him «الأب» would be the false
+ * parent claim the whole feature exists to prevent.
  */
 export function BloodlineColumn({
   variant,
@@ -107,13 +114,29 @@ export function BloodlineColumn({
       <div className={styles.lineageStack}>
         {chain.length > 0 && <div className={styles.lineageRoot}>أقدم سلف موثق</div>}
         {chain.map((anc, i) => (
-          <LineageNode
-            key={anc.id ?? `spine-${i}`}
-            chip={anc}
-            variant={variant}
-            badge={i === chain.length - 1 ? badgeLabel : undefined}
-            hrefFor={hrefFor}
-          />
+          <Fragment key={anc.id ?? `spine-${i}`}>
+            <LineageNode
+              chip={anc}
+              variant={variant}
+              badge={i === chain.length - 1 && !anc.jump ? badgeLabel : undefined}
+              hrefFor={hrefFor}
+            />
+            {anc.jump && (
+              /* The column reads oldest → subject, and a chip's `jump` describes
+                 the gap between it and the person one step YOUNGER — the next
+                 spine entry, or the subject when this is the last one. So the
+                 marker stands directly below this node, where the unbroken
+                 father→son thread would otherwise imply a link the record does
+                 not make.
+
+                 It is the canvas's chip, not the ribbons' «من وَلَد»: this is a
+                 broken thread, not a name, and the tree already taught the
+                 reader to read that dashed pill. */
+              <div className={styles.lineageJump}>
+                <JumpDivider range={anc.jump} variant="chip" />
+              </div>
+            )}
+          </Fragment>
         ))}
         <div className={selfClass}>
           <span className={styles.lineageAvatar}>

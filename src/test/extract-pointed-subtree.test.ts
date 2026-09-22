@@ -405,4 +405,75 @@ describe('extractPointedSubtree', () => {
       expect(Object.keys(data.families)).toHaveLength(originalFamCount);
     });
   });
+
+  // -------------------------------------------------------------------------
+  // «قفزة نسب» back-references never cross the tenancy boundary
+  // -------------------------------------------------------------------------
+
+  describe('ancestry jump back-references', () => {
+    /**
+     * A borrowed branch root is exactly the shape that carries one: a jump
+     * descendant has no parents, so he is precisely the kind of person a share
+     * token is rooted at. `GedcomData` has no `ancestryJumps` key on the way
+     * out, so any surviving back-reference is a SOURCE-workspace row id
+     * dangling in the TARGET workspace's payload.
+     */
+    function jumpFixture(): GedcomData {
+      const data = buildFixture();
+      data.individuals.root.ancestryJumpAsDescendant = 'jump-from-workspace-a';
+      data.families['f-root'].ancestryJumpsAsAncestor = ['jump-from-workspace-a'];
+      data.ancestryJumps = {
+        'jump-from-workspace-a': {
+          id: 'jump-from-workspace-a',
+          type: '_ANC_JUMP',
+          descendant: 'root',
+          ancestorFamily: 'f-root',
+          generationsMin: null,
+          generationsMax: null,
+          notes: '',
+        },
+      };
+      return data;
+    }
+
+    for (const [label, config] of [
+      ['no depth limit', { depthLimit: null, includeGrafts: false }],
+      ['depth limited', { depthLimit: 1, includeGrafts: false }],
+      ['with grafts', { depthLimit: 2, includeGrafts: true }],
+    ] as const) {
+      test(`strips the descendant back-reference — ${label}`, () => {
+        const result = extractPointedSubtree(jumpFixture(), {
+          rootIndividualId: 'root',
+          ...config,
+        });
+
+        for (const person of Object.values(result.individuals)) {
+          expect(person.ancestryJumpAsDescendant).toBeUndefined();
+        }
+      });
+
+      test(`strips the ancestor-family back-reference — ${label}`, () => {
+        const result = extractPointedSubtree(jumpFixture(), {
+          rootIndividualId: 'root',
+          ...config,
+        });
+
+        for (const family of Object.values(result.families)) {
+          expect(family.ancestryJumpsAsAncestor).toBeUndefined();
+        }
+      });
+    }
+
+    test('leaves the source data untouched', () => {
+      const data = jumpFixture();
+      extractPointedSubtree(data, {
+        rootIndividualId: 'root',
+        depthLimit: null,
+        includeGrafts: false,
+      });
+
+      expect(data.individuals.root.ancestryJumpAsDescendant).toBe('jump-from-workspace-a');
+      expect(data.families['f-root'].ancestryJumpsAsAncestor).toEqual(['jump-from-workspace-a']);
+    });
+  });
 });

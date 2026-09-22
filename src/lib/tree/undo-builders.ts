@@ -364,3 +364,81 @@ export function buildDeleteRadaFamilyInverse({
     redo: () => del(`/api/workspaces/${workspaceId}/tree/rada-families/${currentId ?? _deletedId}`, treeId),
   };
 }
+
+// ---------------------------------------------------------------------------
+// Ancestry jump («قفزة نسب») create/update/delete
+//
+// PATCH moves neither endpoint (see ancestry-jump-schemas.ts), so every inverse
+// here is a single-row operation. The composite "jump to a brand-new person"
+// undo (individual → family → jump) is assembled by the caller, not here.
+// ---------------------------------------------------------------------------
+
+export interface CreateAncestryJumpInverseParams {
+  workspaceId: string;
+  createdId: string;
+  createPayload: Record<string, unknown>;
+  treeId?: string;
+}
+
+export function buildCreateAncestryJumpInverse({
+  workspaceId,
+  createdId,
+  createPayload,
+  treeId,
+}: CreateAncestryJumpInverseParams): Inverse {
+  let currentId = createdId;
+  const createUrl = `/api/workspaces/${workspaceId}/tree/ancestry-jumps`;
+  return {
+    undo: () => del(`/api/workspaces/${workspaceId}/tree/ancestry-jumps/${currentId}`, treeId),
+    redo: async () => {
+      const { id } = await postJson(createUrl, createPayload, treeId);
+      if (id) currentId = id;
+    },
+  };
+}
+
+export interface UpdateAncestryJumpInverseParams {
+  workspaceId: string;
+  jumpId: string;
+  before: Record<string, unknown>;
+  after: Record<string, unknown>;
+  treeId?: string;
+}
+
+export function buildUpdateAncestryJumpInverse({
+  workspaceId,
+  jumpId,
+  before,
+  after,
+  treeId,
+}: UpdateAncestryJumpInverseParams): Inverse {
+  const url = `/api/workspaces/${workspaceId}/tree/ancestry-jumps/${jumpId}`;
+  return {
+    undo: () => patchJson(url, before, treeId),
+    redo: () => patchJson(url, after, treeId),
+  };
+}
+
+export interface DeleteAncestryJumpInverseParams {
+  workspaceId: string;
+  deletedId: string;
+  snapshot: Record<string, unknown>;
+  treeId?: string;
+}
+
+export function buildDeleteAncestryJumpInverse({
+  workspaceId,
+  deletedId: _deletedId,
+  snapshot,
+  treeId,
+}: DeleteAncestryJumpInverseParams): Inverse {
+  let currentId: string | null = null;
+  const createUrl = `/api/workspaces/${workspaceId}/tree/ancestry-jumps`;
+  return {
+    undo: async () => {
+      const { id } = await postJson(createUrl, snapshot, treeId);
+      if (id) currentId = id;
+    },
+    redo: () => del(`/api/workspaces/${workspaceId}/tree/ancestry-jumps/${currentId ?? _deletedId}`, treeId),
+  };
+}
