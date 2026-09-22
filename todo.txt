@@ -87,3 +87,6 @@ Find solution when the father/mother is not known but brother/sister is known
 
 
 - قفزة نسب يجب أن تكون ميزة إضافية يجب تفعيلها وليس شيئا موجودا طوال الوقت.
+- عدد الآباء بين شخص وجد، أو مقارنة بالأعداد بين شخص وآخر، ربما مقارنة بين شخص وآخر وكيفية التقائهما بالنسب.
+
+- Fix failed tests (fix bugs or tests based on what needs to be fixed).
