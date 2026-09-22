@@ -61,6 +61,8 @@ Both files live on the encrypted volume, mode 600, gitignored:
 
 **`WORKSPACE_MASTER_KEY` must be backed up out-of-band** (password manager). Losing it means losing every per-workspace encrypted field.
 
+Prod sets `SUPABASE_INTERNAL_URL=http://127.0.0.1:8002` in `.env.local` — the server-side Supabase clients verify tokens against the local Kong listener instead of looping back out through `https://gynat.com` (that round trip timed out at the CDN edge and surfaced as «fetch failed» / random 401s). The browser keeps using `NEXT_PUBLIC_SUPABASE_URL`.
+
 ## 5. Standard deploy
 
 Invoke the `deployer` agent, or run this command:

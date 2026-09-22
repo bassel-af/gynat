@@ -478,6 +478,124 @@ describe('«قفزة نسب» — the «شخص جديد» composite', () => {
     expect(onPushUndo).toHaveBeenCalledTimes(1);
   });
 
+  it('refuses before any call when the person already has parents', async () => {
+    const data = makeData({ adnan: { familyAsChild: '@F-ISHMAEL@' } });
+    const onPushUndo = newUndoSpy();
+    const { result } = renderActions(data, onPushUndo);
+
+    await act(async () => {
+      await result.current.handleAncestryJumpSubmit({
+        source: 'newPerson', individual: makeFormData(),
+        generationsMin: null, generationsMax: null, notes: '',
+      });
+    });
+
+    expect(mockApiFetch).not.toHaveBeenCalled();
+    expect(result.current.formError).toBe('لا يمكن إضافة قفزة نسب لشخص له أب أو أم في الشجرة');
+  });
+
+  it('refuses before any call when the person already has a jump', async () => {
+    const onPushUndo = newUndoSpy();
+    const { result } = renderActions(withJump(), onPushUndo);
+
+    await act(async () => {
+      await result.current.handleAncestryJumpSubmit({
+        source: 'newPerson', individual: makeFormData(),
+        generationsMin: null, generationsMax: null, notes: '',
+      });
+    });
+
+    expect(mockApiFetch).not.toHaveBeenCalled();
+    expect(result.current.formError).toBe('لهذا الشخص قفزة نسب بالفعل');
+  });
+
+  it('rolls the couple and the person back when the jump call fails', async () => {
+    // Without this the editor is left with a stranded ancestor and an empty
+    // couple that no jump points at, and no undo entry to take them away.
+    mockApiFetch
+      .mockResolvedValueOnce(ok({ id: 'new-ind' }))
+      .mockResolvedValueOnce(ok({ id: 'new-fam' }))
+      .mockResolvedValueOnce({
+        ok: false, status: 500, json: () => Promise.resolve({ error: 'فشل الحفظ' }),
+      } as unknown as Response)
+      .mockResolvedValue({ ok: true, status: 204, json: () => Promise.resolve({}) } as unknown as Response);
+    const { result } = renderActions(makeData(), newUndoSpy());
+
+    await act(async () => {
+      await result.current.handleAncestryJumpSubmit({
+        source: 'newPerson', individual: makeFormData(),
+        generationsMin: null, generationsMax: null, notes: '',
+      });
+    });
+
+    expect(mockApiFetch.mock.calls.slice(3).map((c) => [c[1].method, c[0]])).toEqual([
+      ['DELETE', '/api/workspaces/ws-1/tree/families/new-fam'],
+      ['DELETE', '/api/workspaces/ws-1/tree/individuals/new-ind'],
+    ]);
+  });
+
+  it('shows the failure that caused the rollback, not the rollback itself', async () => {
+    mockApiFetch
+      .mockResolvedValueOnce(ok({ id: 'new-ind' }))
+      .mockResolvedValueOnce(ok({ id: 'new-fam' }))
+      .mockResolvedValueOnce({
+        ok: false, status: 500, json: () => Promise.resolve({ error: 'فشل الحفظ' }),
+      } as unknown as Response)
+      .mockRejectedValue(new Error('network down'));
+    const { result } = renderActions(makeData(), newUndoSpy());
+
+    await act(async () => {
+      await result.current.handleAncestryJumpSubmit({
+        source: 'newPerson', individual: makeFormData(),
+        generationsMin: null, generationsMax: null, notes: '',
+      });
+    });
+
+    expect(result.current.formError).toBe('فشل الحفظ');
+  });
+
+  it('pushes no undo entry when the jump call fails', async () => {
+    mockApiFetch
+      .mockResolvedValueOnce(ok({ id: 'new-ind' }))
+      .mockResolvedValueOnce(ok({ id: 'new-fam' }))
+      .mockResolvedValueOnce({
+        ok: false, status: 500, json: () => Promise.resolve({ error: 'فشل الحفظ' }),
+      } as unknown as Response)
+      .mockResolvedValue({ ok: true, status: 204, json: () => Promise.resolve({}) } as unknown as Response);
+    const onPushUndo = newUndoSpy();
+    const { result } = renderActions(makeData(), onPushUndo);
+
+    await act(async () => {
+      await result.current.handleAncestryJumpSubmit({
+        source: 'newPerson', individual: makeFormData(),
+        generationsMin: null, generationsMax: null, notes: '',
+      });
+    });
+
+    expect(onPushUndo).not.toHaveBeenCalled();
+  });
+
+  it('rolls back only the minted couple when the ancestor already existed', async () => {
+    mockApiFetch
+      .mockResolvedValueOnce(ok({ id: 'minted-fam' }))
+      .mockResolvedValueOnce({
+        ok: false, status: 500, json: () => Promise.resolve({ error: 'فشل الحفظ' }),
+      } as unknown as Response)
+      .mockResolvedValue({ ok: true, status: 204, json: () => Promise.resolve({}) } as unknown as Response);
+    const { result } = renderActions(makeData(), newUndoSpy());
+
+    await act(async () => {
+      await result.current.handleAncestryJumpSubmit({
+        source: 'existingPerson', ancestorPersonId: '@QAHTAN@',
+        generationsMin: null, generationsMax: null, notes: '',
+      });
+    });
+
+    expect(mockApiFetch.mock.calls.slice(2).map((c) => [c[1].method, c[0]])).toEqual([
+      ['DELETE', '/api/workspaces/ws-1/tree/families/minted-fam'],
+    ]);
+  });
+
   it('does nothing at all for a borrowed person', async () => {
     const data = makeData({ adnan: { _pointed: true } });
     const onPushUndo = newUndoSpy();

@@ -65,6 +65,32 @@ export interface AncestryJumpCandidate {
  * `calculateDescendantCounts` (Kahn's algorithm), which would silently DROP a
  * cyclic component instead of reporting it.
  */
+/**
+ * J3 + J4 alone — the rules that concern the DESCENDANT and nothing else, so
+ * they can be judged before an ancestor family exists. The client runs these
+ * before it writes anything (a refusal after the ancestor and his couple are
+ * created costs a rollback); `validateAncestryJump` runs them as part of the
+ * full set. One implementation, so the two can never disagree.
+ *
+ * Assumes the descendant exists in `data` (J1 is the caller's job).
+ */
+export function validateJumpDescendant(
+  data: GedcomData,
+  descendantId: string,
+  opts: { ignoreJumpId?: string } = {},
+): Extract<AncestryJumpError, 'descendant_has_parents' | 'descendant_already_has_jump'> | null {
+  // J3 — a jump sits at the TOP of a known line, never beside recorded parents.
+  if (data.individuals[descendantId]?.familyAsChild) return 'descendant_has_parents';
+
+  // J4 — one jump per person, judged on the ROW, never the bare back-reference.
+  // `ignoreJumpId` lets a PATCH re-validate its own row.
+  const existing = buildJumpIndex(data).byDescendant.get(descendantId);
+  if (existing && existing.id !== opts.ignoreJumpId) {
+    return 'descendant_already_has_jump';
+  }
+  return null;
+}
+
 export function validateAncestryJump(
   data: GedcomData,
   candidate: AncestryJumpCandidate,
@@ -80,14 +106,9 @@ export function validateAncestryJump(
   const family = data.families[ancestorFamilyId];
   if (!family) return 'ancestor_family_not_found';
 
-  // J3 — a jump sits at the TOP of a known line, never beside recorded parents.
-  if (descendant.familyAsChild) return 'descendant_has_parents';
-
-  // J4 — one jump per person. `ignoreJumpId` lets a PATCH re-validate its own row.
-  const existing = buildJumpIndex(data).byDescendant.get(descendantId);
-  if (existing && existing.id !== opts.ignoreJumpId) {
-    return 'descendant_already_has_jump';
-  }
+  // J3 + J4 — the descendant-side rules, shared with the client pre-flight.
+  const descendantError = validateJumpDescendant(data, descendantId, opts);
+  if (descendantError) return descendantError;
 
   // J5 — the couple must actually name someone who is in this tree. A family
   // row whose only spouse has been deleted points at nothing.

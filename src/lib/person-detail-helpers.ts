@@ -1,6 +1,7 @@
 import type { Individual, Family, GedcomData } from '@/lib/gedcom/types';
 import { getDisplayName, getDisplayNameWithNasab } from '@/lib/gedcom';
 import { getAllDescendants } from '@/lib/gedcom/graph';
+import { validateJumpDescendant } from '@/lib/tree/ancestry-jump-validators';
 
 /** Format date with place for display */
 export function formatDateWithPlace(date: string, place: string): string {
@@ -93,11 +94,12 @@ export function getAncestryJumpAction(
 ): AncestryJumpAction {
   if (!canEdit || !person || !data) return null;
   if (person._pointed) return null;
-  if (person.familyAsChild) return null;
 
-  const jumpId = person.ancestryJumpAsDescendant;
-  if (jumpId && data.ancestryJumps?.[jumpId]) return 'edit';
-  return 'create';
+  switch (validateJumpDescendant(data, person.id)) {
+    case 'descendant_has_parents': return null;
+    case 'descendant_already_has_jump': return 'edit';
+    default: return 'create';
+  }
 }
 
 /** Add-sibling validation result */

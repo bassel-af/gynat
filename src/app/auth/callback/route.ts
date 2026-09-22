@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
+import { createSsrClient } from '@/lib/supabase/ssr-client';
 import { syncUserToDb } from '@/lib/auth/sync-user';
 import { validateRedirectPath } from '@/lib/auth/validate-redirect';
 
@@ -18,22 +18,16 @@ export async function GET(request: NextRequest) {
   if (code) {
     const response = NextResponse.redirect(new URL(next, origin));
 
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return request.cookies.getAll();
-          },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              response.cookies.set(name, value, options),
-            );
-          },
-        },
+    const supabase = createSsrClient({
+      getAll() {
+        return request.cookies.getAll();
       },
-    );
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value, options }) =>
+          response.cookies.set(name, value, options),
+        );
+      },
+    });
 
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 

@@ -18,6 +18,7 @@
 
 import { prisma } from '@/lib/db';
 import { verifyMailTransport } from '@/lib/email/transport';
+import { getServerSupabaseUrl } from '@/lib/supabase/internal-url';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -371,7 +372,7 @@ async function probeDb(): Promise<HealthMetrics['db']> {
 }
 
 async function probeGotrue(): Promise<HealthMetrics['gotrue']> {
-  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const base = getServerSupabaseUrl();
   if (!base) return { ok: false, error: 'ConfigMissing' };
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), GOTRUE_TIMEOUT_MS);

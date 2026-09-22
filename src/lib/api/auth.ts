@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import type { User } from '@supabase/supabase-js';
 import { trackPresence } from '@/lib/admin/presence-tracker';
+import { getServerSupabaseUrl } from '@/lib/supabase/internal-url';
 
 interface AuthResult {
   user: User | null;
@@ -24,7 +25,7 @@ export async function getAuthenticatedUser(request: NextRequest): Promise<AuthRe
 
   const token = authHeader.slice(7);
   const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    getServerSupabaseUrl(),
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     { global: { headers: { Authorization: `Bearer ${token}` } } },
   );

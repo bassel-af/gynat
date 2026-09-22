@@ -22,6 +22,10 @@ import {
   buildUpdateAncestryJumpInverse,
   buildDeleteAncestryJumpInverse,
 } from '@/lib/tree/undo-builders';
+import {
+  ANCESTRY_JUMP_ERROR_MESSAGES,
+  validateJumpDescendant,
+} from '@/lib/tree/ancestry-jump-validators';
 
 // ---------------------------------------------------------------------------
 // Cascade delete impact data
@@ -925,6 +929,15 @@ export function usePersonActions({
     if (!workspace || !person || isPointed) return;
     const wsId = workspace.workspaceId;
 
+    // Pre-flight: the descendant-side rules, judged before anything is written.
+    // (The rest of the rule set needs the ancestor family, which on two of the
+    // three paths does not exist yet — the server still runs it all.)
+    const preflight = data ? validateJumpDescendant(data, person.id) : null;
+    if (preflight) {
+      setFormError(ANCESTRY_JUMP_ERROR_MESSAGES[preflight]);
+      return;
+    }
+
     let succeeded = false;
     let createdIndividualId: string | null = null;
     let createdFamilyId: string | null = null;
@@ -980,6 +993,19 @@ export function usePersonActions({
       setFormMode(null);
       succeeded = true;
     });
+
+    if (!succeeded) {
+      // The jump is the whole point of the action; without it the ancestor and
+      // his couple are debris the editor never asked for and cannot Ctrl+Z away
+      // (a failed sequence pushes no undo entry). Best effort — the error the
+      // user sees is the one `withFormAction` already reported, not a rollback's.
+      const drop = (path: string) =>
+        apiFetch(`/api/workspaces/${wsId}/tree/${path}`, { method: 'DELETE', ...deleteInit })
+          .catch(() => { /* nothing left to try; the stranded row is the lesser evil */ });
+      if (createdFamilyId) await drop(`families/${createdFamilyId}`);
+      if (createdIndividualId) await drop(`individuals/${createdIndividualId}`);
+      return;
+    }
 
     if (!succeeded || !onPushUndo || !createdJumpId || !ancestorFamilyId) return;
     const label = buildUndoLabel({ kind: 'addAncestryJump', name: ancestorName });
