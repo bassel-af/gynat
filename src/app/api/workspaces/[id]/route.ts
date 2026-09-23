@@ -14,6 +14,7 @@ const updateWorkspaceSchema = z.object({
   logoUrl: z.string().url().nullable().optional(),
   enableUmmWalad: z.boolean().optional(),
   enableRadaa: z.boolean().optional(),
+  enableAncestryJumps: z.boolean().optional(),
   enableKunya: z.boolean().optional(),
   enableAuditLog: z.boolean().optional(),
   enableVersionControl: z.boolean().optional(),
@@ -94,12 +95,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   // NOTE: existing privacy-sensitive toggles (enableAuditLog, enableKunya,
   // hideBirthDateFor*) are NOT audited today — this PR closes the gap only
   // for the two new export fields; the wider gap is flagged for follow-up.
-  const AUDITED_FIELDS = ['enableTreeExport', 'allowMemberExport'] as const;
+  const AUDITED_FIELDS = ['enableTreeExport', 'allowMemberExport', 'enableAncestryJumps'] as const;
   const touchesAuditedField = AUDITED_FIELDS.some((f) => f in parsed.data);
   const before = touchesAuditedField
     ? await prisma.workspace.findUnique({
         where: { id },
-        select: { enableTreeExport: true, allowMemberExport: true },
+        select: { enableTreeExport: true, allowMemberExport: true, enableAncestryJumps: true },
       })
     : null;
 

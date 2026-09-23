@@ -30,6 +30,8 @@ interface WorkspaceTreeContextValue {
   enableUmmWalad?: boolean;
   /** Whether the workspace has rada'a (foster nursing) feature enabled */
   enableRadaa?: boolean;
+  /** Whether new «قفزة نسب» (ancestry jumps) can be added in this workspace */
+  enableAncestryJumps?: boolean;
   /** Whether the workspace has kunya feature enabled */
   enableKunya?: boolean;
   /** Whether the workspace has audit log feature enabled */
@@ -62,6 +64,7 @@ interface WorkspaceTreeProviderProps {
   pointers?: PointerMetadata[];
   enableUmmWalad?: boolean;
   enableRadaa?: boolean;
+  enableAncestryJumps?: boolean;
   enableKunya?: boolean;
   enableAuditLog?: boolean;
   enableTreeExport?: boolean;
@@ -83,6 +86,7 @@ export function WorkspaceTreeProvider({
   pointers,
   enableUmmWalad,
   enableRadaa,
+  enableAncestryJumps,
   enableKunya,
   enableAuditLog,
   enableTreeExport,
@@ -94,7 +98,7 @@ export function WorkspaceTreeProvider({
   defaultNewPersonDeceased,
 }: WorkspaceTreeProviderProps) {
   return (
-    <WorkspaceTreeContext.Provider value={{ workspaceId, canEdit, isAdmin, refreshTree, activeTreeId, pointers, enableUmmWalad, enableRadaa, enableKunya, enableAuditLog, enableTreeExport, allowMemberExport, hideBirthDateForFemale, hideBirthDateForMale, description, familyName, defaultNewPersonDeceased }}>
+    <WorkspaceTreeContext.Provider value={{ workspaceId, canEdit, isAdmin, refreshTree, activeTreeId, pointers, enableUmmWalad, enableRadaa, enableAncestryJumps, enableKunya, enableAuditLog, enableTreeExport, allowMemberExport, hideBirthDateForFemale, hideBirthDateForMale, description, familyName, defaultNewPersonDeceased }}>
       {children}
     </WorkspaceTreeContext.Provider>
   );

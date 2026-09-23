@@ -38,6 +38,7 @@ interface WorkspaceInfo {
   currentUserPermissions: string[];
   enableUmmWalad?: boolean;
   enableRadaa?: boolean;
+  enableAncestryJumps?: boolean;
   enableKunya?: boolean;
   enableAuditLog?: boolean;
   enableTreeExport?: boolean;
@@ -168,6 +169,7 @@ function TreeShellGate({
     pointers,
     enableUmmWalad: workspace.enableUmmWalad,
     enableRadaa: workspace.enableRadaa,
+    enableAncestryJumps: workspace.enableAncestryJumps,
     enableKunya: workspace.enableKunya,
     enableAuditLog: workspace.enableAuditLog,
     enableTreeExport: workspace.enableTreeExport,

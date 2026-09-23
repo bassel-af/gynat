@@ -439,6 +439,7 @@ export function PersonDetail({ personId }: PersonDetailProps) {
   const isPersonView = currentViewMode === 'person';
   const canEdit = workspace?.canEdit ?? false;
   const enableRadaa = workspace?.enableRadaa ?? false;
+  const enableAncestryJumps = workspace?.enableAncestryJumps ?? false;
   const { preference: calendarPreference, setPreference: setCalendarPreference } = useCalendarPreference();
 
   const person = data?.individuals[personId];
@@ -831,7 +832,8 @@ export function PersonDetail({ personId }: PersonDetailProps) {
   // «قفزة نسب»: offered only at the top of a known line — never on a borrowed
   // person, never beside recorded parents, and never to a viewer. Becomes
   // «تعديل قفزة النسب» once this person already has one (v1 allows exactly one).
-  const ancestryJumpAction = getAncestryJumpAction(person, data, canEdit);
+  // A NEW jump also needs the workspace toggle; an existing one stays editable.
+  const ancestryJumpAction = getAncestryJumpAction(person, data, canEdit, enableAncestryJumps);
   const existingJump = person?.ancestryJumpAsDescendant
     ? data?.ancestryJumps?.[person.ancestryJumpAsDescendant]
     : undefined;

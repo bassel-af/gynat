@@ -406,3 +406,16 @@ describe('sanitizeRela', () => {
     expect(sanitizeRela('anc@estor\nx')).toBe('ancestor x')
   })
 })
+
+// ---------------------------------------------------------------------------
+// Read-path lock: the per-workspace «قفزة نسب» toggle (`enableAncestryJumps`)
+// gates only the CREATE route. Export is a read path — it takes no workspace
+// flag, so an existing jump is always written out, toggle on or off.
+// ---------------------------------------------------------------------------
+
+describe('ancestry jump export is independent of the workspace toggle', () => {
+  it('emits an existing jump from the data alone (no feature flag is consulted)', () => {
+    const out = gedcomDataToGedcom(makeJumpData(), '5.5.1')
+    expect(indiBlock(out, '@ADNAN@')).toContain('1 ASSO @ISH@')
+  })
+})

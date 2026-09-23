@@ -22,6 +22,7 @@ vi.mock('@/lib/api/client', () => ({ apiFetch: vi.fn() }));
 // manual browser check — the panel is rendered here with the contexts stubbed.
 let panelData: GedcomData;
 let panelCanEdit = true;
+let panelJumpsEnabled = true;
 
 vi.mock('@/context/TreeContext', () => ({
   useTree: () => ({
@@ -42,6 +43,7 @@ vi.mock('@/context/WorkspaceTreeContext', () => ({
     canEdit: panelCanEdit,
     isAdmin: false,
     enableRadaa: false,
+    enableAncestryJumps: panelJumpsEnabled,
     refreshTree: vi.fn(),
     pointers: [],
   }),
@@ -155,34 +157,44 @@ function withJump(): GedcomData {
 
 describe('«قفزة نسب» — who is offered the action', () => {
   it('offers it to an editor on a person with no parents', () => {
-    expect(getAncestryJumpAction(ADNAN, makeData(), true)).toBe('create');
+    expect(getAncestryJumpAction(ADNAN, makeData(), true, true)).toBe('create');
   });
 
   it('is hidden for a viewer', () => {
-    expect(getAncestryJumpAction(ADNAN, makeData(), false)).toBeNull();
+    expect(getAncestryJumpAction(ADNAN, makeData(), false, true)).toBeNull();
   });
 
   it('is hidden on a borrowed (pointed) person — borrowed data is read-only', () => {
     const pointed = { ...ADNAN, _pointed: true };
-    expect(getAncestryJumpAction(pointed, makeData({ adnan: { _pointed: true } }), true)).toBeNull();
+    expect(getAncestryJumpAction(pointed, makeData({ adnan: { _pointed: true } }), true, true)).toBeNull();
   });
 
   it('is hidden on a person who already has parents — a jump sits at the TOP of a known line', () => {
     const withParents = { ...ADNAN, familyAsChild: '@F-ISHMAEL@' };
-    expect(getAncestryJumpAction(withParents, makeData({ adnan: { familyAsChild: '@F-ISHMAEL@' } }), true))
+    expect(getAncestryJumpAction(withParents, makeData({ adnan: { familyAsChild: '@F-ISHMAEL@' } }), true, true))
       .toBeNull();
   });
 
   it('switches to edit once the person already has a jump', () => {
     const data = withJump();
-    expect(getAncestryJumpAction(data.individuals['@ADNAN@'], data, true)).toBe('edit');
+    expect(getAncestryJumpAction(data.individuals['@ADNAN@'], data, true, true)).toBe('edit');
+  });
+
+  it('is not offered for a NEW jump when the workspace has the feature off', () => {
+    expect(getAncestryJumpAction(ADNAN, makeData(), true, false)).toBeNull();
+  });
+
+  it('still offers edit on an EXISTING jump when the feature is off — it must stay fixable/removable', () => {
+    const data = withJump();
+    expect(getAncestryJumpAction(data.individuals['@ADNAN@'], data, true, false)).toBe('edit');
   });
 });
 
 describe('«قفزة نسب» — the button in the person panel', () => {
-  const renderPanel = (data: GedcomData, canEdit = true) => {
+  const renderPanel = (data: GedcomData, canEdit = true, jumpsEnabled = true) => {
     panelData = data;
     panelCanEdit = canEdit;
+    panelJumpsEnabled = jumpsEnabled;
     render(<PersonDetail personId="@ADNAN@" />);
   };
   const jumpButton = () => screen.queryByRole('button', { name: /قفزة/ });
@@ -209,6 +221,16 @@ describe('«قفزة نسب» — the button in the person panel', () => {
 
   it('becomes the edit action once the person already has a jump', () => {
     renderPanel(withJump());
+    expect(jumpButton()?.textContent).toBe('تعديل قفزة النسب');
+  });
+
+  it('is absent when the workspace has «قفزة نسب» turned off', () => {
+    renderPanel(makeData(), true, false);
+    expect(jumpButton()).toBeNull();
+  });
+
+  it('still shows the edit action for an existing jump when the feature is off', () => {
+    renderPanel(withJump(), true, false);
     expect(jumpButton()?.textContent).toBe('تعديل قفزة النسب');
   });
 
@@ -593,6 +615,41 @@ describe('«قفزة نسب» — the «شخص جديد» composite', () => {
 
     expect(mockApiFetch.mock.calls.slice(2).map((c) => [c[1].method, c[0]])).toEqual([
       ['DELETE', '/api/workspaces/ws-1/tree/families/minted-fam'],
+    ]);
+  });
+
+  it('REDO rolls the re-created couple and person back when the jump call fails', async () => {
+    // e.g. the workspace turned «قفزة نسب» off between undo and redo — the
+    // jump POST is refused, and the replayed ancestor must not be left behind.
+    mockApiFetch
+      .mockResolvedValueOnce(ok({ id: 'new-ind' }))
+      .mockResolvedValueOnce(ok({ id: 'new-fam' }))
+      .mockResolvedValueOnce(ok({ id: 'new-jump' }));
+    const onPushUndo = newUndoSpy();
+    const { result } = renderActions(makeData(), onPushUndo);
+
+    await act(async () => {
+      await result.current.handleAncestryJumpSubmit({
+        source: 'newPerson', individual: makeFormData(),
+        generationsMin: null, generationsMax: null, notes: '',
+      });
+    });
+
+    mockApiFetch.mockReset();
+    mockApiFetch
+      .mockResolvedValueOnce(ok({ id: 'redo-ind' }))
+      .mockResolvedValueOnce(ok({ id: 'redo-fam' }))
+      .mockResolvedValueOnce({
+        ok: false, status: 400,
+        json: () => Promise.resolve({ error: 'ميزة قفزة النسب غير مفعّلة في هذه المساحة' }),
+      } as unknown as Response)
+      .mockResolvedValue({ ok: true, status: 204, json: () => Promise.resolve({}) } as unknown as Response);
+
+    await expect(onPushUndo.mock.calls[0][0].redo()).rejects.toThrow();
+
+    expect(mockApiFetch.mock.calls.slice(3).map((c) => [c[1].method, c[0]])).toEqual([
+      ['DELETE', '/api/workspaces/ws-1/tree/families/redo-fam'],
+      ['DELETE', '/api/workspaces/ws-1/tree/individuals/redo-ind'],
     ]);
   });
 

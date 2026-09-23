@@ -968,6 +968,25 @@ export function usePersonActions({
       ancestorName = spouse?.givenName || spouse?.name;
     }
 
+    // The jump is the whole point of the action; without it a just-created
+    // ancestor and his couple are debris the editor never asked for. Shared by
+    // the forward submit and the composite redo. Best effort — the error the
+    // user sees is the one that caused the rollback, not the rollback's own.
+    const rollbackDebris = async (
+      familyId: string | null,
+      individualId: string | null,
+      isUndo = false,
+    ) => {
+      const drop = (path: string) =>
+        apiFetch(`/api/workspaces/${wsId}/tree/${path}`, {
+          method: 'DELETE',
+          isUndo,
+          ...deleteInit,
+        }).catch(() => { /* nothing left to try; the stranded row is the lesser evil */ });
+      if (familyId) await drop(`families/${familyId}`);
+      if (individualId) await drop(`individuals/${individualId}`);
+    };
+
     await withFormAction(async () => {
       if (payload.source === 'newPerson') {
         const newPerson = await createIndividual(payload.individual);
@@ -995,19 +1014,13 @@ export function usePersonActions({
     });
 
     if (!succeeded) {
-      // The jump is the whole point of the action; without it the ancestor and
-      // his couple are debris the editor never asked for and cannot Ctrl+Z away
-      // (a failed sequence pushes no undo entry). Best effort — the error the
-      // user sees is the one `withFormAction` already reported, not a rollback's.
-      const drop = (path: string) =>
-        apiFetch(`/api/workspaces/${wsId}/tree/${path}`, { method: 'DELETE', ...deleteInit })
-          .catch(() => { /* nothing left to try; the stranded row is the lesser evil */ });
-      if (createdFamilyId) await drop(`families/${createdFamilyId}`);
-      if (createdIndividualId) await drop(`individuals/${createdIndividualId}`);
+      // A failed sequence pushes no undo entry, so the debris could never be
+      // Ctrl+Z'd away — remove it now.
+      await rollbackDebris(createdFamilyId, createdIndividualId);
       return;
     }
 
-    if (!succeeded || !onPushUndo || !createdJumpId || !ancestorFamilyId) return;
+    if (!onPushUndo || !createdJumpId || !ancestorFamilyId) return;
     const label = buildUndoLabel({ kind: 'addAncestryJump', name: ancestorName });
 
     // Single-call path: the couple already existed, so the jump row is the only
@@ -1060,18 +1073,31 @@ export function usePersonActions({
       },
       redo: async () => {
         const opts = { ...famOpts };
-        if (individualForm) {
-          const ind = await undoPost('individuals', serializeIndividualForm(individualForm));
-          if (ind.id) {
-            currentIndividualId = ind.id;
-            if (individualForm.sex === 'F') opts.wifeId = ind.id;
-            else opts.husbandId = ind.id;
+        // What THIS replay created — rolled back if a later step is refused
+        // (e.g. the workspace turned «قفزة نسب» off since the undo).
+        let redoIndividualId: string | null = null;
+        let redoFamilyId: string | null = null;
+        try {
+          if (individualForm) {
+            const ind = await undoPost('individuals', serializeIndividualForm(individualForm));
+            if (ind.id) {
+              redoIndividualId = ind.id;
+              currentIndividualId = ind.id;
+              if (individualForm.sex === 'F') opts.wifeId = ind.id;
+              else opts.husbandId = ind.id;
+            }
           }
+          const fam = await undoPost('families', opts);
+          if (fam.id) {
+            redoFamilyId = fam.id;
+            currentFamilyId = fam.id;
+          }
+          const jump = await undoPost('ancestry-jumps', jumpPayload(currentFamilyId));
+          if (jump.id) currentJumpId = jump.id;
+        } catch (err) {
+          await rollbackDebris(redoFamilyId, redoIndividualId, true);
+          throw err;
         }
-        const fam = await undoPost('families', opts);
-        if (fam.id) currentFamilyId = fam.id;
-        const jump = await undoPost('ancestry-jumps', jumpPayload(currentFamilyId));
-        if (jump.id) currentJumpId = jump.id;
       },
     });
   }, [

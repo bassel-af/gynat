@@ -75,6 +75,7 @@ model Workspace {
   branchSharingPolicy  BranchSharingPolicy  @default(shareable) @map("branch_sharing_policy")
   enableUmmWalad       Boolean              @default(false) @map("enable_umm_walad")
   enableRadaa          Boolean              @default(false) @map("enable_radaa")
+  enableAncestryJumps  Boolean              @default(false) @map("enable_ancestry_jumps")
   enableKunya          Boolean              @default(false) @map("enable_kunya")
   enableAuditLog       Boolean              @default(false) @map("enable_audit_log")
   enableVersionControl Boolean              @default(false) @map("enable_version_control")

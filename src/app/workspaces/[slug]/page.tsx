@@ -39,6 +39,7 @@ interface Workspace {
   currentUserId: string;
   enableUmmWalad?: boolean;
   enableRadaa?: boolean;
+  enableAncestryJumps?: boolean;
   enableKunya?: boolean;
   enableCollections?: boolean;
   enableAuditLog?: boolean;
@@ -338,7 +339,7 @@ export default function WorkspaceDetailPage() {
   }
 
   async function handleToggleFeature(
-    featureKey: 'enableUmmWalad' | 'enableRadaa' | 'enableKunya' | 'enableAuditLog' | 'enableVersionControl' | 'hideBirthDateForFemale' | 'hideBirthDateForMale' | 'defaultNewPersonDeceased',
+    featureKey: 'enableUmmWalad' | 'enableRadaa' | 'enableAncestryJumps' | 'enableKunya' | 'enableAuditLog' | 'enableVersionControl' | 'hideBirthDateForFemale' | 'hideBirthDateForMale' | 'defaultNewPersonDeceased',
     newVal: boolean,
   ) {
     if (!workspace) return;
@@ -530,6 +531,41 @@ export default function WorkspaceDetailPage() {
                 onChange={(val) => handleToggleFeature('enableKunya', val)}
                 disabled={!isAdmin}
                 loading={togglingFeature === 'enableKunya'}
+              />
+            </div>
+
+            {/* «قفزة نسب» — gates adding NEW jumps only; existing ones stay */}
+            <div className={styles.featureCard}>
+              <div className={styles.featureContent}>
+                <div className={styles.featureNameRow}>
+                  <span className={styles.featureName}>قفزة نسب</span>
+                  {workspace.enableAncestryJumps && (
+                    <span className={styles.featureBadge}>مفعّل</span>
+                  )}
+                </div>
+                <p className={styles.featureDescription}>
+                  تربط أعلى جدٍّ في شجرتك بجدٍّ أبعدَ منه، دون إدخال كل الأجيال التي بينهما.
+                </p>
+                <p className={styles.featureDescription}>
+                  <strong>مثال:</strong> يُسرَد نسب الرسول الشريف متصلًا إلى «عدنان»، ثم يُقفَز إلى «إسماعيل» عليه السلام دون سرد الأجيال التي بينهما. بـ«قفزة نسب» تربط «عدنان» بـ«إسماعيل» مباشرة، فيظهر في الشجرة: «عدنان، من وَلَد إسماعيل».
+                </p>
+                <p className={styles.featureDescription}>
+                  إيقاف الميزة لا يحذف الروابط المضافة.
+                </p>
+                <a
+                  href="/islamic-gedcom#ancestry-jump"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.featureLearnMore}
+                >
+                  تعرّف على المزيد
+                </a>
+              </div>
+              <ToggleSwitch
+                checked={workspace.enableAncestryJumps ?? false}
+                onChange={(val) => handleToggleFeature('enableAncestryJumps', val)}
+                disabled={!isAdmin}
+                loading={togglingFeature === 'enableAncestryJumps'}
               />
             </div>
 

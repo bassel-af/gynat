@@ -247,3 +247,42 @@ describe('seedTreeFromGedcomData — ancestry jumps', () => {
     expect(mockAncestryJumpCreateMany).not.toHaveBeenCalled()
   })
 })
+
+// ---------------------------------------------------------------------------
+// The per-workspace «قفزة نسب» toggle gates ONLY the create route. Import is a
+// data-carrying path: a GEDCOM that already holds jumps must round-trip them
+// even when the workspace has the button turned off.
+// ---------------------------------------------------------------------------
+
+describe('seedTreeFromGedcomData — ancestry jumps with enableAncestryJumps OFF', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockWorkspaceFindUnique.mockResolvedValue({
+      encryptedKey: TEST_WRAPPED_KEY,
+      enableAncestryJumps: false,
+    })
+    mockWorkspaceUpdate.mockResolvedValue({})
+    mockFamilyTreeFindFirst.mockResolvedValue(null)
+    mockFamilyTreeCreate.mockResolvedValue({ id: 'tree-off', workspaceId: 'ws-off', individuals: [], families: [] })
+    mockIndividualCount.mockResolvedValue(0)
+    mockAncestryJumpCreateMany.mockResolvedValue({ count: 1 })
+    mockTransaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) =>
+      fn({
+        familyTree: { findFirst: mockFamilyTreeFindFirst, findUnique: mockFamilyTreeFindFirst, create: mockFamilyTreeCreate },
+        individual: { createMany: mockIndividualCreateMany, count: mockIndividualCount },
+        family: { createMany: mockFamilyCreateMany },
+        familyChild: { createMany: mockFamilyChildCreateMany },
+        radaFamily: { createMany: mockRadaFamilyCreateMany },
+        radaFamilyChild: { createMany: mockRadaFamilyChildCreateMany },
+        ancestryJump: { createMany: mockAncestryJumpCreateMany },
+        workspace: { findUnique: mockWorkspaceFindUnique, update: mockWorkspaceUpdate },
+      }),
+    )
+  })
+
+  test('still persists the imported jump', async () => {
+    const result = await seedTreeFromGedcomData('ws-off', makeJumpData(), createMockPrisma())
+    expect(mockAncestryJumpCreateMany.mock.calls[0][0].data).toHaveLength(1)
+    expect(result.ancestryJumpCount).toBe(1)
+  })
+})

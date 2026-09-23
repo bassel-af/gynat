@@ -44,6 +44,8 @@ const noop = vi.fn(() => Promise.resolve({ count: 0 }));
 
 vi.mock('@/lib/db', () => ({
   prisma: {
+    // The jump POST is gated by the workspace «قفزة نسب» toggle — ON here.
+    workspace: { findUnique: vi.fn().mockResolvedValue({ enableAncestryJumps: true }) },
     workspaceMembership: { findUnique: (...a: unknown[]) => mockMembershipFindUnique(...a) },
     familyTree: {
       findFirst: (...a: unknown[]) => mockFamilyTreeFindFirst(...a),

@@ -40,9 +40,13 @@ const mockJumpUpdate = vi.fn();
 const mockJumpDelete = vi.fn();
 const mockJumpFindFirst = vi.fn();
 const mockTreeEditLogCreate = vi.fn();
+const mockWorkspaceFindUnique = vi.fn();
 
 vi.mock('@/lib/db', () => ({
   prisma: {
+    workspace: {
+      findUnique: (...a: unknown[]) => mockWorkspaceFindUnique(...a),
+    },
     workspaceMembership: {
       findUnique: (...a: unknown[]) => mockMembershipFindUnique(...a),
     },
@@ -237,6 +241,77 @@ beforeEach(() => {
   mockJumpDelete.mockResolvedValue(createdRow());
   mockTreeEditLogCreate.mockResolvedValue({});
   mockFamilyTreeUpdate.mockResolvedValue({});
+  // The create route is gated by the per-workspace «قفزة نسب» toggle; ON here
+  // so every pre-existing POST test exercises the enabled path.
+  mockWorkspaceFindUnique.mockResolvedValue({ enableAncestryJumps: true });
+});
+
+// ===========================================================================
+// Workspace feature toggle — `enableAncestryJumps`
+// ===========================================================================
+
+describe('enableAncestryJumps OFF', () => {
+  beforeEach(() => {
+    mockAuth();
+    mockTreeEditor();
+    mockTreeResolves();
+    mockWorkspaceFindUnique.mockResolvedValue({ enableAncestryJumps: false });
+    mockJumpFindFirst.mockResolvedValue({
+      id: JUMP_ID,
+      treeId: MAIN_TREE,
+      descendantId: ADNAN,
+      ancestorFamilyId: FAM_ISH,
+      generationsMin: null,
+      generationsMax: null,
+      notes: null,
+    });
+  });
+
+  test('POST returns 400 with the Arabic feature-off message and writes nothing', async () => {
+    const POST = await postRoute();
+    const res = await POST(
+      makeRequest({ body: { descendantId: ADNAN, ancestorFamilyId: FAM_ISH } }),
+      postParams,
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe('ميزة قفزة النسب غير مفعّلة في هذه المساحة');
+    expect(mockJumpCreate).not.toHaveBeenCalled();
+    expect(mockTreeEditLogCreate).not.toHaveBeenCalled();
+  });
+
+  test('POST is gated for a missing workspace row too (treated as OFF)', async () => {
+    mockWorkspaceFindUnique.mockResolvedValue(null);
+    const POST = await postRoute();
+    const res = await POST(
+      makeRequest({ body: { descendantId: ADNAN, ancestorFamilyId: FAM_ISH } }),
+      postParams,
+    );
+    expect(res.status).toBe(400);
+    expect(mockJumpCreate).not.toHaveBeenCalled();
+  });
+
+  test('POST gate cannot be bypassed by the undo header', async () => {
+    const POST = await postRoute();
+    const req = makeRequest({ body: { descendantId: ADNAN, ancestorFamilyId: FAM_ISH } });
+    req.headers.set('X-Gynat-Undo', 'true');
+    const res = await POST(req, postParams);
+    expect(res.status).toBe(400);
+    expect(mockJumpCreate).not.toHaveBeenCalled();
+  });
+
+  test('PATCH still edits an existing jump', async () => {
+    const { PATCH } = await itemRoute();
+    const res = await PATCH(makeRequest({ method: 'PATCH', body: { generationsMin: 7 } }), itemParams);
+    expect(res.status).toBe(200);
+    expect(mockJumpUpdate).toHaveBeenCalled();
+  });
+
+  test('DELETE still removes an existing jump', async () => {
+    const { DELETE } = await itemRoute();
+    const res = await DELETE(makeRequest({ method: 'DELETE' }), itemParams);
+    expect(res.status).toBe(204);
+    expect(mockJumpDelete).toHaveBeenCalled();
+  });
 });
 
 // ===========================================================================

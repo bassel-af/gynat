@@ -122,6 +122,16 @@ async function main() {
           } else {
             console.log(`    Seeded tree: ${result.individualCount} individuals, ${result.familyCount} families.`);
           }
+
+          // Dev-only: «قفزة نسب» is off by default per workspace; switch it on
+          // where the seeded tree carries jumps so browser testing keeps the button.
+          if (result.ancestryJumpCount > 0) {
+            await prisma.workspace.update({
+              where: { id: workspace.id },
+              data: { enableAncestryJumps: true },
+            });
+            console.log(`    Enabled «قفزة نسب» (${result.ancestryJumpCount} jumps).`);
+          }
         } else {
           console.log(`    GEDCOM file not found: ${gedcomPath}, skipping tree seed.`);
         }

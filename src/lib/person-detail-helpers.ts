@@ -84,6 +84,11 @@ export function validateAddParent(person: Individual, data: GedcomData): AddPare
  *
  * `'edit'` once the person already has a jump — v1 allows exactly one per
  * person, so the action becomes «تعديل قفزة النسب» / «حذف قفزة النسب».
+ *
+ * `enabled` is the workspace's `enableAncestryJumps` toggle. It hides only the
+ * NEW-jump action: an existing jump stays editable (and deletable — the edit
+ * sheet carries the delete) with the feature off, matching the server, which
+ * gates only the create route.
  */
 export type AncestryJumpAction = 'create' | 'edit' | null;
 
@@ -91,6 +96,7 @@ export function getAncestryJumpAction(
   person: Individual | undefined,
   data: GedcomData | null | undefined,
   canEdit: boolean,
+  enabled: boolean,
 ): AncestryJumpAction {
   if (!canEdit || !person || !data) return null;
   if (person._pointed) return null;
@@ -98,7 +104,7 @@ export function getAncestryJumpAction(
   switch (validateJumpDescendant(data, person.id)) {
     case 'descendant_has_parents': return null;
     case 'descendant_already_has_jump': return 'edit';
-    default: return 'create';
+    default: return enabled ? 'create' : null;
   }
 }
 

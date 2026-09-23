@@ -20,8 +20,9 @@ type RouteParams = { params: Promise<{ id: string }> };
 
 // POST /api/workspaces/[id]/tree/ancestry-jumps — create a «قفزة نسب»
 //
-// NOTE: there is deliberately NO workspace feature toggle here (rada'a has one;
-// jumps do not).
+// Gated by the per-workspace `enableAncestryJumps` toggle (off by default).
+// Only CREATE is gated: PATCH/DELETE stay open so an existing jump is always
+// fixable and removable (undo of a create / redo of a delete use DELETE).
 export async function POST(request: NextRequest, { params }: RouteParams) {
   const { id: workspaceId } = await params;
 
@@ -30,6 +31,17 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
   const { allowed, retryAfterSeconds } = treeMutateLimiter.check(result.user.id);
   if (!allowed) return rateLimitResponse(retryAfterSeconds);
+
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: workspaceId },
+    select: { enableAncestryJumps: true },
+  });
+  if (!workspace?.enableAncestryJumps) {
+    return NextResponse.json(
+      { error: 'ميزة قفزة النسب غير مفعّلة في هذه المساحة' },
+      { status: 400 },
+    );
+  }
 
   const parsed = await parseValidatedBody(request, createAncestryJumpSchema);
   if (isParseError(parsed)) return parsed;
