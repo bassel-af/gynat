@@ -12,6 +12,7 @@ import { updateAncestryJumpSchema } from '@/lib/tree/ancestry-jump-schemas';
 import {
   ANCESTRY_JUMP_ERROR_MESSAGES,
   ANCESTRY_JUMP_ERROR_STATUS,
+  JUMP_NOT_FOUND_MESSAGE,
 } from '@/lib/tree/ancestry-jump-validators';
 import { parseValidatedBody, isParseError, parseTreeIdFromBody } from '@/lib/api/route-helpers';
 import { isUndoRequest } from '@/lib/api/undo-header';
@@ -40,7 +41,7 @@ const jumpIdSchema = z.string().uuid();
  * an unparseable id and a jump in someone else's tree are indistinguishable.
  */
 const NOT_FOUND = () =>
-  NextResponse.json({ error: 'قفزة النسب غير موجودة في هذه الشجرة' }, { status: 404 });
+  NextResponse.json({ error: JUMP_NOT_FOUND_MESSAGE }, { status: 404 });
 
 // PATCH /api/workspaces/[id]/tree/ancestry-jumps/[jumpId]
 //

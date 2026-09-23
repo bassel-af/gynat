@@ -190,14 +190,6 @@ a.personLinkLead:hover {
   filter: brightness(1.12);
 }
 
-/* Surname = ornamental closer (gold, script flourish — not a person). */
-.ribbonSurname {
-  font-family: var(--heritage-font-script);
-  font-size: 22px;
-  color: var(--heritage-gold);
-  margin-inline-start: 6px;
-}
-
 /* The deeper into the chain (further left), the fainter — "into the past". */
 .ribbon .ribbonSegment:nth-last-child(2) .personLink { opacity: 0.92; }
 .ribbon .ribbonSegment:nth-last-child(3) .personLink { opacity: 0.78; font-size: 20px; }

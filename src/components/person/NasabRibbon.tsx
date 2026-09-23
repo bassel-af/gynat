@@ -7,7 +7,11 @@ import styles from './person.module.css';
 
 /**
  * The hero signature: the subject's full patronymic chain as ONE continuous
- * ribbon — «<subject> بن <father> بن <grandfather> … <surname>».
+ * ribbon — «<subject> بن <father> بن <grandfather> …».
+ *
+ * The family name is NEVER part of the ribbon — with or without a «قفزة نسب».
+ * It is shown once, in the page's «من بيت X» line. (After a jump a trailing
+ * surname would read as the distant ancestor's house.)
  *
  * The ribbon WRAPS onto multiple centered lines when it does not fit; it never
  * horizontal-scrolls (scrolling a name reads badly). The subject leads (largest,
@@ -69,14 +73,12 @@ export function NasabRibbon({
                   </span>
                 )
               )}
-              {/* Ancestors show only their GIVEN name — the shared family name
-                  (surname) prints ONCE at the end of the ribbon, so repeating it
-                  on every father would read «… بن محمد سعيّد بن عمر سعيّد سعيّد». */}
+              {/* Ancestors show only their GIVEN name — the family name is not
+                  part of the ribbon at all (it lives in the «من بيت» line). */}
               <PersonLink chip={{ ...anc, name: anc.givenName }} hrefFor={hrefFor} />
             </span>
           );
         })}
-        {subject.surname && <span className={styles.ribbonSurname}>{subject.surname}</span>}
       </h1>
     </div>
   );

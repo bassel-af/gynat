@@ -8,6 +8,11 @@ import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
 import { snapshotBranchPointer, encryptAuditDescription, JSON_NULL } from '@/lib/tree/audit';
 import { getWorkspaceKey, decryptIndividualRow } from '@/lib/tree/encryption';
 import { touchTreeTimestamp } from '@/lib/tree/queries';
+import {
+  hasJumpDescendant,
+  childHasJumpResponse,
+  ChildHasJumpError,
+} from '@/lib/tree/ancestry-jump-guards';
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -254,6 +259,21 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         throw new Error('DUPLICATE_ANCHOR_POINTER');
       }
 
+      // «قفزة نسب» backstop: a `parent` link — or a `sibling` link on an anchor
+      // with no parent family, whose stitch mints a synthetic parent family —
+      // would give a jump-carrying anchor parents. Only the move-to-new-father
+      // route may do that. The jump lookup runs first; the parent-family lookup
+      // is needed only when the anchor carries a jump.
+      if (
+        (relationship === 'parent' || relationship === 'sibling') &&
+        (await hasJumpDescendant(tx, anchor.treeId, [anchorIndividualId]))
+      ) {
+        const gainsParents =
+          relationship === 'parent' ||
+          !(await tx.familyChild.findFirst({ where: { individualId: anchorIndividualId } }));
+        if (gainsParents) throw new ChildHasJumpError();
+      }
+
       // Re-check token revocation inside transaction to prevent race with concurrent revoke
       const freshToken = await tx.branchShareToken.findUnique({
         where: { id: shareToken.id },
@@ -290,6 +310,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       });
     });
   } catch (err) {
+    if (err instanceof ChildHasJumpError) return childHasJumpResponse();
     const message = err instanceof Error ? err.message : '';
     if (message === 'DUPLICATE_ANCHOR_POINTER') {
       return NextResponse.json(

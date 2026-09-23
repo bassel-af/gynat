@@ -147,6 +147,7 @@ function mockExistingTree() {
     workspaceId: wsId,
     individuals: [],
     families: [],
+    ancestryJumps: [],
   });
 }
 
@@ -157,6 +158,7 @@ function mockNoTree() {
     workspaceId: wsId,
     individuals: [],
     families: [],
+    ancestryJumps: [],
   });
 }
 

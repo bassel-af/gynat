@@ -31,7 +31,8 @@ export type UndoAction =
   | { kind: 'removeRadaChild'; name?: string }
   | { kind: 'addAncestryJump'; name?: string }
   | { kind: 'updateAncestryJump' }
-  | { kind: 'deleteAncestryJump' };
+  | { kind: 'deleteAncestryJump' }
+  | { kind: 'moveAncestryJumpToFather'; name?: string };
 
 function withName(bareLabel: string, prefixWithName: string, name?: string): string {
   if (!name) return bareLabel;
@@ -110,5 +111,7 @@ function renderLabel(action: UndoAction): string {
       return 'تعديل قفزة نسب';
     case 'deleteAncestryJump':
       return 'حذف قفزة نسب';
+    case 'moveAncestryJumpToFather':
+      return action.name ? `نقل قفزة النسب إلى ${action.name}` : 'نقل قفزة النسب';
   }
 }

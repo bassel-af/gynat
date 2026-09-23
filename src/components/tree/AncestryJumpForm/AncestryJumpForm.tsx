@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState, type FormEvent } from 'react';
 import type { GedcomData, Individual } from '@/lib/gedcom/types';
 import { getDisplayNameWithNasab, JUMP_CONNECTOR, DEFAULT_NASAB_DEPTH } from '@/lib/gedcom/display';
 import { getAllDescendants } from '@/lib/gedcom/graph';
-import { getFamiliesForPicker } from '@/lib/person-detail-helpers';
+import { getFamiliesForPicker, ancestorNameOfExistingJump } from '@/lib/person-detail-helpers';
 import type { AncestryJumpFields, AncestryJumpSubmitPayload } from '@/hooks/usePersonActions';
 import { IndividualForm, type IndividualFormData } from '@/components/tree/IndividualForm/IndividualForm';
 import { FamilyPickerModal } from '@/components/tree/FamilyPickerModal/FamilyPickerModal';
@@ -267,6 +267,7 @@ export function AncestryJumpForm({
   // -------------------------------------------------------------------------
   // Step: the range, the notes, and what the نسب will read
   // -------------------------------------------------------------------------
+  // In edit mode the ancestor is whoever the existing jump already names.
   const ancestorName = chosen?.name ?? ancestorNameOfExistingJump(data, person);
   const preview = ancestorName
     ? `${getDisplayNameWithNasab(data, person, DEFAULT_NASAB_DEPTH)}، ${JUMP_CONNECTOR} ${ancestorName}`
@@ -365,15 +366,4 @@ export function AncestryJumpForm({
       </form>
     </Modal>
   );
-}
-
-/** In edit mode the ancestor is whoever the existing jump already names. */
-function ancestorNameOfExistingJump(data: GedcomData, person: Individual): string | null {
-  const jumpId = person.ancestryJumpAsDescendant;
-  const jump = jumpId ? data.ancestryJumps?.[jumpId] : undefined;
-  if (!jump) return null;
-  const family = data.families[jump.ancestorFamily];
-  const spouseId = family?.husband ?? family?.wife ?? null;
-  const spouse = spouseId ? data.individuals[spouseId] : undefined;
-  return spouse ? spouse.givenName || spouse.name : null;
 }

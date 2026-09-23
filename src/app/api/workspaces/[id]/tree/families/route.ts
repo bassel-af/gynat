@@ -10,6 +10,7 @@ import { isUndoRequest } from '@/lib/api/undo-header';
 import { isPointedIndividualInWorkspace } from '@/lib/tree/branch-pointer-queries';
 import { snapshotFamily, encryptAuditDescription, JSON_NULL } from '@/lib/tree/audit';
 import { getWorkspaceKey, encryptFamilyInput, encryptSnapshot } from '@/lib/tree/encryption';
+import { treeHasJumpDescendant, childHasJumpResponse } from '@/lib/tree/ancestry-jump-guards';
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -125,6 +126,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           { status: 400 },
         );
       }
+    }
+    // «قفزة نسب» backstop: a child who carries a jump gains parents only via
+    // the move-to-new-father route. The resolved tree already carries its jumps.
+    if (treeHasJumpDescendant(tree, childrenIds)) {
+      return childHasJumpResponse();
     }
   }
 

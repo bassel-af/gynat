@@ -351,6 +351,7 @@ describe('POST /api/workspaces/[id]/tree/families/[familyId]/children/[individua
     // Transaction executes the callback
     mockTransaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
       return fn({
+        ancestryJump: { findMany: vi.fn().mockResolvedValue([]) },
         family: {
           findMany: vi.fn().mockResolvedValue([]),
         },
@@ -389,6 +390,7 @@ describe('POST /api/workspaces/[id]/tree/families/[familyId]/children/[individua
       .mockResolvedValueOnce(null);
     mockTransaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
       return fn({
+        ancestryJump: { findMany: vi.fn().mockResolvedValue([]) },
         family: {
           findMany: vi.fn().mockResolvedValue([]),
         },
@@ -447,6 +449,7 @@ describe('POST /api/workspaces/[id]/tree/families/[familyId]/children/[individua
       .mockResolvedValueOnce(null);
     mockTransaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
       return fn({
+        ancestryJump: { findMany: vi.fn().mockResolvedValue([]) },
         family: {
           findMany: vi.fn().mockResolvedValue([]),
         },

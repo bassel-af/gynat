@@ -139,17 +139,17 @@ const nasab = (data: GedcomData, id: string, depth?: number) =>
 
 describe('the «من وَلَد» connector', () => {
   test('replaces «بن» at the jump and the chain continues above it', () => {
-    expect(nasab(adnanData(), 'ADNAN', 0)).toBe('عدنان، من وَلَد إسماعيل بن إبراهيم العدنانية');
+    expect(nasab(adnanData(), 'ADNAN', 0)).toBe('عدنان العدنانية، من وَلَد إسماعيل بن إبراهيم');
   });
 
   test('the comma binds to the preceding name, with no space before it', () => {
-    expect(nasab(adnanData(), 'ADNAN', 0)).toContain('عدنان، من');
-    expect(nasab(adnanData(), 'ADNAN', 0)).not.toContain('عدنان ،');
+    expect(nasab(adnanData(), 'ADNAN', 0)).toContain('العدنانية، من');
+    expect(nasab(adnanData(), 'ADNAN', 0)).not.toContain('العدنانية ،');
   });
 
   test('a recorded line leads INTO the jump normally', () => {
     expect(nasab(adnanData(), 'ZAYD', 0)).toBe(
-      'زيد بن عدنان، من وَلَد إسماعيل بن إبراهيم العدنانية',
+      'زيد بن عدنان العدنانية، من وَلَد إسماعيل بن إبراهيم',
     );
   });
 
@@ -158,7 +158,7 @@ describe('the «من وَلَد» connector', () => {
     data.individuals.FATIMA.ancestryJumpAsDescendant = 'J1';
     data.ancestryJumps!.J1.descendant = 'FATIMA';
     const result = nasab(data, 'FATIMA', 0);
-    expect(result).toBe('فاطمة، من وَلَد إسماعيل بن إبراهيم العدنانية');
+    expect(result).toBe('فاطمة العدنانية، من وَلَد إسماعيل بن إبراهيم');
     expect(result).not.toContain('بنت');
   });
 
@@ -174,9 +174,18 @@ describe('the «من وَلَد» connector', () => {
 // ---------------------------------------------------------------------------
 
 describe('the surname freezes at the jump', () => {
+  test('the family name sits right BEFORE «، من وَلَد», never after the ancestor', () => {
+    // The owner-approved placement: a name ending on the ancestor would read as
+    // HIS house.
+    const result = nasab(adnanData(), 'ADNAN', 0);
+    expect(result).toBe('عدنان العدنانية، من وَلَد إسماعيل بن إبراهيم');
+    expect(result.endsWith('العدنانية')).toBe(false);
+  });
+
+
   test('عدنان’s line keeps its own house, never إسماعيل’s', () => {
     const result = nasab(adnanData(), 'ZAYD', 0);
-    expect(result.endsWith('العدنانية')).toBe(true);
+    expect(result).toContain('العدنانية');
     expect(result).not.toContain('الإسماعيلية');
     expect(result).not.toContain('الخليلية');
   });
@@ -207,11 +216,11 @@ describe('depth', () => {
   });
 
   test('depth 3 spells the jump out and stops there', () => {
-    expect(nasab(adnanData(), 'ADNAN', 3)).toBe('عدنان، من وَلَد إسماعيل العدنانية');
+    expect(nasab(adnanData(), 'ADNAN', 3)).toBe('عدنان العدنانية، من وَلَد إسماعيل');
   });
 
   test('depth 4 continues into the ancestor’s own father', () => {
-    expect(nasab(adnanData(), 'ADNAN', 4)).toBe('عدنان، من وَلَد إسماعيل بن إبراهيم العدنانية');
+    expect(nasab(adnanData(), 'ADNAN', 4)).toBe('عدنان العدنانية، من وَلَد إسماعيل بن إبراهيم');
   });
 
   test('depth 1 is the bare name, as always', () => {
@@ -259,6 +268,6 @@ describe('the chain stops silently', () => {
       descendant: 'ISH',
       ancestorFamily: 'FAM-ADN',
     });
-    expect(nasab(data, 'ADNAN', 0)).toBe('عدنان، من وَلَد إسماعيل العدنانية');
+    expect(nasab(data, 'ADNAN', 0)).toBe('عدنان العدنانية، من وَلَد إسماعيل');
   });
 });

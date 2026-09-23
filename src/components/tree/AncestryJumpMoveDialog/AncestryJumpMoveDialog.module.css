@@ -1,0 +1,18 @@
+/* ============================================
+   ANCESTRY JUMP MOVE DIALOG — Jeweled Heritage
+   (same banner vocabulary as ConflictDialog)
+   ============================================ */
+
+.banner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-6);
+  background: rgba(10, 14, 26, 0.45);
+  border: 1px dashed rgba(200, 168, 101, 0.28);
+  border-radius: var(--radius-lg);
+}
+
+.line {
+  composes: line from '../ConflictDialog/ConflictDialog.module.css';
+}

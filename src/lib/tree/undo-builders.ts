@@ -442,3 +442,58 @@ export function buildDeleteAncestryJumpInverse({
     redo: () => del(`/api/workspaces/${workspaceId}/tree/ancestry-jumps/${currentId ?? _deletedId}`, treeId),
   };
 }
+
+// ---------------------------------------------------------------------------
+// Ancestry jump — moved up to a brand-new father
+//
+// The forward action is ONE atomic server call (create F + his couple +
+// re-point the jump), so both directions are single calls too: undo is
+// move-back (jump back to P with the pre-move range, then delete the couple
+// and F — the server refuses with 409 if anything was built on F since); redo
+// replays the move with the saved father form and re-captures the new ids.
+// ---------------------------------------------------------------------------
+
+export interface MoveJumpToNewFatherInverseParams {
+  workspaceId: string;
+  jumpId: string;
+  fatherId: string;
+  familyId: string;
+  childId: string;
+  /** The father's individual body, exactly as the forward call sent it. */
+  fatherPayload: Record<string, unknown>;
+  /** The range BEFORE the move (the move shrinks it by one). */
+  preMoveRange: { generationsMin: number | null; generationsMax: number | null };
+  treeId?: string;
+}
+
+export function buildMoveJumpToNewFatherInverse({
+  workspaceId,
+  jumpId,
+  fatherId,
+  familyId,
+  childId,
+  fatherPayload,
+  preMoveRange,
+  treeId,
+}: MoveJumpToNewFatherInverseParams): Inverse {
+  const base = `/api/workspaces/${workspaceId}/tree/ancestry-jumps/${jumpId}`;
+  let currentFatherId = fatherId;
+  let currentFamilyId = familyId;
+  return {
+    undo: async () => {
+      await postJson(
+        `${base}/move-back`,
+        { fatherId: currentFatherId, familyId: currentFamilyId, childId, ...preMoveRange },
+        treeId,
+      );
+    },
+    redo: async () => {
+      const data = (await postJson(`${base}/move-to-new-father`, { father: fatherPayload }, treeId)) as {
+        individual?: { id?: string };
+        family?: { id?: string };
+      };
+      if (data.individual?.id) currentFatherId = data.individual.id;
+      if (data.family?.id) currentFamilyId = data.family.id;
+    },
+  };
+}

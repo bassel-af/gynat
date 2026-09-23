@@ -7,6 +7,7 @@ import {
   encryptFieldNullable,
   decryptField,
 } from '@/lib/crypto/workspace-encryption';
+import type { Prisma } from '../../../generated/prisma/client';
 
 // Prisma Json fields require plain objects; these snapshot types use
 // an index signature so they're directly assignable to InputJsonValue.
@@ -387,6 +388,35 @@ export function encryptAuditDescription(
     options,
   );
   return encryptFieldNullable(plaintext, workspaceKey);
+}
+
+/** One `TreeEditLog` row, with the encrypted columns as the helpers above produce them. */
+export interface TreeEditLogEntry {
+  treeId: string;
+  userId: string;
+  action: string;
+  entityType: string;
+  entityId: string;
+  /** An `encryptSnapshot` envelope, or `JSON_NULL`. */
+  snapshotBefore: unknown;
+  /** An `encryptSnapshot` envelope, or `JSON_NULL`. */
+  snapshotAfter: unknown;
+  description: Buffer | null;
+}
+
+/**
+ * Write one audit row through `db` (the Prisma client or a transaction
+ * client). Hides the one cast every route needed: Prisma's Bytes column type
+ * is `Uint8Array<ArrayBuffer>` while a Node `Buffer` is `ArrayBufferLike` —
+ * identical at runtime.
+ */
+export function writeTreeEditLog(
+  db: Pick<Prisma.TransactionClient, 'treeEditLog'>,
+  entry: TreeEditLogEntry,
+) {
+  return db.treeEditLog.create({
+    data: entry as unknown as Prisma.TreeEditLogUncheckedCreateInput,
+  });
 }
 
 /**

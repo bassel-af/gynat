@@ -391,7 +391,7 @@ function addGraftData(
 // mergePointedSubtree
 // ---------------------------------------------------------------------------
 
-const EMPTY_EVENT: FamilyEvent = { date: '', hijriDate: '', place: '', description: '', notes: '' };
+export const EMPTY_EVENT: FamilyEvent = { date: '', hijriDate: '', place: '', description: '', notes: '' };
 
 /**
  * Merges a pointed subtree into a target tree's GedcomData.

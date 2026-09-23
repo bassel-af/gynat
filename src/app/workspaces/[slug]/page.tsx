@@ -22,6 +22,7 @@ import { EnableCollectionsSetting } from '@/components/collections/EnableCollect
 import { JoinCodePanel } from '@/components/collections/JoinCodePanel/JoinCodePanel';
 import type { GedcomData } from '@/lib/gedcom/types';
 import styles from './workspace.module.css';
+import buttonStyles from '@/components/ui/Button/Button.module.css';
 
 const TREE_EXPORT_SEGMENTS: readonly { value: ExportVisibilitySegment; label: string }[] = [
   { value: 'off', label: 'معطّل' },
@@ -460,11 +461,23 @@ export default function WorkspaceDetailPage() {
         </div>
 
         {/* Tree link */}
-        <Link href={`/workspaces/${slug}/tree`} className={styles.treeLink}>
-          <span className={styles.treeLinkIcon}>
+        {/* Primary CTA — reuses the shared Button's primary look on a link
+            (a <button> can't live inside an <a>). */}
+        <Link
+          href={`/workspaces/${slug}/tree`}
+          className={[
+            buttonStyles.button,
+            buttonStyles.primary,
+            buttonStyles.lg,
+            buttonStyles.fullWidth,
+            styles.treeLink,
+          ].join(' ')}
+        >
+          <span className={styles.treeLinkIcon} aria-hidden="true">
             <iconify-icon icon="material-symbols:account-tree" width="24" height="24" />
           </span>
-          عرض شجرة العائلة
+          <span>عرض شجرة العائلة</span>
+          <span className={styles.treeLinkArrow} aria-hidden="true">←</span>
         </Link>
 
         {/* Collections — enable setting + shortcuts to the new areas (§2.9) */}

@@ -1,0 +1,22 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`depth-2 one-line names are unchanged > ancestry-jump.ged 1`] = `
+{
+  "digest": "56ef8e607992d7d9cd0558292648c94ed7567dcb3004897a7d2d1d6e31079394",
+  "people": 4,
+}
+`;
+
+exports[`depth-2 one-line names are unchanged > saeed-family.ged 1`] = `
+{
+  "digest": "a031996ddce97fef59c360cc386266b8ef685799a32345a41f330715fd9bdb28",
+  "people": 485,
+}
+`;
+
+exports[`depth-2 one-line names are unchanged > test-family.ged 1`] = `
+{
+  "digest": "b96cf48d8eb03e81e7209f647d946566964eaf0e284fd4f786fa1b60c026edc7",
+  "people": 16,
+}
+`;

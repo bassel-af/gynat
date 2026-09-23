@@ -68,7 +68,8 @@ function getJumpFather(data: GedcomData, person: Individual): Individual | null 
 
 /**
  * Returns a display name with Arabic nasab (patronymic chain).
- * Uses givenName for each person in the chain, with surname appended once at the end.
+ * Uses givenName for each person in the chain, with surname appended once at the end —
+ * or, when the chain crosses a «قفزة نسب», placed once right before «، من وَلَد».
  *
  * @param data - The GEDCOM data containing individuals and families
  * @param person - The individual to get the name for
@@ -134,8 +135,14 @@ export function getDisplayNameWithNasab(
     if (visited.has(jumpFather.id)) break;
     visited.add(jumpFather.id);
 
-    // «… بن عدنان، من وَلَد إسماعيل». The comma binds to the PRECEDING token,
+    // «… بن عدنان العدنانية، من وَلَد إسماعيل». The family name is placed HERE,
+    // right before the connector, and never at the end: a name ending on the
+    // ancestor would read as HIS house. The comma binds to the PRECEDING token,
     // so it is appended rather than pushed (join(' ') would give «عدنان ، من»).
+    if (!crossedJump) {
+      const surname = surnameSource.surname || person.surname;
+      if (surname) nameParts.push(surname);
+    }
     nameParts[nameParts.length - 1] += '،';
     nameParts.push(JUMP_CONNECTOR);
     nameParts.push(jumpFather.givenName || jumpFather.name || 'Unknown');
@@ -145,11 +152,13 @@ export function getDisplayNameWithNasab(
     generationsAdded += JUMP_GENERATION_COST;
   }
 
-  // Append surname once at the end (from the last person in the chain, frozen
-  // at the jump — see above)
-  const surname = surnameSource.surname || person.surname;
-  if (surname) {
-    nameParts.push(surname);
+  // Append surname once at the end (from the last person in the chain). A chain
+  // that crossed a jump already placed it before «، من وَلَد» — see above.
+  if (!crossedJump) {
+    const surname = surnameSource.surname || person.surname;
+    if (surname) {
+      nameParts.push(surname);
+    }
   }
 
   return nameParts.join(' ');

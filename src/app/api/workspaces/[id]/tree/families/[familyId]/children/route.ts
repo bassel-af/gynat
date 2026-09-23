@@ -10,6 +10,7 @@ import { targetTreeIdSchema } from '@/lib/tree/schemas';
 import { isUndoRequest } from '@/lib/api/undo-header';
 import { encryptAuditDescription, JSON_NULL } from '@/lib/tree/audit';
 import { isSyntheticFamilyId } from '@/lib/tree/branch-pointer-guards';
+import { treeHasJumpDescendant, childHasJumpResponse } from '@/lib/tree/ancestry-jump-guards';
 
 type RouteParams = { params: Promise<{ id: string; familyId: string }> };
 
@@ -59,6 +60,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       { error: 'الشخص غير موجود في هذه الشجرة' },
       { status: 400 },
     );
+  }
+
+  // «قفزة نسب» backstop: a person who carries a jump gains parents only via the
+  // move-to-new-father route. The resolved tree already carries its jumps.
+  if (treeHasJumpDescendant(tree, [parsed.data.individualId])) {
+    return childHasJumpResponse();
   }
 
   // Check for duplicate

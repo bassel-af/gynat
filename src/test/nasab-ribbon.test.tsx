@@ -107,12 +107,18 @@ describe('NasabRibbon — surname shown once, correct بن/بنت', () => {
     expect(screen.queryByText('خالد آل السعيد')).toBeNull();
   });
 
-  it('shows the family name exactly once (the trailing ribbon surname)', () => {
+  it('never shows the family name in the ribbon — it lives only in the «من بيت» line', () => {
     const { container } = render(
       <NasabRibbon subject={subject} chain={[fatherWithSurname]} hrefFor={hrefFor} />,
     );
-    const occurrences = (container.textContent?.split('آل السعيد').length ?? 1) - 1;
-    expect(occurrences).toBe(1);
+    expect(container.textContent).not.toContain('آل السعيد');
+  });
+
+  it('never shows the family name on the public variant either', () => {
+    const { container } = render(
+      <NasabRibbon subject={subject} chain={[fatherWithSurname]} hrefFor={hrefFor} suppressLivingConnectors />,
+    );
+    expect(container.textContent).not.toContain('آل السعيد');
   });
 
   it('uses بنت for a FEMALE subject (رندة بنت بشر), not بن', () => {

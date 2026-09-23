@@ -349,6 +349,8 @@ function mockTransactionPassthrough() {
     // For simplicity, we pass the same mock prisma through
     // The callback should use tx.branchShareToken.update and tx.branchPointer.create
     const txProxy = {
+      ancestryJump: { findMany: vi.fn().mockResolvedValue([]) },
+      familyChild: { findFirst: vi.fn().mockResolvedValue(null) },
       branchShareToken: {
         update: (...args: unknown[]) => mockShareTokenUpdate(...args),
         findUnique: vi.fn().mockResolvedValue({ isRevoked: false }),

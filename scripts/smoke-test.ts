@@ -84,6 +84,11 @@ const ENDPOINTS: Endpoint[] = [
   // or schema in the extended publish path.
   { method: 'PATCH', path: '/api/workspaces/00000000-0000-4000-a000-000000000000/tree/visibility', label: 'Extra-tree publish visibility (anon → 401)', allowUnauth: true },
 
+  // «قفزة نسب» move-to-new-father + its undo (move-back). Anon POST must load
+  // the route and reject at the editor gate (401), NOT 500.
+  { method: 'POST', path: '/api/workspaces/00000000-0000-4000-a000-000000000000/tree/ancestry-jumps/00000000-0000-4000-a000-000000000009/move-to-new-father', label: 'Jump move to new father (anon → 401)', allowUnauth: true },
+  { method: 'POST', path: '/api/workspaces/00000000-0000-4000-a000-000000000000/tree/ancestry-jumps/00000000-0000-4000-a000-000000000009/move-back', label: 'Jump move-back (anon → 401)', allowUnauth: true },
+
   // Unified publish flow: the publish-preview route now resolves a tree via the
   // shared treeId-aware resolver (main when absent, scoped extra tree when
   // present). Anon GET (both forms) must load the route and reject at the admin

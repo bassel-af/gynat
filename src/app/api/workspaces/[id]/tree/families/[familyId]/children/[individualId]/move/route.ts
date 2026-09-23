@@ -11,6 +11,11 @@ import { isSyntheticFamilyId } from '@/lib/tree/branch-pointer-guards';
 import { isPointedIndividualInWorkspace } from '@/lib/tree/branch-pointer-queries';
 import { encryptAuditDescription, encryptAuditPayload } from '@/lib/tree/audit';
 import { getWorkspaceKey } from '@/lib/tree/encryption';
+import {
+  hasJumpDescendant,
+  childHasJumpResponse,
+  ChildHasJumpError,
+} from '@/lib/tree/ancestry-jump-guards';
 
 type RouteParams = {
   params: Promise<{ id: string; familyId: string; individualId: string }>;
@@ -156,6 +161,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // 14. Cycle detection + atomic move inside transaction
     await prisma.$transaction(async (tx) => {
+      // «قفزة نسب» backstop: a person who carries a jump gains parents only via
+      // the move-to-new-father route. Checked inside the move's transaction.
+      if (await hasJumpDescendant(tx, tree.id, [individualId])) {
+        throw new ChildHasJumpError();
+      }
+
       // Compute descendants of individualId via level-order BFS
       const descendants = new Set<string>();
       let queue = [individualId];
@@ -242,6 +253,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (err) {
+    if (err instanceof ChildHasJumpError) return childHasJumpResponse();
     if (err instanceof CycleError) {
       return NextResponse.json(
         { error: 'لا يمكن النقل: الوالد الهدف من ذرية هذا الشخص' },

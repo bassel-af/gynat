@@ -4,7 +4,12 @@ import type { IndividualFormData } from '@/components/tree/IndividualForm/Indivi
 import type { FamilyEventFormData } from '@/components/tree/FamilyEventForm/FamilyEventForm';
 import type { MoveSubtreeOption } from '@/components/tree/MoveSubtreeModal';
 import { apiFetch } from '@/lib/api/client';
-import { serializeIndividualForm, getEditableSpouseFamilyIds } from '@/lib/person-detail-helpers';
+import {
+  serializeIndividualForm,
+  getEditableSpouseFamilyIds,
+  ancestorFamilyDisplayName,
+  jumpBlocksParents,
+} from '@/lib/person-detail-helpers';
 import type { UndoEntry } from '@/lib/undo/types';
 import { buildUndoLabel } from '@/lib/tree/undo-label';
 import {
@@ -21,9 +26,11 @@ import {
   buildCreateAncestryJumpInverse,
   buildUpdateAncestryJumpInverse,
   buildDeleteAncestryJumpInverse,
+  buildMoveJumpToNewFatherInverse,
 } from '@/lib/tree/undo-builders';
 import {
   ANCESTRY_JUMP_ERROR_MESSAGES,
+  JUMP_BLOCKS_PARENTS_MESSAGE,
   validateJumpDescendant,
 } from '@/lib/tree/ancestry-jump-validators';
 
@@ -54,7 +61,8 @@ export type FormMode =
   | { kind: 'addChild'; targetFamilyId?: string }
   | { kind: 'addSpouse'; lockedSex?: 'M' | 'F' }
   | { kind: 'linkExistingSpouse' }
-  | { kind: 'addParent'; lockedSex?: 'M' | 'F' }
+  /** `moveJumpId`: the person carries this «قفزة نسب»; the new father takes it over. */
+  | { kind: 'addParent'; lockedSex?: 'M' | 'F'; moveJumpId?: string }
   | { kind: 'addSibling'; targetFamilyId: string }
   | { kind: 'editFamilyEvent'; familyId: string; isUmmWalad?: boolean }
   | { kind: 'addRadaa' }
@@ -538,8 +546,61 @@ export function usePersonActions({
     }
   }, [workspace, person, personId, createFamily, isPointed, withFormAction, data, activeTreeId, onPushUndo]);
 
+  /**
+   * «إضافة أب» on a person who carries a «قفزة نسب»: ONE atomic server call
+   * creates the father and his couple and re-points the jump to him (range
+   * shrunk by one). ONE undo entry — undo is the server's move-back.
+   */
+  const handleMoveJumpToNewFather = useCallback(async (jumpId: string, formData: IndividualFormData) => {
+    if (!workspace || !person || !data || isPointed) return;
+    const jump = data.ancestryJumps?.[jumpId];
+    if (!jump) return;
+    const wsId = workspace.workspaceId;
+    // A mother never takes a jump over — the form is male-locked, and this is
+    // the belt to that brace.
+    const fatherPayload = { ...serializeIndividualForm(formData), sex: 'M' };
+    const preMoveRange = { generationsMin: jump.generationsMin, generationsMax: jump.generationsMax };
+    // Declared via `as` so TS does not narrow it to `null` — it is assigned
+    // inside the `withFormAction` closure.
+    let moved = null as { individual: { id: string }; family: { id: string } } | null;
+    await withFormAction(async () => {
+      const res = await apiFetch(`/api/workspaces/${wsId}/tree/ancestry-jumps/${jumpId}/move-to-new-father`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(withTreeId({ father: fatherPayload })),
+      });
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.error ?? 'حدث خطأ');
+      }
+      moved = (await res.json()).data;
+      setFormMode(null);
+    });
+    if (!moved || !onPushUndo) return;
+    const inverse = buildMoveJumpToNewFatherInverse({
+      workspaceId: wsId,
+      jumpId,
+      fatherId: moved.individual.id,
+      familyId: moved.family.id,
+      childId: personId,
+      fatherPayload,
+      preMoveRange,
+      treeId: activeTreeId,
+    });
+    onPushUndo({
+      label: buildUndoLabel({ kind: 'moveAncestryJumpToFather', name: formData.givenName }),
+      workspaceId: wsId,
+      undo: inverse.undo,
+      redo: inverse.redo,
+    });
+  }, [workspace, person, data, personId, isPointed, withFormAction, withTreeId, setFormMode, activeTreeId, onPushUndo]);
+
   const handleAddParentSubmit = useCallback(async (formData: IndividualFormData) => {
     if (!workspace || !person || !data || isPointed) return;
+    if (formMode?.kind === 'addParent' && formMode.moveJumpId) {
+      await handleMoveJumpToNewFather(formMode.moveJumpId, formData);
+      return;
+    }
     let succeeded = false;
     let newIndividualId: string | null = null;
     let patchedFamilyId: string | null = null;
@@ -648,7 +709,7 @@ export function usePersonActions({
         },
       });
     }
-  }, [workspace, person, data, personId, createIndividual, patchFamily, createFamily, isPointed, withFormAction, withTreeId, activeTreeId, deleteInit, onPushUndo]);
+  }, [workspace, person, data, personId, formMode, handleMoveJumpToNewFather, createIndividual, patchFamily, createFamily, isPointed, withFormAction, withTreeId, activeTreeId, deleteInit, onPushUndo]);
 
   const handleAddSiblingSubmit = useCallback(async (formData: IndividualFormData) => {
     if (!workspace || formMode?.kind !== 'addSibling' || isPointed) return;
@@ -962,10 +1023,7 @@ export function usePersonActions({
       const ancestor = data?.individuals[payload.ancestorPersonId];
       ancestorName = ancestor?.givenName || ancestor?.name;
     } else {
-      const fam = data?.families[payload.ancestorFamilyId];
-      const spouseId = fam?.husband ?? fam?.wife ?? null;
-      const spouse = spouseId ? data?.individuals[spouseId] : undefined;
-      ancestorName = spouse?.givenName || spouse?.name;
+      ancestorName = (data && ancestorFamilyDisplayName(data, payload.ancestorFamilyId)) || undefined;
     }
 
     // The jump is the whole point of the action; without it a just-created
@@ -1206,6 +1264,13 @@ export function usePersonActions({
   ) => {
     if (!workspace || !person || isPointed) return;
     const fromFamilyId = person.familyAsChild;
+    // «تعيين والدين موجودين» on a person who carries a «قفزة نسب» would give
+    // him parents beside the jump — refused before any call (the server's
+    // `child_has_jump` 409 is the backstop).
+    if (jumpBlocksParents(person)) {
+      setFormError(JUMP_BLOCKS_PARENTS_MESSAGE);
+      return;
+    }
     const personName = person.name;
     const orphanIds = options?.orphanIds ?? [];
     let succeeded = false;

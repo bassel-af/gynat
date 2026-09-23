@@ -108,6 +108,37 @@ export function getAncestryJumpAction(
   }
 }
 
+/**
+ * Display name of a «قفزة نسب» ancestor couple — its husband, else its wife
+ * (a single known ancestor is a one-spouse family). Null when the family or
+ * both spouses are absent.
+ */
+export function ancestorFamilyDisplayName(
+  data: GedcomData,
+  familyId: string,
+): string | null {
+  const family = data.families[familyId];
+  const spouseId = family?.husband ?? family?.wife ?? null;
+  const spouse = spouseId ? data.individuals[spouseId] : undefined;
+  return spouse ? spouse.givenName || spouse.name : null;
+}
+
+/** The ancestor named by the jump this person already carries, or null. */
+export function ancestorNameOfExistingJump(data: GedcomData, person: Individual): string | null {
+  const jumpId = person.ancestryJumpAsDescendant;
+  const jump = jumpId ? data.ancestryJumps?.[jumpId] : undefined;
+  return jump ? ancestorFamilyDisplayName(data, jump.ancestorFamily) : null;
+}
+
+/**
+ * A person who carries a «قفزة نسب» and has no recorded parents may NOT be
+ * given parents by «إضافة والد/والدة» (it must move the jump instead) or by
+ * «تعيين والدين موجودين». Resolved through the mapper's back-reference.
+ */
+export function jumpBlocksParents(person: Individual): boolean {
+  return !person.familyAsChild && !!person.ancestryJumpAsDescendant;
+}
+
 /** Add-sibling validation result */
 export type AddSiblingResult =
   | { allowed: true; targetFamilyId: string }

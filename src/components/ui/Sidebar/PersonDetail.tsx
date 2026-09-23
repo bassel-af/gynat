@@ -41,8 +41,11 @@ import {
   getFamiliesForPicker,
   getSurnamePrefill,
   getAncestryJumpAction,
+  ancestorNameOfExistingJump,
+  jumpBlocksParents,
 } from '@/lib/person-detail-helpers';
 import { MoveSubtreeModal, type MoveSubtreeOption } from '@/components/tree/MoveSubtreeModal';
+import { AncestryJumpMoveDialog } from '@/components/tree/AncestryJumpMoveDialog';
 import type { AddParentResult } from '@/lib/person-detail-helpers';
 import { apiFetch } from '@/lib/api/client';
 import { shouldCollapseDrawerOnPersonView } from '@/lib/utils/viewport';
@@ -481,6 +484,16 @@ export function PersonDetail({ personId }: PersonDetailProps) {
   // Family picker state (stays local — it controls which modal is open)
   const [familyPickerMode, setFamilyPickerMode] = useState<'addChild' | 'moveSubtree' | null>(null);
 
+  // «قفزة نسب» explanation dialog, shown BEFORE any parent-giving action on a
+  // person who carries a jump. 'move' = «إضافة والد/والدة» (offers moving the
+  // jump to the new father); 'blocked' = «تعيين والدين موجودين» (explain only).
+  const [jumpDialog, setJumpDialog] = useState<'move' | 'blocked' | null>(null);
+  const personJump = useMemo(() => {
+    const jumpId = person?.ancestryJumpAsDescendant;
+    if (!data || !person || !jumpId || !data.ancestryJumps?.[jumpId]) return null;
+    return { id: jumpId, ancestorName: ancestorNameOfExistingJump(data, person) ?? '' };
+  }, [data, person]);
+
   // Link-existing-spouse state
   const [linkSpouseSelectedId, setLinkSpouseSelectedId] = useState<string | null>(null);
 
@@ -635,13 +648,28 @@ export function PersonDetail({ personId }: PersonDetailProps) {
 
     const result: AddParentResult = validateAddParent(person, data);
     if (!result.allowed) return;
+    if (personJump) {
+      setJumpDialog('move');
+      return;
+    }
     setFormMode({ kind: 'addParent', lockedSex: result.lockedSex });
-  }, [person, data]);
+  }, [person, data, personJump]);
+
+  const handleJumpMoveConfirm = useCallback(() => {
+    if (!personJump) return;
+    setJumpDialog(null);
+    setFormMode({ kind: 'addParent', lockedSex: 'M', moveJumpId: personJump.id });
+  }, [personJump]);
 
   const handleMoveSubtreeClick = useCallback(() => {
     setFormError('');
+    // «تعيين والدين موجودين» would give a jump-carrying person parents.
+    if (personJump && person && jumpBlocksParents(person)) {
+      setJumpDialog('blocked');
+      return;
+    }
     setFamilyPickerMode('moveSubtree');
-  }, []);
+  }, [personJump, person]);
 
   const handleMoveSubtreeConfirm = useCallback(async (option: MoveSubtreeOption) => {
     const orphans = person && data ? detectOrphanedPreviousParents(person, data) : [];
@@ -1502,7 +1530,12 @@ export function PersonDetail({ personId }: PersonDetailProps) {
           error={formError}
           lockedSex={formLockedSex}
           workspaceId={workspace?.workspaceId}
-          allowBranchLink={formMode.kind !== 'edit' && !!workspace?.workspaceId}
+          allowBranchLink={
+            formMode.kind !== 'edit' &&
+            // A borrowed parent can't take a «قفزة نسب» over (server 409).
+            !(formMode.kind === 'addParent' && formMode.moveJumpId) &&
+            !!workspace?.workspaceId
+          }
           onBranchLink={handleBranchLink}
           relationshipType={
             formMode.kind === 'addChild' ? 'child'
@@ -1530,6 +1563,15 @@ export function PersonDetail({ personId }: PersonDetailProps) {
           onSelect={handleAddChildFamilySelect}
           families={familiesForPicker}
           title="اختر العائلة"
+        />
+      )}
+
+      {jumpDialog && person && personJump && (
+        <AncestryJumpMoveDialog
+          personName={person.givenName || person.name}
+          ancestorName={personJump.ancestorName}
+          onMove={jumpDialog === 'move' ? handleJumpMoveConfirm : undefined}
+          onCancel={() => setJumpDialog(null)}
         />
       )}
 
