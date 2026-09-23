@@ -241,7 +241,7 @@ The family tree belongs to the workspace and is shared by all workspace members.
 
 ### 5.12 Ancestry Jump («قفزة نسب»)
 
-**Status: shipped in code 2026-09-22** (built test-first, security-reviewed, e2e-verified against real infrastructure); **not yet deployed to production**. Design record: `docs/specs/ancestry-jump-spec.md`; research and owner rulings: `docs/ancestor-gap-research-notes.md`.
+**Status: deployed to production** — feature 2026-09-22; per-workspace opt-in toggle, family-name heading rule and move-to-new-father 2026-09-23 (all built test-first and e2e-verified against real infrastructure). Design record: `docs/specs/ancestry-jump-spec.md`; research and owner rulings: `docs/ancestor-gap-research-notes.md`.
 
 - **Problem**: a person's descent from a distant ancestor is certain, but the generations between are not recorded — or the family simply does not want them in its tree. The canonical case is Quraysh: عدنان ⋯ إسماعيل. Without a dedicated relation the only options were inventing filler people or drawing a false parent edge; both publish a claim nobody made.
 - **What it is**: a first-class link from a person to a distant ancestor couple — never a fake parent edge, never fabricated people. On the canvas: a dashed edge with a «قفزة نسب» chip, the ancestor drawn as an ordinary card above (spouse beside when known), the top of the tree becoming the furthest ancestor. On the person page: a «قفزة نسب» divider in the name chain plus a small ancestor block.
