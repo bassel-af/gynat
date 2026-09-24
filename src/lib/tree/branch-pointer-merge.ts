@@ -1,5 +1,6 @@
 import type { GedcomData, Individual, Family, FamilyEvent } from '@/lib/gedcom/types';
 import { extractSubtree, getAllDescendants } from '@/lib/gedcom/graph';
+import { stripSourceKeys } from './source-key-strip';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -149,7 +150,8 @@ function stripJumpBackReferences(data: GedcomData): GedcomData {
   // a borrowed jump would point at an ancestor family outside the subtree.
   const result: GedcomData = { ...data, individuals, families };
   delete result.ancestryJumps;
-  return result;
+  // Sources («المصادر») never cross a workspace inside GedcomData — fail-closed.
+  return stripSourceKeys(result);
 }
 
 // ---------------------------------------------------------------------------

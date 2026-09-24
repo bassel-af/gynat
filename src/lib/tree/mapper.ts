@@ -1,4 +1,5 @@
 import type { Individual, Family, GedcomData, RadaFamily, AncestryJump } from '@/lib/gedcom/types'
+import { stripSourceKeys } from '@/lib/tree/source-key-strip'
 import {
   decryptIndividualRow,
   decryptFamilyRow,
@@ -513,7 +514,8 @@ export function redactPrivateIndividuals(data: GedcomData): GedcomData {
   // structure. Members are inside the workspace, so the jump and its notes
   // stay. The PUBLIC surface is a different path with a fail-closed rule.
   if (data.ancestryJumps) result.ancestryJumps = data.ancestryJumps
-  return result
+  // Sources («المصادر») never ride the tree payload — fail-closed backstop.
+  return stripSourceKeys(result)
 }
 
 // ---------------------------------------------------------------------------

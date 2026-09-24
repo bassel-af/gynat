@@ -43,6 +43,7 @@ model User {
   notifications        Notification[]
   createdIndividuals   Individual[]          @relation("IndividualCreator")
   ancestryJumpsCreated AncestryJump[]        @relation("AncestryJumpCreator")
+  sourceEntriesCreated SourceEntry[]         @relation("SourceEntryCreator")
   uploadedMedia        AlbumMedia[]
   createdShareTokens   BranchShareToken[]
   createdPointers      BranchPointer[]
@@ -263,6 +264,8 @@ model FamilyTree {
   families     Family[]
   radaFamilies RadaFamily[]
   ancestryJumps AncestryJump[]
+  sourceEntries SourceEntry[]
+  sourceFiles   SourceFile[]
   editLogs     TreeEditLog[]
   collectionItems CollectionItem[]
 
@@ -337,6 +340,7 @@ model Individual {
   radaFamiliesAsFosterMother RadaFamily[]   @relation("RadaFamilyFosterMother")
   radaFamilyChildren         RadaFamilyChild[]
   ancestryJumpAsDescendant   AncestryJump[]        @relation("AncestryJumpDescendant")
+  sourceEntries              SourceEntry[]
   collectionItemsAsRoot      CollectionItem[]
 
   @@unique([treeId, gedcomId]) // gedcomId is unique within a tree
@@ -472,6 +476,87 @@ model AncestryJump {
   @@unique([treeId, gedcomId])
   @@index([ancestorFamilyId])
   @@map("ancestry_jumps")
+}
+
+// =============================================================================
+// Sources («المصادر») — v1: a standalone evidence entry per person
+// =============================================================================
+
+/// Who may see one source entry («من يرى هذا المصدر؟»). Stored as plaintext.
+///   admins  = level 1 «المشرفون فقط» (default)
+///   members = level 2 «أعضاء مساحة العائلة»
+///   public  = level 3 «أعضاء مساحة العائلة وزوار الشجرة المنشورة»
+/// The ONE gate that interprets these is `src/lib/tree/source-visibility.ts`.
+enum SourceVisibility {
+  admins
+  members
+  public
+}
+
+/// A source entry on one person, or the tree-wide entry (`individualId` null).
+/// NEVER part of the tree GET payload / `GedcomData`.
+///
+/// HAND-ADDED in migration `20260925120000_add_source_entries` (not expressible
+/// here — a regenerated migration would drop it):
+///   CREATE UNIQUE INDEX source_entries_one_tree_wide_per_tree
+///     ON source_entries (tree_id) WHERE individual_id IS NULL
+model SourceEntry {
+  id           String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  treeId       String           @map("tree_id") @db.Uuid
+  /// Null ONLY for the tree-wide entry («مصدر الشجرة»).
+  individualId String?          @map("individual_id") @db.Uuid
+  visibility   SourceVisibility @default(admins)
+  /// AES-256-GCM ciphertext under the workspace data key.
+  text         Bytes?
+  createdById  String?          @map("created_by") @db.Uuid
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+
+  tree       FamilyTree   @relation(fields: [treeId], references: [id], onDelete: Cascade)
+  individual Individual?  @relation(fields: [individualId], references: [id], onDelete: Cascade)
+  createdBy  User?        @relation("SourceEntryCreator", fields: [createdById], references: [id])
+  files      SourceFile[]
+
+  @@index([treeId, individualId])
+  @@map("source_entries")
+}
+
+/// File METADATA only — the encrypted bytes live in `SourceFileData` so an
+/// `include: { files: true }` never pulls file contents.
+///
+/// HAND-ADDED CHECKs in migration `20260925120000_add_source_entries`:
+///   size_bytes BETWEEN 1 AND 8388608 (8 MB)
+///   mime_type IN ('image/jpeg','image/png','image/webp','application/pdf')
+model SourceFile {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  entryId   String   @map("entry_id") @db.Uuid
+  treeId    String   @map("tree_id") @db.Uuid
+  mimeType  String   @map("mime_type")
+  sizeBytes Int      @map("size_bytes")
+  /// AES-256-GCM ciphertext of the original file name.
+  fileName  Bytes    @map("file_name")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  entry SourceEntry     @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  tree  FamilyTree      @relation(fields: [treeId], references: [id], onDelete: Cascade)
+  data  SourceFileData?
+
+  @@index([entryId])
+  @@index([treeId])
+  @@map("source_files")
+}
+
+/// Encrypted file bytes (AES-256-GCM, workspace key). One-to-one with
+/// `SourceFile`; deleting the file (or its entry) cascades here. The tree
+/// loader never reads this table.
+model SourceFileData {
+  id     String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fileId String @unique @map("file_id") @db.Uuid
+  data   Bytes
+
+  file SourceFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@map("source_file_data")
 }
 
 // =============================================================================

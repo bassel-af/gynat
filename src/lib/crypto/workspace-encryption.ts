@@ -179,6 +179,30 @@ export function unwrapKey(wrappedKey: Buffer, masterKey: Buffer): Buffer {
 // ---------------------------------------------------------------------------
 
 /**
+ * Encrypt raw bytes (e.g. an uploaded source file) with a workspace key.
+ * Same layout as `encryptField`: iv(12) || authTag(16) || ciphertext(N).
+ *
+ * @throws if workspaceKey is not a 32-byte Buffer.
+ */
+export function encryptBytes(plaintext: Buffer, workspaceKey: Buffer): Buffer {
+  assertKey(workspaceKey, 'workspaceKey');
+  if (!Buffer.isBuffer(plaintext)) {
+    throw new Error('encryptBytes expects a Buffer plaintext');
+  }
+  return gcmEncrypt(plaintext, workspaceKey);
+}
+
+/**
+ * Decrypt a packed iv || authTag || ciphertext buffer back to raw bytes.
+ *
+ * @throws on auth tag mismatch, tampered ciphertext, wrong key, or truncation.
+ */
+export function decryptBytes(packed: Buffer, workspaceKey: Buffer): Buffer {
+  assertKey(workspaceKey, 'workspaceKey');
+  return gcmDecrypt(packed, workspaceKey);
+}
+
+/**
  * Encrypt a plaintext string with a workspace key.
  * Uses a fresh random 12-byte nonce per call — calling this twice with the
  * same plaintext yields different ciphertexts.

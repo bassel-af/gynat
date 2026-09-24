@@ -15,6 +15,7 @@
 
 import type { GedcomData, Individual, Family, AncestryJump } from '@/lib/gedcom/types'
 import { INTERNAL_INDIVIDUAL_KEYS } from '@/lib/gedcom/types'
+import { stripSourceKeys } from '@/lib/tree/source-key-strip'
 import type {
   CheckpointPerson,
   CheckpointHousehold,
@@ -244,5 +245,6 @@ export function redactForPublic(
   }
   if (familiesCopied) result.families = families
 
-  return result
+  // Sources («المصادر») never ride the tree payload — fail-closed backstop.
+  return stripSourceKeys(result)
 }
