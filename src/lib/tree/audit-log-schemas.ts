@@ -34,6 +34,7 @@ export const AUDIT_ENTITY_TYPES = [
   'share_token',
   'tree',
   'ancestry_jump',
+  'source_entry',
 ] as const;
 
 // ---------------------------------------------------------------------------

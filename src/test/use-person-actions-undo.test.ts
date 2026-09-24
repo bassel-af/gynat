@@ -202,7 +202,9 @@ describe('usePersonActions — undo integration', () => {
     // 1st apiFetch = delete-impact (hasImpact false → simpleConfirm)
     mockApiFetch
       .mockResolvedValueOnce(new Response(JSON.stringify({ data: { hasImpact: false } }), { status: 200 }))
-      // 2nd apiFetch = DELETE individual
+      // then GET the person's sources (captured for the undo) — none here
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { entries: [], inherited: null } }), { status: 200 }))
+      // then DELETE individual
       .mockResolvedValueOnce(new Response(null, { status: 204 }));
     const person = makeIndividual({ name: 'علي', givenName: 'علي' });
     const data: GedcomData = { individuals: { '@I1@': person }, families: {} };

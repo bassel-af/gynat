@@ -32,7 +32,10 @@ export type UndoAction =
   | { kind: 'addAncestryJump'; name?: string }
   | { kind: 'updateAncestryJump' }
   | { kind: 'deleteAncestryJump' }
-  | { kind: 'moveAncestryJumpToFather'; name?: string };
+  | { kind: 'moveAncestryJumpToFather'; name?: string }
+  | { kind: 'createSourceEntry' }
+  | { kind: 'updateSourceEntry' }
+  | { kind: 'deleteSourceEntry' };
 
 function withName(bareLabel: string, prefixWithName: string, name?: string): string {
   if (!name) return bareLabel;
@@ -113,5 +116,12 @@ function renderLabel(action: UndoAction): string {
       return 'حذف قفزة نسب';
     case 'moveAncestryJumpToFather':
       return action.name ? `نقل قفزة النسب إلى ${action.name}` : 'نقل قفزة النسب';
+
+    case 'createSourceEntry':
+      return 'إضافة مصدر';
+    case 'updateSourceEntry':
+      return 'تعديل مصدر';
+    case 'deleteSourceEntry':
+      return 'حذف مصدر';
   }
 }

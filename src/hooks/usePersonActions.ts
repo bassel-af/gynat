@@ -29,6 +29,11 @@ import {
   buildMoveJumpToNewFatherInverse,
 } from '@/lib/tree/undo-builders';
 import {
+  fetchPersonSources,
+  restorableSourceEntries,
+  type RestorableSourceEntry,
+} from '@/lib/tree/source-entries-api';
+import {
   ANCESTRY_JUMP_ERROR_MESSAGES,
   JUMP_BLOCKS_PARENTS_MESSAGE,
   validateJumpDescendant,
@@ -111,6 +116,8 @@ export interface RadaaFormData {
 interface WorkspaceContext {
   workspaceId: string;
   canEdit: boolean;
+  /** Workspace admin — decides the level a restored source entry keeps. */
+  isAdmin?: boolean;
   refreshTree: () => Promise<void>;
   /** When set, mutations target this `extra` tree; absent ⇒ the main tree. */
   activeTreeId?: string;
@@ -1554,6 +1561,19 @@ export function usePersonActions({
     }) : null;
     const personName = person?.name;
     setDeleteState({ kind: 'loading' });
+    // Sources («المصادر»): the delete cascades the person's entries away, so
+    // capture their text entries first for the undo to re-create. Only simple
+    // deletes are undoable. Best-effort: a failed fetch never blocks the
+    // delete, it just leaves nothing to restore.
+    let sourceEntries: RestorableSourceEntry[] = [];
+    if (isSimple && onPushUndo) {
+      try {
+        const { entries } = await fetchPersonSources(workspace.workspaceId, personId, activeTreeId);
+        sourceEntries = restorableSourceEntries(entries, workspace.isAdmin === true);
+      } catch {
+        sourceEntries = [];
+      }
+    }
     try {
       const body: Record<string, string> = {};
       if (currentState.kind === 'cascadeWarning') {
@@ -1595,6 +1615,7 @@ export function usePersonActions({
           workspaceId: workspace.workspaceId,
           deletedId: personId,
           snapshot: deleteSnapshot,
+          sourceEntries,
           treeId: activeTreeId,
         });
         onPushUndo({

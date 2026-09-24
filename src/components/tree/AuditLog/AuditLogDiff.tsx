@@ -47,6 +47,15 @@ const FIELD_LABELS: Record<string, string> = {
   ancestorFamilyId: 'الجدّ',
   generationsMin: 'أقل عدد للأجيال',
   generationsMax: 'أكثر عدد للأجيال',
+  text: 'المصدر',
+  visibility: 'من يرى هذا المصدر',
+  entries: 'المصادر',
+};
+
+const SOURCE_VISIBILITY_LABELS: Record<string, string> = {
+  admins: 'المشرفون فقط',
+  members: 'أعضاء مساحة العائلة',
+  public: 'أعضاء مساحة العائلة وزوار الشجرة المنشورة',
 };
 
 const SEX_LABELS: Record<string, string> = {
@@ -70,6 +79,7 @@ function formatValue(key: string, value: unknown): string {
   if (value === null || value === undefined) return '—';
   if (typeof value === 'boolean') return value ? 'نعم' : 'لا';
   if (key === 'sex' && typeof value === 'string') return SEX_LABELS[value] ?? value;
+  if (key === 'visibility' && typeof value === 'string') return SOURCE_VISIBILITY_LABELS[value] ?? value;
   if (Array.isArray(value)) return value.length === 0 ? '—' : `${value.length} عنصر`;
   return String(value);
 }

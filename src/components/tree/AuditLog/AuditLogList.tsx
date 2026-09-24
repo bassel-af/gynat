@@ -25,6 +25,7 @@ const ENTITY_TYPE_OPTIONS = [
   { value: 'family_child', label: 'ابن/ابنة' },
   { value: 'rada_family', label: 'عائلة رضاعة' },
   { value: 'branch_pointer', label: 'ربط فرع' },
+  { value: 'source_entry', label: 'مصدر' },
 ];
 
 interface AuditLogListProps {

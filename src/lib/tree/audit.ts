@@ -286,10 +286,39 @@ export function snapshotAncestryJump(record: {
 }
 
 // ---------------------------------------------------------------------------
+// Source entry («مصدر») snapshot
+//
+// Stored through `encryptSnapshot` like every other snapshot, so the text is
+// encrypted at rest inside the envelope. NEVER carries file bytes or names.
+// ---------------------------------------------------------------------------
+
+export interface SourceEntrySnapshot extends JsonObject {
+  id: string;
+  /** Null for the tree-wide entry. */
+  individualId: string | null;
+  visibility: string;
+  text: string | null;
+}
+
+export function snapshotSourceEntry(record: {
+  id: string;
+  individualId: string | null;
+  visibility: string;
+  text: string | null;
+}): SourceEntrySnapshot {
+  return {
+    id: record.id,
+    individualId: record.individualId ?? null,
+    visibility: record.visibility,
+    text: record.text ?? null,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Arabic description builder
 // ---------------------------------------------------------------------------
 
-type AuditEntityType = 'individual' | 'family' | 'family_child' | 'rada_family' | 'rada_family_child' | 'branch_pointer' | 'share_token' | 'tree' | 'ancestry_jump';
+type AuditEntityType = 'individual' | 'family' | 'family_child' | 'rada_family' | 'rada_family_child' | 'branch_pointer' | 'share_token' | 'tree' | 'ancestry_jump' | 'source_entry';
 
 const ENTITY_LABELS: Record<AuditEntityType, string> = {
   individual: 'شخص',
@@ -301,6 +330,7 @@ const ENTITY_LABELS: Record<AuditEntityType, string> = {
   share_token: 'رمز مشاركة',
   tree: 'شجرة',
   ancestry_jump: 'قفزة نسب',
+  source_entry: 'مصدر',
 };
 
 export interface AuditDescriptionOptions {
@@ -402,6 +432,8 @@ export interface TreeEditLogEntry {
   /** An `encryptSnapshot` envelope, or `JSON_NULL`. */
   snapshotAfter: unknown;
   description: Buffer | null;
+  /** An `encryptAuditPayload` blob (optional). */
+  payload?: Buffer | null;
 }
 
 /**

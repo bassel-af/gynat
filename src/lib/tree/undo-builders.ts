@@ -127,6 +127,12 @@ export interface DeleteIndividualInverseParams {
   workspaceId: string;
   deletedId: string;
   snapshot: Record<string, unknown>;
+  /**
+   * Sources («المصادر»): the person's TEXT entries, captured before the delete
+   * (whatever the actor could see). The delete cascades them away; undo
+   * re-creates each under the person's NEW id. Files are never restored.
+   */
+  sourceEntries?: ReadonlyArray<{ text: string; visibility: string }>;
   treeId?: string;
 }
 
@@ -134,6 +140,7 @@ export function buildDeleteIndividualInverse({
   workspaceId,
   deletedId: _deletedId,
   snapshot,
+  sourceEntries = [],
   treeId,
 }: DeleteIndividualInverseParams): Inverse {
   let currentId: string | null = null;
@@ -144,6 +151,17 @@ export function buildDeleteIndividualInverse({
     undo: async () => {
       const { id } = await postJson(createUrl, snapshot, treeId);
       if (id) currentId = id;
+      if (!id || sourceEntries.length === 0) return;
+      // Best-effort, in order: the person is back either way, and one refused
+      // entry must not make the stack believe the whole undo failed (redo
+      // would then delete a person it thinks is absent).
+      for (const entry of sourceEntries) {
+        await postJson(
+          `/api/workspaces/${workspaceId}/tree/individuals/${id}/sources`,
+          { text: entry.text, visibility: entry.visibility },
+          treeId,
+        ).catch(() => undefined);
+      }
     },
     redo: () => del(deleteUrl(), treeId),
   };
@@ -495,5 +513,91 @@ export function buildMoveJumpToNewFatherInverse({
       if (data.individual?.id) currentFatherId = data.individual.id;
       if (data.family?.id) currentFamilyId = data.family.id;
     },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Source entry («مصدر») — text-only (step 4)
+//
+// Creating an entry, editing its text or level, and deleting a text-only entry
+// are undoable. Uploading/deleting a file is not (files are never restored).
+// A re-created entry gets a NEW id, so each builder re-captures it.
+// ---------------------------------------------------------------------------
+
+export interface CreateSourceEntryInverseParams {
+  workspaceId: string;
+  individualId: string;
+  createdId: string;
+  createPayload: { text: string; visibility?: string };
+  treeId?: string;
+}
+
+export function buildCreateSourceEntryInverse({
+  workspaceId,
+  individualId,
+  createdId,
+  createPayload,
+  treeId,
+}: CreateSourceEntryInverseParams): Inverse {
+  let currentId = createdId;
+  const createUrl = `/api/workspaces/${workspaceId}/tree/individuals/${individualId}/sources`;
+  return {
+    undo: () => del(`/api/workspaces/${workspaceId}/tree/sources/${currentId}`, treeId),
+    redo: async () => {
+      const { id } = await postJson(createUrl, createPayload, treeId);
+      if (id) currentId = id;
+    },
+  };
+}
+
+export interface UpdateSourceEntryInverseParams {
+  workspaceId: string;
+  entryId: string;
+  before: { text?: string; visibility?: string };
+  after: { text?: string; visibility?: string };
+  treeId?: string;
+}
+
+export function buildUpdateSourceEntryInverse({
+  workspaceId,
+  entryId,
+  before,
+  after,
+  treeId,
+}: UpdateSourceEntryInverseParams): Inverse {
+  const url = `/api/workspaces/${workspaceId}/tree/sources/${entryId}`;
+  return {
+    undo: () => patchJson(url, before, treeId),
+    redo: () => patchJson(url, after, treeId),
+  };
+}
+
+export interface DeleteSourceEntryInverseParams {
+  workspaceId: string;
+  individualId: string;
+  deletedId: string;
+  snapshot: { text: string; visibility: string };
+  treeId?: string;
+}
+
+export function buildDeleteSourceEntryInverse({
+  workspaceId,
+  individualId,
+  deletedId,
+  snapshot,
+  treeId,
+}: DeleteSourceEntryInverseParams): Inverse {
+  let currentId = deletedId;
+  const createUrl = `/api/workspaces/${workspaceId}/tree/individuals/${individualId}/sources`;
+  return {
+    undo: async () => {
+      const { id } = await postJson(
+        createUrl,
+        { text: snapshot.text, visibility: snapshot.visibility },
+        treeId,
+      );
+      if (id) currentId = id;
+    },
+    redo: () => del(`/api/workspaces/${workspaceId}/tree/sources/${currentId}`, treeId),
   };
 }

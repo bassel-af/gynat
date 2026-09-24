@@ -82,6 +82,11 @@ export const ANCESTRY_JUMP_ENCRYPTED_FIELDS = ['notes'] as const;
 
 export type AncestryJumpEncryptedField = (typeof ANCESTRY_JUMP_ENCRYPTED_FIELDS)[number];
 
+/** Sources («المصادر») — the entry's free text. `visibility` stays plaintext. */
+export const SOURCE_ENTRY_ENCRYPTED_FIELDS = ['text'] as const;
+
+export type SourceEntryEncryptedField = (typeof SOURCE_ENTRY_ENCRYPTED_FIELDS)[number];
+
 // ---------------------------------------------------------------------------
 // Workspace key resolution
 // ---------------------------------------------------------------------------
@@ -293,6 +298,24 @@ export function decryptAncestryJumpRow<T extends object>(
   key: Buffer,
 ): T {
   return decryptFieldsOf(row as unknown as Record<string, unknown>, ANCESTRY_JUMP_ENCRYPTED_FIELDS, key) as unknown as T;
+}
+
+// ---------------------------------------------------------------------------
+// SourceEntry («المصادر»)
+// ---------------------------------------------------------------------------
+
+export function encryptSourceEntryInput<T extends Record<string, unknown>>(
+  input: T,
+  key: Buffer,
+): EncryptedOut<T, SourceEntryEncryptedField> {
+  return encryptFieldsOf(input, SOURCE_ENTRY_ENCRYPTED_FIELDS, key) as EncryptedOut<T, SourceEntryEncryptedField>;
+}
+
+export function decryptSourceEntryRow<T extends object>(
+  row: T,
+  key: Buffer,
+): T {
+  return decryptFieldsOf(row as unknown as Record<string, unknown>, SOURCE_ENTRY_ENCRYPTED_FIELDS, key) as unknown as T;
 }
 
 // ---------------------------------------------------------------------------
