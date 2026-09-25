@@ -22,12 +22,18 @@ import { sourceFileDtos } from '@/lib/tree/source-file-helpers';
 
 type RouteParams = { params: Promise<{ id: string }> };
 
-type ListRow = SourceEntryRow & {
-  individual: { givenName: unknown; surname: unknown; fullName: unknown } | null;
+type ListRow = Omit<SourceEntryRow, 'links'> & {
+  links: {
+    individualId: string;
+    individual: { isPrivate: boolean; givenName: unknown; surname: unknown; fullName: unknown } | null;
+  }[];
 };
 
 interface SourceListItem extends SourceEntryDto {
-  /** Null for the tree-wide entry. Admin-only route: private names are fine. */
+  /**
+   * The first linked person's name; null for a source linked to nobody.
+   * Admin-only route: private names are fine.
+   */
   personName: string | null;
   fileCount: number;
 }
@@ -61,10 +67,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   if (isErrorResponse(tree)) return tree;
 
   const rows = (await prisma.sourceEntry.findMany({
-    // Person entries only: the tree-wide entry has its own card and never joins «تحديد الكل».
+    // Not the tree-wide source: it has its own card and never joins «تحديد الكل».
     where: {
       treeId: tree.id,
-      individualId: { not: null },
+      isTreeWide: false,
       ...(visibility ? { visibility } : {}),
       ...(scope === 'pending' ? { AND: [{ visibility: { not: 'public' as const } }] } : {}),
     },
@@ -72,7 +78,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     take: SOURCE_SCAN_CAP + 1,
     select: {
       ...SOURCE_ENTRY_WITH_FILES_SELECT,
-      individual: { select: { givenName: true, surname: true, fullName: true } },
+      links: {
+        select: {
+          individualId: true,
+          individual: { select: { isPrivate: true, givenName: true, surname: true, fullName: true } },
+        },
+        orderBy: [{ createdAt: 'asc' as const }, { individualId: 'asc' as const }],
+      },
     },
   })) as unknown as ListRow[];
 
@@ -83,11 +95,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   for (const row of rows.slice(0, SOURCE_SCAN_CAP)) {
     const text = decryptEntryText(row, key);
     if (q && q.trim() && !matchesSearch(text ?? '', q)) continue;
+    const first = row.links[0]?.individual ?? null;
     items.push({
       ...sourceEntryDto(row, text, sourceFileDtos(row.files, key)),
-      personName: row.individual
+      personName: first
         ? individualDisplayName(
-            decryptIndividualRow(row.individual, key) as unknown as {
+            decryptIndividualRow(first, key) as unknown as {
               givenName: string | null;
               surname: string | null;
               fullName: string | null;

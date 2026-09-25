@@ -5,7 +5,7 @@
  */
 
 /** Denylist: any key that looks like a source / citation. */
-export const SOURCE_KEY_PATTERN = /source|citation|sourceEntr/i;
+export const SOURCE_KEY_PATTERN = /source|citation|sourceEntr|sourceLink/i;
 
 /**
  * Keys that match the pattern but are branch-pointer PROVENANCE (a workspace

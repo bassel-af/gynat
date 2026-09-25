@@ -96,12 +96,19 @@ function seedIndividuals(): Row[] {
 }
 
 let seq = 0;
+/**
+ * A source row. Shared-source model: a person entry is a source with ONE
+ * link (pushed to `links` here); `individualId: null` = the tree-wide source.
+ */
 function entry(id: string, treeId: string, individualId: string | null, visibility: string, text: string, createdById = 'u-admin'): Row {
   seq += 1;
+  if (individualId !== null) {
+    links.push({ sourceId: id, individualId, treeId, createdById, createdAt: new Date(Date.UTC(2026, 0, 1, 0, 0, seq)) });
+  }
   return {
     id,
     treeId,
-    individualId,
+    isTreeWide: individualId === null,
     visibility,
     text: enc(text),
     createdById,
@@ -112,6 +119,7 @@ function entry(id: string, treeId: string, individualId: string | null, visibili
 
 function seedEntries(): Row[] {
   seq = 0;
+  links = [];
   return [
     entry(E_ADMINS, MAIN, PERSON, 'admins', 'سجل سري'),
     entry(E_MEMBERS, MAIN, PERSON, 'members', 'طبقات ابن سعد، ص ٩٠'),
@@ -125,6 +133,7 @@ function seedEntries(): Row[] {
 
 let individuals: Row[] = [];
 let entries: Row[] = [];
+let links: Row[] = [];
 const auditRows: Row[] = [];
 const mockFamilyTreeUpdate = vi.fn();
 
@@ -142,6 +151,11 @@ function matches(row: Row, where: Row | undefined): boolean {
       if (!(cond as Row[]).every((c) => matches(row, c))) return false;
       continue;
     }
+    if (key === 'links') {
+      const some = (cond as { some: Row }).some;
+      if (!links.some((l) => l.sourceId === row.id && matches(l, some))) return false;
+      continue;
+    }
     const value = row[key];
     if (cond !== null && typeof cond === 'object' && !(cond instanceof Date)) {
       const c = cond as Row;
@@ -157,8 +171,14 @@ function matches(row: Row, where: Row | undefined): boolean {
 }
 
 function withJoins(row: Row): Row {
-  const ind = individuals.find((i) => i.id === row.individualId) ?? null;
-  return { ...row, individual: ind, _count: { files: 0 } };
+  const own = links
+    .filter((l) => l.sourceId === row.id)
+    .map((l) => ({ ...l, individual: individuals.find((i) => i.id === l.individualId) ?? null }));
+  return { ...row, links: own, _count: { files: 0 } };
+}
+
+function dropLinksOf(sourceIds: unknown[]) {
+  links = links.filter((l) => !sourceIds.includes(l.sourceId));
 }
 
 function ordered(rows: Row[], orderBy: unknown): Row[] {
@@ -211,25 +231,27 @@ vi.mock('@/lib/db', () => {
         createCounter += 1;
         const row: Row = {
           id: `ffffffff-0000-4000-8000-${String(createCounter).padStart(12, '0')}`,
-          individualId: null,
+          isTreeWide: false,
           visibility: 'admins',
           createdAt: new Date(),
           updatedAt: new Date(),
           ...data,
         };
         entries.push(row);
-        return row;
+        return withJoins(row);
       },
       update: async ({ where, data }: { where: Row; data: Row }) => {
         const row = entries.find((e) => matches(e, where));
         if (!row) throw Object.assign(new Error('not found'), { code: 'P2025' });
         Object.assign(row, data, { updatedAt: new Date() });
-        return row;
+        return withJoins(row);
       },
       delete: async ({ where }: { where: Row }) => {
         const idx = entries.findIndex((e) => matches(e, where));
         if (idx < 0) throw Object.assign(new Error('not found'), { code: 'P2025' });
-        return entries.splice(idx, 1)[0];
+        const [gone] = entries.splice(idx, 1);
+        dropLinksOf([gone.id]); // FK cascade
+        return gone;
       },
       updateMany: async ({ where, data }: { where: Row; data: Row }) => {
         const hit = entries.filter((e) => matches(e, where));
@@ -237,9 +259,17 @@ vi.mock('@/lib/db', () => {
         return { count: hit.length };
       },
       deleteMany: async ({ where }: { where: Row }) => {
-        const before = entries.length;
+        const gone = entries.filter((e) => matches(e, where));
         entries = entries.filter((e) => !matches(e, where));
-        return { count: before - entries.length };
+        dropLinksOf(gone.map((e) => e.id)); // FK cascade
+        return { count: gone.length };
+      },
+    },
+    sourceLink: {
+      create: async ({ data }: { data: Row }) => {
+        const row = { createdAt: new Date(), ...data };
+        links.push(row);
+        return row;
       },
     },
     treeEditLog: {
@@ -602,7 +632,7 @@ describe('sources/tree-entry', () => {
   test('PUT updates the existing entry instead of adding a second one', async () => {
     const res = await call(ADMIN_USER, 'PUT', { text: 'نسخة ثانية', visibility: 'public' });
     expect(res.status).toBe(200);
-    const treeWide = entries.filter((e) => e.treeId === MAIN && e.individualId === null);
+    const treeWide = entries.filter((e) => e.treeId === MAIN && e.isTreeWide === true);
     expect(treeWide).toHaveLength(1);
     expect(treeWide[0].id).toBe(E_TREE);
     expect(plainOf(treeWide[0])).toBe('نسخة ثانية');
@@ -613,7 +643,7 @@ describe('sources/tree-entry', () => {
     entries = entries.filter((e) => e.id !== E_TREE);
     const res = await call(ADMIN_USER, 'PUT', { text: 'جديد', visibility: 'members' });
     expect(res.status).toBe(201);
-    const treeWide = entries.filter((e) => e.treeId === MAIN && e.individualId === null);
+    const treeWide = entries.filter((e) => e.treeId === MAIN && e.isTreeWide === true);
     expect(treeWide).toHaveLength(1);
     expect(auditRows[0]).toMatchObject({ action: 'create', entityType: 'source_entry' });
   });
@@ -841,5 +871,96 @@ describe('GET sources/publish-summary', () => {
 
   test('a foreign tree id → 404', async () => {
     expect((await summary(ADMIN_USER, `?treeId=${FOREIGN_TREE}`)).status).toBe(404);
+  });
+});
+
+// ===========================================================================
+// Shared-source model (rework R1): links + explicit tree-wide flag
+// ===========================================================================
+
+describe('shared-source model — links and isTreeWide', () => {
+  const SHARED = 'eeeeeeee-0000-4000-8000-0000000000b1';
+  const ORPHAN = 'eeeeeeee-0000-4000-8000-0000000000b2';
+
+  function addShared() {
+    entries.push(entry(SHARED, MAIN, PERSON, 'members', 'دفتر العائلة'));
+    links.push({ sourceId: SHARED, individualId: PERSON_BARE, treeId: MAIN, createdById: 'u-admin', createdAt: new Date() });
+  }
+  function addOrphan(visibility = 'members') {
+    const row = entry(ORPHAN, MAIN, PERSON, visibility, 'بلا أشخاص');
+    links = links.filter((l) => l.sourceId !== ORPHAN);
+    entries.push(row);
+  }
+  async function patch(user: { id: string }, entryId: string, body: unknown) {
+    as(user);
+    const { PATCH } = await entryRoute();
+    return PATCH(req(`sources/${entryId}`, 'PATCH', body), ep(entryId));
+  }
+
+  test('POST writes exactly one link, to the path person in the resolved tree', async () => {
+    as(EDITOR_USER);
+    const { POST } = await personRoute();
+    const res = await POST(req(`individuals/${PERSON}/sources`, 'POST', { text: 'طبقات' }), pp(PERSON));
+    const { data } = await res.json();
+    const created = entries.find((e) => e.id === data.id)!;
+    expect(created.isTreeWide).toBe(false);
+    expect(links.filter((l) => l.sourceId === data.id)).toEqual([
+      expect.objectContaining({ sourceId: data.id, individualId: PERSON, treeId: MAIN, createdById: 'u-editor' }),
+    ]);
+  });
+
+  test('a source linked to two people shows on each, with that person as individualId', async () => {
+    addShared();
+    as(MEMBER_USER);
+    for (const id of [PERSON, PERSON_BARE]) {
+      const { data } = await (await getPerson(id)).json();
+      const row = data.entries.find((e: Row) => e.id === SHARED);
+      expect(row).toMatchObject({ individualId: id, text: 'دفتر العائلة' });
+    }
+  });
+
+  test('an orphan (no links) is never the tree-wide source', async () => {
+    entries = entries.filter((e) => e.id !== E_TREE);
+    addOrphan();
+    as(ADMIN_USER);
+    const { data } = await (await getPerson(PERSON_BARE)).json();
+    expect(data.inherited).toBeNull();
+    const { GET } = await treeEntryRoute();
+    const treeRes = await (await GET(req('sources/tree-entry'), wp)).json();
+    expect(treeRes.data.entry).toBeNull();
+  });
+
+  test('an orphan is editable by an admin, and the same 404 for a non-admin editor', async () => {
+    addOrphan();
+    expect((await patch(EDITOR_USER, ORPHAN, { text: 'x' })).status).toBe(404);
+    expect((await patch(ADMIN_USER, ORPHAN, { text: 'مُعدّل' })).status).toBe(200);
+  });
+
+  test('the admin list keeps an orphan (no person name) and never the tree-wide source', async () => {
+    addOrphan();
+    as(ADMIN_USER);
+    const { GET } = await listRoute();
+    const { data } = await (await GET(req('sources'), wp)).json();
+    expect(data.entries.find((e: Row) => e.id === ORPHAN)).toMatchObject({ personName: null, individualId: null });
+    expect(data.entries.some((e: Row) => e.id === E_TREE)).toBe(false);
+  });
+
+  test('suggestions: an orphan is offered to an admin, never to a non-admin editor', async () => {
+    addOrphan();
+    const { GET } = await suggestionsRoute();
+    as(ADMIN_USER);
+    const admin = await (await GET(req('sources/suggestions?q=بلا'), wp)).json();
+    expect(admin.data.suggestions).toContain('بلا أشخاص');
+    as(EDITOR_USER);
+    const editor = await (await GET(req('sources/suggestions?q=بلا'), wp)).json();
+    expect(editor.data.suggestions).not.toContain('بلا أشخاص');
+  });
+
+  test('deleting a source drops its links (FK cascade in the fake mirrors the DB)', async () => {
+    addShared();
+    as(ADMIN_USER);
+    const { DELETE } = await entryRoute();
+    expect((await DELETE(req(`sources/${SHARED}`, 'DELETE'), ep(SHARED))).status).toBe(204);
+    expect(links.some((l) => l.sourceId === SHARED)).toBe(false);
   });
 });

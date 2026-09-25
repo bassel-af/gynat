@@ -43,6 +43,7 @@ function dbIndividual(id: string, givenName: string): DbIndividual {
     isPrivate: false,
     // A buggy include would hand the mapper these — they must not surface.
     sourceEntries: STRAY_SOURCES,
+    sourceLinks: STRAY_SOURCES,
   } as unknown as DbIndividual;
 }
 
@@ -57,6 +58,7 @@ function dbFamily(id: string, husbandId: string, wifeId: string | null): DbFamil
     isDivorced: false,
     isUmmWalad: false,
     sourceEntries: STRAY_SOURCES,
+    sourceLinks: STRAY_SOURCES,
     citations: STRAY_SOURCES,
   } as unknown as DbFamily;
 }
@@ -99,6 +101,13 @@ describe('findSourceKeys (leak detector self-check)', () => {
       sourceEntries: {},
     });
     expect(hits.sort()).toEqual(['$.families.F1.citations', '$.individuals.I1.sources', '$.sourceEntries']);
+  });
+
+  test('flags shared-source links (`sourceLinks`) anywhere', () => {
+    expect(findSourceKeys({ individuals: { I1: { sourceLinks: [] } }, sourceLinks: [] }).sort()).toEqual([
+      '$.individuals.I1.sourceLinks',
+      '$.sourceLinks',
+    ]);
   });
 
   test('ignores branch-pointer workspace provenance', () => {

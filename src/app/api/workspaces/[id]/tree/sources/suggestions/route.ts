@@ -8,10 +8,13 @@ import {
 } from '@/lib/tree/source-entry-schemas';
 import {
   NO_STORE_HEADERS,
+  SOURCE_LINKS_SELECT,
   decryptEntryText,
   viewerFor,
+  linkedPeople,
+  type SourceLinkRow,
 } from '@/lib/tree/source-entry-route-helpers';
-import { canViewSourceEntry, type SourceVisibilityLevel } from '@/lib/tree/source-visibility';
+import { canViewSourceAnywhere, type SourceVisibilityLevel } from '@/lib/tree/source-visibility';
 import { getWorkspaceKey } from '@/lib/tree/encryption';
 import { matchesSearch } from '@/lib/utils/search';
 
@@ -20,8 +23,8 @@ type RouteParams = { params: Promise<{ id: string }> };
 type SuggestionRow = {
   visibility: SourceVisibilityLevel;
   text: Uint8Array | Buffer | null;
-  individualId: string | null;
-  individual: { isPrivate: boolean } | null;
+  isTreeWide: boolean;
+  links: SourceLinkRow[];
 };
 
 // GET /api/workspaces/[id]/tree/sources/suggestions?q= — tree editors.
@@ -53,10 +56,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     select: {
       visibility: true,
       text: true,
-      individualId: true,
-      individual: { select: { isPrivate: true } },
+      isTreeWide: true,
+      links: SOURCE_LINKS_SELECT,
     },
-  })) as SuggestionRow[];
+  })) as unknown as SuggestionRow[];
 
   const viewer = viewerFor(result.membership);
   const key = rows.length > 0 ? await getWorkspaceKey(workspaceId) : null;
@@ -65,9 +68,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
   for (const row of rows) {
     if (suggestions.length >= MAX_SOURCE_SUGGESTIONS) break;
-    const person =
-      row.individualId === null ? null : { isPrivate: row.individual?.isPrivate ?? true };
-    if (!canViewSourceEntry(row, person, viewer)) continue;
+    if (!canViewSourceAnywhere(row, linkedPeople(row), viewer)) continue;
     const text = decryptEntryText(row, key!);
     if (!text || seen.has(text) || !matchesSearch(text, q)) continue;
     seen.add(text);

@@ -26,12 +26,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
   const [rows, treeEntry] = await Promise.all([
     prisma.sourceEntry.findMany({
-      where: { treeId: tree.id, individualId: { not: null } },
+      where: { treeId: tree.id, isTreeWide: false },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       select: { id: true, visibility: true },
     }),
     prisma.sourceEntry.findFirst({
-      where: { treeId: tree.id, individualId: null },
+      where: { treeId: tree.id, isTreeWide: true },
       select: { id: true, visibility: true },
     }),
   ]);

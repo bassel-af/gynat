@@ -9,6 +9,7 @@ import {
   SOURCE_ENTRY_SELECT,
   decryptEntryText,
   resolveSourceTreeOr404,
+  primaryIndividualId,
   type SourceEntryRow,
 } from '@/lib/tree/source-entry-route-helpers';
 import {
@@ -47,22 +48,24 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
   const rows = (await prisma.sourceEntry.findMany({
     // Person entries only — the tree-wide entry is managed from its own card.
-    where: { treeId: tree.id, individualId: { not: null }, id: { in: [...new Set(ids)] } },
+    where: { treeId: tree.id, isTreeWide: false, id: { in: [...new Set(ids)] } },
     select: SOURCE_ENTRY_SELECT,
-  })) as SourceEntryRow[];
+  })) as unknown as SourceEntryRow[];
 
   const countKey = action === 'delete' ? 'deleted' : 'updated';
   if (rows.length === 0) return NextResponse.json({ data: { [countKey]: 0 } });
 
   const ownIds = rows.map((r) => r.id);
-  const where = { treeId: tree.id, individualId: { not: null }, id: { in: ownIds } };
+  const where = { treeId: tree.id, isTreeWide: false, id: { in: ownIds } };
   const { count } =
     action === 'delete'
       ? await prisma.sourceEntry.deleteMany({ where })
       : await prisma.sourceEntry.updateMany({ where, data: { visibility: visibility! } });
 
   const key = await getWorkspaceKey(workspaceId);
-  const before = rows.map((r) => snapshotSourceEntry({ ...r, text: decryptEntryText(r, key) }));
+  const before = rows.map((r) =>
+    snapshotSourceEntry({ ...r, individualId: primaryIndividualId(r), text: decryptEntryText(r, key) }),
+  );
   const auditAction = action === 'delete' ? 'delete' : 'update';
 
   // No touchTreeTimestamp: sources are not part of the tree payload.

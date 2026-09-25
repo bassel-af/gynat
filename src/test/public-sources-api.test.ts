@@ -129,6 +129,8 @@ const RECORDS: Record<string, Row> = {
 
 let individuals: Row[] = [];
 let entries: Row[] = [];
+/** Shared-source model: `source_links` (a person entry = a source with ONE link). */
+let links: Row[] = [];
 let files: Row[] = [];
 let fileData: Row[] = [];
 const dataReads: string[] = [];
@@ -143,10 +145,14 @@ function seed() {
     // BORROWED lives in another workspace's tree — not a MAIN row.
     { id: BORROWED, treeId: 'bbbbbbbb-9999-4999-9999-999999999999', isPrivate: false },
   ];
-  const e = (id: string, treeId: string, individualId: string | null, visibility: string, text: string | null, t = 0): Row => ({
-    id, treeId, individualId, visibility, text: text === null ? null : enc(text), createdById: 'u-admin',
-    createdAt: new Date(Date.UTC(2026, 0, 1, 0, t)), updatedAt: new Date(Date.UTC(2026, 0, 1)),
-  });
+  links = [];
+  const e = (id: string, treeId: string, individualId: string | null, visibility: string, text: string | null, t = 0): Row => {
+    if (individualId !== null) links.push({ sourceId: id, individualId, treeId });
+    return {
+      id, treeId, isTreeWide: individualId === null, visibility, text: text === null ? null : enc(text), createdById: 'u-admin',
+      createdAt: new Date(Date.UTC(2026, 0, 1, 0, t)), updatedAt: new Date(Date.UTC(2026, 0, 1)),
+    };
+  };
   entries = [
     e(E_PUBLIC, MAIN, DEAD, 'public', 'طبقات ابن سعد، ص ٩٠', 1),
     e(E_PUBLIC_2, MAIN, DEAD, 'public', null, 2),
@@ -182,6 +188,11 @@ function matches(row: Row | null | undefined, where: Row | undefined): boolean {
       if (!matches(entries.find((e) => e.id === row.entryId), cond as Row)) return false;
       continue;
     }
+    if (key === 'links') {
+      const some = (cond as { some: Row }).some;
+      if (!links.some((l) => l.sourceId === row.id && matches(l, some))) return false;
+      continue;
+    }
     const value = row[key];
     if (cond !== null && typeof cond === 'object' && !(cond instanceof Date)) {
       const c = cond as Row;
@@ -197,7 +208,7 @@ function matches(row: Row | null | undefined, where: Row | undefined): boolean {
 const fileMeta = (f: Row): Row => ({ id: f.id, mimeType: f.mimeType, sizeBytes: f.sizeBytes, fileName: f.fileName });
 const joined = (e: Row): Row => ({
   ...e,
-  individual: individuals.find((i) => i.id === e.individualId) ?? null,
+  links: links.filter((l) => l.sourceId === e.id),
   files: files.filter((f) => f.entryId === e.id).map(fileMeta),
 });
 
@@ -353,6 +364,20 @@ describe('public person sources — list', () => {
 // ---------------------------------------------------------------------------
 
 describe('public person sources — file', () => {
+  test('shared model: a file is served only under a shown person its source is LINKED to', async () => {
+    // E_PUBLIC is linked to DEAD only; DEAD_NO_OWN is shown too but not linked.
+    await expectGeneric404(await file('pub-main', DEAD_NO_OWN, E_PUBLIC, F_PUB_IMG));
+    links.push({ sourceId: E_PUBLIC, individualId: DEAD_NO_OWN, treeId: MAIN });
+    expect((await file('pub-main', DEAD_NO_OWN, E_PUBLIC, F_PUB_IMG)).status).toBe(200);
+  });
+
+  test('shared model: a source linked to a shown and a living person lists on the shown one only', async () => {
+    links.push({ sourceId: E_LIVING_PUB, individualId: DEAD, treeId: MAIN });
+    const { data } = await (await list('pub-main', DEAD)).json();
+    expect(data.entries.map((e: Row) => e.id)).toContain(E_LIVING_PUB);
+    await expectGeneric404(await list('pub-main', LIVING));
+  });
+
   test('a public entry image serves inline with locked-down headers', async () => {
     const res = await file('pub-main', DEAD, E_PUBLIC, F_PUB_IMG);
     expect(res.status).toBe(200);

@@ -115,12 +115,17 @@ export async function loadPublicPersonSources(
 
   const [ownRows, treeRow] = await Promise.all([
     prisma.sourceEntry.findMany({
-      where: { treeId: record.treeId, individualId, visibility: 'public' },
+      where: {
+        treeId: record.treeId,
+        isTreeWide: false,
+        visibility: 'public',
+        links: { some: { individualId } },
+      },
       orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
       select: SOURCE_ENTRY_WITH_FILES_SELECT,
     }) as unknown as Promise<SourceEntryRow[]>,
     prisma.sourceEntry.findFirst({
-      where: { treeId: record.treeId, individualId: null },
+      where: { treeId: record.treeId, isTreeWide: true },
       select: SOURCE_ENTRY_WITH_FILES_SELECT,
     }) as unknown as Promise<SourceEntryRow | null>,
   ]);
@@ -142,7 +147,13 @@ interface FileRow {
   id: string;
   mimeType: string;
   fileName: Uint8Array | Buffer;
-  entry: { id: string; individualId: string | null; visibility: SourceVisibilityLevel } | null;
+  entry: {
+    id: string;
+    isTreeWide: boolean;
+    visibility: SourceVisibilityLevel;
+    /** Only the link to the path person, when selected for a person file. */
+    links?: { individualId: string }[];
+  } | null;
 }
 
 export interface PublicSourceFile {
@@ -168,10 +179,14 @@ const FILE_SELECT = {
   id: true,
   mimeType: true,
   fileName: true,
-  entry: { select: { id: true, individualId: true, visibility: true } },
+  entry: { select: { id: true, isTreeWide: true, visibility: true } },
 } as const;
 
-/** One file of a shown person's own entry — single scoped lookup, then the gate. */
+/**
+ * One file of a source LINKED to the shown path person — single scoped
+ * lookup, then the gate. A file of a source linked only to someone else reads
+ * as not found.
+ */
 export async function loadPublicPersonSourceFile(
   slug: string,
   individualId: string,
@@ -184,10 +199,24 @@ export async function loadPublicPersonSourceFile(
   const { record, person } = resolved;
 
   const file = (await prisma.sourceFile.findFirst({
-    where: { id: fileId, entryId, treeId: record.treeId, entry: { treeId: record.treeId, individualId } },
-    select: FILE_SELECT,
+    where: {
+      id: fileId,
+      entryId,
+      treeId: record.treeId,
+      entry: { treeId: record.treeId, isTreeWide: false, links: { some: { individualId } } },
+    },
+    select: {
+      ...FILE_SELECT,
+      entry: {
+        select: {
+          ...FILE_SELECT.entry.select,
+          links: { where: { individualId }, select: { individualId: true } },
+        },
+      },
+    },
   })) as FileRow | null;
-  if (!file?.entry || file.entry.individualId !== individualId) return null;
+  if (!file?.entry || file.entry.isTreeWide) return null;
+  if (!file.entry.links?.some((l) => l.individualId === individualId)) return null;
   if (!canViewSourceEntry(file.entry, person, PUBLIC_VIEWER)) return null;
   return readFile(record, file);
 }
@@ -199,10 +228,10 @@ export async function loadPublicTreeEntryFile(slug: string, fileId: string): Pro
   if (!record) return null;
 
   const file = (await prisma.sourceFile.findFirst({
-    where: { id: fileId, treeId: record.treeId, entry: { treeId: record.treeId, individualId: null } },
+    where: { id: fileId, treeId: record.treeId, entry: { treeId: record.treeId, isTreeWide: true } },
     select: FILE_SELECT,
   })) as FileRow | null;
-  if (!file?.entry || file.entry.individualId !== null) return null;
+  if (!file?.entry || file.entry.isTreeWide !== true) return null;
   if (!canViewSourceEntry(file.entry, null, PUBLIC_VIEWER)) return null;
   return readFile(record, file);
 }

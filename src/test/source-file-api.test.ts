@@ -114,6 +114,8 @@ const PDF_BYTES = Buffer.from('%PDF-1.7\n1 0 obj << >> endobj\n%%EOF\n', 'latin1
 let quotaBytes = 5 * 1024 * 1024 * 1024;
 let individuals: Row[] = [];
 let entries: Row[] = [];
+/** Shared-source model: `source_links` (a person entry = a source with ONE link). */
+let links: Row[] = [];
 let files: Row[] = [];
 let fileData: Row[] = [];
 const auditRows: Row[] = [];
@@ -131,10 +133,14 @@ function seed() {
     { id: EXTRA_PERSON, treeId: EXTRA, isPrivate: false },
     { id: FOREIGN_PERSON, treeId: FOREIGN_TREE, isPrivate: false },
   ];
-  const e = (id: string, treeId: string, individualId: string | null, visibility: string, text: string | null, createdById = 'u-admin'): Row => ({
-    id, treeId, individualId, visibility, text: text === null ? null : enc(text), createdById,
-    createdAt: new Date(Date.UTC(2026, 0, 1)), updatedAt: new Date(Date.UTC(2026, 0, 1)),
-  });
+  links = [];
+  const e = (id: string, treeId: string, individualId: string | null, visibility: string, text: string | null, createdById = 'u-admin'): Row => {
+    if (individualId !== null) links.push({ sourceId: id, individualId, treeId, createdById, createdAt: new Date(Date.UTC(2026, 0, 1)) });
+    return {
+      id, treeId, isTreeWide: individualId === null, visibility, text: text === null ? null : enc(text), createdById,
+      createdAt: new Date(Date.UTC(2026, 0, 1)), updatedAt: new Date(Date.UTC(2026, 0, 1)),
+    };
+  };
   entries = [
     e(E_ADMINS, MAIN, PERSON, 'admins', 'سري'),
     e(E_MEMBERS, MAIN, PERSON, 'members', 'طبقات'),
@@ -184,6 +190,11 @@ function matches(row: Row | null | undefined, where: Row | undefined): boolean {
       if (!matches(entries.find((e) => e.id === row.entryId), cond as Row)) return false;
       continue;
     }
+    if (key === 'links') {
+      const some = (cond as { some: Row }).some;
+      if (!links.some((l) => l.sourceId === row.id && matches(l, some))) return false;
+      continue;
+    }
     const value = row[key];
     if (cond !== null && typeof cond === 'object' && !(cond instanceof Date)) {
       const c = cond as Row;
@@ -206,7 +217,9 @@ function entryJoined(e: Row): Row {
   const own = files.filter((f) => f.entryId === e.id);
   return {
     ...e,
-    individual: individuals.find((i) => i.id === e.individualId) ?? null,
+    links: links
+      .filter((l) => l.sourceId === e.id)
+      .map((l) => ({ ...l, individual: individuals.find((i) => i.id === l.individualId) ?? null })),
     files: own.map(fileMeta),
     _count: { files: own.length },
   };
@@ -253,7 +266,7 @@ const fake: Row = {
     findMany: async ({ where }: { where: Row }) => entries.filter((e) => matches(e, where)).map(entryJoined),
     create: async ({ data }: { data: Row }) => {
       const row: Row = {
-        id: newId('aaaaaaaa'), individualId: null, visibility: 'admins', text: null,
+        id: newId('aaaaaaaa'), isTreeWide: false, visibility: 'admins', text: null,
         createdAt: new Date(), updatedAt: new Date(), ...data,
       };
       entries.push(row);
@@ -269,7 +282,15 @@ const fake: Row = {
       const row = entries.find((e) => matches(e, where));
       if (!row) throw Object.assign(new Error('nf'), { code: 'P2025' });
       entries = entries.filter((e) => e !== row);
+      links = links.filter((l) => l.sourceId !== row.id); // FK cascade
       deleteFilesWhere((f) => f.entryId === row.id); // FK cascade
+      return row;
+    },
+  },
+  sourceLink: {
+    create: async ({ data }: { data: Row }) => {
+      const row = { createdAt: new Date(), ...data };
+      links.push(row);
       return row;
     },
   },
@@ -326,6 +347,7 @@ const fake: Row = {
 fake.$transaction = async (fn: (tx: Row) => Promise<unknown>) => {
   const snap = {
     entries: entries.map((r) => ({ ...r })),
+    links: links.map((r) => ({ ...r })),
     files: files.map((r) => ({ ...r })),
     fileData: [...fileData],
     audit: auditRows.length,
@@ -334,6 +356,7 @@ fake.$transaction = async (fn: (tx: Row) => Promise<unknown>) => {
     return await fn(fake);
   } catch (error) {
     entries = snap.entries;
+    links = snap.links;
     files = snap.files;
     fileData = snap.fileData;
     auditRows.length = snap.audit;
@@ -727,6 +750,18 @@ describe('serving a file', () => {
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toBe('application/pdf');
     expect(res.headers.get('content-disposition')).toMatch(/^attachment; /);
+  });
+
+  test('shared model: a member sees a file through any visible linked person; an orphan\'s file only an admin', async () => {
+    // E_PRIV (members-level) gains a second, non-private person → visible to members.
+    links.push({ sourceId: E_PRIV, individualId: PERSON, treeId: MAIN, createdById: 'u-admin', createdAt: new Date() });
+    as(MEMBER_USER);
+    expect((await serve(E_PRIV, F_PRIV)).status).toBe(200);
+    // E_MEMBERS loses its only link → orphan.
+    links = links.filter((l) => l.sourceId !== E_MEMBERS);
+    expect((await serve(E_MEMBERS, F_MEMBERS)).status).toBe(404);
+    as(ADMIN_USER);
+    expect((await serve(E_MEMBERS, F_MEMBERS)).status).toBe(200);
   });
 
   test('a member sees a members-level file and the members-level tree-wide file', async () => {

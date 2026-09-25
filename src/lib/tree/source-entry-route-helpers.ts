@@ -14,7 +14,11 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { decryptSourceEntryRow } from '@/lib/tree/encryption';
-import type { SourceViewer, SourceVisibilityLevel } from '@/lib/tree/source-visibility';
+import type {
+  SourcePersonContext,
+  SourceViewer,
+  SourceVisibilityLevel,
+} from '@/lib/tree/source-visibility';
 import {
   SOURCE_FILE_META_SELECT,
   type SourceFileDto,
@@ -24,6 +28,12 @@ import {
 /** The shape every source route returns. `text` is ALWAYS plaintext. */
 export interface SourceEntryDto {
   id: string;
+  /**
+   * The person this source was read through (person routes), else its first
+   * linked person; null for the tree-wide source and for a source linked to
+   * nobody. Kept for today's one-person clients until the shared-source DTOs
+   * (rework R2) replace it.
+   */
   individualId: string | null;
   text: string | null;
   visibility: SourceVisibilityLevel;
@@ -33,16 +43,27 @@ export interface SourceEntryDto {
   files: SourceFileDto[];
 }
 
+/**
+ * A source's links, oldest first, with each person's privacy flag — what the
+ * gate needs (`linkedPeople`). Never names: those are decrypted only where a
+ * route shows them.
+ */
+export const SOURCE_LINKS_SELECT = {
+  select: { individualId: true, individual: { select: { isPrivate: true } } },
+  orderBy: [{ createdAt: 'asc' as const }, { individualId: 'asc' as const }],
+};
+
 /** Columns every route selects — never the file tables. */
 export const SOURCE_ENTRY_SELECT = {
   id: true,
   treeId: true,
-  individualId: true,
+  isTreeWide: true,
   visibility: true,
   text: true,
   createdById: true,
   createdAt: true,
   updatedAt: true,
+  links: SOURCE_LINKS_SELECT,
 } as const;
 
 /**
@@ -57,10 +78,15 @@ export const SOURCE_ENTRY_WITH_FILES_SELECT = {
   },
 };
 
+export interface SourceLinkRow {
+  individualId: string;
+  individual?: { isPrivate: boolean } | null;
+}
+
 export interface SourceEntryRow {
   id: string;
   treeId: string;
-  individualId: string | null;
+  isTreeWide: boolean;
   visibility: SourceVisibilityLevel;
   text: Uint8Array | Buffer | null;
   createdById: string | null;
@@ -68,6 +94,24 @@ export interface SourceEntryRow {
   updatedAt: Date;
   /** Present only when selected with `SOURCE_ENTRY_WITH_FILES_SELECT`. */
   files?: SourceFileMetaRow[];
+  /** Present when selected with `SOURCE_ENTRY_SELECT` (oldest link first). */
+  links?: SourceLinkRow[];
+}
+
+/**
+ * The gate context of every linked person. A link whose person row did not
+ * come back counts as PRIVATE (fail-closed).
+ */
+export function linkedPeople(row: { links?: SourceLinkRow[] }): (SourcePersonContext & { id: string })[] {
+  return (row.links ?? []).map((l) => ({
+    id: l.individualId,
+    isPrivate: l.individual?.isPrivate ?? true,
+  }));
+}
+
+/** The first linked person's id, or null (tree-wide source / linked to nobody). */
+export function primaryIndividualId(row: { links?: SourceLinkRow[] }): string | null {
+  return row.links?.[0]?.individualId ?? null;
 }
 
 /**
@@ -75,13 +119,14 @@ export interface SourceEntryRow {
  * holds. The row's own `text` is a `Bytes` column and is deliberately not read.
  */
 export function sourceEntryDto(
-  row: Pick<SourceEntryRow, 'id' | 'individualId' | 'visibility' | 'createdAt' | 'updatedAt'>,
+  row: Pick<SourceEntryRow, 'id' | 'visibility' | 'createdAt' | 'updatedAt' | 'links'>,
   text: string | null,
   files: SourceFileDto[] = [],
+  individualId: string | null = primaryIndividualId(row),
 ): SourceEntryDto {
   return {
     id: row.id,
-    individualId: row.individualId ?? null,
+    individualId,
     text: text ?? null,
     visibility: row.visibility,
     createdAt: toIso(row.createdAt),

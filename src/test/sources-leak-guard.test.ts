@@ -44,7 +44,7 @@ function ind(overrides: Partial<Individual> & { id: string }): Individual {
     familyAsChild: null,
     ...overrides,
     // Stray source-shaped keys a buggy upstream might attach.
-    ...({ sources: STRAY_SOURCES, sourceEntries: STRAY_SOURCES, citations: STRAY_SOURCES } as object),
+    ...({ sources: STRAY_SOURCES, sourceEntries: STRAY_SOURCES, sourceLinks: STRAY_SOURCES, citations: STRAY_SOURCES } as object),
   } as Individual;
 }
 
@@ -60,7 +60,7 @@ function fam(overrides: Partial<Family> & { id: string }): Family {
     divorce: { ...empty },
     isDivorced: false,
     ...overrides,
-    ...({ citations: STRAY_SOURCES, sources: STRAY_SOURCES } as object),
+    ...({ citations: STRAY_SOURCES, sources: STRAY_SOURCES, sourceLinks: STRAY_SOURCES } as object),
   } as Family;
 }
 
@@ -81,7 +81,7 @@ function buildTree(): GedcomData {
       'f-marriage': fam({ id: 'f-marriage', husband: 'focal', wife: 'spouse', children: ['child'] }),
     },
   } as GedcomData;
-  Object.assign(data, { sourceEntries: STRAY_SOURCES, sources: STRAY_SOURCES });
+  Object.assign(data, { sourceEntries: STRAY_SOURCES, sourceLinks: STRAY_SOURCES, sources: STRAY_SOURCES });
   return data;
 }
 

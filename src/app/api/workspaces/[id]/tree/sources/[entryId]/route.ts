@@ -16,9 +16,11 @@ import {
   isWorkspaceAdmin,
   adminOnlyVisibility,
   resolveSourceTreeOr404,
+  linkedPeople,
+  primaryIndividualId,
   type SourceEntryRow,
 } from '@/lib/tree/source-entry-route-helpers';
-import { canViewSourceEntry } from '@/lib/tree/source-visibility';
+import { canViewSourceAnywhere } from '@/lib/tree/source-visibility';
 import {
   snapshotSourceEntry,
   encryptAuditDescription,
@@ -38,26 +40,21 @@ import {
 
 type RouteParams = { params: Promise<{ id: string; entryId: string }> };
 
-type EntryWithPerson = SourceEntryRow & { individual: { isPrivate: boolean } | null };
-
 /**
- * A PERSON entry of the resolved tree, or null. Scoped by `{ id, treeId }` and
- * `individualId: not null` — the tree-wide entry has its own admin-only route,
- * so reaching it here reads as not found.
+ * A non-tree-wide source of the resolved tree (with its links), or null.
+ * Scoped by `{ id, treeId }` and `isTreeWide: false` — the tree-wide source
+ * has its own admin-only route, so reaching it here reads as not found.
  */
-async function loadPersonEntry(treeId: string, entryId: string): Promise<EntryWithPerson | null> {
+async function loadPersonEntry(treeId: string, entryId: string): Promise<SourceEntryRow | null> {
   return (await prisma.sourceEntry.findFirst({
-    where: { id: entryId, treeId, individualId: { not: null } },
-    select: { ...SOURCE_ENTRY_SELECT, individual: { select: { isPrivate: true } } },
-  })) as EntryWithPerson | null;
+    where: { id: entryId, treeId, isTreeWide: false },
+    select: SOURCE_ENTRY_SELECT,
+  })) as unknown as SourceEntryRow | null;
 }
 
-function visibleTo(entry: EntryWithPerson, membership: { role: string }): boolean {
-  return canViewSourceEntry(
-    entry,
-    { isPrivate: entry.individual?.isPrivate ?? true },
-    viewerFor(membership),
-  );
+/** Admin: always; others: at least one linked person they may see it on. */
+function visibleTo(entry: SourceEntryRow, membership: { role: string }): boolean {
+  return canViewSourceAnywhere(entry, linkedPeople(entry), viewerFor(membership));
 }
 
 // PATCH /api/workspaces/[id]/tree/sources/[entryId] — text, level and/or
@@ -137,11 +134,22 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         entityType: 'source_entry',
         entityId: existing.id,
         snapshotBefore: encryptSnapshot(
-          snapshotSourceEntry({ ...existing, text: beforeText, ...counts.before }),
+          snapshotSourceEntry({
+            ...existing,
+            individualId: primaryIndividualId(existing),
+            text: beforeText,
+            ...counts.before,
+          }),
           key,
         ),
         snapshotAfter: encryptSnapshot(
-          snapshotSourceEntry({ ...existing, visibility: afterLevel, text: afterText, ...counts.after }),
+          snapshotSourceEntry({
+            ...existing,
+            individualId: primaryIndividualId(existing),
+            visibility: afterLevel,
+            text: afterText,
+            ...counts.after,
+          }),
           key,
         ),
         description: encryptAuditDescription('update', 'source_entry', null, key, {
@@ -207,7 +215,10 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     action: 'delete',
     entityType: 'source_entry',
     entityId: existing.id,
-    snapshotBefore: encryptSnapshot(snapshotSourceEntry({ ...existing, text }), key),
+    snapshotBefore: encryptSnapshot(
+      snapshotSourceEntry({ ...existing, individualId: primaryIndividualId(existing), text }),
+      key,
+    ),
     snapshotAfter: JSON_NULL,
     description: encryptAuditDescription('delete', 'source_entry', null, key, {
       isUndo: isUndoRequest(request),

@@ -16,8 +16,12 @@ import {
   isUuid,
   viewerFor,
   isWorkspaceAdmin,
+  linkedPeople,
+  primaryIndividualId,
+  SOURCE_LINKS_SELECT,
+  type SourceLinkRow,
 } from '@/lib/tree/source-entry-route-helpers';
-import { canViewSourceEntry, type SourceVisibilityLevel } from '@/lib/tree/source-visibility';
+import { canViewSourceAnywhere, type SourceVisibilityLevel } from '@/lib/tree/source-visibility';
 import { contentDispositionFor } from '@/lib/tree/source-file-processing';
 import { isSourceFileMime } from '@/lib/tree/source-file-types';
 import { decryptFileName, fileAuditMeta } from '@/lib/tree/source-file-helpers';
@@ -39,11 +43,11 @@ interface FileWithEntry {
   entry: {
     id: string;
     treeId: string;
-    individualId: string | null;
+    isTreeWide: boolean;
     visibility: SourceVisibilityLevel;
     text: Uint8Array | Buffer | null;
     createdById: string | null;
-    individual: { isPrivate: boolean } | null;
+    links: SourceLinkRow[];
   } | null;
 }
 
@@ -83,11 +87,11 @@ async function loadFile(
         select: {
           id: true,
           treeId: true,
-          individualId: true,
+          isTreeWide: true,
           visibility: true,
           text: true,
           createdById: true,
-          individual: { select: { isPrivate: true } },
+          links: SOURCE_LINKS_SELECT,
         },
       },
     },
@@ -95,10 +99,13 @@ async function loadFile(
   return row && row.entry ? row : null;
 }
 
-/** The gate, with the entry's person context (tree-wide entry: person null). */
+/**
+ * The gate for a source's files: admin always; the tree-wide gate for the
+ * tree-wide source; otherwise at least one linked person the viewer may see
+ * the source on.
+ */
 function visibleTo(entry: NonNullable<FileWithEntry['entry']>, membership: { role: string }): boolean {
-  const person = entry.individualId === null ? null : { isPrivate: entry.individual?.isPrivate ?? true };
-  return canViewSourceEntry(entry, person, viewerFor(membership));
+  return canViewSourceAnywhere(entry, linkedPeople(entry), viewerFor(membership));
 }
 
 // GET /api/workspaces/[id]/tree/sources/[entryId]/files/[fileId]?treeId=
@@ -159,7 +166,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   if (!file || !entry) return fileNotFound();
 
   const allowedToDelete =
-    entry.individualId === null
+    entry.isTreeWide
       ? isWorkspaceAdmin(result.membership)
       : visibleTo(entry, result.membership) || entry.createdById === result.user.id;
   if (!allowedToDelete) return fileNotFound();
@@ -174,7 +181,10 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     if (deleteEntry) await tx.sourceEntry.delete({ where: { id: entry.id } });
 
     const snap = (fileCount: number) =>
-      encryptSnapshot(snapshotSourceEntry({ ...entry, text, fileCount }), key);
+      encryptSnapshot(
+        snapshotSourceEntry({ ...entry, individualId: primaryIndividualId(entry), text, fileCount }),
+        key,
+      );
     await writeTreeEditLog(tx, {
       treeId: entry.treeId,
       userId: result.user.id,

@@ -185,7 +185,6 @@ describe('text-or-files (step 5)', () => {
     const dto = sourceEntryDto(
       {
         id: UUID,
-        individualId: null,
         visibility: 'admins',
         createdAt: new Date('2026-01-01T00:00:00Z'),
         updatedAt: new Date('2026-01-01T00:00:00Z'),
@@ -193,6 +192,19 @@ describe('text-or-files (step 5)', () => {
       'x',
     );
     expect(dto.files).toEqual([]);
+  });
+
+  test('the DTO individualId is the first linked person unless the route names one', () => {
+    const row = {
+      id: UUID,
+      visibility: 'admins' as const,
+      createdAt: new Date('2026-01-01T00:00:00Z'),
+      updatedAt: new Date('2026-01-01T00:00:00Z'),
+      links: [{ individualId: 'P1' }, { individualId: 'P2' }],
+    };
+    expect(sourceEntryDto(row, 'x').individualId).toBe('P1');
+    expect(sourceEntryDto(row, 'x', [], 'P2').individualId).toBe('P2');
+    expect(sourceEntryDto({ ...row, links: [] }, 'x').individualId).toBeNull();
   });
 
   test('snapshotSourceEntry adds fileCount only when given', () => {

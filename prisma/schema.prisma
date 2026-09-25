@@ -44,6 +44,7 @@ model User {
   createdIndividuals   Individual[]          @relation("IndividualCreator")
   ancestryJumpsCreated AncestryJump[]        @relation("AncestryJumpCreator")
   sourceEntriesCreated SourceEntry[]         @relation("SourceEntryCreator")
+  sourceLinksCreated   SourceLink[]          @relation("SourceLinkCreator")
   sourceFilesUploaded  SourceFile[]          @relation("SourceFileUploader")
   uploadedMedia        AlbumMedia[]
   createdShareTokens   BranchShareToken[]
@@ -265,6 +266,7 @@ model FamilyTree {
   radaFamilies    RadaFamily[]
   ancestryJumps   AncestryJump[]
   sourceEntries   SourceEntry[]
+  sourceLinks     SourceLink[]
   sourceFiles     SourceFile[]
   editLogs        TreeEditLog[]
   collectionItems CollectionItem[]
@@ -340,7 +342,7 @@ model Individual {
   radaFamiliesAsFosterMother RadaFamily[]          @relation("RadaFamilyFosterMother")
   radaFamilyChildren         RadaFamilyChild[]
   ancestryJumpAsDescendant   AncestryJump[]        @relation("AncestryJumpDescendant")
-  sourceEntries              SourceEntry[]
+  sourceLinks                SourceLink[]
   collectionItemsAsRoot      CollectionItem[]
 
   @@unique([treeId, gedcomId]) // gedcomId is unique within a tree
@@ -479,7 +481,7 @@ model AncestryJump {
 }
 
 // =============================================================================
-// Sources («المصادر») — v1: a standalone evidence entry per person
+// Sources («المصادر») — v1: shared sources (one source, many people)
 // =============================================================================
 
 /// Who may see one source entry («من يرى هذا المصدر؟»). Stored as plaintext.
@@ -493,32 +495,59 @@ enum SourceVisibility {
   public
 }
 
-/// A source entry on one person, or the tree-wide entry (`individualId` null).
-/// NEVER part of the tree GET payload / `GedcomData`.
+/// A source («مصدر»): free text + files + ONE visibility level, attached to
+/// MANY people through `SourceLink` («مصدر لـ:»). A source with zero links
+/// can exist (kept after its last person was removed — «ليس مصدرًا لأحد»).
+/// The tree-wide source («مصدر الشجرة») is the explicit `isTreeWide` flag,
+/// never inferred from having no links. NEVER part of the tree GET payload /
+/// `GedcomData`.
 ///
-/// HAND-ADDED in migration `20260925120000_add_source_entries` (not expressible
+/// HAND-ADDED in migration `20260927120000_shared_sources` (not expressible
 /// here — a regenerated migration would drop it):
 ///   CREATE UNIQUE INDEX source_entries_one_tree_wide_per_tree
-///     ON source_entries (tree_id) WHERE individual_id IS NULL
+///     ON source_entries (tree_id) WHERE is_tree_wide
+/// APP-ENFORCED (tested): a tree-wide source has no links; every link's person
+/// and source are in the link's `tree_id`.
 model SourceEntry {
-  id           String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  treeId       String           @map("tree_id") @db.Uuid
-  /// Null ONLY for the tree-wide entry («مصدر الشجرة»).
-  individualId String?          @map("individual_id") @db.Uuid
-  visibility   SourceVisibility @default(admins)
+  id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  treeId      String           @map("tree_id") @db.Uuid
+  /// «مصدر الشجرة». Never inferred from having no links.
+  isTreeWide  Boolean          @default(false) @map("is_tree_wide")
+  visibility  SourceVisibility @default(admins)
   /// AES-256-GCM ciphertext under the workspace data key.
-  text         Bytes?
-  createdById  String?          @map("created_by") @db.Uuid
-  createdAt    DateTime         @default(now()) @map("created_at")
-  updatedAt    DateTime         @updatedAt @map("updated_at")
+  text        Bytes?
+  createdById String?          @map("created_by") @db.Uuid
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
 
-  tree       FamilyTree   @relation(fields: [treeId], references: [id], onDelete: Cascade)
-  individual Individual?  @relation(fields: [individualId], references: [id], onDelete: Cascade)
-  createdBy  User?        @relation("SourceEntryCreator", fields: [createdById], references: [id])
-  files      SourceFile[]
+  tree      FamilyTree   @relation(fields: [treeId], references: [id], onDelete: Cascade)
+  createdBy User?        @relation("SourceEntryCreator", fields: [createdById], references: [id])
+  files     SourceFile[]
+  links     SourceLink[]
 
-  @@index([treeId, individualId])
+  @@index([treeId])
   @@map("source_entries")
+}
+
+/// One person a source is «مصدر لـ». Same tree as the source (app-enforced).
+/// Deleting the person or the source cascades the link; the source itself
+/// survives its people.
+model SourceLink {
+  sourceId     String   @map("source_id") @db.Uuid
+  individualId String   @map("individual_id") @db.Uuid
+  treeId       String   @map("tree_id") @db.Uuid
+  createdById  String?  @map("created_by") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  source     SourceEntry @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  individual Individual  @relation(fields: [individualId], references: [id], onDelete: Cascade)
+  tree       FamilyTree  @relation(fields: [treeId], references: [id], onDelete: Cascade)
+  createdBy  User?       @relation("SourceLinkCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@id([sourceId, individualId])
+  @@index([individualId])
+  @@index([treeId])
+  @@map("source_links")
 }
 
 /// File METADATA only — the encrypted bytes live in `SourceFileData` so an

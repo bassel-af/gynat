@@ -26,40 +26,15 @@ import {
   type BirthDatePrivacySettings,
 } from '@/lib/tree/birth-date-privacy'
 import { blankPrivatePerson } from '@/lib/tree/mapper'
+import { extractYear, isPresumedLiving } from '@/lib/tree/public-shown'
 
 // ---------------------------------------------------------------------------
 // Living-status rule
 // ---------------------------------------------------------------------------
 
-/**
- * Anyone whose birth date makes them this old or older is presumed deceased,
- * even without a deceased mark. A safe, well-understood genealogy cutoff that
- * clears out the obviously-dead without risking a living person.
- */
-export const PRESUMED_DECEASED_AGE_YEARS = 130
-
-/** Extracts a 4-digit year from a free-form date string ("12 JAN 1850" -> 1850). */
-function extractYear(dateStr: string): number | null {
-  const match = dateStr.match(/\d{4}/)
-  return match ? Number(match[0]) : null
-}
-
-/**
- * The SINGLE living-status rule. A person is presumed LIVING when they are
- * NOT marked deceased AND were not born more than 130 years ago. A person
- * with neither a birth date nor a deceased mark is treated as living.
- */
-export function isPresumedLiving(individual: Individual, now: Date): boolean {
-  if (individual.isDeceased) return false
-
-  const birthYear = extractYear(individual.birth)
-  if (birthYear === null) return true // no date, not deceased -> living
-
-  const age = now.getUTCFullYear() - birthYear
-  if (age >= PRESUMED_DECEASED_AGE_YEARS) return false // presumed deceased
-
-  return true
-}
+// The rule itself lives in the client-safe `public-shown.ts`; re-exported here
+// so existing imports keep working and there is still exactly ONE rule.
+export { PRESUMED_DECEASED_AGE_YEARS, isPresumedLiving } from '@/lib/tree/public-shown'
 
 // ---------------------------------------------------------------------------
 // Checkpoint view-model

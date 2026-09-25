@@ -8,6 +8,7 @@ import type { GedcomData } from '@/lib/gedcom/types'
  * attaches a source-shaped key to an individual, a family or the root, it is
  * dropped here instead of riding out to a viewer or across a workspace.
  */
+/** Covers `sourceEntries`, shared-source `sourceLinks`, `citations`, … */
 const SOURCE_KEY_PATTERN = /source|citation/i
 
 /** Branch-pointer provenance (a workspace id), not evidence — kept. */

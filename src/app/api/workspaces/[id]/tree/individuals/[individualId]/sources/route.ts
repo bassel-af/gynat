@@ -66,28 +66,33 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
   const [ownRows, treeRow] = await Promise.all([
     prisma.sourceEntry.findMany({
-      where: { treeId: tree.id, individualId },
+      where: { treeId: tree.id, isTreeWide: false, links: { some: { individualId } } },
       orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
       select: SOURCE_ENTRY_WITH_FILES_SELECT,
     }) as unknown as Promise<SourceEntryRow[]>,
     prisma.sourceEntry.findFirst({
-      where: { treeId: tree.id, individualId: null },
+      where: { treeId: tree.id, isTreeWide: true },
       select: SOURCE_ENTRY_WITH_FILES_SELECT,
     }) as unknown as Promise<SourceEntryRow | null>,
   ]);
 
   const viewer = viewerFor(result.membership);
   const context = { isPrivate: person.isPrivate };
-  // Gate FIRST, decrypt only what passed.
+  // Gate FIRST (per source, on THIS person), decrypt only what passed.
   const visible = filterEntriesForViewer(ownRows, context, viewer);
   const inherited = inheritedTreeEntry(ownRows, treeRow, context, viewer);
 
   const key = visible.length > 0 || inherited ? await getWorkspaceKey(workspaceId) : null;
-  const toDto = (row: SourceEntryRow) =>
-    sourceEntryDto(row, decryptEntryText(row, key!), sourceFileDtos(row.files, key!));
+  const toDto = (row: SourceEntryRow, personId: string | null) =>
+    sourceEntryDto(row, decryptEntryText(row, key!), sourceFileDtos(row.files, key!), personId);
 
   return NextResponse.json(
-    { data: { entries: visible.map(toDto), inherited: inherited ? toDto(inherited) : null } },
+    {
+      data: {
+        entries: visible.map((row) => toDto(row, individualId)),
+        inherited: inherited ? toDto(inherited, null) : null,
+      },
+    },
     { headers: NO_STORE_HEADERS },
   );
 }
@@ -133,13 +138,18 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       const row = (await tx.sourceEntry.create({
         data: {
           treeId: tree.id,
-          individualId,
+          isTreeWide: false,
           visibility,
           ...encryptSourceEntryInput({ text }, key),
           createdById: result.user.id,
         } as unknown as Parameters<typeof prisma.sourceEntry.create>[0]['data'],
         select: SOURCE_ENTRY_SELECT,
-      })) as SourceEntryRow;
+      })) as unknown as SourceEntryRow;
+
+      // «مصدر لـ»: this one person (same tree, checked above).
+      await tx.sourceLink.create({
+        data: { sourceId: row.id, individualId, treeId: tree.id, createdById: result.user.id },
+      });
 
       const files = await attachStagedFiles(tx, {
         entryId: row.id,
@@ -177,7 +187,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     });
 
     return NextResponse.json(
-      { data: sourceEntryDto(row, text, sourceFileDtos(files, key)) },
+      { data: sourceEntryDto(row, text, sourceFileDtos(files, key), individualId) },
       { status: 201 },
     );
   } catch (error) {

@@ -111,3 +111,44 @@ export function inheritedTreeEntry<
   if (!canViewSourceEntry(treeEntry, null, viewer)) return null;
   return treeEntry;
 }
+
+// ---------------------------------------------------------------------------
+// Shared sources — one source linked to MANY people (rework R1)
+// ---------------------------------------------------------------------------
+
+/** What the per-source helpers need from a source row. */
+export interface SharedSourceGateInput {
+  visibility: SourceVisibilityLevel;
+  /** «مصدر الشجرة» — explicit flag, never inferred from having no links. */
+  isTreeWide: boolean;
+}
+
+/**
+ * The linked people on whom this viewer may see this source, order kept.
+ * The ONLY input for names, counts and «مشترك مع» — a count never includes a
+ * person this returns nothing for.
+ */
+export function visibleLinkedPeople<P extends SourcePersonContext>(
+  source: { visibility: SourceVisibilityLevel; isTreeWide?: boolean },
+  people: readonly P[],
+  viewer: SourceViewer,
+): P[] {
+  return people.filter((p) => canViewSourceEntry(source, p, viewer));
+}
+
+/**
+ * May this viewer see the source at all (member file route, preview,
+ * suggestions)? Admin: always, orphans included. Tree-wide source: the
+ * tree-wide gate. Otherwise: at least one visible linked person — so a member
+ * or visitor never sees an orphan.
+ */
+export function canViewSourceAnywhere(
+  source: SharedSourceGateInput,
+  people: readonly SourcePersonContext[],
+  viewer: SourceViewer,
+): boolean {
+  if (!canViewSourceEntry(source, null, viewer)) return false;
+  if (source.isTreeWide === true) return true;
+  if (viewer.kind === 'admin') return true;
+  return visibleLinkedPeople(source, people, viewer).length > 0;
+}

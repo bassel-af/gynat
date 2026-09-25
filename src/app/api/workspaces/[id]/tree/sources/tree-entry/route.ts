@@ -41,13 +41,16 @@ import {
 
 type RouteParams = { params: Promise<{ id: string }> };
 
-/** The tree-wide entry («مصدر الشجرة») — at most one per tree (partial unique index). */
+/**
+ * The tree-wide source («مصدر الشجرة») — the explicit `isTreeWide` flag, at
+ * most one per tree (partial unique index). Never linked to anyone.
+ */
 async function loadTreeEntry(
   treeId: string,
   db: Pick<typeof prisma, 'sourceEntry'> = prisma,
 ): Promise<SourceEntryRow | null> {
   return (await db.sourceEntry.findFirst({
-    where: { treeId, individualId: null },
+    where: { treeId, isTreeWide: true },
     select: SOURCE_ENTRY_WITH_FILES_SELECT,
   })) as unknown as SourceEntryRow | null;
 }
@@ -110,12 +113,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         : ((await tx.sourceEntry.create({
             data: {
               treeId: tree.id,
-              individualId: null,
+              isTreeWide: true,
               createdById: result.user.id,
               ...data,
             } as unknown as Parameters<typeof prisma.sourceEntry.create>[0]['data'],
             select: SOURCE_ENTRY_SELECT,
-          })) as SourceEntryRow);
+          })) as unknown as SourceEntryRow);
 
       const attached = await attachStagedFiles(tx, {
         entryId: base.id,
@@ -145,7 +148,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         entityId: row.id,
         snapshotBefore: existing
           ? encryptSnapshot(
-              snapshotSourceEntry({ ...existing, text: beforeText, ...withFiles(fileCount - attached.length) }),
+              snapshotSourceEntry({
+                ...existing,
+                individualId: null,
+                text: beforeText,
+                ...withFiles(fileCount - attached.length),
+              }),
               key,
             )
           : JSON_NULL,
@@ -208,7 +216,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     action: 'delete',
     entityType: 'source_entry',
     entityId: existing.id,
-    snapshotBefore: encryptSnapshot(snapshotSourceEntry({ ...existing, text }), key),
+    snapshotBefore: encryptSnapshot(snapshotSourceEntry({ ...existing, individualId: null, text }), key),
     snapshotAfter: JSON_NULL,
     description: encryptAuditDescription('delete', 'source_entry', null, key, {
       isUndo: isUndoRequest(request),
