@@ -44,6 +44,12 @@ vi.mock('@/context/WorkspaceTreeContext', () => ({
   useWorkspaceTree: () => ({ workspaceId: 'ws-1', canEdit: true }),
 }));
 vi.mock('@/context/UndoStackContext', () => ({ useOptionalUndoStack: () => null }));
+// The panel's sources section fetches on its own; these tests count only the
+// parent / «قفزة نسب» calls.
+vi.mock('@/hooks/usePersonSources', () => ({
+  usePersonSources: () => ({ entries: [], inherited: null, loaded: false, error: false, refetch: vi.fn() }),
+  notifySourcesChanged: vi.fn(),
+}));
 vi.mock('next/navigation', () => ({
   useParams: () => ({ slug: 'test' }),
   usePathname: () => '/workspaces/test/tree',

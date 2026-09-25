@@ -112,3 +112,16 @@ describe('undo stack reducer', () => {
     });
   });
 });
+
+describe('undo-only entries (redo cannot work, e.g. a create whose files are gone)', () => {
+  it('undoing an undo-only entry offers no redo and drops later redo entries', () => {
+    let state: UndoStackState = pushEntry(emptyStack(), makeEntry('A'));
+    state = pushEntry(state, { ...makeEntry('B'), undoOnly: true });
+    state = pushEntry(state, makeEntry('C'));
+    state = popUndo(state).next; // C → future
+    const { entry, next } = popUndo(state); // B (undo-only)
+    expect(entry?.label).toBe('B');
+    expect(next.future).toEqual([]);
+    expect(next.past.map((e) => e.label)).toEqual(['A']);
+  });
+});

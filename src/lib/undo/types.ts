@@ -28,6 +28,12 @@ export interface UndoEntry {
   undo: () => Promise<void>;
   /** Re-apply the original mutation. */
   redo: () => Promise<void>;
+  /**
+   * The mutation cannot be re-applied once undone (e.g. a source entry created
+   * with files — undo deletes the files for good). Undoing it offers no redo,
+   * and drops the redo entries above it (they built on it).
+   */
+  undoOnly?: boolean;
 }
 
 export interface UndoStackState {

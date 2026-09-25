@@ -553,8 +553,9 @@ export function buildCreateSourceEntryInverse({
 export interface UpdateSourceEntryInverseParams {
   workspaceId: string;
   entryId: string;
-  before: { text?: string; visibility?: string };
-  after: { text?: string; visibility?: string };
+  /** `text: null` = the entry had no text (it kept files). */
+  before: { text?: string | null; visibility?: string };
+  after: { text?: string | null; visibility?: string };
   treeId?: string;
 }
 

@@ -50,6 +50,7 @@ const FIELD_LABELS: Record<string, string> = {
   text: 'المصدر',
   visibility: 'من يرى هذا المصدر',
   entries: 'المصادر',
+  fileCount: 'عدد الملفات',
 };
 
 const SOURCE_VISIBILITY_LABELS: Record<string, string> = {

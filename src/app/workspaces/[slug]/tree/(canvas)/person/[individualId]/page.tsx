@@ -4,6 +4,7 @@ import { Suspense, useEffect, useRef, useState, type ComponentProps } from 'reac
 import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { PersonPage } from '@/components/person';
+import { PersonSourcesCard } from '@/components/sources';
 import personStyles from '@/components/person/person.module.css';
 import { useOptionalWorkspaceTree } from '@/context/WorkspaceTreeContext';
 import { useTree } from '@/context/TreeContext';
@@ -151,6 +152,9 @@ function PersonView() {
         backHref={backHref}
         treeHref={treeHref}
         enableKunya={workspace?.enableKunya}
+        afterRecord={
+          <PersonSourcesCard workspaceId={workspaceId} treeId={treeId} individualId={individualId} />
+        }
       />
     </div>
   );

@@ -597,6 +597,14 @@
   color: #f0b98b;
 }
 
+.deleteConfirmNote {
+  font-family: var(--heritage-font-body);
+  font-size: 12px;
+  font-weight: 300;
+  line-height: 1.6;
+  color: rgba(240, 185, 139, 0.8);
+}
+
 .deleteConfirmActions {
   display: flex;
   align-items: center;

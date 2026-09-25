@@ -1,0 +1,70 @@
+.thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.thumb {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid rgba(200, 168, 101, 0.25);
+  border-radius: 6px;
+  background: rgba(10, 14, 26, 0.6);
+  color: var(--heritage-gold);
+  cursor: zoom-in;
+  transition: border-color 160ms, transform 160ms;
+}
+
+/* Keep the tap target at 44px on touch screens without enlarging the tile. */
+.thumb::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}
+
+.thumb:hover,
+.thumb:focus-visible {
+  border-color: var(--heritage-gold);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.pdf {
+  cursor: pointer;
+  background: rgba(200, 168, 101, 0.08);
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.placeholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(110deg, rgba(200, 168, 101, 0.06) 30%, rgba(200, 168, 101, 0.16) 50%, rgba(200, 168, 101, 0.06) 70%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+.pdfLabel {
+  font-family: var(--heritage-font-body);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+@keyframes shimmer {
+  to { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .placeholder { animation: none; }
+}

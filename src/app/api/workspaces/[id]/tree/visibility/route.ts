@@ -17,6 +17,42 @@ import { freezeDependentPointers, freezeCollectionLinks } from '@/lib/tree/going
 type RouteParams = { params: Promise<{ id: string }> }
 
 /**
+ * GET /api/workspaces/[id]/tree/visibility?treeId= — the tree's current
+ * publish level (`private` | `public_link` | `public_listed`). Admin-only; it
+ * feeds the live status line of the sources «من يرى هذا المصدر؟» picker.
+ * Selects the level only (never the whole tree). Absent `treeId` ⇒ the main
+ * tree; a foreign, unknown or malformed id ⇒ 404.
+ */
+export async function GET(request: NextRequest, { params }: RouteParams) {
+  const { id: workspaceId } = await params
+
+  const auth = await requireWorkspaceAdmin(request, workspaceId)
+  if (isErrorResponse(auth)) return auth
+
+  const treeId = new URL(request.url).searchParams.get('treeId')
+  if (treeId !== null && !UUID_RE.test(treeId)) return treeNotFound()
+
+  const tree = await prisma.familyTree.findFirst({
+    where: treeId
+      ? { id: treeId, workspaceId, kind: { in: ['main', 'extra'] } }
+      : { workspaceId, kind: 'main' },
+    select: { visibility: true },
+  })
+  if (!tree) return treeNotFound()
+
+  return NextResponse.json(
+    { data: { visibility: tree.visibility } },
+    { headers: { 'Cache-Control': 'private, no-store' } },
+  )
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+function treeNotFound() {
+  return NextResponse.json({ error: 'الشجرة غير موجودة' }, { status: 404 })
+}
+
+/**
  * PATCH /api/workspaces/[id]/tree/visibility — set the main tree's public
  * visibility level. Admin-only. Going public requires the typed confirmation
  * phrase (validated server-side) and generates the auto public slug. Every

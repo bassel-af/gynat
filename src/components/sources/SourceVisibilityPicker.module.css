@@ -1,0 +1,129 @@
+/* «من يرى هذا المصدر؟» — Jeweled Heritage radio group */
+
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.legend {
+  padding: 0;
+  margin-bottom: var(--space-3);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  color: var(--heritage-gold);
+}
+
+.optionWrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.option {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  min-height: 44px;
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid rgba(200, 168, 101, 0.12);
+  border-radius: var(--heritage-radius-sm);
+  background: rgba(10, 14, 26, 0.45);
+  cursor: pointer;
+  transition: border-color 180ms, background 180ms;
+}
+
+.option:hover {
+  border-color: rgba(200, 168, 101, 0.3);
+}
+
+.optionChecked {
+  border-color: var(--heritage-gold);
+  background: rgba(200, 168, 101, 0.08);
+}
+
+.optionLocked {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.optionLocked:hover {
+  border-color: rgba(200, 168, 101, 0.12);
+}
+
+.radio {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  accent-color: var(--heritage-gold);
+}
+
+.optionText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.optionLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--heritage-font-body);
+  font-size: 14px;
+  color: var(--heritage-parchment);
+  line-height: 1.5;
+}
+
+.optionIcon {
+  color: var(--heritage-gold);
+}
+
+.optionSuffix {
+  font-family: var(--heritage-font-body);
+  font-size: 12px;
+  font-weight: 300;
+  color: var(--heritage-text-muted);
+}
+
+.status,
+.hint,
+.warning {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: 0;
+  font-family: var(--heritage-font-body);
+  font-size: 12px;
+  font-weight: 300;
+  line-height: 1.7;
+}
+
+.status {
+  padding-inline-start: calc(18px + var(--space-4) + var(--space-5));
+  color: var(--heritage-text-soft);
+}
+
+.statusIcon {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+.hint {
+  color: var(--heritage-text-muted);
+}
+
+.warning {
+  padding: var(--space-4) var(--space-5);
+  border: 1px dashed rgba(232, 161, 92, 0.35);
+  border-radius: var(--heritage-radius-sm);
+  background: rgba(232, 161, 92, 0.08);
+  color: #f0c89b;
+}

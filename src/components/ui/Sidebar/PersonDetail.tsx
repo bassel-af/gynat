@@ -8,6 +8,9 @@ import { ViewSwitcherIconButton } from '@/components/tree/ViewSwitcherIconButton
 import { getViewMode, viewModeFromPathname } from '@/lib/tree/view-modes';
 import { useOptionalWorkspaceTree } from '@/context/WorkspaceTreeContext';
 import { useOptionalUndoStack } from '@/context/UndoStackContext';
+import { useOptionalToast } from '@/context/ToastContext';
+import { usePersonSources } from '@/hooks/usePersonSources';
+import { PersonSourcesSection } from '@/components/sources';
 import { getDisplayName, getDisplayNameWithNasab, getPersonRelationships, getRadaRelationships, getAllDescendants, findTopmostAncestor, hasExternalFamily } from '@/lib/gedcom';
 import type { Individual } from '@/lib/gedcom';
 import { IndividualForm, type IndividualFormData } from '@/components/tree/IndividualForm/IndividualForm';
@@ -450,6 +453,14 @@ export function PersonDetail({ personId }: PersonDetailProps) {
     hideBirthDateForFemale: workspace?.hideBirthDateForFemale,
     hideBirthDateForMale: workspace?.hideBirthDateForMale,
   }) : false;
+
+  // Sources («المصادر»): fetched when this panel shows the person. A borrowed
+  // person has no section (their sources stay with the owning workspace).
+  const toast = useOptionalToast();
+  const personSources = usePersonSources(workspace?.workspaceId, workspace?.activeTreeId, personId, {
+    enabled: !!workspace && !!person && !person._pointed,
+  });
+  const personHasSourceFiles = personSources.entries.some((e) => e.files.length > 0);
 
   const {
     formMode, setFormMode,
@@ -1460,6 +1471,19 @@ export function PersonDetail({ personId }: PersonDetailProps) {
           </div>
         )}
 
+        {workspace && !person._pointed && (
+          <PersonSourcesSection
+            workspaceId={workspace.workspaceId}
+            treeId={workspace.activeTreeId}
+            individualId={personId}
+            canEdit={canEdit}
+            isAdmin={isAdmin}
+            sources={personSources}
+            onPushUndo={undoStack?.push}
+            onNotice={toast ? (message) => toast.showToast(message, 'success') : undefined}
+          />
+        )}
+
         {workspace?.enableAuditLog && workspace?.isAdmin && (
           <PersonAuditHistory
             workspaceId={workspace.workspaceId}
@@ -1488,6 +1512,9 @@ export function PersonDetail({ personId }: PersonDetailProps) {
           ) : deleteState.kind === 'simpleConfirm' ? (
             <div className={styles.deleteConfirm}>
               <span className={styles.deleteConfirmText}>هل أنت متأكد؟</span>
+              {personHasSourceFiles && (
+                <span className={styles.deleteConfirmNote}>ملفات مصادره لا تعود عند التراجع عن الحذف.</span>
+              )}
               <div className={styles.deleteConfirmActions}>
                 <button
                   className={styles.deleteConfirmYes}

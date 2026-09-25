@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import Link from 'next/link';
 import type { PersonProjection } from '@/lib/tree/person-projection';
 import { useTreeColorOverrides } from '@/hooks/useTreeColorOverrides';
@@ -33,6 +33,11 @@ export interface PersonPageProps {
    * suppresses the بن/بنت connector between two LIVING people in the ribbon.
    */
   variant?: 'member' | 'public';
+  /**
+   * Rendered right after السجل — the member route passes the «المصادر» card
+   * (sources are fetched per person, never part of the projection).
+   */
+  afterRecord?: ReactNode;
 }
 
 /**
@@ -48,6 +53,7 @@ export function PersonPage({
   treeHref,
   enableKunya = true,
   variant = 'member',
+  afterRecord,
 }: PersonPageProps) {
   // Honor the viewer's tree color customization (gold/green accents) — member
   // only; the public surface has no per-user settings.
@@ -248,6 +254,8 @@ export function PersonPage({
 
         {/* ============ THE RECORD ============ */}
         <PersonRecord subject={subject} />
+
+        {afterRecord}
 
         {/* ============ VIEW IN TREE ============ */}
         <ViewInTreeButton href={treeHref} />

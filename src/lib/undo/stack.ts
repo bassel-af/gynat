@@ -25,7 +25,7 @@ export function popUndo(state: UndoStackState): { entry: UndoEntry | null; next:
     entry,
     next: {
       past: state.past.slice(0, -1),
-      future: [...state.future, entry],
+      future: entry.undoOnly ? [] : [...state.future, entry],
     },
   };
 }

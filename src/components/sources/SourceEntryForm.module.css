@@ -1,0 +1,258 @@
+/* «إضافة مصدر» form — Jeweled Heritage, mirrors AncestryJumpForm */
+
+.modal {
+  max-width: 520px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-7);
+}
+
+.error {
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-lg);
+  background: rgba(232, 92, 51, 0.1);
+  border: 1px dashed rgba(232, 161, 92, 0.3);
+  color: #f0b98b;
+  font-family: var(--heritage-font-body);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.label {
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  color: var(--heritage-gold);
+}
+
+.suggestWrap {
+  position: relative;
+}
+
+.textarea {
+  width: 100%;
+  padding: var(--space-5) var(--space-6);
+  border-radius: var(--heritage-radius-sm);
+  border: 1px solid rgba(200, 168, 101, 0.12);
+  background: rgba(10, 14, 26, 0.5);
+  color: var(--heritage-parchment);
+  font-family: var(--heritage-font-body);
+  font-size: 15px;
+  font-weight: 300;
+  line-height: 1.7;
+  resize: vertical;
+  outline: none;
+  transition: border-color 220ms, background 220ms, box-shadow 220ms;
+}
+
+.textarea::placeholder {
+  color: rgba(232, 223, 200, 0.32);
+}
+
+.textarea:focus {
+  border-color: var(--heritage-gold);
+  background: rgba(10, 14, 26, 0.7);
+  box-shadow:
+    0 0 0 3px rgba(200, 168, 101, 0.1),
+    inset 0 0 0 1px rgba(200, 168, 101, 0.25);
+}
+
+.suggestions {
+  margin: var(--space-2) 0 0;
+  padding: var(--space-2);
+  list-style: none;
+  border: 1px solid rgba(200, 168, 101, 0.22);
+  border-radius: var(--heritage-radius-sm);
+  background: rgba(10, 14, 26, 0.92);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.suggestion {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  padding: var(--space-3) var(--space-5);
+  border-radius: 8px;
+  font-family: var(--heritage-font-body);
+  font-size: 14px;
+  color: var(--heritage-text-soft);
+  cursor: pointer;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.suggestion:hover,
+.suggestion:focus-visible {
+  background: rgba(200, 168, 101, 0.1);
+  color: var(--heritage-parchment);
+  outline: none;
+}
+
+.fileList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fileItem {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid rgba(200, 168, 101, 0.12);
+  border-radius: var(--heritage-radius-sm);
+  background: rgba(10, 14, 26, 0.4);
+}
+
+.fileUploading {
+  opacity: 0.75;
+}
+
+.fileThumb {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: rgba(200, 168, 101, 0.08);
+  color: var(--heritage-gold);
+}
+
+.fileThumbLoading {
+  background: linear-gradient(110deg, rgba(200, 168, 101, 0.06) 30%, rgba(200, 168, 101, 0.16) 50%, rgba(200, 168, 101, 0.06) 70%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+@keyframes shimmer {
+  to { background-position: -200% 0; }
+}
+
+.fileThumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.fileName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--heritage-font-body);
+  font-size: 13px;
+  color: var(--heritage-text-soft);
+}
+
+.fileRemove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  margin: -6px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--heritage-text-muted);
+  cursor: pointer;
+}
+
+.fileRemove:hover,
+.fileRemove:focus-visible {
+  color: #f0b98b;
+  background: rgba(232, 92, 51, 0.1);
+  outline: none;
+}
+
+.fileConfirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.fileConfirmText {
+  font-family: var(--heritage-font-body);
+  font-size: 12px;
+  color: #f0b98b;
+}
+
+.spinner {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(200, 168, 101, 0.2);
+  border-top-color: var(--heritage-gold);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.addFileButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  min-height: 44px;
+  padding: 0 var(--space-6);
+  border: 1px dashed rgba(200, 168, 101, 0.35);
+  border-radius: var(--heritage-radius-sm);
+  background: transparent;
+  color: var(--heritage-gold-bright);
+  font-family: var(--heritage-font-body);
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color 180ms, background 180ms;
+}
+
+.addFileButton:hover:not(:disabled) {
+  border-color: var(--heritage-gold);
+  background: rgba(200, 168, 101, 0.08);
+}
+
+.addFileButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Phone: a full-height sheet with 16px inputs (no iOS zoom). */
+@media (max-width: 600px) {
+  .modal {
+    max-width: none;
+    height: 100%;
+    max-height: none;
+  }
+
+  .textarea {
+    font-size: 16px;
+  }
+}
