@@ -23,6 +23,7 @@ import { extractPointedSubtree } from '@/lib/tree/branch-pointer-merge';
 import { persistDeepCopy } from '@/lib/tree/branch-pointer-deep-copy';
 import { prepareTreeSnapshot } from '@/lib/collections/copy';
 import { assertExtraTreeCapacity } from '@/lib/collections/extra-tree-cap';
+import { copySources, SOURCE_COPY_TX_TIMEOUT_MS } from '@/lib/tree/source-copy';
 import { WHOLE_TREE_ROOT, type ResolvedLinkSource } from '@/lib/collections/resolve-link';
 import type { GedcomData } from '@/lib/gedcom/types';
 
@@ -39,7 +40,7 @@ export interface CopyBorrowedInput {
  */
 export async function copyBorrowedBranchIntoNewExtraTree(
   input: CopyBorrowedInput,
-): Promise<{ newTreeId: string; peopleCount: number }> {
+): Promise<{ newTreeId: string; peopleCount: number; skippedSourceFiles: number }> {
   const { addingWorkspaceId, source, nameAr } = input;
 
   // Minting another extra tree in the ADDING workspace — reject at the cap before
@@ -63,8 +64,9 @@ export async function copyBorrowedBranchIntoNewExtraTree(
 
   // Whole-tree (public slug) → snapshot everything. Branch (private token) →
   // extract the pointed subtree first, then snapshot that.
+  const wholeTree = source.rootIndividualId === WHOLE_TREE_ROOT;
   const toCopy: GedcomData =
-    source.rootIndividualId === WHOLE_TREE_ROOT
+    wholeTree
       ? sourceData
       : extractPointedSubtree(sourceData, {
           rootIndividualId: source.rootIndividualId,
@@ -76,14 +78,14 @@ export async function copyBorrowedBranchIntoNewExtraTree(
   const peopleCount = Object.keys(snapshot.individuals).length;
 
   const sourceRootId =
-    source.rootIndividualId === WHOLE_TREE_ROOT
+    wholeTree
       ? (Object.keys(toCopy.individuals)[0] ?? source.sourceTreeId)
       : source.rootIndividualId;
   const copiedRootId = snapshot.idMap.get(sourceRootId) ?? sourceRootId;
 
-  // Create the new extra tree AND persist the re-encrypted snapshot + provenance
-  // in ONE transaction (a crash can't leave an empty orphan tree behind).
-  const newTreeId = await prisma.$transaction(async (tx) => {
+  // Create the new extra tree AND persist the re-encrypted snapshot, provenance
+  // and sources in ONE transaction (a crash can't leave an empty orphan tree behind).
+  const { newTreeId, skippedSourceFiles } = await prisma.$transaction(async (tx) => {
     const newTree = await tx.familyTree.create({
       data: { workspaceId: addingWorkspaceId, kind: 'extra', nameAr },
       select: { id: true },
@@ -95,8 +97,18 @@ export async function copyBorrowedBranchIntoNewExtraTree(
       sourceRootId,
       copiedRootId,
     });
-    return newTree.id;
-  });
+    // Another family's workspace: level-3 sources of landed, non-private people
+    // only; the tree-wide source only with a whole-tree copy.
+    const { skippedSourceFiles } = await copySources(tx, {
+      fromTreeId: source.sourceTreeId,
+      toTreeId: newTree.id,
+      targetWorkspaceId: addingWorkspaceId,
+      idMap: snapshot.idMap,
+      mode: { kind: 'cross', sourceKey, targetKey },
+      includeTreeWide: wholeTree,
+    });
+    return { newTreeId: newTree.id, skippedSourceFiles };
+  }, { timeout: SOURCE_COPY_TX_TIMEOUT_MS });
 
-  return { newTreeId, peopleCount };
+  return { newTreeId, peopleCount, skippedSourceFiles };
 }

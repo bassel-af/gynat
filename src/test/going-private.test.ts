@@ -55,6 +55,12 @@ vi.mock('@/lib/tree/branch-pointer-deep-copy', () => ({
   computeAnchorReuse: vi.fn().mockReturnValue(null),
 }));
 
+const mockCopySources = vi.fn();
+vi.mock('@/lib/tree/source-copy', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/tree/source-copy')>()),
+  copySources: (...a: unknown[]) => mockCopySources(...a),
+}));
+
 vi.mock('@/lib/api/swallowed-error-log', () => ({
   logSwallowedAuditError: vi.fn(),
 }));
@@ -78,9 +84,44 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockGetTreeByWorkspaceId.mockResolvedValue({ id: 'src-tree' });
   mockGetOrCreateTree.mockResolvedValue({ id: 'tgt-tree' });
+  mockCopySources.mockResolvedValue({ skippedSourceFiles: 0 });
   mockTransaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
     const tx = { branchPointer: { update: vi.fn().mockResolvedValue({}) } };
     return fn(tx);
+  });
+});
+
+describe('freezeDependentPointers — sources (step 8)', () => {
+  test('the frozen copy carries the branch sources cross-family, in the copy transaction', async () => {
+    let txSeen: unknown = null;
+    mockTransaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
+      txSeen = { branchPointer: { update: vi.fn().mockResolvedValue({}) } };
+      return fn(txSeen);
+    });
+    mockBranchPointerFindMany.mockResolvedValue([POINTER]);
+
+    await freezeDependentPointers('src-ws');
+
+    expect(mockCopySources).toHaveBeenCalledTimes(1);
+    const [tx, input] = mockCopySources.mock.calls[0];
+    expect(tx).toBe(txSeen);
+    expect(input).toMatchObject({
+      fromTreeId: 'src-tree',
+      toTreeId: 'tgt-tree',
+      targetWorkspaceId: 'tgt-ws',
+      mode: { kind: 'cross' },
+      includeTreeWide: false,
+    });
+    expect(input.idMap.get('root')).toBe('new-root');
+  });
+
+  test('reports the source files the target quotas left out', async () => {
+    mockBranchPointerFindMany.mockResolvedValue([POINTER, { ...POINTER, id: 'ptr-2' }]);
+    mockCopySources.mockResolvedValueOnce({ skippedSourceFiles: 2 }).mockResolvedValueOnce({ skippedSourceFiles: 5 });
+
+    const result = await freezeDependentPointers('src-ws');
+
+    expect(result.skippedSourceFiles).toBe(7);
   });
 });
 
@@ -88,7 +129,7 @@ describe('freezeDependentPointers', () => {
   test('returns zero counts when there are no active dependent pointers', async () => {
     mockBranchPointerFindMany.mockResolvedValue([]);
     const result = await freezeDependentPointers('src-ws');
-    expect(result).toEqual({ frozen: 0, failed: 0 });
+    expect(result).toEqual({ frozen: 0, failed: 0, skippedSourceFiles: 0 });
     expect(mockPersistDeepCopy).not.toHaveBeenCalled();
   });
 
@@ -181,7 +222,7 @@ describe('freezeDependentPointers', () => {
     const result = await freezeDependentPointers('src-ws');
     // The collection-link pointer was filtered out → nothing to freeze, and it
     // is NEVER deep-copied, stitched, or marked broken/revoked (left untouched).
-    expect(result).toEqual({ frozen: 0, failed: 0 });
+    expect(result).toEqual({ frozen: 0, failed: 0, skippedSourceFiles: 0 });
     expect(mockPersistDeepCopy).not.toHaveBeenCalled();
     expect(mockBranchPointerUpdate).not.toHaveBeenCalled();
   });

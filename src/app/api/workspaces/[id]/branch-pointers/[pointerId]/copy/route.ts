@@ -7,6 +7,7 @@ import { getWorkspaceKey, encryptSnapshot } from '@/lib/tree/encryption';
 import { extractPointedSubtree } from '@/lib/tree/branch-pointer-merge';
 import { prepareDeepCopy, persistDeepCopy, computeAnchorReuse } from '@/lib/tree/branch-pointer-deep-copy';
 import { snapshotBranchPointer, encryptAuditDescription } from '@/lib/tree/audit';
+import { copySources, SOURCE_COPY_TX_TIMEOUT_MS } from '@/lib/tree/source-copy';
 
 type RouteParams = { params: Promise<{ id: string; pointerId: string }> };
 
@@ -90,10 +91,21 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     anchorReuse,
   });
 
-  await prisma.$transaction(async (tx) => {
+  const { skippedSourceFiles } = await prisma.$transaction(async (tx) => {
     const txPrisma = tx as typeof prisma;
 
     await persistDeepCopy(txPrisma, targetTree.id, copyResult, targetKey);
+
+    // Another family: level-3 sources of landed, non-private people only; a
+    // branch copy never carries the tree-wide source.
+    const sources = await copySources(txPrisma, {
+      fromTreeId: sourceTree.id,
+      toTreeId: targetTree.id,
+      targetWorkspaceId: workspaceId,
+      idMap: copyResult.idMap,
+      mode: { kind: 'cross', sourceKey, targetKey },
+      includeTreeWide: false,
+    });
 
     // Mark pointer as broken (deep copy replaces the live link)
     await txPrisma.branchPointer.update({
@@ -114,7 +126,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       } as unknown as Parameters<typeof txPrisma.treeEditLog.create>[0]['data'],
     });
 
-  });
+    return sources;
+  }, { timeout: SOURCE_COPY_TX_TIMEOUT_MS });
 
   await touchTreeTimestamp(targetTree.id);
 
@@ -122,6 +135,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     data: {
       copiedIndividuals: Object.keys(copyResult.individuals).length,
       copiedFamilies: Object.keys(copyResult.families).length,
+      skippedSourceFiles,
       status: 'broken',
     },
   });

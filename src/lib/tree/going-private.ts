@@ -19,11 +19,14 @@ import { prepareDeepCopy, persistDeepCopy, computeAnchorReuse } from '@/lib/tree
 import { isStitchablePointer } from '@/lib/tree/branch-pointer-guards'
 import { logSwallowedAuditError } from '@/lib/api/swallowed-error-log'
 import { copyBorrowedBranchIntoNewExtraTree } from '@/lib/collections/copy-borrowed'
+import { copySources, SOURCE_COPY_TX_TIMEOUT_MS } from '@/lib/tree/source-copy'
 import type { ResolvedLinkSource } from '@/lib/collections/resolve-link'
 
 export interface FreezeResult {
   frozen: number
   failed: number
+  /** Source files the target workspace quotas left out of the frozen copies. */
+  skippedSourceFiles: number
 }
 
 /**
@@ -52,7 +55,7 @@ export async function freezeDependentPointers(
   const activePointers = await prisma.branchPointer.findMany({
     where: { sourceWorkspaceId, status: 'active', isCollectionLink: false },
   })
-  if (activePointers.length === 0) return { frozen: 0, failed: 0 }
+  if (activePointers.length === 0) return { frozen: 0, failed: 0, skippedSourceFiles: 0 }
 
   // Source tree fetched once (all these pointers share the same source).
   const sourceKey = await getWorkspaceKey(sourceWorkspaceId)
@@ -61,6 +64,7 @@ export async function freezeDependentPointers(
 
   let frozen = 0
   let failed = 0
+  let skippedSourceFiles = 0
 
   for (const pointer of activePointers) {
     try {
@@ -112,7 +116,7 @@ export async function freezeDependentPointers(
       const copiedRootId =
         copyResult.idMap.get(pointer.rootIndividualId) ?? pointer.rootIndividualId
 
-      await prisma.$transaction(async (tx) => {
+      const sources = await prisma.$transaction(async (tx) => {
         const txPrisma = tx as typeof prisma
         await persistDeepCopy(txPrisma, targetTree.id, copyResult, targetKey, {
           reason: 'going_private',
@@ -121,12 +125,24 @@ export async function freezeDependentPointers(
           sourceRootId: pointer.rootIndividualId,
           copiedRootId,
         })
+        // Another family: level-3 sources of landed, non-private people only;
+        // a branch copy never carries the tree-wide source.
+        const copied = await copySources(txPrisma, {
+          fromTreeId: sourceTree.id,
+          toTreeId: targetTree.id,
+          targetWorkspaceId: pointer.targetWorkspaceId,
+          idMap: copyResult.idMap,
+          mode: { kind: 'cross', sourceKey, targetKey },
+          includeTreeWide: false,
+        })
         await txPrisma.branchPointer.update({
           where: { id: pointer.id },
           data: { status: 'broken' },
         })
-      })
+        return copied
+      }, { timeout: SOURCE_COPY_TX_TIMEOUT_MS })
 
+      skippedSourceFiles += sources.skippedSourceFiles
       frozen++
     } catch (err) {
       logSwallowedAuditError('going_private_freeze', { pointerId: pointer.id }, err)
@@ -134,7 +150,7 @@ export async function freezeDependentPointers(
     }
   }
 
-  return { frozen, failed }
+  return { frozen, failed, skippedSourceFiles }
 }
 
 /**
@@ -175,10 +191,11 @@ export async function freezeCollectionLinks(
       collectionItems: { select: { id: true, titleAr: true } },
     },
   })
-  if (pointers.length === 0) return { frozen: 0, failed: 0 }
+  if (pointers.length === 0) return { frozen: 0, failed: 0, skippedSourceFiles: 0 }
 
   let frozen = 0
   let failed = 0
+  let skippedSourceFiles = 0
 
   for (const pointer of pointers) {
     try {
@@ -219,11 +236,13 @@ export async function freezeCollectionLinks(
       }
 
       const nameAr = pointer.collectionItems[0]?.titleAr ?? 'فرع محفوظ'
-      const { newTreeId } = await copyBorrowedBranchIntoNewExtraTree({
+      const copy = await copyBorrowedBranchIntoNewExtraTree({
         addingWorkspaceId: pointer.targetWorkspaceId,
         source,
         nameAr,
       })
+      const { newTreeId } = copy
+      skippedSourceFiles += copy.skippedSourceFiles
 
       // Re-point the dependent items onto the frozen copy + break the pointer,
       // atomically. (`copyBorrowedBranchIntoNewExtraTree` already committed the
@@ -247,5 +266,5 @@ export async function freezeCollectionLinks(
     }
   }
 
-  return { frozen, failed }
+  return { frozen, failed, skippedSourceFiles }
 }

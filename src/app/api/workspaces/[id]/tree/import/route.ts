@@ -3,7 +3,7 @@ import { requireTreeEditor, isErrorResponse } from '@/lib/api/workspace-auth'
 import { treeImportLimiter, rateLimitResponse } from '@/lib/api/rate-limit'
 import { touchTreeTimestamp } from '@/lib/tree/queries'
 import { seedTreeFromGedcomData } from '@/lib/tree/seed-helpers'
-import { parseGedcom } from '@/lib/gedcom/parser'
+import { parseGedcom, countSkippedSources } from '@/lib/gedcom/parser'
 import { prisma } from '@/lib/db'
 import { encryptAuditDescription, encryptAuditPayload } from '@/lib/tree/audit'
 import { getWorkspaceKey } from '@/lib/tree/encryption'
@@ -122,6 +122,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       familyCount: seedResult.familyCount,
       radaFamilyCount: seedResult.radaFamilyCount,
       ancestryJumpCount: seedResult.ancestryJumpCount,
+      // Sources are not imported; the UI tells the user how many were left out.
+      skippedSources: countSkippedSources(text),
     },
     { status: 201 },
   )

@@ -96,6 +96,13 @@ vi.mock('@/lib/tree/branch-pointer-deep-copy', () => ({
   computeAnchorReuse: vi.fn().mockReturnValue(null),
 }));
 
+// Sources (step 8): the copy carries sources through the shared helper.
+const mockCopySources = vi.fn();
+vi.mock('@/lib/tree/source-copy', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/tree/source-copy')>()),
+  copySources: (...args: unknown[]) => mockCopySources(...args),
+}));
+
 // Phase 10b: stub workspace-key helpers.
 vi.mock('@/lib/tree/encryption', async () => {
   const actual = await vi.importActual<typeof import('@/lib/tree/encryption')>('@/lib/tree/encryption');
@@ -169,7 +176,10 @@ function makeActivePointer(id: string, targetWsId: string) {
 // ---------------------------------------------------------------------------
 
 describe('DELETE /api/workspaces/[id]/share-tokens/[tokenId] — revoke with auto deep-copy', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockCopySources.mockResolvedValue({ skippedSourceFiles: 0 });
+  });
 
   test('token is revoked FIRST, before any deep-copy attempt', async () => {
     mockAuth();
@@ -628,5 +638,55 @@ describe('DELETE /api/workspaces/[id]/share-tokens/[tokenId] — revoke with aut
     expect(res.status).toBe(200);
     expect(body.copiedPointers).toBe(1);
     expect(body.disconnectedPointers).toBe(2);
+  });
+
+  describe('sources (step 8)', () => {
+    async function revokeTwoPointers() {
+      mockAuth();
+      mockAdmin();
+      setupTransactionPassthrough();
+      mockShareTokenFindUnique.mockResolvedValue({ id: tokenId, sourceWorkspaceId: wsId, isRevoked: false });
+      mockShareTokenUpdate.mockResolvedValue({ id: tokenId, isRevoked: true });
+      mockBranchPointerFindMany.mockResolvedValue([
+        makeActivePointer('ptr-1', 'ws-target-1'),
+        makeActivePointer('ptr-2', 'ws-target-2'),
+      ]);
+      mockGetTreeByWorkspaceId.mockResolvedValue({ id: 'tree-source', workspaceId: wsId, individuals: [], families: [] });
+      mockDbTreeToGedcomData.mockReturnValue({ individuals: {}, families: {} });
+      mockExtractPointedSubtree.mockReturnValue({ individuals: {}, families: {} });
+      mockPrepareDeepCopy.mockReturnValue({ individuals: {}, families: {}, idMap: new Map([['a', 'b']]), stitchFamily: null });
+      mockGetOrCreateTree.mockImplementation(async (ws: string) => ({ id: `tree-of-${ws}` }));
+      mockPersistDeepCopy.mockResolvedValue(undefined);
+      mockBranchPointerUpdate.mockResolvedValue({});
+      mockTreeEditLogCreate.mockResolvedValue({});
+      mockMembershipFindMany.mockResolvedValue([]);
+      mockNotificationCreateMany.mockResolvedValue({ count: 0 });
+      const { DELETE } = await import('@/app/api/workspaces/[id]/share-tokens/[tokenId]/route');
+      return DELETE(makeDeleteRequest(`http://localhost:3000/api/workspaces/${wsId}/share-tokens/${tokenId}`), routeParams);
+    }
+
+    test('each auto-copy carries the branch sources cross-family into its target', async () => {
+      await revokeTwoPointers();
+      expect(mockCopySources).toHaveBeenCalledTimes(2);
+      expect(mockCopySources.mock.calls[1][1]).toMatchObject({
+        fromTreeId: 'tree-source',
+        toTreeId: 'tree-of-ws-target-2',
+        targetWorkspaceId: 'ws-target-2',
+        mode: { kind: 'cross' },
+        includeTreeWide: false,
+      });
+    });
+
+    test('links follow the id map of the landed people', async () => {
+      await revokeTwoPointers();
+      const input = mockCopySources.mock.calls[0][1] as { idMap: Map<string, string> };
+      expect(input.idMap.get('a')).toBe('b');
+    });
+
+    test('the response reports the source files the quotas left out', async () => {
+      mockCopySources.mockResolvedValueOnce({ skippedSourceFiles: 2 }).mockResolvedValueOnce({ skippedSourceFiles: 1 });
+      const res = await revokeTwoPointers();
+      expect((await res.json()).skippedSourceFiles).toBe(3);
+    });
   });
 });

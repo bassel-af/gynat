@@ -6,6 +6,7 @@ import { getWorkspaceKey } from '@/lib/tree/encryption';
 import { persistDeepCopy, copyAncestryJumps } from '@/lib/tree/branch-pointer-deep-copy';
 import type { DeepCopyResult } from '@/lib/tree/branch-pointer-deep-copy';
 import { assertExtraTreeCapacity } from '@/lib/collections/extra-tree-cap';
+import { copySources, SOURCE_COPY_TX_TIMEOUT_MS } from '@/lib/tree/source-copy';
 import type { GedcomData, Individual, Family } from '@/lib/gedcom/types';
 
 // ---------------------------------------------------------------------------
@@ -93,7 +94,7 @@ export async function copyTreeIntoNewExtraTree(input: {
   workspaceId: string;
   sourceTreeId: string;
   nameAr: string;
-}): Promise<{ newTreeId: string; nameAr: string; peopleCount: number }> {
+}): Promise<{ newTreeId: string; nameAr: string; peopleCount: number; skippedSourceFiles: number }> {
   // Minting another extra tree — reject when the workspace is at the cap before
   // doing any decrypt/copy work (same limit the extra-trees POST route enforces).
   await assertExtraTreeCapacity(input.workspaceId);
@@ -117,9 +118,9 @@ export async function copyTreeIntoNewExtraTree(input: {
   // instead of a follow-up query.
   const peopleCount = Object.keys(snapshot.individuals).length;
 
-  // Create the new extra tree AND persist the snapshot in ONE transaction, so a
-  // crash between the two can't leave an empty orphan tree behind.
-  const newTreeId = await prisma.$transaction(async (tx) => {
+  // Create the new extra tree AND persist the snapshot (sources included) in ONE
+  // transaction, so a crash between the two can't leave an empty orphan tree behind.
+  const { newTreeId, skippedSourceFiles } = await prisma.$transaction(async (tx) => {
     const newTree = await tx.familyTree.create({
       data: { workspaceId: input.workspaceId, kind: 'extra', nameAr: input.nameAr },
       select: { id: true },
@@ -131,8 +132,17 @@ export async function copyTreeIntoNewExtraTree(input: {
       sourceRootId,
       copiedRootId,
     });
-    return newTree.id;
-  });
+    // Same workspace: every source (orphans and the tree-wide one included).
+    const { skippedSourceFiles } = await copySources(tx, {
+      fromTreeId: input.sourceTreeId,
+      toTreeId: newTree.id,
+      targetWorkspaceId: input.workspaceId,
+      idMap: snapshot.idMap,
+      mode: { kind: 'same' },
+      includeTreeWide: true,
+    });
+    return { newTreeId: newTree.id, skippedSourceFiles };
+  }, { timeout: SOURCE_COPY_TX_TIMEOUT_MS });
 
-  return { newTreeId, nameAr: input.nameAr, peopleCount };
+  return { newTreeId, nameAr: input.nameAr, peopleCount, skippedSourceFiles };
 }

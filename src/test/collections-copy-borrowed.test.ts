@@ -66,6 +66,12 @@ vi.mock('@/lib/tree/branch-pointer-deep-copy', async (importOriginal) => {
   return { ...actual, persistDeepCopy: (...a: unknown[]) => mockPersistDeepCopy(...a) };
 });
 
+const mockCopySources = vi.fn((..._a: unknown[]) => Promise.resolve({ skippedSourceFiles: 0 }));
+vi.mock('@/lib/tree/source-copy', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/tree/source-copy')>()),
+  copySources: (...a: unknown[]) => mockCopySources(...a),
+}));
+
 const mockTreeCreate = vi.fn((..._a: unknown[]): Promise<{ id: string }> => Promise.resolve({ id: NEW_TREE_ID }));
 const mockTreeCount = vi.fn((..._a: unknown[]): Promise<number> => Promise.resolve(0));
 const mockTransaction = vi.fn((fn: (tx: unknown) => unknown) =>
@@ -91,6 +97,7 @@ beforeEach(() => {
   mockDbTreeToGedcomData.mockReturnValue(sourceData);
   mockTreeCreate.mockResolvedValue({ id: NEW_TREE_ID });
   mockTreeCount.mockResolvedValue(0);
+  mockCopySources.mockResolvedValue({ skippedSourceFiles: 0 });
 });
 
 describe('copyBorrowedBranchIntoNewExtraTree — TWO-KEY cross-workspace deep copy', () => {
@@ -213,5 +220,47 @@ describe('copyBorrowedBranchIntoNewExtraTree — TWO-KEY cross-workspace deep co
         nameAr: 'فرع',
       }),
     ).rejects.toThrow();
+  });
+});
+
+describe('copyBorrowedBranchIntoNewExtraTree — sources (step 8)', () => {
+  const branch = {
+    type: 'private-token' as const, sourceWorkspaceId: SOURCE_WS, sourceTreeId: SOURCE_TREE_ID,
+    rootIndividualId: ROOT_IND, depthLimit: null, includeGrafts: false,
+    isPublic: false, shareTokenId: 'tok-1', allowReuse: true,
+  };
+  const wholeTree = { ...branch, type: 'public-slug' as const, rootIndividualId: WHOLE_TREE_ROOT, shareTokenId: null };
+  const inputOf = () => mockCopySources.mock.calls[0][1] as Record<string, unknown> & { idMap: Map<string, string> };
+
+  test('copies sources cross-family, re-encrypting from the source key to the target key', async () => {
+    await copyBorrowedBranchIntoNewExtraTree({ addingWorkspaceId: ADDING_WS, source: branch, nameAr: 'فرع' });
+    expect(inputOf()).toMatchObject({
+      fromTreeId: SOURCE_TREE_ID,
+      toTreeId: NEW_TREE_ID,
+      targetWorkspaceId: ADDING_WS,
+      mode: { kind: 'cross', sourceKey: mockSourceKey, targetKey: mockTargetKey },
+    });
+  });
+
+  test('a branch copy never carries the tree-wide source', async () => {
+    await copyBorrowedBranchIntoNewExtraTree({ addingWorkspaceId: ADDING_WS, source: branch, nameAr: 'فرع' });
+    expect(inputOf().includeTreeWide).toBe(false);
+  });
+
+  test('a whole-tree copy carries the tree-wide source', async () => {
+    await copyBorrowedBranchIntoNewExtraTree({ addingWorkspaceId: ADDING_WS, source: wholeTree, nameAr: 'شجرة' });
+    expect(inputOf().includeTreeWide).toBe(true);
+  });
+
+  test('links follow the snapshot id map of the landed people', async () => {
+    await copyBorrowedBranchIntoNewExtraTree({ addingWorkspaceId: ADDING_WS, source: branch, nameAr: 'فرع' });
+    const copyResult = mockPersistDeepCopy.mock.calls[0][2] as { idMap: Map<string, string> };
+    expect(inputOf().idMap).toBe(copyResult.idMap);
+  });
+
+  test('reports the files skipped for the quota', async () => {
+    mockCopySources.mockResolvedValue({ skippedSourceFiles: 2 });
+    const res = await copyBorrowedBranchIntoNewExtraTree({ addingWorkspaceId: ADDING_WS, source: branch, nameAr: 'فرع' });
+    expect(res.skippedSourceFiles).toBe(2);
   });
 });

@@ -5,7 +5,8 @@ import { ToastContainer } from '@/components/ui/Toast';
 import type { ToastVariant, ToastItem } from '@/components/ui/Toast';
 
 interface ToastContextValue {
-  showToast: (message: string, variant?: ToastVariant) => void;
+  /** `durationMs` defaults to 3 s; pass more for a long message. */
+  showToast: (message: string, variant?: ToastVariant, durationMs?: number) => void;
 }
 
 const ToastContext = createContext<ToastContextValue | null>(null);
@@ -30,13 +31,13 @@ interface ToastProviderProps {
 export function ToastProvider({ children }: ToastProviderProps) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
-  const showToast = useCallback((message: string, variant: ToastVariant = 'info') => {
+  const showToast = useCallback((message: string, variant: ToastVariant = 'info', durationMs = 3000) => {
     const id = crypto.randomUUID();
     setToasts((prev) => [...prev, { id, message, variant }]);
 
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 3000);
+    }, durationMs);
   }, []);
 
   return (

@@ -6,6 +6,7 @@ import { dbTreeToGedcomData } from '@/lib/tree/mapper';
 import { getWorkspaceKey } from '@/lib/tree/encryption';
 import { extractPointedSubtree } from '@/lib/tree/branch-pointer-merge';
 import { prepareDeepCopy, persistDeepCopy, computeAnchorReuse } from '@/lib/tree/branch-pointer-deep-copy';
+import { copySources, SOURCE_COPY_TX_TIMEOUT_MS } from '@/lib/tree/source-copy';
 import { isStitchablePointer } from '@/lib/tree/branch-pointer-guards';
 import { z } from 'zod';
 import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
@@ -99,6 +100,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
   let copiedPointers = 0;
   let disconnectedPointers = 0;
+  // Source files the target quotas left out of the copies.
+  let skippedSourceFiles = 0;
 
   // Phase 10b follow-up: fetch the source workspace key once, up front, so
   // BOTH the deep-copy loop (for decrypting the source tree) AND the final
@@ -124,7 +127,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
           continue;
         }
 
-        if (sourceData) {
+        if (sourceTree && sourceData) {
           const pointedSubtree = extractPointedSubtree(sourceData, {
             rootIndividualId: pointer.rootIndividualId,
             depthLimit: pointer.depthLimit,
@@ -155,11 +158,22 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
             anchorReuse,
           });
 
-          // Per-pointer transaction: persistDeepCopy + update pointer + log
-          await prisma.$transaction(async (tx) => {
+          // Per-pointer transaction: persistDeepCopy + sources + update pointer + log
+          const sources = await prisma.$transaction(async (tx) => {
             const txPrisma = tx as typeof prisma;
 
             await persistDeepCopy(txPrisma, targetTree.id, copyResult, targetKey);
+
+            // Another family: level-3 sources of landed, non-private people
+            // only; a branch copy never carries the tree-wide source.
+            const copied = await copySources(txPrisma, {
+              fromTreeId: sourceTree.id,
+              toTreeId: targetTree.id,
+              targetWorkspaceId: pointer.targetWorkspaceId,
+              idMap: copyResult.idMap,
+              mode: { kind: 'cross', sourceKey, targetKey },
+              includeTreeWide: false,
+            });
 
             await txPrisma.branchPointer.update({
               where: { id: pointer.id },
@@ -180,8 +194,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
                 description: encryptAuditDescription('deep_copy', 'branch_pointer', null, targetKey),
               } as unknown as Parameters<typeof txPrisma.treeEditLog.create>[0]['data'],
             });
-          });
 
+            return copied;
+          }, { timeout: SOURCE_COPY_TX_TIMEOUT_MS });
+
+          skippedSourceFiles += sources.skippedSourceFiles;
           copiedPointers++;
         } else {
           // Source tree deleted — revoke pointer without copy
@@ -255,7 +272,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
           action: 'revoke_token',
           entityType: 'share_token',
           entityId: tokenId,
-          payload: encryptAuditPayload({ disconnectedPointers, copiedPointers }, sourceKey),
+          payload: encryptAuditPayload({ disconnectedPointers, copiedPointers, skippedSourceFiles }, sourceKey),
           description: encryptAuditDescription('revoke_token', 'share_token', null, sourceKey),
         } as unknown as Parameters<typeof prisma.treeEditLog.create>[0]['data'],
       });
@@ -267,5 +284,5 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     logSwallowedAuditError('token_revoke_audit_write', { tokenId }, err);
   }
 
-  return NextResponse.json({ success: true, disconnectedPointers, copiedPointers });
+  return NextResponse.json({ success: true, disconnectedPointers, copiedPointers, skippedSourceFiles });
 }

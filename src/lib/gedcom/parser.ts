@@ -106,6 +106,46 @@ function unescapeNoteText(value: string): string {
   return value.replace(/@@/g, '@');
 }
 
+/** Top-level records the importer does not carry (sources, media, repositories, 7.0 shared notes). */
+const SKIPPED_SOURCE_RECORDS = new Set(['SOUR', 'OBJE', 'REPO', 'SNOTE']);
+/** Citations and media links on a person or a family. */
+const SKIPPED_SOURCE_CITATIONS = new Set(['SOUR', 'OBJE']);
+
+/**
+ * How many source-related items `parseGedcom` leaves out of an import: each
+ * top-level `SOUR` / `OBJE` / `REPO` / `SNOTE` record, plus each `SOUR` /
+ * `OBJE` citation (pointer or inline) anywhere inside an `INDI` or `FAM`
+ * record — on the record itself or under an event (BIRT, DEAT, MARR…).
+ * Anything nested inside a counted item (media under a citation) is part of
+ * it and not counted again. A `SOUR` inside `HEAD` names the exporting
+ * program and is not counted.
+ */
+export function countSkippedSources(text: string): number {
+  let count = 0;
+  let recordTag: string | null = null;
+  /** Level of the item just counted; deeper lines belong to it. */
+  let countedLevel = Infinity;
+  for (const line of text.split(/\r\n|\r|\n/)) {
+    const parts = line.trim().replace(/^\uFEFF/, '').split(/\s+/);
+    const level = parseInt(parts[0]);
+    if (isNaN(level)) continue;
+    if (level > countedLevel) continue;
+    countedLevel = Infinity;
+    const tag = POINTER_RE.test(parts[1] ?? '') ? parts[2] : parts[1];
+    if (level === 0) {
+      recordTag = tag ?? null;
+      if (tag && SKIPPED_SOURCE_RECORDS.has(tag)) {
+        count++;
+        countedLevel = 0;
+      }
+    } else if ((recordTag === 'INDI' || recordTag === 'FAM') && tag && SKIPPED_SOURCE_CITATIONS.has(tag)) {
+      count++;
+      countedLevel = level;
+    }
+  }
+  return count;
+}
+
 export function parseGedcom(text: string): GedcomData {
   // Strip UTF-8 BOM if present
   const cleanText = text.startsWith('\uFEFF') ? text.slice(1) : text;

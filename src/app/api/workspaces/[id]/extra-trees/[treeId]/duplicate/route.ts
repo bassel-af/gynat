@@ -59,7 +59,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   }
   const nameAr = `${baseName} (نسخة)`;
 
-  const { newTreeId, peopleCount } = await copyTreeIntoNewExtraTree({
+  const { newTreeId, peopleCount, skippedSourceFiles } = await copyTreeIntoNewExtraTree({
     workspaceId,
     sourceTreeId: treeId,
     nameAr,
@@ -75,6 +75,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         kind: 'extra',
         visibility: 'private',
         peopleCount,
+        // Source files the workspace storage quota left out of the copy.
+        skippedSourceFiles,
       },
     },
     { status: 201 },

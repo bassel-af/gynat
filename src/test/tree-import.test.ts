@@ -397,6 +397,35 @@ describe('POST /api/workspaces/[id]/tree/import', () => {
       expect(typeof body.familyCount).toBe('number')
     })
 
+    test('response reports the sources the import left out', async () => {
+      mockAuth()
+      mockAdmin()
+      mockEmptyTree()
+      mockSeedSuccess()
+      const { POST } = await import('@/app/api/workspaces/[id]/tree/import/route')
+      const withSources = validGedcom.replace(
+        '0 TRLR',
+        `0 @S1@ SOUR
+1 TITL دفتر العائلة
+0 @O1@ OBJE
+1 FILE scan.jpg
+0 TRLR`,
+      )
+      const res = await POST(makeFormDataRequest(withSources), importParams)
+      expect(res.status).toBe(201)
+      expect((await res.json()).skippedSources).toBe(2)
+    })
+
+    test('response reports zero skipped sources for a file without sources', async () => {
+      mockAuth()
+      mockAdmin()
+      mockEmptyTree()
+      mockSeedSuccess()
+      const { POST } = await import('@/app/api/workspaces/[id]/tree/import/route')
+      const res = await POST(makeFormDataRequest(validGedcom), importParams)
+      expect((await res.json()).skippedSources).toBe(0)
+    })
+
     test('response includes radaFamilyCount', async () => {
       mockAuth()
       mockAdmin()

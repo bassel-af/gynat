@@ -35,7 +35,7 @@ import { freezeCollectionLinks } from '@/lib/tree/going-private';
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockCopyBorrowed.mockResolvedValue({ newTreeId: 'new-tree-1', peopleCount: 3 });
+  mockCopyBorrowed.mockResolvedValue({ newTreeId: 'new-tree-1', peopleCount: 3, skippedSourceFiles: 0 });
   mockPointerUpdate.mockResolvedValue({});
   mockItemUpdateMany.mockResolvedValue({ count: 1 });
 });
@@ -59,7 +59,7 @@ describe('freezeCollectionLinks', () => {
     mockPointerFindMany.mockResolvedValue([]);
     const result = await freezeCollectionLinks('ws-source');
     expect(mockCopyBorrowed).not.toHaveBeenCalled();
-    expect(result).toEqual({ frozen: 0, failed: 0 });
+    expect(result).toEqual({ frozen: 0, failed: 0, skippedSourceFiles: 0 });
   });
 
   test('deep-copies the borrow, re-points the dependent item, breaks the pointer', async () => {
@@ -100,7 +100,7 @@ describe('freezeCollectionLinks', () => {
         data: { status: 'broken' },
       }),
     );
-    expect(result).toEqual({ frozen: 1, failed: 0 });
+    expect(result).toEqual({ frozen: 1, failed: 0, skippedSourceFiles: 0 });
   });
 
   test('SKIPS a borrow whose source leaf tree is still public + reusable (S19 over-broad fix)', async () => {
@@ -128,7 +128,7 @@ describe('freezeCollectionLinks', () => {
     expect(mockCopyBorrowed).not.toHaveBeenCalled();
     expect(mockItemUpdateMany).not.toHaveBeenCalled();
     expect(mockPointerUpdate).not.toHaveBeenCalled();
-    expect(result).toEqual({ frozen: 0, failed: 0 });
+    expect(result).toEqual({ frozen: 0, failed: 0, skippedSourceFiles: 0 });
   });
 
   test('STILL freezes a borrow whose source leaf tree is now private (or non-reusable)', async () => {
@@ -170,7 +170,7 @@ describe('freezeCollectionLinks', () => {
         data: { status: 'broken' },
       }),
     );
-    expect(result).toEqual({ frozen: 1, failed: 0 });
+    expect(result).toEqual({ frozen: 1, failed: 0, skippedSourceFiles: 0 });
   });
 
   test('STILL freezes a borrow whose source leaf is public but NOT reusable (allowReuse off)', async () => {
@@ -192,7 +192,7 @@ describe('freezeCollectionLinks', () => {
     const result = await freezeCollectionLinks('ws-source');
 
     expect(mockCopyBorrowed).toHaveBeenCalledTimes(1);
-    expect(result).toEqual({ frozen: 1, failed: 0 });
+    expect(result).toEqual({ frozen: 1, failed: 0, skippedSourceFiles: 0 });
   });
 
   test('a copy failure is counted as failed and does not abort the rest', async () => {
@@ -202,9 +202,32 @@ describe('freezeCollectionLinks', () => {
     ]);
     mockCopyBorrowed
       .mockRejectedValueOnce(new Error('boom'))
-      .mockResolvedValueOnce({ newTreeId: 'nt2', peopleCount: 1 });
+      .mockResolvedValueOnce({ newTreeId: 'nt2', peopleCount: 1, skippedSourceFiles: 0 });
 
     const result = await freezeCollectionLinks('ws-source');
-    expect(result).toEqual({ frozen: 1, failed: 1 });
+    expect(result).toEqual({ frozen: 1, failed: 1, skippedSourceFiles: 0 });
+  });
+});
+
+describe('freezeCollectionLinks — sources (step 8)', () => {
+  test('reports the source files the target quotas left out of the frozen copies', async () => {
+    const pointer = (id: string) => ({
+      id,
+      sourceWorkspaceId: 'ws-source',
+      targetWorkspaceId: 'ws-target',
+      rootIndividualId: 'ind-root',
+      depthLimit: null,
+      includeGrafts: false,
+      rootIndividual: { tree: { id: 'src-leaf-tree', visibility: 'private', allowReuse: false } },
+      collectionItems: [{ id: `item-${id}`, titleAr: 'فرع' }],
+    });
+    mockPointerFindMany.mockResolvedValue([pointer('p1'), pointer('p2')]);
+    mockCopyBorrowed
+      .mockResolvedValueOnce({ newTreeId: 't1', peopleCount: 1, skippedSourceFiles: 1 })
+      .mockResolvedValueOnce({ newTreeId: 't2', peopleCount: 1, skippedSourceFiles: 4 });
+
+    const result = await freezeCollectionLinks('ws-source');
+
+    expect(result.skippedSourceFiles).toBe(5);
   });
 });

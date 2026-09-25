@@ -18,6 +18,7 @@ import { Sidebar } from '@/components/ui';
 import { Spinner } from '@/components/ui/Spinner';
 import { apiFetch } from '@/lib/api/client';
 import { useToast } from '@/context/ToastContext';
+import { importSkippedSourcesNotice } from '@/components/sources/importSkippedSources';
 import Link from 'next/link';
 
 // The member tree has two views — the spatial canvas (`tree/page.tsx`) and the
@@ -373,6 +374,9 @@ function EmptyTreeWithForm({ canEdit }: { canEdit: boolean }) {
           return;
         }
         showToast('تم استيراد البيانات بنجاح', 'success');
+        const sourcesNotice = importSkippedSourcesNotice(body.skippedSources ?? 0);
+        // A long sentence: keep it up long enough to read.
+        if (sourcesNotice) showToast(sourcesNotice, 'info', 8000);
         await refreshTree();
       } catch {
         showToast('فشل في استيراد البيانات', 'error');

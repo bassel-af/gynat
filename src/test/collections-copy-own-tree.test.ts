@@ -55,6 +55,12 @@ vi.mock('@/lib/db', () => ({
 
 vi.mock('@/lib/tree/queries', () => ({ TREE_INCLUDES: {} }));
 
+const mockCopySources = vi.fn((..._a: unknown[]) => Promise.resolve({ skippedSourceFiles: 0 }));
+vi.mock('@/lib/tree/source-copy', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/tree/source-copy')>()),
+  copySources: (...a: unknown[]) => mockCopySources(...a),
+}));
+
 import { copyTreeIntoNewExtraTree } from '@/lib/collections/copy';
 import { ExtraTreeCapError, MAX_EXTRA_TREES_PER_WORKSPACE } from '@/lib/collections/extra-tree-cap';
 
@@ -63,6 +69,7 @@ beforeEach(() => {
   mockFindFirst.mockResolvedValue({ id: SOURCE_TREE_ID });
   mockTreeCount.mockResolvedValue(0);
   mockTreeCreate.mockResolvedValue({ id: NEW_TREE_ID });
+  mockCopySources.mockResolvedValue({ skippedSourceFiles: 0 });
 });
 
 describe('copyTreeIntoNewExtraTree — extra-tree cap', () => {
@@ -82,5 +89,40 @@ describe('copyTreeIntoNewExtraTree — extra-tree cap', () => {
     });
     expect(res.newTreeId).toBe(NEW_TREE_ID);
     expect(mockTransaction).toHaveBeenCalledOnce();
+  });
+});
+
+describe('copyTreeIntoNewExtraTree — sources (step 8)', () => {
+  const copy = () => copyTreeIntoNewExtraTree({ workspaceId: WS, sourceTreeId: SOURCE_TREE_ID, nameAr: 'نسخة' });
+
+  test('copies every source of the tree in same-workspace mode, tree-wide source included', async () => {
+    await copy();
+    expect(mockCopySources).toHaveBeenCalledOnce();
+    const [, input] = mockCopySources.mock.calls[0] as [unknown, Record<string, unknown>];
+    expect(input).toMatchObject({
+      fromTreeId: SOURCE_TREE_ID,
+      toTreeId: NEW_TREE_ID,
+      targetWorkspaceId: WS,
+      mode: { kind: 'same' },
+      includeTreeWide: true,
+    });
+  });
+
+  test('re-points links through the snapshot id map', async () => {
+    await copy();
+    const [, input] = mockCopySources.mock.calls[0] as [unknown, { idMap: Map<string, string> }];
+    expect(input.idMap.get('ind-1')).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
+  test('runs inside the copy transaction, after the people are written', async () => {
+    await copy();
+    expect(mockPersistDeepCopy.mock.invocationCallOrder[0]).toBeLessThan(mockCopySources.mock.invocationCallOrder[0]);
+    expect(mockCopySources.mock.calls[0][0]).toBe(mockPersistDeepCopy.mock.calls[0][0]);
+  });
+
+  test('reports the files skipped for the quota', async () => {
+    mockCopySources.mockResolvedValue({ skippedSourceFiles: 3 });
+    const res = await copy();
+    expect(res.skippedSourceFiles).toBe(3);
   });
 });

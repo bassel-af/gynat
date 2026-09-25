@@ -185,4 +185,19 @@ describe('POST /api/workspaces/[id]/extra-trees/[treeId]/duplicate', () => {
       expect.objectContaining({ nameAr: 'عائلة سعيد (نسخة)' }),
     );
   });
+
+  test('201 reports the source files the quota left out of the copy', async () => {
+    collectionsOn();
+    mockAuth();
+    mockEditor();
+    mockTreeFindFirst.mockResolvedValue({ id: SOURCE_TREE_ID, kind: 'extra', nameAr: 'فرع' });
+    mockTreeCount.mockResolvedValue(0);
+    mockCopyTree.mockResolvedValue({ newTreeId: NEW_TREE_ID, nameAr: 'فرع (نسخة)', peopleCount: 5, skippedSourceFiles: 4 });
+    const { POST } = await import(
+      '@/app/api/workspaces/[id]/extra-trees/[treeId]/duplicate/route'
+    );
+    const res = await POST(dupReq(), params);
+    const body = await res.json();
+    expect(body.data.skippedSourceFiles).toBe(4);
+  });
 });
