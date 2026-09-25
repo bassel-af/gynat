@@ -236,7 +236,7 @@ The family tree belongs to the workspace and is shared by all workspace members.
 ### 5.11 Data Encryption
 
 - **Layer 1 (disk)**: LUKS2-encrypted volume for the app, database, and backups. Protects against stolen disks, leaked backups, physical theft.
-- **Layer 2 (application)**: per-workspace AES-256-GCM data keys wrapped by a master key held in `WORKSPACE_MASTER_KEY`. Sensitive Individual, Family, RadaFamily, AncestryJump, and TreeEditLog fields are stored encrypted. Ciphertext never crosses workspace boundaries — branch pointer deep copies re-encrypt with the target workspace's key.
+- **Layer 2 (application)**: per-workspace AES-256-GCM data keys wrapped by a master key held in `WORKSPACE_MASTER_KEY`. Sensitive Individual, Family, RadaFamily, AncestryJump, and TreeEditLog fields — and source text, file names and file bytes — are stored encrypted. Ciphertext never crosses workspace boundaries — branch pointer deep copies re-encrypt with the target workspace's key.
 - **Not end-to-end**: platform admins with live server access can still read data. This is explicit — see §1 of this PRD and the encryption runbook (`docs/encryption.md`).
 
 ### 5.12 Ancestry Jump («قفزة نسب»)
@@ -259,6 +259,26 @@ The family tree belongs to the workspace and is shared by all workspace members.
   - **Adding a father to a person who has a jump** (owner decisions 2026-09-23): «إضافة والد/والدة» first shows a dialog explaining the person has a «قفزة نسب» to {ancestor}, with «نقل القفزة إلى الأب الجديد» and «إلغاء». Moving creates the father and re-points the jump to him (one generation of the stated range is now recorded, so the range shrinks by one) — one undo step. Adding a mother, or removing the jump instead, requires deleting the jump manually first («احذف قفزة النسب يدويًا أولًا ثم أضف الأب»); nothing is removed automatically. Every other way of giving that person parents («تعيين والدين موجودين», branch links as parent/sibling) is refused. The workspace «قفزة نسب» switch never blocks moving a jump or undoing/redoing a move.
 - **Scholarly framing**: the only line of scholarship used in product copy is **«الأمر عندنا الإمساك عمّا وراء عدنان إلى إسماعيل»**. Never use «كذب النسابون» (graded موضوع) or «إذا بلغ نسبي عدنان فأمسكوا» (unsourced).
 - **Later, separately**: register `_ANCESTOR` in the FamilySearch GEDCOM extension registry.
+
+### 5.13 Sources («المصادر»)
+
+**Status: built and tested locally, NOT deployed** (2026-09-25; waiting for the owner to test). Spec: `docs/sources-v1-goal.md`; owner rulings: memory `project_sources_decisions.md`; how it works: `docs/implementation.md` §4.10.
+
+- **Problem**: families want trustworthy trees — evidence for who someone is and how they connect (a book reference, a scan of a دفتر العائلة, a birth certificate) — with control over who may see each piece of evidence, because many documents are ID papers of living people.
+- **What it is**: a source is a free-text reference and/or files (JPEG, PNG, WebP, PDF; up to 20 files of 8 MB each), with ONE visibility level, attached to one or many people through the «مصدر لـ:» line. One دفتر العائلة is entered once and attached to the whole household; a book cited at different pages per person is one source per person (no page field). A tree can also carry one tree-wide source («مصدر الشجرة»), shown as «من مصدر الشجرة» on people with no source of their own.
+- **Product rules** (owner decisions, 2026-09-24/25 — do not re-open):
+  - Visibility is one 3-level choice «من يرى هذا المصدر؟»: «المشرفون فقط» (default) / «أعضاء مساحة العائلة» / «أعضاء مساحة العائلة وزوار الشجرة المنشورة — فقط إذا قمت بنشرها للعامة», with a live line describing the tree's current publish state. Level 3 with files shows a soft warning about personal data of living people.
+  - Admins see every source, including on private people. Members never see sources on a private person. Public visitors see level-3 sources only on people the public tree already shows — and never who else a source belongs to.
+  - No source library, types or citation fields; no create-source-first step. Sources are added from a person (sidebar, person edit form, add child/spouse/parent form). The person you start from can never be removed from the «مصدر لـ» line. Earlier sources are reused by linking (never re-uploading) or by copying their text.
+  - Removing a source's last person asks: delete the source and its files, or keep it on the «المصادر» page under «ليس مصدرًا لأحد». Deleting a person never deletes their sources.
+  - Publishing a tree asks once about sources: كلها / لا شيء / أختار بنفسي. The admin «المصادر» page supports search, select-all and bulk level change — admins never have to edit per person.
+  - Copies: a same-family whole-tree copy carries every source; a copy into another family carries only level-3 sources, only for non-private people who were copied, re-encrypted for that family. Storage quota never blocks a copy (files that don't fit are left out).
+  - GEDCOM import does not bring sources in; it tells the user how many were left out.
+- **Deploy prerequisites** (before the first production deploy of Sources):
+  - Production nginx: add `client_max_body_size 9m;` to the gynat.com vhost — it currently has the 1 MB default, so every upload over 1 MB would fail.
+  - `sharp` must load on the production server (hz): after deploy, smoke one image upload so a re-encode actually runs.
+  - Apply the three migrations in order: `20260925120000_add_source_entries`, `20260926120000_source_file_staging`, `20260927120000_shared_sources` (`prisma migrate deploy`; back up the prod DB first).
+- **Later (v2)**: sources on marriages and individual facts, GEDCOM export/import of sources, `/islamic-gedcom` documentation, a «الأبناء والأحفاد» quick button, a page field.
 
 ---
 
@@ -318,6 +338,20 @@ AncestryJump  -- «قفزة نسب»: descendant → distant ancestor COUPLE (al
   id, tree_id, gedcom_id?, descendant_id, ancestor_family_id,
   generations_min?, generations_max?, (encrypted) notes, created_by?, created_at
   -- unique (tree_id, descendant_id): one jump per person
+
+SourceEntry  -- «مصدر»: text + files + ONE level, linked to many people
+  id, tree_id, is_tree_wide, visibility (admins | members | public),
+  (encrypted) text, created_by?, created_at, updated_at
+  -- partial unique (tree_id) WHERE is_tree_wide: one tree-wide source per tree
+
+SourceLink  -- «مصدر لـ»: one person a source belongs to
+  source_id, individual_id, tree_id, created_by?, created_at
+
+SourceFile  -- metadata only; entry_id null while the upload is staged
+  id, entry_id?, tree_id, (encrypted) file_name, mime_type, size_bytes, created_by?, created_at
+
+SourceFileData
+  id, file_id, (encrypted) data
 
 BranchShareToken
   id, source_workspace_id, hashed_token (SHA-256), root_individual_id,

@@ -59,6 +59,10 @@ The project is at Phase 5 (Branch Pointers) with Phases 1-5 complete.
 - `ancestor-gap-research-notes.md` - «قفزة نسب» (ancestry jump) research + owner rulings
 - `specs/ancestry-jump-spec.md` - «قفزة نسب» implementation spec (data model, API, graph, nasab, GEDCOM, canvas)
 - `specs/ancestry-jump-security-review.md` - «قفزة نسب» security review (findings + fixes)
+- `sources-v1-goal.md` - Sources («المصادر») v1 spec + build status notes (temporary working doc)
+- `sources-shared-design.md` - Sources shared-source designs + review
+- `sources-design-notes.md` - Sources security threat model and early design notes
+- `sources-edit-form-spec.md` - Sources inside the person edit form spec
 - `gedcom-marriage-explainer.html` - Standalone HTML explainer for GEDCOM marriage concepts
 - `screenshots/` - Mobile UI screenshots (`mobile-fab-test.png`, `mobile-sidebar-open.png`)
 
@@ -131,6 +135,7 @@ The project is at Phase 5 (Branch Pointers) with Phases 1-5 complete.
   - `create/` - Workspace creation page
   - `[slug]/` - Workspace detail (`page.tsx`, `workspace.module.css`)
     - `tree/` - Database-backed tree view (`WorkspaceTreeClient.tsx`)
+      - `sources/page.tsx` - «المصادر» admin page (tree-wide source card + per-source list, bulk actions)
 - `profile/` - User profile page (`page.tsx`, `ProfileClient.tsx`)
 - `invite/[id]/` - Invitation acceptance page (`InviteAcceptClient.tsx`)
 - `policy/` - Public policy page
@@ -144,8 +149,11 @@ The project is at Phase 5 (Branch Pointers) with Phases 1-5 complete.
   - `[id]/places/route.ts` - Place search and creation (workspace-scoped)
   - `[id]/tree/` - Tree CRUD (individuals, families, children, move)
     - `ancestry-jumps/route.ts` + `ancestry-jumps/[jumpId]/route.ts` - «قفزة نسب» create / update / delete
+    - `sources/` - Sources: `route.ts` (create / admin list), `[entryId]/` (preview / update / delete, `files/[fileId]/` serve + remove), `uploads/`, `bulk/`, `suggestions/`, `publish-summary/`, `tree-entry/`
+    - `individuals/[individualId]/sources/route.ts` - A person's gated sources (+ tree-wide inheritance, family hints)
   - `[id]/branch-pointers/` - Branch pointer CRUD (redeem, disconnect, deep copy)
   - `[id]/share-tokens/` - Share token CRUD (create, list, disable, revoke, preview)
+- `family/[slug]/person/[individualId]/sources/` + `family/[slug]/sources/tree-entry/files/[fileId]/` - Anonymous public sources (level 3 only) and their files
 - `workspaces/by-slug/[slug]/route.ts` - Workspace lookup by slug
 - `workspaces/join/route.ts` - Join workspace via code
 
@@ -166,6 +174,20 @@ The project is at Phase 5 (Branch Pointers) with Phases 1-5 complete.
 - `RootBackChip/` - Floating chip to navigate back to previous root after re-root (no index.ts)
 - `ViewModeToggle/` - Segmented pill for view mode switching, DISABLED (no index.ts)
 - `index.ts` - Barrel export (exports FamilyTree, PersonCard, CoupleRow, EmptyTreeState, IndividualForm, FamilyPickerModal, FamilyEventForm)
+
+##### `/src/components/sources/`
+**Purpose:** Sources («المصادر») UI
+- `SourceEntryForm` - Add/edit form («المصدر», files, «مصدر لـ:» people line, visibility, suggestions)
+- `SourcePeoplePicker` - People picker sheet (quick buttons + same-tree search)
+- `SourcePreview` / `LastLinkDialog` - Read-only source preview; last-person keep/delete dialog
+- `SourceVisibilityPicker` / `SourceLevelBadge` - 3-level radio with live publish-status line; level badge
+- `PersonSourcesSection` / `SourceRow` / `FamilySourceHints` - Sidebar section, row with «⋯» menu, «مصادر أسرته» hints
+- `StagedSourcesList` - Staged source rows inside `IndividualForm`
+- `PersonSourcesCard` / `PublicPersonSourcesCard` - Member and public person-page cards
+- `SourceFileThumbs` / `SourceLightbox` / `SourceIcons` - Thumbnails, full-screen viewer, icons
+- `SourcesManager` / `TreeSourceCard` / `SourcesAdmin.module.css` - «المصادر» admin page
+- `arabicDigits.ts` (`peopleCountLabel`), `importSkippedSources.ts` (post-import notice)
+- `index.ts` - Barrel export
 
 ##### `/src/components/ui/`
 **Purpose:** Reusable UI components
@@ -224,6 +246,10 @@ Note: `CalendarPreferenceContext` is defined inside `src/hooks/useCalendarPrefer
 - `usePointerActions.ts` - Shared hook for branch pointer break/copy API calls
 - `useTreeLines.ts` - SVG line drawing for playground mode
 - `useWorkspaceTreeData.ts` - Fetches and manages workspace tree data
+- `usePersonSources.ts` / `useTreeSourceEntry.ts` - A person's sources; the tree-wide source
+- `useSourceFileUrls.ts` - Authenticated file fetch → object URLs (revoked on unmount)
+- `useSourceUnlink.tsx` - «إزالته عن … فقط» flow with the last-person dialog
+- `useTreePublishLevel.ts` - The tree's current publish level (for the visibility picker)
 
 #### `/src/lib/`
 
@@ -279,6 +305,17 @@ Note: `CalendarPreferenceContext` is defined inside `src/hooks/useCalendarPrefer
 - `ancestry-jump-schemas.ts` - Zod schemas for the «قفزة نسب» API (create / update)
 - `ancestry-jump-validators.ts` - Pure `validateAncestryJump` (rules J1–J8 incl. cycle check) + Arabic error map
 - `ancestry-jump-route-helpers.ts` - Jump response DTO + Prisma duplicate-error narrowing
+- `source-visibility.ts` - Sources: the ONE visibility gate (per source, person, viewer)
+- `source-links.ts` - Sources: link validation, last-link rules, linked people, household, family hints
+- `source-entry-route-helpers.ts` / `source-entry-schemas.ts` - Sources: DTOs, selects, tree resolution; Zod schemas + limits
+- `source-file-processing.ts` / `source-file-helpers.ts` / `source-file-types.ts` - Sources: upload pipeline (magic bytes, sharp re-encode, PDF checks), staging + sweep
+- `public-sources.ts` / `public-shown.ts` - Sources: anonymous public read path; `isShownOnPublicTree`
+- `publish-sources.ts` - Sources: publish-step choice → bulk level changes
+- `source-entries-api.ts` - Sources: client API wrappers
+- `source-staging.ts` / `source-plan-apply.ts` / `source-entry-undo.ts` - Sources: form staging, plan apply, undo inverses
+- `source-people.ts` / `relation-label.ts` - Sources: picker quick groups + rows; relation labels
+- `source-copy.ts` - Sources: `copySources` for every copy path
+- `source-key-strip.ts` - Sources: fail-closed strip of source-shaped keys from `GedcomData`
 - `branch-pointer-merge.ts` - Subtree extraction and merge for branch pointers
 - `branch-pointer-deep-copy.ts` - Deep copy logic (new UUIDs + ID remapping + DB persistence)
 - `branch-pointer-schemas.ts` - Zod schemas for redeem token, share token creation
