@@ -1,0 +1,179 @@
+/* «اختيار الأشخاص» — Jeweled Heritage, a sheet over the source form */
+
+.modal {
+  max-width: 520px;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-height: 0;
+}
+
+.quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.quickButton {
+  min-height: 44px;
+  padding: 0 var(--space-6);
+  border: 1px solid rgba(200, 168, 101, 0.3);
+  border-radius: var(--heritage-radius-pill);
+  background: transparent;
+  color: var(--heritage-text-soft);
+  font-family: var(--heritage-font-body);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 180ms, border-color 180ms, color 180ms;
+}
+
+.quickButton:hover,
+.quickButton:focus-visible {
+  border-color: var(--heritage-gold);
+  outline: none;
+}
+
+.quickButton[aria-pressed='true'] {
+  border-color: var(--heritage-gold);
+  background: rgba(200, 168, 101, 0.16);
+  color: var(--heritage-gold-bright);
+}
+
+.search {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 var(--space-6);
+  border-radius: var(--heritage-radius-sm);
+  border: 1px solid rgba(200, 168, 101, 0.12);
+  background: rgba(10, 14, 26, 0.5);
+  color: var(--heritage-parchment);
+  font-family: var(--heritage-font-body);
+  font-size: 15px;
+  outline: none;
+}
+
+.search:focus {
+  border-color: var(--heritage-gold);
+  box-shadow: 0 0 0 3px rgba(200, 168, 101, 0.1);
+}
+
+.search::placeholder {
+  color: rgba(232, 223, 200, 0.32);
+}
+
+.people {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 46vh;
+  overflow-y: auto;
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  min-height: 44px;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--heritage-radius-sm);
+  cursor: pointer;
+}
+
+.row:hover {
+  background: rgba(200, 168, 101, 0.06);
+}
+
+.rowOn {
+  background: rgba(200, 168, 101, 0.08);
+}
+
+.rowLocked,
+.rowOff {
+  cursor: default;
+}
+
+.rowOff {
+  opacity: 0.55;
+}
+
+.check {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  margin-top: 3px;
+  accent-color: var(--heritage-gold);
+}
+
+.names {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.name {
+  font-family: var(--heritage-font-body);
+  font-size: 15px;
+  color: var(--heritage-parchment);
+  line-height: 1.5;
+}
+
+.sub {
+  font-family: var(--heritage-font-body);
+  font-size: 12px;
+  color: var(--heritage-text-muted);
+}
+
+.why {
+  font-family: var(--heritage-font-body);
+  font-size: 12px;
+  color: var(--heritage-gold);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-5);
+  width: 100%;
+}
+
+.count {
+  font-family: var(--heritage-font-body);
+  font-size: 14px;
+  color: var(--heritage-text-soft);
+}
+
+/* Phone: a full-height sheet; the list takes the room left. */
+@media (max-width: 600px) {
+  .modal {
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .body {
+    flex: 1;
+  }
+
+  .people {
+    max-height: none;
+    flex: 1;
+  }
+
+  .search {
+    font-size: 16px;
+  }
+
+  .done {
+    min-height: 44px;
+    min-width: 88px;
+  }
+}

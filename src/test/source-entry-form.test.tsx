@@ -2,19 +2,19 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 
 const api = {
-  createSourceEntry: vi.fn(),
-  updateSourceEntry: vi.fn(),
+  createSource: vi.fn(),
+  patchSource: vi.fn(),
   uploadSourceFile: vi.fn(),
   deleteSourceFile: vi.fn(),
-  fetchSourceSuggestions: vi.fn(),
+  fetchSourceSuggestionSummaries: vi.fn(),
   fetchSourceFileBlob: vi.fn(),
 };
 vi.mock('@/lib/tree/source-entries-api', () => ({
-  createSourceEntry: (...a: unknown[]) => api.createSourceEntry(...a),
-  updateSourceEntry: (...a: unknown[]) => api.updateSourceEntry(...a),
+  createSource: (...a: unknown[]) => api.createSource(...a),
+  patchSource: (...a: unknown[]) => api.patchSource(...a),
   uploadSourceFile: (...a: unknown[]) => api.uploadSourceFile(...a),
   deleteSourceFile: (...a: unknown[]) => api.deleteSourceFile(...a),
-  fetchSourceSuggestions: (...a: unknown[]) => api.fetchSourceSuggestions(...a),
+  fetchSourceSuggestionSummaries: (...a: unknown[]) => api.fetchSourceSuggestionSummaries(...a),
   fetchSourceFileBlob: (...a: unknown[]) => api.fetchSourceFileBlob(...a),
 }));
 vi.mock('@/hooks/useTreePublishLevel', () => ({ useTreePublishLevel: () => 'private' }));
@@ -54,7 +54,7 @@ const fileInput = () => document.querySelector('input[type="file"]') as HTMLInpu
 
 beforeEach(() => {
   Object.values(api).forEach((m) => m.mockReset());
-  api.fetchSourceSuggestions.mockResolvedValue([]);
+  api.fetchSourceSuggestionSummaries.mockResolvedValue([]);
   createObjectURL.mockReset().mockReturnValue('blob:preview');
   revokeObjectURL.mockReset();
   Object.assign(URL, { createObjectURL, revokeObjectURL });
@@ -70,23 +70,23 @@ describe('SourceEntryForm — create', () => {
     fireEvent.change(textbox(), { target: { value: '   ' } });
     save();
     expect(await screen.findByText('أضف نصًا أو ملفًا')).toBeInTheDocument();
-    expect(api.createSourceEntry).not.toHaveBeenCalled();
+    expect(api.createSource).not.toHaveBeenCalled();
   });
 
   it('saves a text entry at «المشرفون فقط» by default and pushes a redoable undo', async () => {
-    api.createSourceEntry.mockResolvedValue(created());
+    api.createSource.mockResolvedValue(created());
     const { onSaved, onPushUndo } = renderCreate({ treeId: 'T' });
     fireEvent.change(textbox(), { target: { value: ' طبقات ابن سعد ' } });
     save();
     await waitFor(() => expect(onSaved).toHaveBeenCalled());
-    expect(api.createSourceEntry).toHaveBeenCalledWith('ws', 'P1', { text: 'طبقات ابن سعد', visibility: 'admins' }, 'T');
+    expect(api.createSource).toHaveBeenCalledWith('ws', { text: 'طبقات ابن سعد', visibility: 'admins', personIds: ['P1'] }, 'T');
     expect(onPushUndo).toHaveBeenCalledTimes(1);
     expect(onPushUndo.mock.calls[0][0].undoOnly).toBeFalsy();
   });
 
   it('uploads a file at once and sends its id on save; the undo cannot be redone', async () => {
     api.uploadSourceFile.mockResolvedValue({ id: 'F1', mimeType: 'image/png', sizeBytes: 3, fileName: 'a.png' });
-    api.createSourceEntry.mockResolvedValue(created({ text: null, files: [{ id: 'F1' }] }));
+    api.createSource.mockResolvedValue(created({ text: null, files: [{ id: 'F1' }] }));
     const { onPushUndo } = renderCreate();
     const file = new File(['abc'], 'a.png', { type: 'image/png' });
     fireEvent.change(fileInput(), { target: { files: [file] } });
@@ -94,7 +94,7 @@ describe('SourceEntryForm — create', () => {
     await screen.findByRole('button', { name: 'إزالة a.png' });
     save();
     await waitFor(() =>
-      expect(api.createSourceEntry).toHaveBeenCalledWith('ws', 'P1', { text: null, fileIds: ['F1'], visibility: 'admins' }, undefined),
+      expect(api.createSource).toHaveBeenCalledWith('ws', { text: null, fileIds: ['F1'], visibility: 'admins', personIds: ['P1'] }, undefined),
     );
     expect(onPushUndo.mock.calls[0][0].undoOnly).toBe(true);
   });
@@ -126,21 +126,23 @@ describe('SourceEntryForm — create', () => {
 
   it('suggests texts already used; picking one copies the text only', async () => {
     vi.useFakeTimers();
-    api.fetchSourceSuggestions.mockResolvedValue(['طبقات ابن سعد، ص ٩٠']);
-    api.createSourceEntry.mockResolvedValue(created());
+    api.fetchSourceSuggestionSummaries.mockResolvedValue([
+      { id: 'S0', text: 'طبقات ابن سعد، ص ٩٠', visibility: 'admins', fileCount: 0, peopleCount: 0, firstPersonName: null },
+    ]);
+    api.createSource.mockResolvedValue(created());
     renderCreate();
     fireEvent.change(textbox(), { target: { value: 'طبقات' } });
     await act(async () => {
       await vi.advanceTimersByTimeAsync(400);
     });
-    expect(api.fetchSourceSuggestions).toHaveBeenCalledWith('ws', 'طبقات');
+    expect(api.fetchSourceSuggestionSummaries).toHaveBeenCalledWith('ws', 'طبقات', undefined);
     vi.useRealTimers();
-    fireEvent.click(await screen.findByRole('option', { name: 'طبقات ابن سعد، ص ٩٠' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'طبقات ابن سعد، ص ٩٠' }));
     expect(textbox().value).toBe('طبقات ابن سعد، ص ٩٠');
-    expect(screen.queryByRole('option')).toBeNull();
+    expect(screen.queryByRole('list', { name: 'مصادر مستعملة' })).toBeNull();
     save();
     await waitFor(() =>
-      expect(api.createSourceEntry).toHaveBeenCalledWith('ws', 'P1', { text: 'طبقات ابن سعد، ص ٩٠', visibility: 'admins' }, undefined),
+      expect(api.createSource).toHaveBeenCalledWith('ws', { text: 'طبقات ابن سعد، ص ٩٠', visibility: 'admins', personIds: ['P1'] }, undefined),
     );
   });
 
@@ -168,6 +170,7 @@ describe('SourceEntryForm — edit', () => {
   function renderEdit() {
     const onSaved = vi.fn();
     const onPushUndo = vi.fn();
+    const onClose = vi.fn();
     render(
       <SourceEntryForm
         mode="edit"
@@ -177,30 +180,33 @@ describe('SourceEntryForm — edit', () => {
         isAdmin
         onSaved={onSaved}
         onPushUndo={onPushUndo}
-        onClose={vi.fn()}
+        onClose={onClose}
       />,
     );
-    return { onSaved, onPushUndo };
+    return { onSaved, onPushUndo, onClose };
   }
 
   it('sends only what changed and pushes an update undo', async () => {
-    api.updateSourceEntry.mockResolvedValue({ ...existing, text: 'جديد' });
+    api.patchSource.mockResolvedValue({ ...existing, text: 'جديد' });
     const { onSaved, onPushUndo } = renderEdit();
     expect(textbox().value).toBe('قديم');
     fireEvent.change(textbox(), { target: { value: 'جديد' } });
     save();
     await waitFor(() => expect(onSaved).toHaveBeenCalled());
-    expect(api.updateSourceEntry).toHaveBeenCalledWith('ws', 'S1', { text: 'جديد' }, undefined);
+    expect(api.patchSource).toHaveBeenCalledWith('ws', 'S1', { text: 'جديد' }, undefined);
     expect(onPushUndo).toHaveBeenCalledTimes(1);
   });
 
-  it('deletes an existing file only after confirming', async () => {
+  it('deletes an existing file only after confirming, without saving the form', async () => {
     api.deleteSourceFile.mockResolvedValue({ entryDeleted: false });
-    renderEdit();
+    const { onSaved, onClose } = renderEdit();
     fireEvent.click(screen.getByRole('button', { name: 'حذف deed.pdf' }));
     expect(api.deleteSourceFile).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'نعم، احذف الملف' }));
     await waitFor(() => expect(api.deleteSourceFile).toHaveBeenCalledWith('ws', 'S1', 'F0', undefined));
     await waitFor(() => expect(screen.queryByText('deed.pdf')).toBeNull());
+    expect(api.patchSource).not.toHaveBeenCalled();
+    expect(onSaved).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
   });
 });

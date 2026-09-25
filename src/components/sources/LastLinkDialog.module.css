@@ -1,0 +1,62 @@
+/* «هذا آخر شخص لهذا المصدر» — a short two-choice confirm */
+
+.modal {
+  max-width: 420px;
+}
+
+/* Static, so the ✕ sits in the dialog's corner beside the title. */
+.content {
+  position: static;
+  overflow: visible;
+}
+
+.close {
+  position: absolute;
+  top: var(--space-5);
+  inset-inline-end: var(--space-5);
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--heritage-text-muted);
+  cursor: pointer;
+}
+
+.close:hover,
+.close:focus-visible {
+  color: var(--heritage-parchment);
+  background: rgba(200, 168, 101, 0.1);
+  outline: none;
+}
+
+.question {
+  margin: 0;
+  font-family: var(--heritage-font-body);
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--heritage-text-soft);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  width: 100%;
+}
+
+/* Phone: stacked full-width 44px buttons, not a full-height sheet (it is a short question). */
+@media (max-width: 600px) {
+  .actions {
+    flex-direction: column;
+  }
+
+  .actions > * {
+    width: 100%;
+    min-height: 44px;
+  }
+}

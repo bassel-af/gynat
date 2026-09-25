@@ -234,6 +234,11 @@ export function TreeProvider({ children, forcedRootId }: TreeProviderProps) {
   return <TreeContext.Provider value={value}>{children}</TreeContext.Provider>;
 }
 
+/** The tree state when inside a `TreeProvider`, else null (never throws). */
+export function useOptionalTree() {
+  return useContext(TreeContext);
+}
+
 export function useTree() {
   const context = useContext(TreeContext);
   if (!context) {

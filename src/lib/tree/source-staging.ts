@@ -13,6 +13,7 @@
 import type { SourceEntryDto } from '@/lib/tree/source-entries-api';
 import type { SourceVisibilityLevel } from '@/lib/tree/source-visibility';
 import type { SourceEntryPatch } from '@/lib/tree/source-entry-undo';
+import type { SourceSummaryDto } from '@/lib/tree/source-links';
 
 /** A file uploaded (staged on the server) in the deferred form, not yet attached. */
 export interface DraftFile {
@@ -23,6 +24,12 @@ export interface DraftFile {
   previewUrl: string | null;
 }
 
+/** A person on the form's «مصدر لـ» line (name as shown on the chip). */
+export interface SourceDraftPerson {
+  id: string;
+  name: string;
+}
+
 /** What the deferred «إضافة مصدر» / «تعديل المصدر» form hands back on «حفظ». */
 export interface SourceDraft {
   text: string;
@@ -30,6 +37,21 @@ export interface SourceDraft {
   addFiles: DraftFile[];
   /** Saved files of the entry to delete on the parent «حفظ». */
   removeFileIds: string[];
+  /**
+   * «مصدر لـ»: the OTHER people on the line as the form left them — never
+   * the starting person (a create adds them, or the SELF placeholder for a
+   * new person). Absent ⇒ the form had no «مصدر لـ» line.
+   */
+  people?: SourceDraftPerson[];
+  /** Edit: people to link / unlink against the saved source (never the starting person). */
+  addPersonIds?: string[];
+  removePersonIds?: string[];
+  /**
+   * Reuse («ربطه بهذا الشخص»): link this existing source to the starting
+   * person (and `people`) instead of creating one. Text, files and level are
+   * the source's own and are not changed.
+   */
+  linkSource?: SourceSummaryDto;
 }
 
 export interface StagedSource {

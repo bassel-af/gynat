@@ -4,6 +4,7 @@ import { useId } from 'react';
 import clsx from 'clsx';
 import type { SourceVisibilityLevel } from '@/lib/tree/source-visibility';
 import { AlertIcon, GlobeIcon, LinkIcon, LockIcon } from './SourceIcons';
+import { peopleCountLabel, toArabicDigits } from './arabicDigits';
 import styles from './SourceVisibilityPicker.module.css';
 
 /** The tree's publish level (the `TreeVisibility` DB values). */
@@ -18,6 +19,12 @@ export interface SourceVisibilityPickerProps {
   treeVisibility: TreePublishLevel | null;
   /** The entry has (or will have) files — drives the level-3 soft warning. */
   hasFiles: boolean;
+  /**
+   * A source for several people: how many (`total`, as this viewer sees
+   * them) and how many of those the published tree shows (`shown`). Turns
+   * the files warning into the shared-source sentence when `total` > 1.
+   */
+  sharedPeople?: { total: number; shown: number };
   disabled?: boolean;
 }
 
@@ -30,6 +37,10 @@ export const SOURCE_LEVEL_LABELS: Record<SourceVisibilityLevel, string> = {
 const PUBLIC_SUFFIX = 'فقط إذا قمت بنشرها للعامة';
 const ADMIN_ONLY_HINT = 'تغيير من يرى المصدر متاح للمشرفين فقط';
 const FILES_WARNING = 'تأكد أن الملفات لا تحوي بيانات شخصية لأحياء (رقم هوية، صورة، عنوان)';
+
+function sharedFilesWarning({ total, shown }: { total: number; shown: number }): string {
+  return `هذا المصدر لـ ${peopleCountLabel(total)}، ويظهر على الأشخاص الظاهرين في الشجرة المنشورة (${toArabicDigits(shown)} من ${toArabicDigits(total)}). تأكد أن الملفات لا تحوي بيانات شخصية لأحياء.`;
+}
 
 const STATUS_LINES: Record<TreePublishLevel, { text: string; Icon: typeof LockIcon }> = {
   private: {
@@ -56,6 +67,7 @@ export function SourceVisibilityPicker({
   isAdmin,
   treeVisibility,
   hasFiles,
+  sharedPeople,
   disabled = false,
 }: SourceVisibilityPickerProps) {
   const name = useId();
@@ -111,7 +123,7 @@ export function SourceVisibilityPicker({
       {value === 'public' && hasFiles && (
         <p className={styles.warning} role="note">
           <AlertIcon size={14} className={styles.statusIcon} />
-          <span>{FILES_WARNING}</span>
+          <span>{sharedPeople && sharedPeople.total > 1 ? sharedFilesWarning(sharedPeople) : FILES_WARNING}</span>
         </p>
       )}
     </fieldset>

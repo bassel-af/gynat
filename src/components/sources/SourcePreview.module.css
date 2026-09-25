@@ -1,0 +1,77 @@
+/* «معاينة المصدر» — a read-only card over the source form */
+
+.modal {
+  max-width: 480px;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.readOnly {
+  align-self: flex-start;
+  padding: var(--space-1) var(--space-4);
+  border: 1px solid rgba(200, 168, 101, 0.3);
+  border-radius: var(--heritage-radius-pill);
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  color: var(--heritage-gold);
+}
+
+.text {
+  margin: 0;
+  font-family: var(--heritage-font-body);
+  font-size: 15px;
+  line-height: 1.8;
+  color: var(--heritage-parchment);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.caption {
+  margin: 0;
+  font-family: var(--heritage-font-body);
+  font-size: 12px;
+  color: var(--heritage-text-muted);
+}
+
+.meta {
+  margin: 0;
+  font-family: var(--heritage-font-body);
+  font-size: 13px;
+  color: var(--heritage-text-soft);
+}
+
+.meta b {
+  font-weight: 500;
+  color: var(--heritage-parchment);
+}
+
+.error {
+  margin: 0;
+  font-family: var(--heritage-font-body);
+  font-size: 13px;
+  color: #f0b98b;
+}
+
+.loading {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(200, 168, 101, 0.2);
+  border-top-color: var(--heritage-gold);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Phone: 44px action targets. */
+@media (max-width: 600px) {
+  .action {
+    min-height: 44px;
+  }
+}

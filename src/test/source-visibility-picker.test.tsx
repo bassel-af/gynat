@@ -66,3 +66,20 @@ describe('SourceVisibilityPicker', () => {
     expect(screen.queryByText(FILES_WARNING)).toBeNull();
   });
 });
+
+describe('SourceVisibilityPicker — a source for several people', () => {
+  it('names how many of them the published tree shows', () => {
+    renderPicker({ value: 'public', hasFiles: true, sharedPeople: { total: 10, shown: 3 } });
+    expect(
+      screen.getByText(
+        'هذا المصدر لـ ١٠ أشخاص، ويظهر على الأشخاص الظاهرين في الشجرة المنشورة (٣ من ١٠). تأكد أن الملفات لا تحوي بيانات شخصية لأحياء.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(FILES_WARNING)).toBeNull();
+  });
+
+  it('keeps the one-person warning for one person', () => {
+    renderPicker({ value: 'public', hasFiles: true, sharedPeople: { total: 1, shown: 0 } });
+    expect(screen.getByText(FILES_WARNING)).toBeInTheDocument();
+  });
+});

@@ -322,3 +322,10 @@ Files: `src/lib/tree/branch-pointer-deep-copy.ts`, `src/lib/collections/copy.ts`
     - For a non-admin, private people count as hidden. A private id in their remove list is silently ignored, which avoids revealing whether that person is linked.
     - A partial DELETE returns 200 `{deleted:false}`; a full DELETE returns 204.
     - A person who can't be linked gets one generic 400.
+- **2026-09-27, R4 done.** Carry-overs:
+  - **R5 undo:** linking an existing source and changing people push no undo entry yet, and the create undo's redo re-creates for one person only. Fix both, together with the R1/R2 undo items above.
+  - **R5 IndividualForm:** it must pass `individualId` / `newPerson`, and `buildSourcePlan` must use the new `SourceDraft` fields.
+  - **R5 sidebar:** the «⋯» menu must use `useSourceUnlink`.
+  - **R5 mobile:** the form's «حفظ»/«إلغاء» buttons are only 35px tall at 390px; make them 44px. At ≤600px the PEOPLE PICKER sheet (SourcePeoplePicker) has a see-through background and the form shows behind it; make it opaque.
+  - **R6:** use `SourcePeoplePicker` with no locked person, plus `useSourceUnlink` and `namesSummary`.
+  - **Copy R4 introduced (flag it to the owner at the end):** «إلغاء الربط»; «الأب: X» / «الأم: X» when only one parent is known; «ليس مصدرًا لأحد» on suggestions.
