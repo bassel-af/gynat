@@ -11,6 +11,7 @@ import { isUndoRequest } from '@/lib/api/undo-header';
 import { createSourceEntrySchema } from '@/lib/tree/source-entry-schemas';
 import {
   SOURCE_ENTRY_SELECT,
+  SOURCE_ENTRY_WITH_FILES_SELECT,
   NO_STORE_HEADERS,
   sourceEntryDto,
   decryptEntryText,
@@ -23,8 +24,20 @@ import {
   type SourceEntryRow,
 } from '@/lib/tree/source-entry-route-helpers';
 import { filterEntriesForViewer, inheritedTreeEntry } from '@/lib/tree/source-visibility';
-import { snapshotSourceEntry, encryptAuditDescription, writeTreeEditLog, JSON_NULL } from '@/lib/tree/audit';
+import {
+  snapshotSourceEntry,
+  encryptAuditDescription,
+  encryptAuditPayload,
+  writeTreeEditLog,
+  JSON_NULL,
+} from '@/lib/tree/audit';
 import { getWorkspaceKey, encryptSourceEntryInput, encryptSnapshot } from '@/lib/tree/encryption';
+import {
+  attachStagedFiles,
+  sourceFileDtos,
+  sourceFileErrorResponse,
+  fileAuditMeta,
+} from '@/lib/tree/source-file-helpers';
 
 type RouteParams = { params: Promise<{ id: string; individualId: string }> };
 
@@ -55,12 +68,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     prisma.sourceEntry.findMany({
       where: { treeId: tree.id, individualId },
       orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
-      select: SOURCE_ENTRY_SELECT,
-    }) as Promise<SourceEntryRow[]>,
+      select: SOURCE_ENTRY_WITH_FILES_SELECT,
+    }) as unknown as Promise<SourceEntryRow[]>,
     prisma.sourceEntry.findFirst({
       where: { treeId: tree.id, individualId: null },
-      select: SOURCE_ENTRY_SELECT,
-    }) as Promise<SourceEntryRow | null>,
+      select: SOURCE_ENTRY_WITH_FILES_SELECT,
+    }) as unknown as Promise<SourceEntryRow | null>,
   ]);
 
   const viewer = viewerFor(result.membership);
@@ -70,7 +83,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   const inherited = inheritedTreeEntry(ownRows, treeRow, context, viewer);
 
   const key = visible.length > 0 || inherited ? await getWorkspaceKey(workspaceId) : null;
-  const toDto = (row: SourceEntryRow) => sourceEntryDto(row, decryptEntryText(row, key!));
+  const toDto = (row: SourceEntryRow) =>
+    sourceEntryDto(row, decryptEntryText(row, key!), sourceFileDtos(row.files, key!));
 
   return NextResponse.json(
     { data: { entries: visible.map(toDto), inherited: inherited ? toDto(inherited) : null } },
@@ -95,7 +109,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
   const parsed = await parseValidatedBody(request, createSourceEntrySchema);
   if (isParseError(parsed)) return parsed;
-  const { treeId, text } = parsed.data;
+  const { treeId, text, fileIds } = parsed.data;
   const visibility = parsed.data.visibility ?? 'admins';
 
   if (visibility !== 'admins' && !isWorkspaceAdmin(result.membership)) {
@@ -112,33 +126,63 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   if (!person) return sourceNotFound();
 
   const key = await getWorkspaceKey(workspaceId);
-  const row = (await prisma.sourceEntry.create({
-    data: {
-      treeId: tree.id,
-      individualId,
-      visibility,
-      ...encryptSourceEntryInput({ text }, key),
-      createdById: result.user.id,
-    } as unknown as Parameters<typeof prisma.sourceEntry.create>[0]['data'],
-    select: SOURCE_ENTRY_SELECT,
-  })) as SourceEntryRow;
+  try {
+    // One transaction: the entry and its attached files land together, or
+    // not at all (a bad file id leaves no text-less, file-less entry behind).
+    const { row, files } = await prisma.$transaction(async (tx) => {
+      const row = (await tx.sourceEntry.create({
+        data: {
+          treeId: tree.id,
+          individualId,
+          visibility,
+          ...encryptSourceEntryInput({ text }, key),
+          createdById: result.user.id,
+        } as unknown as Parameters<typeof prisma.sourceEntry.create>[0]['data'],
+        select: SOURCE_ENTRY_SELECT,
+      })) as SourceEntryRow;
 
-  // No touchTreeTimestamp: sources are not part of the tree payload.
-  await writeTreeEditLog(prisma, {
-    treeId: tree.id,
-    userId: result.user.id,
-    action: 'create',
-    entityType: 'source_entry',
-    entityId: row.id,
-    snapshotBefore: JSON_NULL,
-    snapshotAfter: encryptSnapshot(
-      snapshotSourceEntry({ id: row.id, individualId, visibility, text }),
-      key,
-    ),
-    description: encryptAuditDescription('create', 'source_entry', null, key, {
-      isUndo: isUndoRequest(request),
-    }),
-  });
+      const files = await attachStagedFiles(tx, {
+        entryId: row.id,
+        treeId: tree.id,
+        userId: result.user.id,
+        fileIds,
+      });
 
-  return NextResponse.json({ data: sourceEntryDto(row, text) }, { status: 201 });
+      // No touchTreeTimestamp: sources are not part of the tree payload.
+      await writeTreeEditLog(tx, {
+        treeId: tree.id,
+        userId: result.user.id,
+        action: 'create',
+        entityType: 'source_entry',
+        entityId: row.id,
+        snapshotBefore: JSON_NULL,
+        snapshotAfter: encryptSnapshot(
+          snapshotSourceEntry({
+            id: row.id,
+            individualId,
+            visibility,
+            text,
+            ...(files.length > 0 ? { fileCount: files.length } : {}),
+          }),
+          key,
+        ),
+        description: encryptAuditDescription('create', 'source_entry', null, key, {
+          isUndo: isUndoRequest(request),
+        }),
+        ...(files.length > 0
+          ? { payload: encryptAuditPayload({ filesAdded: fileAuditMeta(files) }, key) }
+          : {}),
+      });
+      return { row, files };
+    });
+
+    return NextResponse.json(
+      { data: sourceEntryDto(row, text, sourceFileDtos(files, key)) },
+      { status: 201 },
+    );
+  } catch (error) {
+    const response = sourceFileErrorResponse(error);
+    if (response) return response;
+    throw error;
+  }
 }

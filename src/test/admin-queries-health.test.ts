@@ -14,6 +14,7 @@ import { randomBytes } from 'node:crypto';
 const mockQueryRaw = vi.fn();
 const mockAdminAccessLogCount = vi.fn();
 const mockAlbumMediaAggregate = vi.fn();
+const mockSourceFileAggregate = vi.fn();
 const mockVerifyMailTransport = vi.fn();
 
 vi.mock('@/lib/db', () => ({
@@ -24,6 +25,9 @@ vi.mock('@/lib/db', () => ({
     },
     albumMedia: {
       aggregate: (...args: unknown[]) => mockAlbumMediaAggregate(...args),
+    },
+    sourceFile: {
+      aggregate: (...args: unknown[]) => mockSourceFileAggregate(...args),
     },
   },
 }));
@@ -42,6 +46,7 @@ describe('getHealthMetrics', () => {
     mockQueryRaw.mockResolvedValue([{ '?column?': 1 }]);
     mockAdminAccessLogCount.mockResolvedValue(0);
     mockAlbumMediaAggregate.mockResolvedValue({ _sum: { fileSizeBytes: null } });
+    mockSourceFileAggregate.mockResolvedValue({ _sum: { sizeBytes: null } });
     mockVerifyMailTransport.mockResolvedValue(true);
     // Always provide a valid 32-byte base64 master key by default
     process.env.WORKSPACE_MASTER_KEY = randomBytes(32).toString('base64');
@@ -162,6 +167,13 @@ describe('getHealthMetrics', () => {
       });
       const metrics = await getHealthMetrics();
       expect(metrics.storage.totalMediaBytes).toBe(123456789);
+    });
+
+    test('includes source files (المصادر) in totalMediaBytes', async () => {
+      mockAlbumMediaAggregate.mockResolvedValue({ _sum: { fileSizeBytes: BigInt(1000) } });
+      mockSourceFileAggregate.mockResolvedValue({ _sum: { sizeBytes: 234 } });
+      const metrics = await getHealthMetrics();
+      expect(metrics.storage.totalMediaBytes).toBe(1234);
     });
 
     test('returns totalMediaBytes:0 when sum is null (empty table)', async () => {

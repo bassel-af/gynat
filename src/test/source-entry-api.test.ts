@@ -179,8 +179,8 @@ function ordered(rows: Row[], orderBy: unknown): Row[] {
 
 let createCounter = 0;
 
-vi.mock('@/lib/db', () => ({
-  prisma: {
+vi.mock('@/lib/db', () => {
+  const prisma: Record<string, unknown> = {
     workspaceMembership: {
       findUnique: async ({ where }: { where: { userId_workspaceId: { userId: string; workspaceId: string } } }) => {
         const { userId, workspaceId } = where.userId_workspaceId;
@@ -248,8 +248,15 @@ vi.mock('@/lib/db', () => ({
         return data;
       },
     },
-  },
-}));
+    // Step 5: entries here carry no files (the file paths live in
+    // source-file-api.test.ts).
+    sourceFile: {
+      count: async () => 0,
+    },
+  };
+  prisma.$transaction = async (fn: (tx: unknown) => Promise<unknown>) => fn(prisma);
+  return { prisma };
+});
 
 import { NextRequest } from 'next/server';
 
@@ -373,7 +380,7 @@ describe('GET person sources', () => {
     const json = await (await getPerson(PERSON)).json();
     expect(hasBytesOrUndefined(json)).toBe(false);
     expect(Object.keys(json.data.entries[0]).sort()).toEqual(
-      ['createdAt', 'id', 'individualId', 'text', 'updatedAt', 'visibility'].sort(),
+      ['createdAt', 'files', 'id', 'individualId', 'text', 'updatedAt', 'visibility'].sort(),
     );
   });
 

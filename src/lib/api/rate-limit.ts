@@ -65,6 +65,8 @@ export const treeExportLimiter = new RateLimiter({ maxRequests: 20, windowMs: 15
 export const treeImportLimiter = new RateLimiter({ maxRequests: 10, windowMs: 60 * 60 * 1000 });
 export const cascadePreviewLimiter = new RateLimiter({ maxRequests: 10, windowMs: 60 * 1000 });
 export const auditLogLimiter = new RateLimiter({ maxRequests: 60, windowMs: 60 * 1000 });
+// Sources («المصادر») file uploads — one file per request, per user.
+export const sourceUploadLimiter = new RateLimiter({ maxRequests: 30, windowMs: 60 * 60 * 1000 });
 // Public, anonymous, IP-keyed limiters (the authed limiters above don't cover
 // anonymous callers). Public tree reads are heavily cached, so this only needs
 // to blunt scrapers/enumeration, not normal browsing.

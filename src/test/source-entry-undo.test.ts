@@ -161,6 +161,7 @@ describe('restorableSourceEntries', () => {
     visibility,
     createdAt: '',
     updatedAt: '',
+    files: [],
   });
 
   test('an admin keeps every level', () => {

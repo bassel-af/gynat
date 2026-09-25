@@ -138,3 +138,65 @@ describe('audit wiring', () => {
     expect(auditLogQuerySchema.safeParse({ entityType: 'source_entry' }).success).toBe(true);
   });
 });
+
+// ===========================================================================
+// Step 5 — files: an entry needs text OR at least one file
+// ===========================================================================
+
+describe('text-or-files (step 5)', () => {
+  const FILE = 'aaaaaaaa-0000-4000-8000-0000000000f1';
+
+  test('create: a file-only entry is accepted', () => {
+    const r = createSourceEntrySchema.safeParse({ fileIds: [FILE] });
+    expect(r.success).toBe(true);
+    expect(r.success && r.data.text).toBe(null);
+  });
+
+  test('create: an empty text counts as no text', () => {
+    expect(createSourceEntrySchema.safeParse({ text: '', fileIds: [FILE] }).success).toBe(true);
+    expect(createSourceEntrySchema.safeParse({ text: '' }).success).toBe(false);
+  });
+
+  test('create: neither text nor files is refused', () => {
+    expect(createSourceEntrySchema.safeParse({}).success).toBe(false);
+    expect(createSourceEntrySchema.safeParse({ fileIds: [] }).success).toBe(false);
+  });
+
+  test('create: more than 20 file ids is refused', () => {
+    const ids = Array.from({ length: 21 }, (_, i) => `aaaaaaaa-0000-4000-8000-${String(i).padStart(12, '0')}`);
+    expect(createSourceEntrySchema.safeParse({ text: 'x', fileIds: ids }).success).toBe(false);
+  });
+
+  test('create: a malformed file id is refused', () => {
+    expect(createSourceEntrySchema.safeParse({ text: 'x', fileIds: ['nope'] }).success).toBe(false);
+  });
+
+  test('update: a files-only patch and a text-clearing patch are both changes', () => {
+    expect(updateSourceEntrySchema.safeParse({ fileIds: [FILE] }).success).toBe(true);
+    const cleared = updateSourceEntrySchema.safeParse({ text: null });
+    expect(cleared.success && cleared.data.text).toBe(null);
+  });
+
+  test('tree entry: text may be omitted when files come along', () => {
+    expect(putTreeEntrySchema.safeParse({ visibility: 'members', fileIds: [FILE] }).success).toBe(true);
+  });
+
+  test('the DTO carries a files list, empty by default', () => {
+    const dto = sourceEntryDto(
+      {
+        id: UUID,
+        individualId: null,
+        visibility: 'admins',
+        createdAt: new Date('2026-01-01T00:00:00Z'),
+        updatedAt: new Date('2026-01-01T00:00:00Z'),
+      },
+      'x',
+    );
+    expect(dto.files).toEqual([]);
+  });
+
+  test('snapshotSourceEntry adds fileCount only when given', () => {
+    const snap = snapshotSourceEntry({ id: UUID, individualId: null, visibility: 'members', text: null, fileCount: 2 });
+    expect(snap).toEqual({ id: UUID, individualId: null, visibility: 'members', text: null, fileCount: 2 });
+  });
+});

@@ -7,7 +7,7 @@ import {
   SOURCE_SCAN_CAP,
 } from '@/lib/tree/source-entry-schemas';
 import {
-  SOURCE_ENTRY_SELECT,
+  SOURCE_ENTRY_WITH_FILES_SELECT,
   NO_STORE_HEADERS,
   sourceEntryDto,
   decryptEntryText,
@@ -18,12 +18,12 @@ import {
 } from '@/lib/tree/source-entry-route-helpers';
 import { getWorkspaceKey, decryptIndividualRow } from '@/lib/tree/encryption';
 import { matchesSearch } from '@/lib/utils/search';
+import { sourceFileDtos } from '@/lib/tree/source-file-helpers';
 
 type RouteParams = { params: Promise<{ id: string }> };
 
 type ListRow = SourceEntryRow & {
   individual: { givenName: unknown; surname: unknown; fullName: unknown } | null;
-  _count: { files: number };
 };
 
 interface SourceListItem extends SourceEntryDto {
@@ -65,9 +65,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     take: SOURCE_SCAN_CAP + 1,
     select: {
-      ...SOURCE_ENTRY_SELECT,
+      ...SOURCE_ENTRY_WITH_FILES_SELECT,
       individual: { select: { givenName: true, surname: true, fullName: true } },
-      _count: { select: { files: true } },
     },
   })) as unknown as ListRow[];
 
@@ -79,7 +78,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const text = decryptEntryText(row, key);
     if (q && q.trim() && !matchesSearch(text ?? '', q)) continue;
     items.push({
-      ...sourceEntryDto(row, text),
+      ...sourceEntryDto(row, text, sourceFileDtos(row.files, key)),
       personName: row.individual
         ? individualDisplayName(
             decryptIndividualRow(row.individual, key) as unknown as {
@@ -89,7 +88,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             },
           )
         : null,
-      fileCount: row._count?.files ?? 0,
+      fileCount: row.files?.length ?? 0,
     });
   }
 

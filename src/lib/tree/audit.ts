@@ -298,6 +298,8 @@ export interface SourceEntrySnapshot extends JsonObject {
   individualId: string | null;
   visibility: string;
   text: string | null;
+  /** How many files the entry holds — counts only, never names or bytes. */
+  fileCount?: number;
 }
 
 export function snapshotSourceEntry(record: {
@@ -305,12 +307,14 @@ export function snapshotSourceEntry(record: {
   individualId: string | null;
   visibility: string;
   text: string | null;
+  fileCount?: number;
 }): SourceEntrySnapshot {
   return {
     id: record.id,
     individualId: record.individualId ?? null,
     visibility: record.visibility,
     text: record.text ?? null,
+    ...(typeof record.fileCount === 'number' ? { fileCount: record.fileCount } : {}),
   };
 }
 

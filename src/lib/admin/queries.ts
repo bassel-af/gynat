@@ -417,12 +417,14 @@ function probeEncryption(): HealthMetrics['encryption'] {
 
 async function probeStorage(): Promise<HealthMetrics['storage']> {
   try {
-    const result = await prisma.albumMedia.aggregate({
-      _sum: { fileSizeBytes: true },
-    });
-    const sum = result._sum.fileSizeBytes;
-    if (sum === null || sum === undefined) return { totalMediaBytes: 0 };
-    return { totalMediaBytes: Number(sum) };
+    // Album media + source files («المصادر»); both count against storage.
+    const [album, sources] = await Promise.all([
+      prisma.albumMedia.aggregate({ _sum: { fileSizeBytes: true } }),
+      prisma.sourceFile.aggregate({ _sum: { sizeBytes: true } }),
+    ]);
+    const albumBytes = album._sum.fileSizeBytes;
+    const sourceBytes = sources._sum.sizeBytes;
+    return { totalMediaBytes: Number(albumBytes ?? 0) + Number(sourceBytes ?? 0) };
   } catch {
     return { totalMediaBytes: null };
   }

@@ -15,6 +15,11 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { decryptSourceEntryRow } from '@/lib/tree/encryption';
 import type { SourceViewer, SourceVisibilityLevel } from '@/lib/tree/source-visibility';
+import {
+  SOURCE_FILE_META_SELECT,
+  type SourceFileDto,
+  type SourceFileMetaRow,
+} from '@/lib/tree/source-file-helpers';
 
 /** The shape every source route returns. `text` is ALWAYS plaintext. */
 export interface SourceEntryDto {
@@ -24,6 +29,8 @@ export interface SourceEntryDto {
   visibility: SourceVisibilityLevel;
   createdAt: string;
   updatedAt: string;
+  /** File metadata (plaintext names), oldest first. Never bytes. */
+  files: SourceFileDto[];
 }
 
 /** Columns every route selects — never the file tables. */
@@ -38,6 +45,18 @@ export const SOURCE_ENTRY_SELECT = {
   updatedAt: true,
 } as const;
 
+/**
+ * `SOURCE_ENTRY_SELECT` plus the entry's file METADATA (never
+ * `SourceFileData`) — for routes that return entries to a viewer.
+ */
+export const SOURCE_ENTRY_WITH_FILES_SELECT = {
+  ...SOURCE_ENTRY_SELECT,
+  files: {
+    select: SOURCE_FILE_META_SELECT,
+    orderBy: [{ createdAt: 'asc' as const }, { id: 'asc' as const }],
+  },
+};
+
 export interface SourceEntryRow {
   id: string;
   treeId: string;
@@ -47,6 +66,8 @@ export interface SourceEntryRow {
   createdById: string | null;
   createdAt: Date;
   updatedAt: Date;
+  /** Present only when selected with `SOURCE_ENTRY_WITH_FILES_SELECT`. */
+  files?: SourceFileMetaRow[];
 }
 
 /**
@@ -56,6 +77,7 @@ export interface SourceEntryRow {
 export function sourceEntryDto(
   row: Pick<SourceEntryRow, 'id' | 'individualId' | 'visibility' | 'createdAt' | 'updatedAt'>,
   text: string | null,
+  files: SourceFileDto[] = [],
 ): SourceEntryDto {
   return {
     id: row.id,
@@ -64,6 +86,7 @@ export function sourceEntryDto(
     visibility: row.visibility,
     createdAt: toIso(row.createdAt),
     updatedAt: toIso(row.updatedAt),
+    files,
   };
 }
 

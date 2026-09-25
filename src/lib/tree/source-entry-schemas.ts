@@ -4,10 +4,11 @@
  * An entry is a standalone piece of evidence on one person (or the tree-wide
  * entry). Every string carries a `.max()`.
  *
- * Step 5 (files) will let an entry carry files and no text. To relax the rule,
- * swap `text: sourceTextSchema` for `text: sourceTextSchema.optional()` on the
- * create/PUT schemas (plus a "text or files" check in the route); nothing else
- * here depends on text being present.
+ * Step 5 (files): an entry carries text, files, or both — never neither.
+ * Files are uploaded first on their own (staged, `POST sources/uploads`) and
+ * attached here by id (`fileIds`). The schemas enforce "text or files" where
+ * the request alone decides it (create); PATCH / PUT re-check it in the route
+ * against the entry's stored files.
  */
 import { z } from 'zod';
 import { targetTreeIdSchema } from '@/lib/tree/schemas';
@@ -35,28 +36,50 @@ export const sourceTextSchema = z
   .min(1, TEXT_MESSAGE)
   .max(MAX_SOURCE_TEXT, TEXT_MESSAGE);
 
+/**
+ * Text that may be absent: `''` and `null` both mean "no text"; anything else
+ * must pass `sourceTextSchema` (so whitespace-only is still refused).
+ */
+export const optionalSourceTextSchema = z
+  .union([z.literal(''), z.null(), sourceTextSchema])
+  .transform((v) => (v === '' ? null : v));
+
+/** Per-entry file cap (also the most ids one request may attach). */
+export const MAX_FILES_PER_ENTRY = 20;
+
+export const fileIdsSchema = z.array(z.string().uuid()).max(MAX_FILES_PER_ENTRY, `لا يمكن إرفاق أكثر من ${MAX_FILES_PER_ENTRY} ملفًا بالمصدر الواحد`);
+
+export const TEXT_OR_FILES_MESSAGE = 'أضف نص المصدر أو ملفًا واحدًا على الأقل';
+
 export const sourceVisibilitySchema = z.enum(['admins', 'members', 'public']);
 
-export const createSourceEntrySchema = z.object({
-  treeId: targetTreeIdSchema,
-  text: sourceTextSchema,
-  visibility: sourceVisibilitySchema.optional(),
-});
+export const createSourceEntrySchema = z
+  .object({
+    treeId: targetTreeIdSchema,
+    text: optionalSourceTextSchema.optional().transform((v) => v ?? null),
+    fileIds: fileIdsSchema.optional(),
+    visibility: sourceVisibilitySchema.optional(),
+  })
+  .refine((d) => d.text !== null || (d.fileIds?.length ?? 0) > 0, { message: TEXT_OR_FILES_MESSAGE });
 
 export const updateSourceEntrySchema = z
   .object({
     treeId: targetTreeIdSchema,
-    text: sourceTextSchema.optional(),
+    /** `null` / `''` clears the text — only allowed while the entry keeps a file. */
+    text: optionalSourceTextSchema.optional(),
+    fileIds: fileIdsSchema.optional(),
     visibility: sourceVisibilitySchema.optional(),
   })
-  .refine((d) => d.text !== undefined || d.visibility !== undefined, {
+  .refine((d) => d.text !== undefined || d.visibility !== undefined || (d.fileIds?.length ?? 0) > 0, {
     message: 'لا يوجد ما يُعدَّل',
   });
 
 /** The tree-wide entry («مصدر الشجرة») — upsert, at most one per tree. */
+/** Omitted `text` keeps the stored text; `null` / `''` clears it (files must remain). */
 export const putTreeEntrySchema = z.object({
   treeId: targetTreeIdSchema,
-  text: sourceTextSchema,
+  text: optionalSourceTextSchema.optional(),
+  fileIds: fileIdsSchema.optional(),
   visibility: sourceVisibilitySchema,
 });
 

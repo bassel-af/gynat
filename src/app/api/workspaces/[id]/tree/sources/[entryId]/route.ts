@@ -7,6 +7,7 @@ import { isUndoRequest } from '@/lib/api/undo-header';
 import { updateSourceEntrySchema } from '@/lib/tree/source-entry-schemas';
 import {
   SOURCE_ENTRY_SELECT,
+  SOURCE_ENTRY_WITH_FILES_SELECT,
   sourceEntryDto,
   decryptEntryText,
   sourceNotFound,
@@ -26,6 +27,14 @@ import {
   JSON_NULL,
 } from '@/lib/tree/audit';
 import { getWorkspaceKey, encryptSourceEntryInput, encryptSnapshot } from '@/lib/tree/encryption';
+import {
+  attachStagedFiles,
+  sourceFileDtos,
+  sourceFileErrorResponse,
+  fileAuditMeta,
+  SourceFileRequestError,
+  ENTRY_NEEDS_TEXT_OR_FILES_MESSAGE,
+} from '@/lib/tree/source-file-helpers';
 
 type RouteParams = { params: Promise<{ id: string; entryId: string }> };
 
@@ -51,11 +60,13 @@ function visibleTo(entry: EntryWithPerson, membership: { role: string }): boolea
   );
 }
 
-// PATCH /api/workspaces/[id]/tree/sources/[entryId] — text and/or level.
+// PATCH /api/workspaces/[id]/tree/sources/[entryId] — text, level and/or
+// attach staged files (`fileIds`).
 //
 // The editor must be able to SEE the entry (else the same 404 as a missing
 // one). Changing the level at all is admin only; re-sending the current level
-// is not a change.
+// is not a change. `text: null` / `''` clears the text, allowed only while the
+// entry keeps at least one file.
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   const { id: workspaceId, entryId } = await params;
 
@@ -69,7 +80,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
   const parsed = await parseValidatedBody(request, updateSourceEntrySchema);
   if (isParseError(parsed)) return parsed;
-  const { treeId, text, visibility } = parsed.data;
+  const { treeId, text, visibility, fileIds } = parsed.data;
 
   const tree = await resolveSourceTreeOr404(workspaceId, treeId);
   if (isErrorResponse(tree)) return tree;
@@ -86,37 +97,74 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   if (text !== undefined) Object.assign(patch, encryptSourceEntryInput({ text }, key));
   if (visibility !== undefined) patch.visibility = visibility;
 
-  const row = (await prisma.sourceEntry.update({
-    where: { id: existing.id },
-    data: patch as unknown as Parameters<typeof prisma.sourceEntry.update>[0]['data'],
-    select: SOURCE_ENTRY_SELECT,
-  })) as SourceEntryRow;
-
-  const afterText = text ?? beforeText;
+  const afterText = text !== undefined ? text : beforeText;
   const afterLevel = visibility ?? existing.visibility;
 
-  // No touchTreeTimestamp: sources are not part of the tree payload.
-  await writeTreeEditLog(prisma, {
-    treeId: tree.id,
-    userId: result.user.id,
-    action: 'update',
-    entityType: 'source_entry',
-    entityId: existing.id,
-    snapshotBefore: encryptSnapshot(
-      snapshotSourceEntry({ ...existing, text: beforeText }),
-      key,
-    ),
-    snapshotAfter: encryptSnapshot(
-      snapshotSourceEntry({ ...existing, visibility: afterLevel, text: afterText }),
-      key,
-    ),
-    description: encryptAuditDescription('update', 'source_entry', null, key, {
-      isUndo: isUndoRequest(request),
-    }),
-    payload: encryptAuditPayload({ text, visibility }, key),
-  });
+  try {
+    const row = await prisma.$transaction(async (tx) => {
+      const attached = await attachStagedFiles(tx, {
+        entryId: existing.id,
+        treeId: tree.id,
+        userId: result.user.id,
+        fileIds,
+      });
 
-  return NextResponse.json({ data: sourceEntryDto(row, afterText) });
+      const touchesFiles = attached.length > 0 || afterText === null;
+      const fileCount = touchesFiles
+        ? await tx.sourceFile.count({ where: { entryId: existing.id } })
+        : undefined;
+      // Never leave an entry with neither text nor files.
+      if (afterText === null && fileCount === 0) {
+        throw new SourceFileRequestError(ENTRY_NEEDS_TEXT_OR_FILES_MESSAGE, 400);
+      }
+
+      const row = (await tx.sourceEntry.update({
+        where: { id: existing.id },
+        data: patch as unknown as Parameters<typeof prisma.sourceEntry.update>[0]['data'],
+        select: SOURCE_ENTRY_WITH_FILES_SELECT,
+      })) as unknown as SourceEntryRow;
+
+      const counts =
+        fileCount === undefined
+          ? { before: {}, after: {} }
+          : { before: { fileCount: fileCount - attached.length }, after: { fileCount } };
+
+      // No touchTreeTimestamp: sources are not part of the tree payload.
+      await writeTreeEditLog(tx, {
+        treeId: tree.id,
+        userId: result.user.id,
+        action: 'update',
+        entityType: 'source_entry',
+        entityId: existing.id,
+        snapshotBefore: encryptSnapshot(
+          snapshotSourceEntry({ ...existing, text: beforeText, ...counts.before }),
+          key,
+        ),
+        snapshotAfter: encryptSnapshot(
+          snapshotSourceEntry({ ...existing, visibility: afterLevel, text: afterText, ...counts.after }),
+          key,
+        ),
+        description: encryptAuditDescription('update', 'source_entry', null, key, {
+          isUndo: isUndoRequest(request),
+        }),
+        payload: encryptAuditPayload(
+          {
+            text,
+            visibility,
+            ...(attached.length > 0 ? { filesAdded: fileAuditMeta(attached) } : {}),
+          },
+          key,
+        ),
+      });
+      return row;
+    });
+
+    return NextResponse.json({ data: sourceEntryDto(row, afterText, sourceFileDtos(row.files, key)) });
+  } catch (error) {
+    const response = sourceFileErrorResponse(error);
+    if (response) return response;
+    throw error;
+  }
 }
 
 // DELETE /api/workspaces/[id]/tree/sources/[entryId] — optional `{ treeId }`.

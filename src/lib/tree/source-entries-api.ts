@@ -1,6 +1,6 @@
 /**
- * Sources («المصادر») — client `apiFetch` wrappers for the step-4 text-only
- * entry API. Thin glue: every permission and visibility decision is made on
+ * Sources («المصادر») — client `apiFetch` wrappers for the entry API (step 4)
+ * and its files (step 5). Thin glue: every permission and visibility decision is made on
  * the server (source-visibility.ts). Each wrapper takes an optional `treeId`
  * to target an `extra` tree; absent ⇒ the workspace main tree.
  *
@@ -9,9 +9,10 @@
  */
 import { apiFetch } from '@/lib/api/client';
 import type { SourceEntryDto } from '@/lib/tree/source-entry-route-helpers';
+import type { SourceFileDto } from '@/lib/tree/source-file-helpers';
 import type { SourceVisibilityLevel } from '@/lib/tree/source-visibility';
 
-export type { SourceEntryDto };
+export type { SourceEntryDto, SourceFileDto };
 
 export interface PersonSources {
   entries: SourceEntryDto[];
@@ -74,7 +75,8 @@ export async function fetchPersonSources(
 export async function createSourceEntry(
   workspaceId: string,
   individualId: string,
-  body: { text: string; visibility?: SourceVisibilityLevel },
+  /** `text` or `fileIds` (staged uploads) — at least one. */
+  body: { text?: string | null; fileIds?: string[]; visibility?: SourceVisibilityLevel },
   treeId?: string,
 ): Promise<SourceEntryDto> {
   return json(
@@ -88,7 +90,8 @@ export async function createSourceEntry(
 export async function updateSourceEntry(
   workspaceId: string,
   entryId: string,
-  body: { text?: string; visibility?: SourceVisibilityLevel },
+  /** `text: null` clears the text (the entry must keep a file). */
+  body: { text?: string | null; fileIds?: string[]; visibility?: SourceVisibilityLevel },
   treeId?: string,
 ): Promise<SourceEntryDto> {
   return json(
@@ -112,7 +115,7 @@ export async function fetchTreeEntry(workspaceId: string, treeId?: string): Prom
 
 export async function putTreeEntry(
   workspaceId: string,
-  body: { text: string; visibility: SourceVisibilityLevel },
+  body: { text?: string | null; fileIds?: string[]; visibility: SourceVisibilityLevel },
   treeId?: string,
 ): Promise<SourceEntryDto> {
   return json(
@@ -167,4 +170,74 @@ export function restorableSourceEntries(
   return entries
     .filter((e): e is SourceEntryDto & { text: string } => typeof e.text === 'string' && e.text !== '')
     .map((e) => ({ text: e.text, visibility: isAdmin ? e.visibility : 'admins' }));
+}
+
+// ---------------------------------------------------------------------------
+// Files (step 5)
+// ---------------------------------------------------------------------------
+
+/**
+ * Upload ONE file (image or PDF, ≤ 8 MB). It is staged: send the returned id
+ * in `fileIds` of the entry create / update / tree-entry save to attach it.
+ * An upload never attached is deleted by the server after 24 h. The browser
+ * sets the multipart Content-Type (with its boundary) — never set it here.
+ * Rejections throw with the server's Arabic message.
+ */
+export async function uploadSourceFile(
+  workspaceId: string,
+  file: File | Blob,
+  treeId?: string,
+): Promise<SourceFileDto> {
+  const form = new FormData();
+  form.append('file', file);
+  const res = await apiFetch(`${base(workspaceId)}/sources/uploads${query({ treeId })}`, {
+    method: 'POST',
+    body: form,
+  });
+  if (!res.ok) {
+    const message = await res
+      .json()
+      .then((b: { error?: unknown }) => (typeof b?.error === 'string' ? b.error : null))
+      .catch(() => null);
+    throw new Error(message ?? `sources API error: ${res.status}`);
+  }
+  return ((await res.json()) as { data: SourceFileDto }).data;
+}
+
+/**
+ * The file's route. It needs the Bearer token, so an `<img src>` cannot load
+ * it directly — use `fetchSourceFileBlob` + `URL.createObjectURL`.
+ */
+export function sourceFileUrl(workspaceId: string, entryId: string, fileId: string, treeId?: string): string {
+  return `${base(workspaceId)}/sources/${entryId}/files/${fileId}${query({ treeId })}`;
+}
+
+/** Fetch a file's bytes (authenticated) as a Blob for display or download. */
+export async function fetchSourceFileBlob(
+  workspaceId: string,
+  entryId: string,
+  fileId: string,
+  treeId?: string,
+): Promise<Blob> {
+  const res = await apiFetch(sourceFileUrl(workspaceId, entryId, fileId, treeId));
+  if (!res.ok) throw new Error(`sources API error: ${res.status}`);
+  return res.blob();
+}
+
+/**
+ * Delete one file of an entry (not undoable). `entryDeleted` is true when it
+ * was the last file of an entry without text — the entry is gone too.
+ */
+export async function deleteSourceFile(
+  workspaceId: string,
+  entryId: string,
+  fileId: string,
+  treeId?: string,
+): Promise<{ entryDeleted: boolean }> {
+  return json(
+    await apiFetch(
+      `${base(workspaceId)}/sources/${entryId}/files/${fileId}`,
+      jsonInit('DELETE', treeId ? { treeId } : {}),
+    ),
+  );
 }
