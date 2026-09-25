@@ -330,3 +330,6 @@ Files: `src/lib/tree/branch-pointer-deep-copy.ts`, `src/lib/collections/copy.ts`
   - **R6:** use `SourcePeoplePicker` with no locked person, plus `useSourceUnlink` and `namesSummary`.
   - **Copy R4 introduced (flag it to the owner at the end):** «إلغاء الربط»; «الأب: X» / «الأم: X» when only one parent is known; «ليس مصدرًا لأحد» on suggestions.
 - **2026-09-27, R5 + R6 done.** The legacy wrappers (`createSourceEntry`, `updateSourceEntry`, `fetchSourceSuggestions`, `restorableSourceEntries`) are removed. **Copy added by R5/R6, to show the owner at the end:** «سيُزال عن هذا الشخص», «إزالة المصدر عن هذا الشخص», «تراجع عن إزالة المصدر», «تعذّر إزالة المصدر», «تعذّر إضافة المصدر»; the publish line «…ومصدر واحد (تظهر على شخص واحد) يظهر لهم أصلًا»; the admin tabs «الكل / مشترك / ليس مصدرًا لأحد»; ▾ on one-person rows as well.
+- **2026-09-27, R7 done:** the full real-infrastructure e2e passed all 10 items (evidence in /tmp/r7/). Every "Done when" item is met; the feature is NOT deployed and waits for the owner's own test. Pre-existing bugs found outside Sources (not fixed here):
+  - Person-delete undo re-creates the person but not their family membership (`buildDeleteIndividualInverse`).
+  - Deleting a workspace fails when it is the source of a broken branch pointer (`branch_pointers_source_workspace_id_fkey`).
