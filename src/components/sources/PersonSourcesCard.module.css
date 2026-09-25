@@ -65,7 +65,6 @@
 }
 
 .inherited .text {
-  font-style: italic;
   color: var(--heritage-text-muted);
 }
 
