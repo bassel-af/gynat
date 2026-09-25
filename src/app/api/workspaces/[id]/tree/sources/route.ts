@@ -61,7 +61,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   if (isErrorResponse(tree)) return tree;
 
   const rows = (await prisma.sourceEntry.findMany({
-    where: { treeId: tree.id, ...(visibility ? { visibility } : {}) },
+    // Person entries only: the tree-wide entry has its own card and never joins «تحديد الكل».
+    where: { treeId: tree.id, individualId: { not: null }, ...(visibility ? { visibility } : {}) },
     orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     take: SOURCE_SCAN_CAP + 1,
     select: {

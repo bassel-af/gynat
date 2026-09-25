@@ -5,6 +5,7 @@ import clsx from 'clsx';
 import {
   createSourceEntry,
   updateSourceEntry,
+  putTreeEntry,
   uploadSourceFile,
   deleteSourceFile,
   fetchSourceSuggestions,
@@ -41,7 +42,13 @@ export interface SourceEntryFormProps {
   workspaceId: string;
   /** Target tree; absent ⇒ the workspace main tree. */
   treeId?: string;
-  individualId: string;
+  /** The person the entry is on (unused for the tree-wide entry). */
+  individualId?: string;
+  /**
+   * The tree-wide entry («مصدر الشجرة», admins only): saved through PUT
+   * tree-entry (an upsert — create and edit alike), not undoable.
+   */
+  treeWide?: boolean;
   /** Edit mode: the entry being edited. */
   entry?: SourceEntryDto;
   isAdmin: boolean;
@@ -73,6 +80,7 @@ export function SourceEntryForm({
   workspaceId,
   treeId,
   individualId,
+  treeWide = false,
   entry,
   isAdmin,
   onClose,
@@ -205,7 +213,14 @@ export function SourceEntryForm({
     setError('');
     setSaving(true);
     try {
-      if (mode === 'create') {
+      if (treeWide) {
+        const saved = await putTreeEntry(
+          workspaceId,
+          { text: trimmed || null, ...(stagedIds.length > 0 ? { fileIds: stagedIds } : {}), visibility },
+          treeId,
+        );
+        onSaved(saved);
+      } else if (mode === 'create' && individualId) {
         const body = {
           text: trimmed || null,
           ...(stagedIds.length > 0 ? { fileIds: stagedIds } : {}),
@@ -240,7 +255,7 @@ export function SourceEntryForm({
     }
   };
 
-  const title = mode === 'create' ? 'إضافة مصدر' : 'تعديل المصدر';
+  const title = treeWide ? 'مصدر الشجرة' : mode === 'create' ? 'إضافة مصدر' : 'تعديل المصدر';
   const actions = (
     <>
       <Button variant="ghost" size="md" onClick={onClose} disabled={saving}>

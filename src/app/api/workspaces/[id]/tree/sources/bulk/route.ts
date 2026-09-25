@@ -46,7 +46,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   if (isErrorResponse(tree)) return tree;
 
   const rows = (await prisma.sourceEntry.findMany({
-    where: { treeId: tree.id, id: { in: [...new Set(ids)] } },
+    // Person entries only — the tree-wide entry is managed from its own card.
+    where: { treeId: tree.id, individualId: { not: null }, id: { in: [...new Set(ids)] } },
     select: SOURCE_ENTRY_SELECT,
   })) as SourceEntryRow[];
 
@@ -54,7 +55,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   if (rows.length === 0) return NextResponse.json({ data: { [countKey]: 0 } });
 
   const ownIds = rows.map((r) => r.id);
-  const where = { treeId: tree.id, id: { in: ownIds } };
+  const where = { treeId: tree.id, individualId: { not: null }, id: { in: ownIds } };
   const { count } =
     action === 'delete'
       ? await prisma.sourceEntry.deleteMany({ where })

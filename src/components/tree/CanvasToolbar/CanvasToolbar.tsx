@@ -32,7 +32,7 @@ export function CanvasToolbar({ workspaceSlug, workspaceId, undoRedo, onPublish 
   const [isExporting, setIsExporting] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
   const { showToast } = useToast();
-  const { enableAuditLog, isAdmin, enableTreeExport, allowMemberExport } = useWorkspaceTree();
+  const { enableAuditLog, isAdmin, enableTreeExport, allowMemberExport, activeTreeId } = useWorkspaceTree();
   const canExport = (enableTreeExport ?? true) && (isAdmin || (allowMemberExport ?? false));
 
   // Close dropdown on outside click
@@ -207,6 +207,22 @@ export function CanvasToolbar({ workspaceSlug, workspaceId, undoRedo, onPublish 
               <PublishIcon size={12} className={styles.publishIcon} />
               <span className={styles.iconTooltip} role="tooltip" aria-hidden="true">نشر الشجرة</span>
             </button>
+          </>
+        )}
+        {isAdmin && (
+          <>
+            <span className={styles.separator} />
+            <Link
+              href={`/workspaces/${workspaceSlug}/tree/sources${activeTreeId ? `?treeId=${encodeURIComponent(activeTreeId)}` : ''}`}
+              className={styles.auditLink}
+              aria-label="المصادر"
+            >
+              <svg className={styles.auditIcon} width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M4 5a2 2 0 012-2h9l5 5v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+                <path d="M14 3v5h5M8 13h8M8 17h5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+              <span className={styles.auditLabel}>المصادر</span>
+            </Link>
           </>
         )}
         {enableAuditLog && isAdmin && (

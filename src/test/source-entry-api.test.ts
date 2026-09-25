@@ -649,7 +649,8 @@ describe('GET sources (admin list)', () => {
     expect(res.headers.get('Cache-Control')).toBe('private, no-store');
     const json = await res.json();
     const ids = json.data.entries.map((e: Row) => e.id);
-    expect(ids.sort()).toEqual([E_ADMINS, E_MEMBERS, E_PRIV, E_TREE, E_MINE_ADMINS].sort());
+    // The tree-wide entry has its own card on the page — never a list row, never in «تحديد الكل».
+    expect(ids.sort()).toEqual([E_ADMINS, E_MEMBERS, E_PRIV, E_MINE_ADMINS].sort());
     const priv = json.data.entries.find((e: Row) => e.id === E_PRIV);
     expect(priv).toMatchObject({ individualId: PRIV, personName: 'سرّي', fileCount: 0 });
     expect(json.data.entries.find((e: Row) => e.id === E_MEMBERS).personName).toBe('محمد السعيد');
@@ -669,10 +670,11 @@ describe('GET sources (admin list)', () => {
   test('paginates, and matchedIds covers every match for «تحديد الكل»', async () => {
     const page1 = (await (await list(ADMIN_USER, '?limit=2')).json()).data;
     expect(page1.entries).toHaveLength(2);
-    expect(page1.total).toBe(5);
-    expect(page1.matchedIds).toHaveLength(5);
+    expect(page1.total).toBe(4);
+    expect(page1.matchedIds).toHaveLength(4);
+    expect(page1.matchedIds).not.toContain(E_TREE);
     expect(page1.nextCursor).not.toBeNull();
-    const page3 = (await (await list(ADMIN_USER, `?limit=2&cursor=4`)).json()).data;
+    const page3 = (await (await list(ADMIN_USER, `?limit=2&cursor=3`)).json()).data;
     expect(page3.entries).toHaveLength(1);
     expect(page3.nextCursor).toBeNull();
   });
@@ -718,6 +720,15 @@ describe('POST sources/bulk', () => {
     await bulk(ADMIN_USER, { ids: [E_ADMINS, E_MEMBERS], action: 'delete' });
     expect(auditRows).toHaveLength(1);
     expect(auditRows[0]).toMatchObject({ action: 'delete', entityType: 'source_entry', entityId: MAIN });
+  });
+
+  test('never touches the tree-wide entry (it is managed from its own card)', async () => {
+    const del = await bulk(ADMIN_USER, { ids: [E_TREE, E_ADMINS], action: 'delete' });
+    expect((await del.json()).data).toEqual({ deleted: 1 });
+    expect(entries.some((e) => e.id === E_TREE)).toBe(true);
+    const upd = await bulk(ADMIN_USER, { ids: [E_TREE], action: 'setVisibility', visibility: 'public' });
+    expect((await upd.json()).data).toEqual({ updated: 0 });
+    expect(entries.find((e) => e.id === E_TREE)?.visibility).toBe('members');
   });
 
   test('an all-foreign id list answers 0 and writes no audit row', async () => {
