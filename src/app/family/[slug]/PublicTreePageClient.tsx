@@ -12,6 +12,8 @@ export interface PublicTreePageClientProps {
   description?: string;
   /** Public, no-account report page for this tree (PRD §8.2). */
   reportHref?: string;
+  /** Published tree slug (public sources in the person panel). */
+  slug?: string;
 }
 
 /**
@@ -27,6 +29,7 @@ export default function PublicTreePageClient({
   subtitle,
   description,
   reportHref,
+  slug,
 }: PublicTreePageClientProps) {
   const [calendar, setCalendar] = useState<CalendarPreference>('hijri');
 
@@ -39,6 +42,7 @@ export default function PublicTreePageClient({
       calendar={calendar}
       onCalendarChange={setCalendar}
       reportHref={reportHref}
+      slug={slug}
     />
   );
 }

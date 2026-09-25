@@ -100,6 +100,8 @@ export const listSourceEntriesQuerySchema = z.object({
   treeId: targetTreeIdSchema,
   q: z.string().max(MAX_SOURCE_QUERY).optional(),
   visibility: sourceVisibilitySchema.optional(),
+  /** `pending` = entries not yet at the public level (the publish flow's «أختار بنفسي»). */
+  scope: z.enum(['pending']).optional(),
   cursor: z.coerce.number().int().min(0).max(1_000_000).optional(),
   limit: z.coerce.number().int().min(1).max(MAX_SOURCE_PAGE).default(20),
 });

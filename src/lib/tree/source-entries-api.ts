@@ -132,7 +132,15 @@ export async function deleteTreeEntry(workspaceId: string, treeId?: string): Pro
 
 export async function listTreeSources(
   workspaceId: string,
-  params: { treeId?: string; q?: string; visibility?: SourceVisibilityLevel; cursor?: number; limit?: number } = {},
+  params: {
+    treeId?: string;
+    q?: string;
+    visibility?: SourceVisibilityLevel;
+    /** `pending` = not yet at the public level (the publish flow's list). */
+    scope?: 'pending';
+    cursor?: number;
+    limit?: number;
+  } = {},
 ): Promise<SourceListPage> {
   return json(await apiFetch(`${base(workspaceId)}/sources${query(params)}`));
 }
@@ -148,6 +156,23 @@ export async function bulkSources(
       jsonInit('POST', { ...body, ...(treeId ? { treeId } : {}) }),
     ),
   );
+}
+
+/** The publish flow's «المصادر في الشجرة المنشورة» numbers (admins). */
+export interface PublishSourcesSummary {
+  /** Every person entry of the tree not yet visible to visitors (uncapped). */
+  pendingIds: string[];
+  /** Person entries already at the public level. */
+  publicCount: number;
+  /** The tree-wide entry, handled separately from the list and bulk. */
+  treeEntry: { id: string; visibility: SourceVisibilityLevel } | null;
+}
+
+export async function fetchPublishSourcesSummary(
+  workspaceId: string,
+  treeId?: string,
+): Promise<PublishSourcesSummary> {
+  return json(await apiFetch(`${base(workspaceId)}/sources/publish-summary${query({ treeId })}`));
 }
 
 export async function fetchSourceSuggestions(workspaceId: string, q: string): Promise<string[]> {

@@ -256,3 +256,32 @@
     font-size: 16px;
   }
 }
+
+/* Deferred mode: a saved file marked for removal until the person form saves. */
+.fileRemoved .fileName {
+  text-decoration: line-through;
+  opacity: 0.45;
+}
+
+.fileRemoved .fileThumb {
+  opacity: 0.45;
+}
+
+.fileRestore {
+  flex-shrink: 0;
+  min-height: 44px;
+  padding: 0 var(--space-5);
+  border: 1px solid rgba(200, 168, 101, 0.3);
+  border-radius: var(--heritage-radius-pill);
+  background: transparent;
+  color: var(--heritage-gold-bright);
+  font-family: var(--heritage-font-body);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.fileRestore:hover,
+.fileRestore:focus-visible {
+  background: rgba(200, 168, 101, 0.1);
+  outline: none;
+}

@@ -785,3 +785,61 @@ describe('GET sources/suggestions', () => {
     expect(json.data.suggestions).toHaveLength(10);
   });
 });
+
+// ===========================================================================
+// Step 7 — publish flow: «المصادر في الشجرة المنشورة»
+// ===========================================================================
+
+describe('GET sources?scope=pending (publish «أختار بنفسي» list)', () => {
+  async function list(user: { id: string }, query = '') {
+    as(user);
+    const { GET } = await listRoute();
+    return GET(req(`sources${query}`), wp);
+  }
+
+  test('lists only entries NOT yet at the public level, and matchedIds follows', async () => {
+    entries.push(entry('eeeeeeee-0000-4000-8000-0000000000a1', MAIN, PERSON, 'public', 'منشور'));
+    const json = await (await list(ADMIN_USER, '?scope=pending')).json();
+    const ids = json.data.entries.map((e: Row) => e.id).sort();
+    expect(ids).toEqual([E_ADMINS, E_MEMBERS, E_PRIV, E_MINE_ADMINS].sort());
+    expect(json.data.matchedIds.sort()).toEqual(ids);
+  });
+
+  test('rejects an unknown scope', async () => {
+    expect((await list(ADMIN_USER, '?scope=everything')).status).toBe(400);
+  });
+});
+
+describe('GET sources/publish-summary', () => {
+  const summaryRoute = () => import('@/app/api/workspaces/[id]/tree/sources/publish-summary/route');
+  async function summary(user: { id: string }, query = '') {
+    as(user);
+    const { GET } = await summaryRoute();
+    return GET(req(`sources/publish-summary${query}`), wp);
+  }
+
+  test('is admin only', async () => {
+    expect((await summary(EDITOR_USER)).status).toBe(403);
+    expect((await summary(MEMBER_USER)).status).toBe(403);
+  });
+
+  test('every not-yet-public PERSON entry id of the tree, the public count, and the tree-wide entry level', async () => {
+    entries.push(entry('eeeeeeee-0000-4000-8000-0000000000a1', MAIN, PERSON, 'public', 'منشور'));
+    const res = await summary(ADMIN_USER);
+    expect(res.status).toBe(200);
+    expect(res.headers.get('Cache-Control')).toBe('private, no-store');
+    const { data } = await res.json();
+    expect(data.pendingIds.sort()).toEqual([E_ADMINS, E_MEMBERS, E_PRIV, E_MINE_ADMINS].sort());
+    expect(data.publicCount).toBe(1);
+    expect(data.treeEntry).toEqual({ id: E_TREE, visibility: 'members' });
+  });
+
+  test('is scoped to the ?treeId tree', async () => {
+    const { data } = await (await summary(ADMIN_USER, `?treeId=${EXTRA}`)).json();
+    expect(data).toEqual({ pendingIds: [E_EXTRA], publicCount: 0, treeEntry: null });
+  });
+
+  test('a foreign tree id → 404', async () => {
+    expect((await summary(ADMIN_USER, `?treeId=${FOREIGN_TREE}`)).status).toBe(404);
+  });
+});

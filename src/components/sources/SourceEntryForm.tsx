@@ -21,6 +21,7 @@ import {
   type SourceEntryPatch,
 } from '@/lib/tree/source-entry-undo';
 import type { UndoEntry } from '@/lib/undo/types';
+import type { SourceDraft } from '@/lib/tree/source-staging';
 import { useTreePublishLevel } from '@/hooks/useTreePublishLevel';
 import { useSourceFileUrls } from '@/hooks/useSourceFileUrls';
 import { Modal } from '@/components/ui/Modal';
@@ -56,6 +57,18 @@ export interface SourceEntryFormProps {
   /** After a successful save (or after the last file of a text-less entry is deleted). */
   onSaved: (entry: SourceEntryDto | null) => void;
   onPushUndo?: (entry: UndoEntry) => void;
+  /**
+   * DEFERRED mode (inside the person edit form): «حفظ» makes no entry API
+   * call — it validates and hands the draft back; the person form saves it on
+   * its own «حفظ». Uploads still go up at once (staged files). Removing a saved
+   * file is only staged. The parent owns the previews: this form never
+   * revokes a preview it handed back or was given.
+   */
+  onDraft?: (draft: SourceDraft) => void;
+  /** Deferred mode: the row's staged draft, to reopen it as it was left. */
+  initialDraft?: SourceDraft;
+  /** Deferred mode opens on top of the person form. */
+  stacked?: boolean;
 }
 
 /** A file picked in this form: uploading, or staged on the server. */
@@ -66,6 +79,8 @@ interface StagedFile {
   previewUrl: string | null;
   status: 'uploading' | 'done';
   id?: string;
+  /** Came in with `initialDraft` — the parent owns its preview. */
+  fromParent?: boolean;
 }
 
 let stagedCounter = 0;
@@ -86,11 +101,29 @@ export function SourceEntryForm({
   onClose,
   onSaved,
   onPushUndo,
+  onDraft,
+  initialDraft,
+  stacked = false,
 }: SourceEntryFormProps) {
-  const [text, setText] = useState(entry?.text ?? '');
-  const [visibility, setVisibility] = useState<SourceVisibilityLevel>(entry?.visibility ?? 'admins');
+  const deferred = !!onDraft;
+  const [text, setText] = useState(initialDraft?.text ?? entry?.text ?? '');
+  const [visibility, setVisibility] = useState<SourceVisibilityLevel>(
+    initialDraft?.visibility ?? entry?.visibility ?? 'admins',
+  );
   const [existingFiles, setExistingFiles] = useState<SourceFileDto[]>(entry?.files ?? []);
-  const [staged, setStaged] = useState<StagedFile[]>([]);
+  const [staged, setStaged] = useState<StagedFile[]>(() =>
+    (initialDraft?.addFiles ?? []).map((f) => ({
+      key: `parent-${f.id}`,
+      name: f.name,
+      isImage: f.isImage,
+      previewUrl: f.previewUrl,
+      status: 'done' as const,
+      id: f.id,
+      fromParent: true,
+    })),
+  );
+  // Deferred mode: saved files the user removed (crossed out until «حفظ»).
+  const [removedIds, setRemovedIds] = useState<string[]>(initialDraft?.removeFileIds ?? []);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [confirmDeleteFileId, setConfirmDeleteFileId] = useState<string | null>(null);
@@ -104,12 +137,15 @@ export function SourceEntryForm({
   const treeVisibility = useTreePublishLevel(workspaceId, treeId, isAdmin);
   const existingUrls = useSourceFileUrls(workspaceId, treeId, entry?.id ?? '', mode === 'edit' ? existingFiles : []);
 
-  // Revoke every local preview on close.
+  // Revoke every local preview this form still owns on close.
   const stagedRef = useRef(staged);
   stagedRef.current = staged;
+  // Deferred mode: once the draft is handed back, its previews are the parent's.
+  const handedOffRef = useRef(false);
   useEffect(
     () => () => {
-      for (const s of stagedRef.current) if (s.previewUrl) URL.revokeObjectURL(s.previewUrl);
+      if (handedOffRef.current) return;
+      for (const s of stagedRef.current) if (s.previewUrl && !s.fromParent) URL.revokeObjectURL(s.previewUrl);
     },
     [],
   );
@@ -172,7 +208,7 @@ export function SourceEntryForm({
   const removeStaged = (key: string) => {
     setStaged((prev) => {
       const gone = prev.find((s) => s.key === key);
-      if (gone?.previewUrl) URL.revokeObjectURL(gone.previewUrl);
+      if (gone?.previewUrl && !gone.fromParent) URL.revokeObjectURL(gone.previewUrl);
       return prev.filter((s) => s.key !== key);
     });
   };
@@ -199,18 +235,34 @@ export function SourceEntryForm({
 
   const uploading = staged.some((s) => s.status === 'uploading');
   const stagedIds = staged.filter((s) => s.status === 'done' && s.id).map((s) => s.id as string);
-  const hasFiles = existingFiles.length + staged.length > 0;
+  const keptExisting = existingFiles.length - removedIds.length;
+  const hasFiles = keptExisting + staged.length > 0;
   const fileSlotsLeft = MAX_FILES_PER_ENTRY - existingFiles.length - staged.length;
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     if (saving || uploading) return;
     const trimmed = text.trim();
-    if (!trimmed && existingFiles.length + stagedIds.length === 0) {
+    if (!trimmed && keptExisting + stagedIds.length === 0) {
       setError(NEEDS_TEXT_OR_FILE);
       return;
     }
     setError('');
+    if (onDraft) {
+      onDraft({
+        text: trimmed,
+        visibility,
+        addFiles: staged
+          .filter((s) => s.status === 'done' && s.id)
+          .map((s) => ({ id: s.id as string, name: s.name, isImage: s.isImage, previewUrl: s.previewUrl })),
+        removeFileIds: [...removedIds],
+      });
+      // The previews now belong to the parent's list.
+      handedOffRef.current = true;
+      onClose();
+      return;
+    }
     setSaving(true);
     try {
       if (treeWide) {
@@ -268,7 +320,7 @@ export function SourceEntryForm({
   );
 
   return (
-    <Modal isOpen onClose={onClose} title={title} actions={actions} className={styles.modal}>
+    <Modal isOpen onClose={onClose} title={title} actions={actions} className={styles.modal} stacked={stacked}>
       <form id="source-entry-form" className={styles.form} onSubmit={handleSubmit} noValidate>
         {error && (
           <div className={styles.error} role="alert">
@@ -296,6 +348,7 @@ export function SourceEntryForm({
                 }
               }}
               placeholder="مثال: طبقات ابن سعد، ص ٩٠"
+              autoFocus={deferred}
               maxLength={MAX_SOURCE_TEXT}
               rows={3}
               autoComplete="off"
@@ -335,8 +388,9 @@ export function SourceEntryForm({
               {existingFiles.map((f) => {
                 const isImage = f.mimeType.startsWith('image/');
                 const url = existingUrls[f.id];
+                const removed = deferred && removedIds.includes(f.id);
                 return (
-                  <li key={f.id} className={styles.fileItem}>
+                  <li key={f.id} className={clsx(styles.fileItem, { [styles.fileRemoved]: removed })}>
                     <span className={clsx(styles.fileThumb, { [styles.fileThumbLoading]: isImage && !url })}>
                       {isImage ? (
                         // eslint-disable-next-line @next/next/no-img-element -- object URL
@@ -348,7 +402,26 @@ export function SourceEntryForm({
                     <span className={styles.fileName} dir="auto">
                       {f.fileName}
                     </span>
-                    {confirmDeleteFileId === f.id ? (
+                    {deferred ? (
+                      removed ? (
+                        <button
+                          type="button"
+                          className={styles.fileRestore}
+                          onClick={() => setRemovedIds((prev) => prev.filter((id) => id !== f.id))}
+                        >
+                          تراجع
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className={styles.fileRemove}
+                          aria-label={`حذف ${f.fileName}`}
+                          onClick={() => setRemovedIds((prev) => [...prev, f.id])}
+                        >
+                          <CloseIcon size={14} />
+                        </button>
+                      )
+                    ) : confirmDeleteFileId === f.id ? (
                       <span className={styles.fileConfirm}>
                         <span className={styles.fileConfirmText}>لا يمكن التراجع عن حذف الملف.</span>
                         <Button

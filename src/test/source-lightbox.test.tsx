@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { SourceLightbox } from '@/components/sources/SourceLightbox';
+import { Modal } from '@/components/ui/Modal';
 
 const A = { id: 'a', mimeType: 'image/jpeg' as const, sizeBytes: 1, fileName: 'a.jpg' };
 const B = { id: 'b', mimeType: 'image/png' as const, sizeBytes: 1, fileName: 'b.png' };
@@ -62,5 +63,29 @@ describe('SourceLightbox', () => {
     (buttons[buttons.length - 1] as HTMLElement).focus();
     fireEvent.keyDown(document, { key: 'Tab' });
     expect(document.activeElement).toBe(buttons[0]);
+  });
+
+  it('opened over a modal, Esc closes only the viewer and the body stays locked', () => {
+    const onCloseModal = vi.fn();
+    const onClose = vi.fn();
+    const { rerender } = render(
+      <Modal isOpen onClose={onCloseModal} title="نموذج">
+        <span />
+      </Modal>,
+    );
+    rerender(
+      <Modal isOpen onClose={onCloseModal} title="نموذج">
+        <SourceLightbox files={[A]} urls={urls} startIndex={0} onClose={onClose} onDownload={vi.fn()} />
+      </Modal>,
+    );
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(onCloseModal).not.toHaveBeenCalled();
+    rerender(
+      <Modal isOpen onClose={onCloseModal} title="نموذج">
+        <span />
+      </Modal>,
+    );
+    expect(document.body.style.overflow).toBe('hidden');
   });
 });

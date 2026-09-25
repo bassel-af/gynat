@@ -50,6 +50,12 @@ interface WorkspaceTreeContextValue {
   familyName?: string;
   /** Pre-check "deceased" on new person forms (create mode only) */
   defaultNewPersonDeceased?: boolean;
+  /**
+   * Set ONLY by the anonymous public tree viewer (`/family/[slug]`): the
+   * published tree's slug. Panels that would call member APIs read public
+   * routes instead (e.g. «المصادر»).
+   */
+  publicSlug?: string;
 }
 
 const WorkspaceTreeContext = createContext<WorkspaceTreeContextValue | null>(null);
@@ -74,6 +80,7 @@ interface WorkspaceTreeProviderProps {
   description?: string;
   familyName?: string;
   defaultNewPersonDeceased?: boolean;
+  publicSlug?: string;
 }
 
 export function WorkspaceTreeProvider({
@@ -96,9 +103,10 @@ export function WorkspaceTreeProvider({
   description,
   familyName,
   defaultNewPersonDeceased,
+  publicSlug,
 }: WorkspaceTreeProviderProps) {
   return (
-    <WorkspaceTreeContext.Provider value={{ workspaceId, canEdit, isAdmin, refreshTree, activeTreeId, pointers, enableUmmWalad, enableRadaa, enableAncestryJumps, enableKunya, enableAuditLog, enableTreeExport, allowMemberExport, hideBirthDateForFemale, hideBirthDateForMale, description, familyName, defaultNewPersonDeceased }}>
+    <WorkspaceTreeContext.Provider value={{ workspaceId, canEdit, isAdmin, refreshTree, activeTreeId, pointers, enableUmmWalad, enableRadaa, enableAncestryJumps, enableKunya, enableAuditLog, enableTreeExport, allowMemberExport, hideBirthDateForFemale, hideBirthDateForMale, description, familyName, defaultNewPersonDeceased, publicSlug }}>
       {children}
     </WorkspaceTreeContext.Provider>
   );

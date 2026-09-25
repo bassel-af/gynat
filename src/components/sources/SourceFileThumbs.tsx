@@ -15,9 +15,27 @@ export interface SourceFileThumbsProps {
   files: readonly SourceFileDto[];
   /** Thumbnail edge in px (32 in the sidebar). */
   size?: number;
+  /**
+   * Direct URL per file, for the anonymous public surface (no Bearer token is
+   * needed, so a plain `<img src>` works and nothing is fetched as a blob).
+   * Absent ⇒ the member path: authenticated object URLs.
+   */
+  fileUrl?: (file: SourceFileDto) => string;
   /** Called with the tapped file's index (the viewer opens either way). */
   onOpen?: (index: number) => void;
   className?: string;
+}
+
+const NO_FILES: readonly SourceFileDto[] = [];
+
+/** Public files are plain URLs: the route itself answers PDFs as a download. */
+function openDirectDownload(url: string): void {
+  const a = document.createElement('a');
+  a.href = url;
+  a.rel = 'noopener';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 }
 
 /**
@@ -31,10 +49,14 @@ export function SourceFileThumbs({
   entryId,
   files,
   size = 32,
+  fileUrl,
   onOpen,
   className,
 }: SourceFileThumbsProps) {
-  const urls = useSourceFileUrls(workspaceId, treeId, entryId, files);
+  const fetched = useSourceFileUrls(workspaceId, treeId, entryId, fileUrl ? NO_FILES : files);
+  const urls = fileUrl
+    ? Object.fromEntries(files.filter((f) => f.mimeType.startsWith('image/')).map((f) => [f.id, fileUrl(f)]))
+    : fetched;
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   if (files.length === 0) return null;
@@ -84,6 +106,10 @@ export function SourceFileThumbs({
           startIndex={openIndex}
           onClose={() => setOpenIndex(null)}
           onDownload={(file) => {
+            if (fileUrl) {
+              openDirectDownload(fileUrl(file));
+              return;
+            }
             void downloadSourceFile(workspaceId, treeId, entryId, file).catch(() => undefined);
           }}
         />

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useModalStackEntry } from '@/components/ui/Modal/modalStack';
 import type { SourceFileDto } from '@/lib/tree/source-entries-api';
 import { toArabicDigits } from './arabicDigits';
 import { ChevronIcon, CloseIcon, DocumentIcon, DownloadIcon } from './SourceIcons';
@@ -39,6 +40,8 @@ export function SourceLightbox({ files, urls, startIndex, onClose, onDownload }:
   const pinchRef = useRef<{ distance: number; zoom: number } | null>(null);
   const dragRef = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
 
+  const isTop = useModalStackEntry(true);
+
   const count = files.length;
   const file = files[index];
   const isImage = !!file && file.mimeType.startsWith('image/');
@@ -57,6 +60,8 @@ export function SourceLightbox({ files, urls, startIndex, onClose, onDownload }:
   // Tab trap so focus never leaves the viewer while it is open.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Opened over a modal: only the viewer (the top overlay) answers.
+      if (!isTop()) return;
       if (e.key === 'Escape') {
         e.preventDefault();
         onClose();
@@ -83,16 +88,14 @@ export function SourceLightbox({ files, urls, startIndex, onClose, onDownload }:
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [go, onClose]);
+  }, [go, onClose, isTop]);
 
-  // Focus in on open, back to where it was on close; no page scroll behind.
+  // Focus in on open, back to where it was on close. No page scroll behind:
+  // the shared overlay stack keeps the body locked until the last one closes.
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
     closeRef.current?.focus();
-    const overflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
     return () => {
-      document.body.style.overflow = overflow;
       previous?.focus?.();
     };
   }, []);
@@ -144,7 +147,13 @@ export function SourceLightbox({ files, urls, startIndex, onClose, onDownload }:
   if (!file || typeof document === 'undefined') return null;
 
   return createPortal(
-    <div className={styles.overlay} onClick={onClose}>
+    <div
+      className={styles.overlay}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClose();
+      }}
+    >
       <div
         ref={dialogRef}
         className={styles.dialog}

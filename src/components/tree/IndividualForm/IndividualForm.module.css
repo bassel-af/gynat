@@ -272,3 +272,40 @@
 .modal {
   max-width: 520px;
 }
+
+/* Phones: the person form is full-height (a stacked «إضافة مصدر» covers it). */
+@media (max-width: 600px) {
+  .modal {
+    height: 100%;
+    max-height: none;
+  }
+}
+
+/* «المصادر» — the footer hint and the discard bar */
+.sourcesHint {
+  margin-inline-end: auto;
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  color: var(--heritage-text-muted);
+}
+
+.discardBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.discardText {
+  font-family: var(--heritage-font-body);
+  font-size: 13px;
+  font-weight: 500;
+  color: #f0b98b;
+}
+
+.discardActions {
+  display: flex;
+  gap: var(--space-3);
+}

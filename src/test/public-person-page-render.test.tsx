@@ -43,6 +43,22 @@ vi.mock('@/lib/tree/public-serve', () => ({
     r.kind === 'main' && r.visibility === 'public_listed' && r.personPagesIndexable,
 }));
 
+// Any database read during SSR is recorded; source tables must never be touched.
+const { dbTouches, publicSourceRows } = vi.hoisted(() => ({
+  dbTouches: [] as string[],
+  publicSourceRows: [] as Record<string, unknown>[],
+}));
+vi.mock('@/lib/db', () => ({
+  prisma: new Proxy({}, {
+    get: (_t, model: string) => new Proxy({}, {
+      get: (_m, op: string) => async () => {
+        dbTouches.push(`${model}.${op}`);
+        return /source/i.test(model) ? publicSourceRows : null;
+      },
+    }),
+  }),
+}));
+
 vi.mock('@/app/family/[slug]/person/[individualId]/PublicPersonView', () => ({ default: () => null }));
 vi.mock('@/app/family/[slug]/person/[individualId]/page.module.css', () => ({ default: {} }));
 vi.mock('next/navigation', () => ({ notFound: () => { throw new Error('NEXT_NOT_FOUND'); } }));
@@ -204,5 +220,32 @@ describe('public person page — one payload build per request', () => {
     await PublicPersonPage(params('slug', 'focal'));
 
     expect(mockBuildPublicTreePayload).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('public person page — sources never reach the SSR / JSON-LD', () => {
+  test('a person with public sources: identical JSON-LD, no source text in the HTML, no source reads', async () => {
+    mockGetPublicTreeForRequest.mockResolvedValue(
+      record({ visibility: 'public_listed', personPagesIndexable: true }),
+    );
+    mockBuildPublicTreePayload.mockResolvedValue(payload());
+    const baseline = render(await PublicPersonPage(params('slug', 'focal')));
+    const before = jsonLdBlobs(baseline.container);
+    baseline.unmount();
+    hoisted.resets.forEach((reset) => reset());
+
+    // The focal person now HAS a public-level source entry in the database.
+    dbTouches.length = 0;
+    publicSourceRows.push({ id: 'SRC-1', individualId: 'focal', visibility: 'public', text: 'طبقات ابن سعد، ص ٩٠' });
+    try {
+      const { container } = render(await PublicPersonPage(params('slug', 'focal')));
+      expect(jsonLdBlobs(container)).toEqual(before);
+      expect(container.innerHTML).not.toContain('ابن سعد');
+      const meta = await generateMetadata(params('slug', 'focal'));
+      expect(JSON.stringify(meta)).not.toContain('ابن سعد');
+      expect(dbTouches.filter((t) => /source/i.test(t))).toEqual([]);
+    } finally {
+      publicSourceRows.length = 0;
+    }
   });
 });

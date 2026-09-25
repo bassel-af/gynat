@@ -28,6 +28,8 @@ export interface PublicTreeViewerProps {
   onCalendarChange?: (calendar: CalendarPreference) => void;
   /** Public, no-account report page for this tree (PRD §1.5, §8.2). */
   reportHref?: string;
+  /** The published tree's slug — the person panel reads public sources with it. */
+  slug?: string;
   className?: string;
 }
 
@@ -52,6 +54,7 @@ export function PublicTreeViewer({
   calendar,
   onCalendarChange,
   reportHref,
+  slug,
   className,
 }: PublicTreeViewerProps) {
   return (
@@ -63,6 +66,7 @@ export function PublicTreeViewer({
         refreshTree={noopRefresh}
         description={description}
         familyName={familyName}
+        publicSlug={slug}
       >
         <PublicTreeViewerInner
           data={data}
@@ -93,7 +97,7 @@ function PublicTreeViewerInner({
   onCalendarChange,
   reportHref,
   className,
-}: Omit<PublicTreeViewerProps, 'description'>) {
+}: Omit<PublicTreeViewerProps, 'description' | 'slug'>) {
   const { data: contextData, setData } = useTree();
   const [ctaDismissed, setCtaDismissed] = useState(false);
 

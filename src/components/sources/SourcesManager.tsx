@@ -15,18 +15,28 @@ import { Button } from '@/components/ui/Button';
 import { SourceVisibilityPicker } from './SourceVisibilityPicker';
 import { SourceFileThumbs } from './SourceFileThumbs';
 import { SourceLevelBadge, SOURCE_LEVEL_SHORT_LABELS } from './SourceLevelBadge';
-import { toArabicDigits } from './arabicDigits';
+import { sourceCountLabel, toArabicDigits } from './arabicDigits';
 import styles from './SourcesAdmin.module.css';
 
 const SEARCH_DELAY_MS = 300;
 const PAGE_SIZE = 20;
 const LEVELS: SourceVisibilityLevel[] = ['admins', 'members', 'public'];
+const PENDING_LEVELS: SourceVisibilityLevel[] = ['admins', 'members'];
 
 export interface SourcesManagerProps {
   workspaceId: string;
   slug: string;
   /** Target tree; absent ⇒ the workspace main tree. */
   treeId?: string;
+  /**
+   * Selection-only mode (the publish flow's «أختار بنفسي»): lists only the
+   * entries visitors can't see yet, keeps ticks across searches, and has no
+   * bulk bar, dialogs or person links — the caller owns the selection.
+   */
+  selection?: {
+    selected: ReadonlySet<string>;
+    onChange: (next: Set<string>) => void;
+  };
 }
 
 interface ListState {
@@ -52,9 +62,10 @@ const EMPTY: ListState = {
  * server's `matchedIds`, capped at 500), not only the loaded rows.
  * Bulk actions are not undoable.
  */
-export function SourcesManager({ workspaceId, slug, treeId }: SourcesManagerProps) {
+export function SourcesManager({ workspaceId, slug, treeId, selection }: SourcesManagerProps) {
   const { showToast } = useToast();
-  const treeVisibility = useTreePublishLevel(workspaceId, treeId, true);
+  const selectOnly = !!selection;
+  const treeVisibility = useTreePublishLevel(workspaceId, treeId, !selectOnly);
 
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
@@ -63,7 +74,15 @@ export function SourcesManager({ workspaceId, slug, treeId }: SourcesManagerProp
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(false);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [ownSelected, setOwnSelected] = useState<Set<string>>(new Set());
+  const selected: ReadonlySet<string> = selection ? selection.selected : ownSelected;
+  const selectionRef = useRef(selection);
+  selectionRef.current = selection;
+  const setSelected = useCallback((next: Set<string> | ((prev: ReadonlySet<string>) => Set<string>)) => {
+    const current = selectionRef.current;
+    if (current) current.onChange(typeof next === 'function' ? next(current.selected) : next);
+    else setOwnSelected((prev) => (typeof next === 'function' ? next(prev) : next));
+  }, []);
   const [dialog, setDialog] = useState<'visibility' | 'delete' | null>(null);
   const [targetLevel, setTargetLevel] = useState<SourceVisibilityLevel>('admins');
   const [applying, setApplying] = useState(false);
@@ -80,10 +99,11 @@ export function SourcesManager({ workspaceId, slug, treeId }: SourcesManagerProp
         treeId,
         q: debouncedQuery || undefined,
         visibility: level ?? undefined,
+        scope: selectOnly ? 'pending' : undefined,
         cursor,
         limit: PAGE_SIZE,
       }),
-    [workspaceId, treeId, debouncedQuery, level],
+    [workspaceId, treeId, debouncedQuery, level, selectOnly],
   );
 
   const reload = useCallback(async () => {
@@ -109,11 +129,12 @@ export function SourcesManager({ workspaceId, slug, treeId }: SourcesManagerProp
     }
   }, [fetchPage]);
 
-  // A new search or filter starts over, selection included.
+  // A new search or filter starts over, selection included — except in
+  // selection-only mode, where ticks survive a search (the caller owns them).
   useEffect(() => {
-    setSelected(new Set());
+    if (!selectOnly) setSelected(new Set());
     void reload();
-  }, [reload]);
+  }, [reload, selectOnly, setSelected]);
 
   const loadMore = async () => {
     if (list.nextCursor === null) return;
@@ -131,7 +152,15 @@ export function SourcesManager({ workspaceId, slug, treeId }: SourcesManagerProp
   };
 
   const allSelected = list.matchedIds.length > 0 && list.matchedIds.every((id) => selected.has(id));
-  const toggleAll = () => setSelected(allSelected ? new Set() : new Set(list.matchedIds));
+  const toggleAll = () =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      for (const id of list.matchedIds) {
+        if (allSelected) next.delete(id);
+        else next.add(id);
+      }
+      return next;
+    });
   const toggleOne = (id: string) =>
     setSelected((prev) => {
       const next = new Set(prev);
@@ -161,10 +190,10 @@ export function SourcesManager({ workspaceId, slug, treeId }: SourcesManagerProp
     try {
       if (dialog === 'delete') {
         const res = await bulkSources(workspaceId, { ids, action: 'delete' }, treeId);
-        showToast(`تم حذف ${toArabicDigits(res.deleted ?? ids.length)} مصدرًا`, 'success');
+        showToast(`تم حذف ${sourceCountLabel(res.deleted ?? ids.length)}`, 'success');
       } else {
         const res = await bulkSources(workspaceId, { ids, action: 'setVisibility', visibility: targetLevel }, treeId);
-        showToast(`تم تحديث ${toArabicDigits(res.updated ?? ids.length)} مصدرًا`, 'success');
+        showToast(`تم تحديث ${sourceCountLabel(res.updated ?? ids.length)}`, 'success');
       }
       setDialog(null);
       setSelected(new Set());
@@ -201,7 +230,7 @@ export function SourcesManager({ workspaceId, slug, treeId }: SourcesManagerProp
           >
             الكل
           </button>
-          {LEVELS.map((l) => (
+          {(selectOnly ? PENDING_LEVELS : LEVELS).map((l) => (
             <button
               key={l}
               type="button"
@@ -252,7 +281,7 @@ export function SourcesManager({ workspaceId, slug, treeId }: SourcesManagerProp
                 </label>
                 <div className={styles.rowMain}>
                   <div className={styles.rowHead}>
-                    {e.individualId ? (
+                    {e.individualId && !selectOnly ? (
                       <Link
                         className={styles.personLink}
                         href={getViewMode('tree').href({ slug, individualId: e.individualId, treeId })}
@@ -285,7 +314,7 @@ export function SourcesManager({ workspaceId, slug, treeId }: SourcesManagerProp
         </div>
       )}
 
-      {selected.size > 0 && (
+      {!selectOnly && selected.size > 0 && (
         <div className={styles.bulkBar} role="region" aria-label="إجراءات المصادر المحددة">
           <div className={styles.bulkInfo}>
             <span className={styles.bulkCount}>تم تحديد {count}</span>
@@ -312,7 +341,7 @@ export function SourcesManager({ workspaceId, slug, treeId }: SourcesManagerProp
       <Modal
         isOpen={dialog === 'visibility'}
         onClose={() => (applying ? undefined : setDialog(null))}
-        title={`تغيير من يرى ${count} مصدرًا`}
+        title={`تغيير من يرى ${sourceCountLabel(selected.size)}`}
         className={styles.dialog}
         actions={
           <>
@@ -351,7 +380,7 @@ export function SourcesManager({ workspaceId, slug, treeId }: SourcesManagerProp
           </>
         }
       >
-        <p className={styles.confirmText}>سيُحذف {count} مصدرًا مع ملفاتها، ولا يمكن التراجع</p>
+        <p className={styles.confirmText}>سيُحذف {sourceCountLabel(selected.size)} مع ملفاتها، ولا يمكن التراجع</p>
       </Modal>
     </section>
   );

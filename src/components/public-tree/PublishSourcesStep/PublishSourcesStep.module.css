@@ -1,0 +1,146 @@
+/* «المصادر في الشجرة المنشورة» — one step inside the publish flow's glass panel. */
+
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  color: var(--heritage-cream);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--heritage-font-display);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-medium);
+  color: var(--heritage-gold-bright);
+}
+
+.lead {
+  margin: 0;
+  font-family: var(--heritage-font-body);
+  font-size: var(--font-size-base);
+  line-height: 1.8;
+}
+
+.options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.option {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-height: 44px;
+  padding: var(--space-5);
+  border-radius: var(--heritage-radius-lg, 14px);
+  border: 1px solid var(--heritage-glass-border);
+  background: var(--heritage-glass-bg);
+  cursor: pointer;
+  transition: border-color var(--transition-base), background var(--transition-base);
+}
+
+.option:hover {
+  border-color: var(--heritage-gold);
+}
+
+.optionActive {
+  border-color: var(--heritage-gold);
+  background: rgba(200, 168, 101, 0.1);
+}
+
+.radio,
+.checkbox {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-top: 3px;
+  accent-color: var(--heritage-gold);
+}
+
+.optionText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.optionLabel {
+  font-weight: var(--font-weight-medium);
+}
+
+.optionHint {
+  font-size: var(--font-size-sm);
+  opacity: 0.72;
+}
+
+.treeEntry {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.treeEntry .checkbox {
+  margin-top: 0;
+}
+
+.picker {
+  max-height: min(52vh, 520px);
+  overflow-y: auto;
+  padding: var(--space-4);
+  border-radius: var(--heritage-radius-lg, 14px);
+  border: 1px solid var(--heritage-glass-border);
+  background: rgba(7, 11, 24, 0.6);
+}
+
+.warning {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--heritage-gold);
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-4);
+  margin-top: var(--space-3);
+}
+
+.continueBtn {
+  padding: var(--space-6) var(--space-13);
+  font-family: var(--heritage-font-display);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--heritage-midnight-deep);
+  background: var(--heritage-gradient-gold);
+  border: none;
+  border-radius: var(--heritage-radius-pill);
+  cursor: pointer;
+}
+
+.backBtn {
+  padding: var(--space-6) var(--space-9);
+  font-family: var(--heritage-font-body);
+  font-size: var(--font-size-base);
+  color: var(--heritage-cream);
+  background: transparent;
+  border: 1px solid var(--heritage-glass-border-strong);
+  border-radius: var(--heritage-radius-pill);
+  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  .options {
+    grid-template-columns: 1fr;
+  }
+
+  .actions {
+    flex-wrap: wrap;
+  }
+
+  .continueBtn,
+  .backBtn {
+    flex: 1;
+  }
+}

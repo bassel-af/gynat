@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef, type FormEvent } from 'react';
+import { useState, useCallback, useEffect, useRef, type FormEvent } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { PlaceComboBox } from '@/components/ui/PlaceComboBox';
@@ -8,6 +8,23 @@ import { Button } from '@/components/ui/Button';
 import { getDisplayNameWithNasab } from '@/lib/gedcom/display';
 import { getAddRelationshipLabel } from '@/lib/tree/relationship-labels';
 import type { GedcomData } from '@/lib/gedcom/types';
+import type { SourceEntryDto } from '@/lib/tree/source-entries-api';
+import {
+  stagedFromEntries,
+  addDraft,
+  replaceDraft,
+  toggleDelete,
+  hasStagedChanges,
+  buildSourcePlan,
+  applyPlanResult,
+  draftFileUrls,
+  type SourceDraft,
+  type SourcePlan,
+  type SourcePlanResult,
+  type StagedSource,
+} from '@/lib/tree/source-staging';
+import { StagedSourcesList } from '@/components/sources/StagedSourcesList';
+import { SourceEntryForm } from '@/components/sources/SourceEntryForm';
 import styles from './IndividualForm.module.css';
 
 export interface IndividualFormData {
@@ -34,10 +51,29 @@ export interface IndividualFormData {
   isUmmWalad?: boolean;
 }
 
+/**
+ * «المصادر» inside the form. Absent ⇒ no sources section (branch pointers,
+ * borrowed people, the «قفزة نسب» «شخص جديد» path).
+ */
+export interface IndividualFormSources {
+  workspaceId: string;
+  treeId?: string;
+  isAdmin: boolean;
+  /** The person's saved entries (empty in create modes). */
+  entries: readonly SourceEntryDto[];
+  /** The tree-wide entry the person inherits — read-only here. */
+  inherited?: SourceEntryDto | null;
+}
+
 interface IndividualFormProps {
   mode: 'create' | 'edit';
   initialData?: Partial<IndividualFormData>;
-  onSubmit: (data: IndividualFormData) => Promise<void>;
+  /**
+   * With `sources`, the second argument is the staged sources plan. A
+   * returned `SourcePlanResult` means the form stays open for a retry: the
+   * rows that saved leave the plan, the failed ones are flagged.
+   */
+  onSubmit: (data: IndividualFormData, sourcePlan?: SourcePlan) => Promise<SourcePlanResult | void>;
   onClose: () => void;
   isLoading?: boolean;
   error?: string;
@@ -72,7 +108,12 @@ interface IndividualFormProps {
   ummWaladInitialValue?: boolean;
   /** In edit mode: whether the family has existing MARC/MARR data (triggers confirmation) */
   ummWaladHasMarriageData?: boolean;
+  sources?: IndividualFormSources;
 }
+
+/** Names the form's own submit button, which reads «إضافة» in create modes. */
+const sourcesHint = (label: string) => `تغييرات المصادر تُحفظ عند الضغط على «${label}»`;
+const DISCARD_PROMPT = 'ستُفقد تغييرات المصادر. تجاهلها؟';
 
 function buildFormTitle(
   mode: 'create' | 'edit',
@@ -128,6 +169,7 @@ export function IndividualForm({
   ummWaladInitialValue,
   ummWaladHasMarriageData,
   defaultDeceased = false,
+  sources,
 }: IndividualFormProps) {
   const [formData, setFormData] = useState<IndividualFormData>(() => {
     const base = { ...EMPTY_FORM, ...initialData };
@@ -165,6 +207,44 @@ export function IndividualForm({
   const [linkChildrenToAnchor, setLinkChildrenToAnchor] = useState<boolean | null>(null);
   // Store the full subtree from preview for client-side orphan detection
   const [branchSubtree, setBranchSubtree] = useState<Record<string, unknown> | null>(null);
+
+  // «المصادر»: staged rows; nothing is saved until «حفظ».
+  const sourceEntries = sources?.entries;
+  const [sourceItems, setSourceItems] = useState<StagedSource[]>(() => stagedFromEntries(sourceEntries ?? []));
+  const [sourceForm, setSourceForm] = useState<{ key?: string } | null>(null);
+  const [sourceAnnouncement, setSourceAnnouncement] = useState('');
+  const [showDiscard, setShowDiscard] = useState(false);
+  const addSourceRef = useRef<HTMLButtonElement>(null);
+  // The saved entries arrived or changed (a refetch): take them while nothing is staged.
+  useEffect(() => {
+    if (!sourceEntries) return;
+    setSourceItems((prev) => (hasStagedChanges(prev) ? prev : stagedFromEntries(sourceEntries)));
+  }, [sourceEntries]);
+  // The list owns every local preview it was handed; revoke them when the form goes.
+  const sourceItemsRef = useRef(sourceItems);
+  sourceItemsRef.current = sourceItems;
+  useEffect(
+    () => () => {
+      for (const url of draftFileUrls(sourceItemsRef.current)) URL.revokeObjectURL(url);
+    },
+    [],
+  );
+
+  const handleSourceDraft = useCallback((key: string | undefined, draft: SourceDraft) => {
+    setShowDiscard(false);
+    if (key === undefined) {
+      setSourceItems((prev) => addDraft(prev, draft));
+      setSourceAnnouncement('أُضيف المصدر إلى القائمة');
+      return;
+    }
+    setSourceItems((prev) => {
+      // Previews the new draft dropped are no longer the list's to keep.
+      const old = prev.find((i) => i.key === key)?.draft;
+      const kept = new Set(draft.addFiles.map((f) => f.previewUrl));
+      for (const f of old?.addFiles ?? []) if (f.previewUrl && !kept.has(f.previewUrl)) URL.revokeObjectURL(f.previewUrl);
+      return replaceDraft(prev, key, draft);
+    });
+  }, []);
 
   const showBranchToggle = allowBranchLink && mode === 'create' && !!onBranchLink;
   const showUmmWaladCheckbox = enableUmmWalad && (
@@ -318,19 +398,50 @@ export function IndividualForm({
         return;
       }
       const submitData = showUmmWaladCheckbox ? { ...formData, isUmmWalad } : formData;
-      await onSubmit(submitData);
+      if (!sources) {
+        await onSubmit(submitData);
+        return;
+      }
+      setShowDiscard(false);
+      const result = await onSubmit(submitData, buildSourcePlan(sourceItems));
+      if (result) setSourceItems((prev) => applyPlanResult(prev, result));
     },
-    [formData, onSubmit, branchLinkMode, onBranchLink, branchToken, selectedBranchPersonId, orphanedChildNames, linkChildrenToAnchor, isUmmWalad, showUmmWaladCheckbox],
+    [formData, onSubmit, branchLinkMode, onBranchLink, branchToken, selectedBranchPersonId, orphanedChildNames, linkChildrenToAnchor, isUmmWalad, showUmmWaladCheckbox, sources, sourceItems],
   );
+
+  const showSources = !!sources && !branchLinkMode;
+  const sourcesStaged = showSources && hasStagedChanges(sourceItems);
+
+  // «إلغاء», Esc and the backdrop discard what is staged — after asking.
+  const requestClose = useCallback(() => {
+    if (sourcesStaged) {
+      setShowDiscard(true);
+      return;
+    }
+    onClose();
+  }, [sourcesStaged, onClose]);
 
   const effectiveLoading = branchLinkMode ? branchLinkLoading : isLoading;
   const branchLinkDisabled = branchLinkMode && (!branchToken.trim() || !selectedBranchPersonId);
   const sexMissing = !branchLinkMode && !formData.sex;
   const givenNameMissing = !branchLinkMode && mode === 'create' && !formData.givenName.trim();
 
-  const actions = (
+  const actions = showDiscard ? (
+    <div className={styles.discardBar} role="alert">
+      <span className={styles.discardText}>{DISCARD_PROMPT}</span>
+      <div className={styles.discardActions}>
+        <Button variant="danger" size="md" onClick={onClose}>
+          تجاهل
+        </Button>
+        <Button variant="ghost" size="md" onClick={() => setShowDiscard(false)}>
+          متابعة التعديل
+        </Button>
+      </div>
+    </div>
+  ) : (
     <>
-      <Button variant="ghost" size="md" onClick={onClose} disabled={effectiveLoading}>
+      {sourcesStaged && <span className={styles.sourcesHint}>{sourcesHint(submitLabel)}</span>}
+      <Button variant="ghost" size="md" onClick={requestClose} disabled={effectiveLoading}>
         إلغاء
       </Button>
       <Button
@@ -349,7 +460,7 @@ export function IndividualForm({
   return (
     <Modal
       isOpen
-      onClose={onClose}
+      onClose={requestClose}
       title={title}
       actions={actions}
       className={styles.modal}
@@ -359,7 +470,7 @@ export function IndividualForm({
         className={styles.form}
         onSubmit={handleSubmit}
       >
-        {error && <div className={styles.error}>{error}</div>}
+        {error && <div className={styles.error} role="alert">{error}</div>}
         {branchLinkError && <div className={styles.error}>{branchLinkError}</div>}
 
         {showBranchToggle && (
@@ -730,9 +841,55 @@ export function IndividualForm({
           />
         </div>
 
+        {showSources && sources && (
+          <>
+            <hr className={styles.sectionDivider} />
+            <StagedSourcesList
+              ref={addSourceRef}
+              workspaceId={sources.workspaceId}
+              treeId={sources.treeId}
+              mode={mode}
+              items={sourceItems}
+              inherited={sources.inherited}
+              announcement={sourceAnnouncement}
+              onAdd={() => {
+                setSourceAnnouncement('');
+                setSourceForm({});
+              }}
+              onEdit={(key) => setSourceForm({ key })}
+              onToggleDelete={(key) => {
+                setShowDiscard(false);
+                setSourceItems((prev) => {
+                  const gone = prev.find((i) => i.key === key);
+                  // An added row goes outright — its previews with it.
+                  if (gone && !gone.entry) for (const url of draftFileUrls([gone])) URL.revokeObjectURL(url);
+                  return toggleDelete(prev, key);
+                });
+              }}
+            />
+          </>
+        )}
+
         </>
         )}
       </form>
+      {showSources && sources && sourceForm && (() => {
+        const item = sourceForm.key ? sourceItems.find((i) => i.key === sourceForm.key) : undefined;
+        return (
+          <SourceEntryForm
+            mode={item ? 'edit' : 'create'}
+            workspaceId={sources.workspaceId}
+            treeId={sources.treeId}
+            entry={item?.entry}
+            initialDraft={item?.draft}
+            isAdmin={sources.isAdmin}
+            stacked
+            onDraft={(draft) => handleSourceDraft(sourceForm.key, draft)}
+            onSaved={() => {}}
+            onClose={() => setSourceForm(null)}
+          />
+        );
+      })()}
     </Modal>
   );
 }

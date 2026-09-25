@@ -32,7 +32,7 @@ interface SourceListItem extends SourceEntryDto {
   fileCount: number;
 }
 
-// GET /api/workspaces/[id]/tree/sources?treeId=&q=&visibility=&cursor=&limit=
+// GET /api/workspaces/[id]/tree/sources?treeId=&q=&visibility=&scope=&cursor=&limit=
 //
 // «المصادر» page backend — admins only. Newest first.
 //
@@ -55,14 +55,19 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
   }
-  const { treeId, q, visibility, cursor = 0, limit } = parsed.data;
+  const { treeId, q, visibility, scope, cursor = 0, limit } = parsed.data;
 
   const tree = await resolveSourceTreeOr404(workspaceId, treeId);
   if (isErrorResponse(tree)) return tree;
 
   const rows = (await prisma.sourceEntry.findMany({
     // Person entries only: the tree-wide entry has its own card and never joins «تحديد الكل».
-    where: { treeId: tree.id, individualId: { not: null }, ...(visibility ? { visibility } : {}) },
+    where: {
+      treeId: tree.id,
+      individualId: { not: null },
+      ...(visibility ? { visibility } : {}),
+      ...(scope === 'pending' ? { AND: [{ visibility: { not: 'public' as const } }] } : {}),
+    },
     orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     take: SOURCE_SCAN_CAP + 1,
     select: {

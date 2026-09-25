@@ -185,6 +185,7 @@ export default async function PublicPersonPage({ params }: PageParams) {
       <PublicPersonView
         projection={projection}
         slug={slug}
+        individualId={individualId}
         enableKunya={record.enableKunya}
       />
     </div>

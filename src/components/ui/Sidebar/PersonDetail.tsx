@@ -10,7 +10,8 @@ import { useOptionalWorkspaceTree } from '@/context/WorkspaceTreeContext';
 import { useOptionalUndoStack } from '@/context/UndoStackContext';
 import { useOptionalToast } from '@/context/ToastContext';
 import { usePersonSources } from '@/hooks/usePersonSources';
-import { PersonSourcesSection } from '@/components/sources';
+import { useTreeSourceEntry } from '@/hooks/useTreeSourceEntry';
+import { PersonSourcesSection, PublicPersonSourcesCard } from '@/components/sources';
 import { getDisplayName, getDisplayNameWithNasab, getPersonRelationships, getRadaRelationships, getAllDescendants, findTopmostAncestor, hasExternalFamily } from '@/lib/gedcom';
 import type { Individual } from '@/lib/gedcom';
 import { IndividualForm, type IndividualFormData } from '@/components/tree/IndividualForm/IndividualForm';
@@ -287,6 +288,9 @@ interface AuditHistoryEntry {
   user: { displayName: string | null };
 }
 
+/** Create modes: a new person has no entries of their own yet. */
+const NO_SOURCE_ENTRIES: never[] = [];
+
 const AUDIT_ACTION_LABELS: Record<string, string> = {
   create: 'إضافة',
   update: 'تعديل',
@@ -458,7 +462,8 @@ export function PersonDetail({ personId }: PersonDetailProps) {
   // person has no section (their sources stay with the owning workspace).
   const toast = useOptionalToast();
   const personSources = usePersonSources(workspace?.workspaceId, workspace?.activeTreeId, personId, {
-    enabled: !!workspace && !!person && !person._pointed,
+    // The anonymous public viewer reads the public route instead (below).
+    enabled: !!workspace && !workspace.publicSlug && !!person && !person._pointed,
   });
   const personHasSourceFiles = personSources.entries.some((e) => e.files.length > 0);
 
@@ -490,6 +495,7 @@ export function PersonDetail({ personId }: PersonDetailProps) {
     data,
     setSelectedPersonId,
     onPushUndo: undoStack?.push,
+    onNotice: toast ? (message) => toast.showToast(message, 'success') : undefined,
   });
 
   // Family picker state (stays local — it controls which modal is open)
@@ -750,6 +756,32 @@ export function PersonDetail({ personId }: PersonDetailProps) {
     const prefilledSurname = getSurnamePrefill(data, person, formMode);
     formInitialData = prefilledSurname ? { surname: prefilledSurname } : undefined;
   }
+
+  // «المصادر» inside the person form: the person's entries when editing; in the
+  // create modes a new person has none yet but inherits the tree-wide entry.
+  // Borrowed people have no sources section.
+  const formIsCreate = !!formMode && formMode.kind !== 'edit' && !!formSubmitHandler;
+  const treeSourceEntry = useTreeSourceEntry(workspace?.workspaceId, workspace?.activeTreeId, formIsCreate);
+  const formSources = useMemo(() => {
+    if (!workspace || !person || person._pointed || !formMode || !formSubmitHandler) return undefined;
+    if (formMode.kind === 'edit') {
+      if (!personSources.loaded) return undefined;
+      return {
+        workspaceId: workspace.workspaceId,
+        treeId: workspace.activeTreeId,
+        isAdmin: workspace.isAdmin === true,
+        entries: personSources.entries,
+        inherited: personSources.inherited,
+      };
+    }
+    return {
+      workspaceId: workspace.workspaceId,
+      treeId: workspace.activeTreeId,
+      isAdmin: workspace.isAdmin === true,
+      entries: NO_SOURCE_ENTRIES,
+      inherited: treeSourceEntry,
+    };
+  }, [workspace, person, formMode, formSubmitHandler, personSources.loaded, personSources.entries, personSources.inherited, treeSourceEntry]);
 
   const formLockedSex = formMode?.kind === 'addParent' ? formMode.lockedSex
     : formMode?.kind === 'addSpouse' ? formMode.lockedSex
@@ -1471,7 +1503,12 @@ export function PersonDetail({ personId }: PersonDetailProps) {
           </div>
         )}
 
-        {workspace && !person._pointed && (
+        {workspace?.publicSlug && (
+          // Public tree viewer: read-only «زوار الشجرة المنشورة» entries only.
+          <PublicPersonSourcesCard slug={workspace.publicSlug} individualId={personId} variant="panel" />
+        )}
+
+        {workspace && !workspace.publicSlug && !person._pointed && (
           <PersonSourcesSection
             workspaceId={workspace.workspaceId}
             treeId={workspace.activeTreeId}
@@ -1580,6 +1617,7 @@ export function PersonDetail({ personId }: PersonDetailProps) {
           ummWaladInitialValue={formMode.kind === 'edit' ? formMode.ummWaladInitialValue : undefined}
           ummWaladHasMarriageData={formMode.kind === 'edit' && ummWaladEditContext ? ummWaladEditContext.hasMarriageData : undefined}
           defaultDeceased={workspace?.defaultNewPersonDeceased}
+          sources={formSources}
         />
       )}
 

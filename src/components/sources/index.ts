@@ -9,3 +9,4 @@ export type { SourceEntryFormProps } from './SourceEntryForm';
 export { PersonSourcesSection } from './PersonSourcesSection';
 export { PersonSourcesCard } from './PersonSourcesCard';
 export { toArabicDigits } from './arabicDigits';
+export { PublicPersonSourcesCard } from './PublicPersonSourcesCard';

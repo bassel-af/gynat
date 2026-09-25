@@ -221,7 +221,7 @@ describe('SourcesManager — bulk actions', () => {
     fireEvent.click(screen.getByRole('button', { name: 'حذف' }));
     expect(api.bulkSources).not.toHaveBeenCalled();
     const dialog = screen.getByRole('dialog');
-    expect(within(dialog).getByText('سيُحذف ٣ مصدرًا مع ملفاتها، ولا يمكن التراجع')).toBeInTheDocument();
+    expect(within(dialog).getByText('سيُحذف ٣ مصادر مع ملفاتها، ولا يمكن التراجع')).toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole('button', { name: 'حذف' }));
     await waitFor(() =>
       expect(api.bulkSources).toHaveBeenCalledWith('ws', { ids: [ID(1), ID(2), ID(3)], action: 'delete' }, 'T1'),

@@ -80,3 +80,24 @@
   color: var(--heritage-gold);
   opacity: 0.8;
 }
+
+/* Public tree viewer's person panel — the same footnotes, no card chrome,
+   titled like the sidebar's other sections. */
+.panel {
+  margin-top: 8px;
+}
+
+.panelTitle {
+  padding: var(--space-4) var(--space-9);
+  margin: 0;
+  font-family: var(--heritage-font-body);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  color: var(--heritage-gold);
+  border-bottom: 1px dashed rgba(200, 168, 101, 0.1);
+}
+
+.panelNotes {
+  padding: var(--space-5) var(--space-9) 0;
+}

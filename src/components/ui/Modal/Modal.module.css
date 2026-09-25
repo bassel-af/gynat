@@ -135,3 +135,30 @@
     font-size: 20px;
   }
 }
+
+/* A modal opened on top of another one: above it, a lighter scrim, no second blur. */
+.overlayStacked {
+  z-index: 3001;
+  background: rgba(3, 5, 10, 0.5);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.modalStacked {
+  max-width: 460px;
+}
+
+@media (max-width: 600px) {
+  /* On a phone the stacked form fully covers the one under it. */
+  .overlayStacked {
+    padding: 0;
+    align-items: stretch;
+  }
+
+  .modalStacked {
+    max-width: none;
+    max-height: none;
+    height: 100%;
+    border-radius: 0;
+  }
+}

@@ -9,7 +9,8 @@ import { notifySourcesChanged, type PersonSourcesState } from '@/hooks/usePerson
 import { SourceEntryForm } from './SourceEntryForm';
 import { SourceFileThumbs } from './SourceFileThumbs';
 import { toArabicDigits } from './arabicDigits';
-import { BookIcon, ChevronIcon, LockIcon, PencilIcon, PlusIcon, TrashIcon } from './SourceIcons';
+import { SourceRow } from './SourceRow';
+import { BookIcon, ChevronIcon, PencilIcon, PlusIcon, TrashIcon } from './SourceIcons';
 import styles from './PersonSourcesSection.module.css';
 
 export interface PersonSourcesSectionProps {
@@ -87,47 +88,44 @@ export function PersonSourcesSection({
           {entries.length > 0 && (
             <ul className={styles.list}>
               {entries.map((entry) => (
-                <li key={entry.id} className={styles.row}>
-                  <div className={styles.rowMain}>
-                    {entry.text && <p className={styles.text}>{entry.text}</p>}
-                    <div className={styles.meta}>
-                      <SourceFileThumbs
-                        workspaceId={workspaceId}
-                        treeId={treeId}
-                        entryId={entry.id}
-                        files={entry.files}
-                      />
-                      {entry.visibility === 'admins' && (
-                        <span className={styles.lockBadge}>
-                          <LockIcon size={11} />
-                          للمشرفين
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  {canEdit && (
-                    <div className={styles.rowActions}>
-                      <button
-                        type="button"
-                        className={styles.iconButton}
-                        aria-label="تعديل المصدر"
-                        onClick={() => setForm({ mode: 'edit', entry })}
-                      >
-                        <PencilIcon size={13} />
-                      </button>
-                      <button
-                        type="button"
-                        className={clsx(styles.iconButton, styles.iconButtonDanger)}
-                        aria-label="حذف المصدر"
-                        onClick={() => {
-                          setDeleteError(false);
-                          setConfirmDeleteId(entry.id);
-                        }}
-                      >
-                        <TrashIcon size={13} />
-                      </button>
-                    </div>
-                  )}
+                <SourceRow
+                  key={entry.id}
+                  text={entry.text}
+                  thumbs={
+                    <SourceFileThumbs
+                      workspaceId={workspaceId}
+                      treeId={treeId}
+                      entryId={entry.id}
+                      files={entry.files}
+                    />
+                  }
+                  locked={entry.visibility === 'admins'}
+                  actions={
+                    canEdit && (
+                      <>
+                        <button
+                          type="button"
+                          className={styles.iconButton}
+                          aria-label="تعديل المصدر"
+                          onClick={() => setForm({ mode: 'edit', entry })}
+                        >
+                          <PencilIcon size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          className={clsx(styles.iconButton, styles.iconButtonDanger)}
+                          aria-label="حذف المصدر"
+                          onClick={() => {
+                            setDeleteError(false);
+                            setConfirmDeleteId(entry.id);
+                          }}
+                        >
+                          <TrashIcon size={13} />
+                        </button>
+                      </>
+                    )
+                  }
+                >
                   {confirmDeleteId === entry.id && (
                     <div className={styles.confirm}>
                       <span className={styles.confirmText}>
@@ -156,7 +154,7 @@ export function PersonSourcesSection({
                       </div>
                     </div>
                   )}
-                </li>
+                </SourceRow>
               ))}
             </ul>
           )}

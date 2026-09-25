@@ -139,3 +139,19 @@ describe('PersonSourcesSection — editing', () => {
     expect(onPushUndo).not.toHaveBeenCalled();
   });
 });
+
+describe('PersonSourcesSection — markup regression (SourceRow extraction)', () => {
+  it('renders a row exactly as before: text, thumbs + lock badge, edit / delete, inline confirm', () => {
+    const files = [{ id: 'f', mimeType: 'application/pdf' as const, sizeBytes: 1, fileName: 'd.pdf' }];
+    const { container } = renderSection({
+      canEdit: true,
+      isAdmin: true,
+      sources: sources({
+        entries: [entry('a', { visibility: 'admins', files }), entry('b', { text: null })],
+        inherited: null,
+      }),
+    });
+    fireEvent.click(screen.getAllByRole('button', { name: 'حذف المصدر' })[0]);
+    expect(container.querySelector('ul')!.outerHTML).toMatchSnapshot();
+  });
+});

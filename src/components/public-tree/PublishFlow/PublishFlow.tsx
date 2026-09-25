@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { HeritageOverlay } from '../HeritageOverlay';
 import { VisibilityLadder, type VisibilityLevel } from '../VisibilityLadder';
@@ -51,9 +51,17 @@ export interface PublishFlowProps {
    */
   personPagesIndexable?: boolean;
   onPersonPagesIndexableChange?: (indexable: boolean) => void;
+  /**
+   * Sources («المصادر في الشجرة المنشورة»): when true, going public from
+   * PRIVATE inserts one step between the ladder and the checkpoint, rendered
+   * by `renderSourcesStep`. The caller owns the choice and applies it after
+   * the publish succeeded.
+   */
+  askSources?: boolean;
+  renderSourcesStep?: (nav: { onContinue: () => void; onBack: () => void }) => ReactNode;
 }
 
-type Step = 'manage' | 'choose' | 'checkpoint' | 'success' | 'makePrivate';
+type Step = 'manage' | 'choose' | 'sources' | 'checkpoint' | 'success' | 'makePrivate';
 
 /** Already-public trees open to the manage panel; private trees to the chooser. */
 function initialStep(level: VisibilityLevel): Step {
@@ -83,6 +91,8 @@ export function PublishFlow({
   reportHref,
   personPagesIndexable = false,
   onPersonPagesIndexableChange,
+  askSources = false,
+  renderSourcesStep,
 }: PublishFlowProps) {
   const [step, setStep] = useState<Step>(() => initialStep(currentLevel));
   // The level the admin is selecting in the ladder (starts at current).
@@ -115,8 +125,9 @@ export function PublishFlow({
       }
       return;
     }
-    // Going public (link or search) → the publish review checkpoint.
-    setStep('checkpoint');
+    // Going public (link or search) → the sources question when there is one
+    // (first publish / re-publish only), then the publish review checkpoint.
+    setStep(askSources && renderSourcesStep && currentLevel === 'private' ? 'sources' : 'checkpoint');
   };
 
   // Run a persisted action with shared busy/error handling. Returns true on
@@ -219,7 +230,7 @@ export function PublishFlow({
     );
   }
 
-  // 'choose' and 'success' share a centered glass panel.
+  // 'choose', 'sources' and 'success' share a centered glass panel.
   return (
     <HeritageOverlay isOpen={isOpen} onClose={onClose} align="top">
       <div
@@ -261,6 +272,12 @@ export function PublishFlow({
             </div>
           </>
         )}
+
+        {step === 'sources' &&
+          renderSourcesStep?.({
+            onContinue: () => setStep('checkpoint'),
+            onBack: () => setStep('choose'),
+          })}
 
         {step === 'success' && (
           <PublishSuccess

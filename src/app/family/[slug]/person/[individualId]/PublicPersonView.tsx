@@ -2,12 +2,15 @@
 
 import type { PersonProjection } from '@/lib/tree/person-projection';
 import { PersonPage } from '@/components/person';
+import { PublicPersonSourcesCard } from '@/components/sources/PublicPersonSourcesCard';
 
 export interface PublicPersonViewProps {
   /** Already-redacted, public-capped projection (private dropped upstream). */
   projection: PersonProjection;
   /** Public tree slug — used to build same-tree person/back/tree hrefs. */
   slug: string;
+  /** The focal person — their public sources are fetched client-side. */
+  individualId: string;
   enableKunya: boolean;
 }
 
@@ -20,7 +23,7 @@ export interface PublicPersonViewProps {
  * adapter binds it to the PUBLIC route's URL shape. It reads nothing beyond the
  * projection it is handed.
  */
-export default function PublicPersonView({ projection, slug, enableKunya }: PublicPersonViewProps) {
+export default function PublicPersonView({ projection, slug, individualId, enableKunya }: PublicPersonViewProps) {
   return (
     <PersonPage
       projection={projection}
@@ -32,6 +35,9 @@ export default function PublicPersonView({ projection, slug, enableKunya }: Publ
       // localStorage read for an anonymous visitor) and suppresses the بن/بنت
       // nasab connector between two LIVING people. Privacy-relevant — pass it.
       variant="public"
+      // «المصادر»: fetched in the browser from the anonymous sources route, so
+      // the server render, metadata and JSON-LD stay source-free.
+      afterRecord={<PublicPersonSourcesCard slug={slug} individualId={individualId} />}
     />
   );
 }

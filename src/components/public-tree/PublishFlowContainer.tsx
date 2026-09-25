@@ -7,6 +7,14 @@ import { useOptionalWorkspaceTree } from '@/context/WorkspaceTreeContext';
 // Import from the component paths directly (NOT the package barrel) — the barrel
 // re-exports this container, so importing the barrel here would be circular.
 import { PublishFlow } from './PublishFlow';
+import { PublishSourcesStep } from './PublishSourcesStep';
+import { fetchPublishSourcesSummary, type PublishSourcesSummary } from '@/lib/tree/source-entries-api';
+import {
+  applyPublishSourcesChoice,
+  shouldAskAboutSources,
+  DEFAULT_PUBLISH_SOURCES_CHOICE,
+  type PublishSourcesChoice,
+} from '@/lib/tree/publish-sources';
 import type { PublishCheckpointData } from './PublishCheckpoint';
 import type { VisibilityLevel } from './VisibilityLadder';
 
@@ -66,6 +74,12 @@ export function PublishFlowContainer({
   // The admin's pending person-pages choice. `null` = untouched, so the saved
   // value from the preview stands (no effect needed to seed it).
   const [personPagesChoice, setPersonPagesChoice] = useState<boolean | null>(null);
+  // Sources («المصادر في الشجرة المنشورة»): asked once when a PRIVATE tree
+  // goes public. «لا شيء» (default) changes nothing.
+  const [sourcesSummary, setSourcesSummary] = useState<PublishSourcesSummary | null>(null);
+  // The ladder waits for this answer, so a quick «متابعة» can never skip the question.
+  const [sourcesLoaded, setSourcesLoaded] = useState(false);
+  const [sourcesChoice, setSourcesChoice] = useState<PublishSourcesChoice>(DEFAULT_PUBLISH_SOURCES_CHOICE);
 
   // Build the treeId-scoped endpoints once: the preview reads ?treeId, the PATCH
   // carries it in the body (which the visibility route already reads).
@@ -92,6 +106,25 @@ export function PublishFlowContainer({
       cancelled = true;
     };
   }, [previewUrl]);
+
+  // Only a private tree going public is asked about sources. A failed summary
+  // simply skips the step (nothing changes — the safe default).
+  const isPrivate = preview?.currentLevel === 'private';
+  useEffect(() => {
+    if (!isPrivate) return;
+    let cancelled = false;
+    fetchPublishSourcesSummary(workspaceId, treeId ?? undefined)
+      .then((summary) => {
+        if (!cancelled) setSourcesSummary(summary);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) setSourcesLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isPrivate, workspaceId, treeId]);
 
   // The admin's pending choice wins; otherwise the saved value from the preview.
   const personPagesIndexable = personPagesChoice ?? preview?.personPagesIndexable ?? false;
@@ -129,6 +162,7 @@ export function PublishFlowContainer({
   }, [loadError, showToast, onClose]);
 
   if (loadError || !preview) return null; // closing or still loading — no flash
+  if (isPrivate && !sourcesLoaded) return null; // the sources question must be known first
 
   const effectiveSlug = publishedSlug ?? preview.publicSlug;
   const shareUrl = effectiveSlug
@@ -153,9 +187,34 @@ export function PublishFlowContainer({
       reportHref={reportHref}
       personPagesIndexable={personPagesIndexable}
       onPersonPagesIndexableChange={setPersonPagesChoice}
+      askSources={shouldAskAboutSources(sourcesSummary)}
+      renderSourcesStep={({ onContinue, onBack }) =>
+        sourcesSummary && (
+          <PublishSourcesStep
+            workspaceId={workspaceId}
+            treeId={treeId ?? undefined}
+            summary={sourcesSummary}
+            value={sourcesChoice}
+            onChange={setSourcesChoice}
+            onContinue={onContinue}
+            onBack={onBack}
+          />
+        )
+      }
       onPublishConfirm={async (level, confirmationPhrase) => {
+        // Publish FIRST; a rejected publish throws here and no source changes.
         const body = await patchVisibility(level, confirmationPhrase);
         if (body?.data?.publicSlug) setPublishedSlug(body.data.publicSlug);
+        // Then the sources choice. Its failure never undoes the publish.
+        const sourcesApplied = await applyPublishSourcesChoice(
+          workspaceId,
+          treeId ?? undefined,
+          sourcesChoice,
+          shouldAskAboutSources(sourcesSummary) ? sourcesSummary : null,
+        );
+        if (!sourcesApplied) {
+          showToast('نُشرت الشجرة، لكن تعذّر تغيير من يرى المصادر. غيّره من صفحة المصادر.', 'error');
+        }
         await refreshTree?.();
         onChanged?.(level);
         showToast('تم نشر الشجرة', 'success');

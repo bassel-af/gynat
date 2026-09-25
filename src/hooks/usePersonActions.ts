@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import type { Individual, GedcomData } from '@/lib/gedcom/types';
 import type { IndividualFormData } from '@/components/tree/IndividualForm/IndividualForm';
 import type { FamilyEventFormData } from '@/components/tree/FamilyEventForm/FamilyEventForm';
@@ -33,6 +33,10 @@ import {
   restorableSourceEntries,
   type RestorableSourceEntry,
 } from '@/lib/tree/source-entries-api';
+import { isPlanEmpty, type SourcePlan, type SourcePlanResult } from '@/lib/tree/source-staging';
+import { applySourcePlan, composeInverses, type AppliedSourcePlan } from '@/lib/tree/source-plan-apply';
+import { notifySourcesChanged } from '@/hooks/usePersonSources';
+import { toArabicDigits } from '@/components/sources/arabicDigits';
 import {
   ANCESTRY_JUMP_ERROR_MESSAGES,
   JUMP_BLOCKS_PARENTS_MESSAGE,
@@ -131,7 +135,20 @@ export interface UsePersonActionsParams {
   setSelectedPersonId: (id: string | null) => void;
   /** Phase 15a: called with an undo entry after each successful mutation + refresh. */
   onPushUndo?: (entry: UndoEntry) => void;
+  /** A short message for the user (a toast) — sources saved with the person form. */
+  onNotice?: (message: string) => void;
 }
+
+/** A person-form submit: the form data plus the staged «المصادر» plan. */
+export type PersonFormSubmit = (
+  formData: IndividualFormData,
+  sourcePlan?: SourcePlan,
+) => Promise<SourcePlanResult | void>;
+
+const SOURCES_PARTIAL_FAILURE = 'حُفظت بيانات الشخص، وتعذّر حفظ بعض المصادر. اضغط «حفظ» لإعادة المحاولة.';
+const SOURCE_ADMINS_ONLY_NOTICE = 'أُضيف المصدر، ويراه المشرفون فقط.';
+const sourcesCreateFailedNotice = (n: number) =>
+  `أُضيف الشخص، وتعذّر حفظ ${toArabicDigits(n)} من المصادر. أضِفها من لوحة الشخص.`;
 
 export interface UsePersonActionsReturn {
   formMode: FormMode | null;
@@ -142,11 +159,11 @@ export interface UsePersonActionsReturn {
   setFormError: (error: string) => void;
   deleteState: DeleteState;
   setDeleteState: (state: DeleteState) => void;
-  handleEditSubmit: (formData: IndividualFormData) => Promise<void>;
-  handleAddChildSubmit: (formData: IndividualFormData) => Promise<void>;
-  handleAddSpouseSubmit: (formData: IndividualFormData) => Promise<void>;
-  handleAddParentSubmit: (formData: IndividualFormData) => Promise<void>;
-  handleAddSiblingSubmit: (formData: IndividualFormData) => Promise<void>;
+  handleEditSubmit: PersonFormSubmit;
+  handleAddChildSubmit: PersonFormSubmit;
+  handleAddSpouseSubmit: PersonFormSubmit;
+  handleAddParentSubmit: PersonFormSubmit;
+  handleAddSiblingSubmit: PersonFormSubmit;
   handleFamilyEventSubmit: (eventData: FamilyEventFormData) => Promise<void>;
   handleLinkExistingSpouse: (existingPersonId: string) => Promise<void>;
   handleRadaaSubmit: (data: RadaaFormData) => Promise<void>;
@@ -171,6 +188,7 @@ export function usePersonActions({
   data,
   setSelectedPersonId,
   onPushUndo,
+  onNotice,
 }: UsePersonActionsParams): UsePersonActionsReturn {
   // Pointed individuals are read-only — block all mutations
   const isPointed = person?._pointed === true;
@@ -290,10 +308,55 @@ export function usePersonActions({
   }, [workspace]);
 
   // -------------------------------------------------------------------------
+  // «المصادر» staged in the person form
+  // -------------------------------------------------------------------------
+
+  // After a partly-failed edit save the person is already stored; a retry with
+  // the same person data sends only the sources that failed.
+  const savedPersonKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (formModeRaw === null) savedPersonKeyRef.current = null;
+  }, [formModeRaw]);
+
+  const runSourcePlan = useCallback(
+    async (individualId: string, plan: SourcePlan): Promise<AppliedSourcePlan> => {
+      const applied = await applySourcePlan({
+        workspaceId: workspace!.workspaceId,
+        individualId,
+        treeId: activeTreeId,
+        isAdmin: workspace!.isAdmin === true,
+        plan,
+      });
+      // A non-admin cannot see what they saved at «المشرفون فقط» — say so once.
+      if (applied.createdAdminsOnly > 0 && workspace!.isAdmin !== true) onNotice?.(SOURCE_ADMINS_ONLY_NOTICE);
+      if (applied.createdCount + applied.result.deleted.length + Object.keys(applied.result.updated).length > 0
+        || Object.keys(applied.result.removedFileIds ?? {}).length > 0) {
+        notifySourcesChanged();
+      }
+      return applied;
+    },
+    [workspace, activeTreeId, onNotice],
+  );
+
+  /**
+   * Create modes: the queued entries go on the person just created. The form
+   * has already closed; failures are a toast. Returns how many were saved.
+   */
+  const saveQueuedSources = useCallback(
+    async (individualId: string, plan: SourcePlan | undefined): Promise<number> => {
+      if (!workspace || !plan || plan.creates.length === 0) return 0;
+      const applied = await runSourcePlan(individualId, { creates: plan.creates, updates: [], deletes: [] });
+      if (applied.failedCount > 0) onNotice?.(sourcesCreateFailedNotice(applied.failedCount));
+      return applied.createdCount;
+    },
+    [workspace, runSourcePlan, onNotice],
+  );
+
+  // -------------------------------------------------------------------------
   // Form submit handlers
   // -------------------------------------------------------------------------
 
-  const handleEditSubmit = useCallback(async (formData: IndividualFormData) => {
+  const handleEditSubmit = useCallback(async (formData: IndividualFormData, sourcePlan?: SourcePlan) => {
     if (!workspace || isPointed) return;
     // Capture before-snapshot (for undo) from the current person BEFORE the API call.
     const beforeSnapshot = person ? serializeIndividualForm({
@@ -319,8 +382,15 @@ export function usePersonActions({
     }) : null;
     const afterSnapshot = serializeIndividualForm(formData);
     const personName = person?.name;
+    const personKey = JSON.stringify([afterSnapshot, formData.isUmmWalad ?? null]);
+    // A retry after a partly-failed save: the person is already stored.
+    const skipPerson = savedPersonKeyRef.current === personKey;
     let succeeded = false;
+    let personSaved = false;
+    let applied: AppliedSourcePlan | null = null;
+    let retryResult: SourcePlanResult | undefined;
     await withFormAction(async () => {
+      if (!skipPerson) {
       const res = await apiFetch(`/api/workspaces/${workspace.workspaceId}/tree/individuals/${personId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -349,27 +419,51 @@ export function usePersonActions({
           }
         }
       }
+      personSaved = true;
+      }
+      // Sources only after the person saved: creates → updates → deletes.
+      if (sourcePlan && !isPlanEmpty(sourcePlan)) {
+        applied = await runSourcePlan(personId, sourcePlan);
+        if (applied.failedCount > 0) {
+          // Keep the form open: the failed rows stay staged for a retry.
+          savedPersonKeyRef.current = personKey;
+          retryResult = applied.result;
+          setFormError(SOURCES_PARTIAL_FAILURE);
+          succeeded = true;
+          return;
+        }
+      }
       succeeded = true;
       setFormMode(null);
     });
-    if (succeeded && onPushUndo && beforeSnapshot) {
-      const inverse = buildUpdateIndividualInverse({
+    if (!succeeded || !onPushUndo) return retryResult;
+    // ONE undo step for this «حفظ»: the person edit plus the reversible source work.
+    const parts = [];
+    if (personSaved && beforeSnapshot) {
+      parts.push(buildUpdateIndividualInverse({
         workspaceId: workspace.workspaceId,
         individualId: personId,
         before: beforeSnapshot,
         after: afterSnapshot,
         treeId: activeTreeId,
-      });
+      }));
+    }
+    const sourceWork = applied as AppliedSourcePlan | null;
+    if (sourceWork) parts.push(...sourceWork.inverses);
+    if (parts.length > 0) {
+      const inverse = sourceWork ? composeInverses(parts) : parts[0];
       onPushUndo({
         label: buildUndoLabel({ kind: 'updateIndividual', name: personName }),
         workspaceId: workspace.workspaceId,
-        undo: inverse.undo,
-        redo: inverse.redo,
+        undo: sourceWork ? async () => { await inverse.undo(); notifySourcesChanged(); } : inverse.undo,
+        redo: sourceWork ? async () => { await inverse.redo(); notifySourcesChanged(); } : inverse.redo,
+        ...(sourceWork?.involvedFiles ? { undoOnly: true } : {}),
       });
     }
-  }, [workspace, personId, isPointed, formMode, withFormAction, withTreeId, activeTreeId, person, onPushUndo]);
+    return retryResult;
+  }, [workspace, personId, isPointed, formMode, withFormAction, withTreeId, activeTreeId, person, onPushUndo, runSourcePlan]);
 
-  const handleAddChildSubmit = useCallback(async (formData: IndividualFormData) => {
+  const handleAddChildSubmit = useCallback(async (formData: IndividualFormData, sourcePlan?: SourcePlan) => {
     if (!workspace || !person || !data || isPointed) return;
     let succeeded = false;
     let newIndividualId: string | null = null;
@@ -407,6 +501,7 @@ export function usePersonActions({
       succeeded = true;
       setFormMode(null);
     });
+    const savedSources = succeeded && newIndividualId ? await saveQueuedSources(newIndividualId, sourcePlan) : 0;
     if (succeeded && onPushUndo && newIndividualId) {
       const inverse = buildCreateIndividualInverse({
         workspaceId: workspace.workspaceId,
@@ -419,11 +514,13 @@ export function usePersonActions({
         workspaceId: workspace.workspaceId,
         undo: inverse.undo,
         redo: inverse.redo,
+        // Undo deletes the person and their sources; a redo could not bring the sources back.
+        ...(savedSources > 0 ? { undoOnly: true } : {}),
       });
     }
-  }, [workspace, person, data, personId, formMode, createIndividual, addChildToFamily, createFamily, isPointed, withFormAction, activeTreeId, onPushUndo]);
+  }, [workspace, person, data, personId, formMode, createIndividual, addChildToFamily, createFamily, isPointed, withFormAction, activeTreeId, onPushUndo, saveQueuedSources]);
 
-  const handleAddSpouseSubmit = useCallback(async (formData: IndividualFormData) => {
+  const handleAddSpouseSubmit = useCallback(async (formData: IndividualFormData, sourcePlan?: SourcePlan) => {
     if (!workspace || !person || isPointed) return;
     let succeeded = false;
     let newIndividualId: string | null = null;
@@ -459,6 +556,7 @@ export function usePersonActions({
       setFormError('');
       succeeded = true;
     });
+    const savedSources = succeeded && newIndividualId ? await saveQueuedSources(newIndividualId, sourcePlan) : 0;
     if (succeeded && onPushUndo && newIndividualId && newFamilyId) {
       const capturedIndividualId = newIndividualId;
       const capturedFamilyId = newFamilyId;
@@ -466,6 +564,7 @@ export function usePersonActions({
       onPushUndo({
         label: buildUndoLabel({ kind: 'addSpouse', sex: spouseSex, name: spouseName }),
         workspaceId: wsId,
+        ...(savedSources > 0 ? { undoOnly: true } : {}),
         undo: async () => {
           // Delete family first (it refers to both individuals), then the new individual.
           const famRes = await apiFetch(`/api/workspaces/${wsId}/tree/families/${capturedFamilyId}`, {
@@ -511,7 +610,7 @@ export function usePersonActions({
         },
       });
     }
-  }, [workspace, person, personId, createIndividual, createFamily, isPointed, withFormAction, withTreeId, activeTreeId, deleteInit, onPushUndo]);
+  }, [workspace, person, personId, createIndividual, createFamily, isPointed, withFormAction, withTreeId, activeTreeId, deleteInit, onPushUndo, saveQueuedSources]);
 
   const handleLinkExistingSpouse = useCallback(async (existingPersonId: string) => {
     if (!workspace || !person || isPointed) return;
@@ -558,7 +657,7 @@ export function usePersonActions({
    * creates the father and his couple and re-points the jump to him (range
    * shrunk by one). ONE undo entry — undo is the server's move-back.
    */
-  const handleMoveJumpToNewFather = useCallback(async (jumpId: string, formData: IndividualFormData) => {
+  const handleMoveJumpToNewFather = useCallback(async (jumpId: string, formData: IndividualFormData, sourcePlan?: SourcePlan) => {
     if (!workspace || !person || !data || isPointed) return;
     const jump = data.ancestryJumps?.[jumpId];
     if (!jump) return;
@@ -583,7 +682,10 @@ export function usePersonActions({
       moved = (await res.json()).data;
       setFormMode(null);
     });
-    if (!moved || !onPushUndo) return;
+    if (!moved) return;
+    const movedIds = moved as { individual: { id: string }; family: { id: string } };
+    const savedSources = await saveQueuedSources(movedIds.individual.id, sourcePlan);
+    if (!onPushUndo) return;
     const inverse = buildMoveJumpToNewFatherInverse({
       workspaceId: wsId,
       jumpId,
@@ -599,13 +701,14 @@ export function usePersonActions({
       workspaceId: wsId,
       undo: inverse.undo,
       redo: inverse.redo,
+      ...(savedSources > 0 ? { undoOnly: true } : {}),
     });
-  }, [workspace, person, data, personId, isPointed, withFormAction, withTreeId, setFormMode, activeTreeId, onPushUndo]);
+  }, [workspace, person, data, personId, isPointed, withFormAction, withTreeId, setFormMode, activeTreeId, onPushUndo, saveQueuedSources]);
 
-  const handleAddParentSubmit = useCallback(async (formData: IndividualFormData) => {
+  const handleAddParentSubmit = useCallback(async (formData: IndividualFormData, sourcePlan?: SourcePlan) => {
     if (!workspace || !person || !data || isPointed) return;
     if (formMode?.kind === 'addParent' && formMode.moveJumpId) {
-      await handleMoveJumpToNewFather(formMode.moveJumpId, formData);
+      await handleMoveJumpToNewFather(formMode.moveJumpId, formData, sourcePlan);
       return;
     }
     let succeeded = false;
@@ -647,6 +750,7 @@ export function usePersonActions({
       setFormMode(null);
       succeeded = true;
     });
+    const savedSources = succeeded && newIndividualId ? await saveQueuedSources(newIndividualId, sourcePlan) : 0;
     if (succeeded && onPushUndo && newIndividualId) {
       const wsId = workspace.workspaceId;
       const capturedInd = newIndividualId;
@@ -655,6 +759,7 @@ export function usePersonActions({
       onPushUndo({
         label: buildUndoLabel({ kind: 'addParent', sex: parentSex, name: parentName }),
         workspaceId: wsId,
+        ...(savedSources > 0 ? { undoOnly: true } : {}),
         undo: async () => {
           // Reverse the structural op first, then delete the new individual.
           if (capturedPatchedFam) {
@@ -716,9 +821,9 @@ export function usePersonActions({
         },
       });
     }
-  }, [workspace, person, data, personId, formMode, handleMoveJumpToNewFather, createIndividual, patchFamily, createFamily, isPointed, withFormAction, withTreeId, activeTreeId, deleteInit, onPushUndo]);
+  }, [workspace, person, data, personId, formMode, handleMoveJumpToNewFather, createIndividual, patchFamily, createFamily, isPointed, withFormAction, withTreeId, activeTreeId, deleteInit, onPushUndo, saveQueuedSources]);
 
-  const handleAddSiblingSubmit = useCallback(async (formData: IndividualFormData) => {
+  const handleAddSiblingSubmit = useCallback(async (formData: IndividualFormData, sourcePlan?: SourcePlan) => {
     if (!workspace || formMode?.kind !== 'addSibling' || isPointed) return;
     let succeeded = false;
     let newIndividualId: string | null = null;
@@ -731,6 +836,7 @@ export function usePersonActions({
       setFormMode(null);
       succeeded = true;
     });
+    const savedSources = succeeded && newIndividualId ? await saveQueuedSources(newIndividualId, sourcePlan) : 0;
     if (succeeded && onPushUndo && newIndividualId) {
       const inverse = buildCreateIndividualInverse({
         workspaceId: workspace.workspaceId,
@@ -743,9 +849,10 @@ export function usePersonActions({
         workspaceId: workspace.workspaceId,
         undo: inverse.undo,
         redo: inverse.redo,
+        ...(savedSources > 0 ? { undoOnly: true } : {}),
       });
     }
-  }, [workspace, formMode, createIndividual, addChildToFamily, isPointed, withFormAction, activeTreeId, onPushUndo]);
+  }, [workspace, formMode, createIndividual, addChildToFamily, isPointed, withFormAction, activeTreeId, onPushUndo, saveQueuedSources]);
 
   const handleFamilyEventSubmit = useCallback(async (eventData: FamilyEventFormData) => {
     if (!workspace || formMode?.kind !== 'editFamilyEvent' || isPointed) return;
