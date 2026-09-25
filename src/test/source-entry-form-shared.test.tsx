@@ -31,6 +31,12 @@ vi.mock('@/hooks/useTreePublishLevel', () => ({ useTreePublishLevel: () => 'priv
 vi.mock('@/lib/api/client', () => ({ apiFetch: vi.fn() }));
 
 import { SourceEntryForm } from '@/components/sources/SourceEntryForm';
+import { apiFetch } from '@/lib/api/client';
+
+const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
+/** The PATCH / POST bodies the undo entry sends. */
+const undoCalls = () =>
+  mockApiFetch.mock.calls.map(([path, init]) => [path, (init as { method: string }).method, JSON.parse((init as { body?: string }).body ?? 'null')]);
 import { buildPickerFamily } from './helpers/source-people-fixture';
 
 const data = buildPickerFamily();
@@ -267,6 +273,58 @@ describe('reuse — typing suggestions', () => {
     fireEvent.click(await screen.findByRole('button', { name: /^دفتر العائلة/ }));
     expect(screen.queryByRole('button', { name: 'ربطه بهذا الشخص' })).toBeNull();
     expect(textbox().value).toBe('دفتر العائلة');
+  });
+});
+
+describe('undo (R5)', () => {
+  beforeEach(() => {
+    mockApiFetch.mockReset().mockResolvedValue(new Response(JSON.stringify({ data: { id: 'S-NEW' } }), { status: 200 }));
+  });
+
+  it('a source saved for the whole family is ONE entry whose redo re-creates it for everyone', async () => {
+    api.createSource.mockResolvedValue(dto({ text: 'دفتر العائلة' }));
+    const { onPushUndo } = renderForm();
+    await pickWholeFamily();
+    fireEvent.change(textbox(), { target: { value: 'دفتر العائلة' } });
+    save();
+    await waitFor(() => expect(onPushUndo).toHaveBeenCalledTimes(1));
+    const entry = onPushUndo.mock.calls[0][0];
+    expect(entry.label).toBe('إضافة مصدر لـ ٦ أشخاص');
+    await entry.undo();
+    await entry.redo();
+    const [, , redoBody] = undoCalls()[1];
+    expect([...redoBody.personIds].sort()).toEqual(['K1', 'K2', 'K3', 'M', 'W1', 'W2']);
+  });
+
+  it('linking an existing source pushes an undo that takes off only the people it added', async () => {
+    api.fetchSourceSuggestionSummaries.mockResolvedValue([bookSummary]);
+    api.fetchSourcePreview.mockResolvedValue({ ...dto({ id: 'S9' }), people: [{ id: 'W1', name: 'فاطمة' }], peopleCount: 1 });
+    api.patchSource.mockResolvedValue({ ...dto({ id: 'S9' }), peopleCount: 2 });
+    const { onPushUndo } = renderForm();
+    await typeAndSuggest('دفتر');
+    fireEvent.click(await screen.findByRole('button', { name: /^دفتر العائلة/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'ربطه بهذا الشخص' }));
+    save();
+    await waitFor(() => expect(onPushUndo).toHaveBeenCalledTimes(1));
+    const entry = onPushUndo.mock.calls[0][0];
+    expect(entry.label).toBe('إضافة مصدر');
+    await entry.undo();
+    expect(undoCalls()).toEqual([
+      ['/api/workspaces/ws/tree/sources/S9', 'PATCH', { removePersonIds: ['M'], onLastLink: 'keep', treeId: 'T' }],
+    ]);
+  });
+
+  it('a people-only edit pushes an undo that restores the people', async () => {
+    const shared = dto({ people: [{ id: 'W1', name: 'فاطمة' }, { id: 'K1', name: 'أحمد' }], sharedCount: 2 });
+    api.patchSource.mockResolvedValue({ ...shared, peopleCount: 2 });
+    const { onPushUndo } = renderForm({ mode: 'edit', entry: shared });
+    fireEvent.click(within(line()).getByRole('button', { name: /^إزالة أحمد/ }));
+    save('حفظ');
+    await waitFor(() => expect(onPushUndo).toHaveBeenCalledTimes(1));
+    const entry = onPushUndo.mock.calls[0][0];
+    expect(entry.label).toBe('تعديل مصدر لـ شخصين');
+    await entry.undo();
+    expect(undoCalls()[0][2]).toEqual({ addPersonIds: ['K1'], treeId: 'T' });
   });
 });
 

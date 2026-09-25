@@ -157,6 +157,8 @@
     max-height: none;
     display: flex;
     flex-direction: column;
+    /* Opaque: the form under the sheet must not show through. */
+    background: linear-gradient(180deg, rgb(15, 21, 40), rgb(7, 11, 24));
   }
 
   .body {

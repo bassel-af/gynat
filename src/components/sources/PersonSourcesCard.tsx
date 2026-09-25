@@ -4,6 +4,7 @@ import { usePersonSources } from '@/hooks/usePersonSources';
 import personStyles from '@/components/person/person.module.css';
 import { SourceFileThumbs } from './SourceFileThumbs';
 import { toArabicDigits } from './arabicDigits';
+import { SharedTag } from './SourceRow';
 import styles from './PersonSourcesCard.module.css';
 
 export interface PersonSourcesCardProps {
@@ -45,6 +46,7 @@ export function PersonSourcesCard({ workspaceId, treeId, individualId }: PersonS
                 files={entry.files}
                 size={48}
               />
+              <SharedTag count={entry.sharedCount} className={styles.sharedTag} />
             </div>
           </li>
         ))}

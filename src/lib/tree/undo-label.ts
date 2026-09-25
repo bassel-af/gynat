@@ -6,6 +6,8 @@
  * console.*, analytics events, or any telemetry payload.
  */
 
+import { peopleCountLabel } from '@/components/sources/arabicDigits';
+
 export const MAX_LABEL_LENGTH = 40;
 const ELLIPSIS = '…';
 
@@ -33,13 +35,20 @@ export type UndoAction =
   | { kind: 'updateAncestryJump' }
   | { kind: 'deleteAncestryJump' }
   | { kind: 'moveAncestryJumpToFather'; name?: string }
-  | { kind: 'createSourceEntry' }
-  | { kind: 'updateSourceEntry' }
+  /** `people` = how many people the source was saved for (labels never carry its text). */
+  | { kind: 'createSourceEntry'; people?: number }
+  | { kind: 'updateSourceEntry'; people?: number }
+  | { kind: 'unlinkSource'; name?: string }
   | { kind: 'deleteSourceEntry' };
 
 function withName(bareLabel: string, prefixWithName: string, name?: string): string {
   if (!name) return bareLabel;
   return `${prefixWithName}: ${name}`;
+}
+
+/** «إضافة مصدر لـ ١٠ أشخاص» — only when the source is for more than one person. */
+function withPeople(bareLabel: string, people?: number): string {
+  return people && people > 1 ? `${bareLabel} لـ ${peopleCountLabel(people)}` : bareLabel;
 }
 
 function truncate(label: string): string {
@@ -118,9 +127,11 @@ function renderLabel(action: UndoAction): string {
       return action.name ? `نقل قفزة النسب إلى ${action.name}` : 'نقل قفزة النسب';
 
     case 'createSourceEntry':
-      return 'إضافة مصدر';
+      return withPeople('إضافة مصدر', action.people);
     case 'updateSourceEntry':
-      return 'تعديل مصدر';
+      return withPeople('تعديل مصدر', action.people);
+    case 'unlinkSource':
+      return action.name ? `إزالة مصدر عن ${action.name}` : 'إزالة مصدر';
     case 'deleteSourceEntry':
       return 'حذف مصدر';
   }

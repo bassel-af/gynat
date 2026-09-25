@@ -80,6 +80,12 @@
   opacity: 0.8;
 }
 
+/* «مشترك مع …» sits at its own size on the start edge (no names — member view). */
+.sharedTag {
+  align-self: flex-start;
+  font-size: 11px;
+}
+
 /* Public tree viewer's person panel — the same footnotes, no card chrome,
    titled like the sidebar's other sections. */
 .panel {

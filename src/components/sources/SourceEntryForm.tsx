@@ -22,9 +22,11 @@ import { MAX_SOURCE_TEXT, MAX_SOURCE_SUGGESTIONS, MAX_FILES_PER_ENTRY } from '@/
 import { MAX_SOURCE_FILE_BYTES } from '@/lib/tree/source-file-types';
 import {
   sourceCreateUndoEntry,
+  sourceLinkUndoEntry,
   sourceUpdateUndoEntry,
   type SourceEntryPatch,
 } from '@/lib/tree/source-entry-undo';
+import { linkPeopleToSource } from '@/lib/tree/source-plan-apply';
 import type { UndoEntry } from '@/lib/undo/types';
 import type { SourceDraft, SourceDraftPerson } from '@/lib/tree/source-staging';
 import { useTreePublishLevel } from '@/hooks/useTreePublishLevel';
@@ -436,25 +438,29 @@ export function SourceEntryForm({
         onSaved(saved);
       } else if (mode === 'create' && individualId && linked) {
         // Reuse: the existing source gains these people; its content is untouched.
-        const saved = await patchSource(
+        const { source: saved, added } = await linkPeopleToSource({
           workspaceId,
-          linked.id,
-          { addPersonIds: [individualId, ...idsOf(others)] },
+          sourceId: linked.id,
+          personIds: [individualId, ...idsOf(others)],
           treeId,
-        );
+        });
+        if (added.length > 0) {
+          onPushUndo?.(sourceLinkUndoEntry({ workspaceId, sourceId: linked.id, personIds: added, treeId }));
+        }
         onSaved(saved);
       } else if (mode === 'create' && individualId) {
+        const personIds = [individualId, ...idsOf(others)];
         const created = await createSource(
           workspaceId,
           {
             text: trimmed || null,
             ...(stagedIds.length > 0 ? { fileIds: stagedIds } : {}),
             visibility,
-            personIds: [individualId, ...idsOf(others)],
+            personIds,
           },
           treeId,
         );
-        onPushUndo?.(sourceCreateUndoEntry({ workspaceId, individualId, created, treeId }));
+        onPushUndo?.(sourceCreateUndoEntry({ workspaceId, created, personIds, treeId }));
         onSaved(created);
       } else if (entry) {
         const patch: SourceEntryPatch = {};
@@ -473,7 +479,14 @@ export function SourceEntryForm({
         }
         // The starting person always stays, so this never removes the last one.
         const updated = await patchSource(workspaceId, entry.id, body, treeId);
-        const undo = sourceUpdateUndoEntry({ workspaceId, before: entry, patch, treeId });
+        const undo = sourceUpdateUndoEntry({
+          workspaceId,
+          before: entry,
+          patch,
+          ...(showPeople ? { addPersonIds, removePersonIds } : {}),
+          people: total,
+          treeId,
+        });
         if (undo) onPushUndo?.(undo);
         onSaved(updated);
       }
@@ -491,10 +504,18 @@ export function SourceEntryForm({
   const title = treeWide ? 'مصدر الشجرة' : mode === 'create' ? 'إضافة مصدر' : 'تعديل المصدر';
   const actions = (
     <>
-      <Button type="button" variant="ghost" size="md" onClick={onClose} disabled={saving}>
+      <Button type="button" variant="ghost" size="md" className={styles.action} onClick={onClose} disabled={saving}>
         إلغاء
       </Button>
-      <Button variant="primary" size="md" type="submit" form="source-entry-form" loading={saving} disabled={uploading}>
+      <Button
+        variant="primary"
+        size="md"
+        type="submit"
+        form="source-entry-form"
+        className={styles.action}
+        loading={saving}
+        disabled={uploading}
+      >
         {saveLabel}
       </Button>
     </>

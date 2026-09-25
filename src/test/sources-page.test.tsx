@@ -22,8 +22,11 @@ vi.mock('@/components/sources/TreeSourceCard', () => ({
 
 import SourcesPage from '@/app/workspaces/[slug]/tree/sources/page';
 
-function workspace(role: string) {
-  return { ok: true, json: async () => ({ data: { id: 'ws', slug: 'fam', nameAr: 'آل سعيد', currentUserRole: role } }) };
+function workspace(role: string, extra: Record<string, unknown> = {}) {
+  return {
+    ok: true,
+    json: async () => ({ data: { id: 'ws', slug: 'fam', nameAr: 'آل سعيد', currentUserRole: role, ...extra } }),
+  };
 }
 
 beforeEach(() => {
@@ -55,5 +58,14 @@ describe('«المصادر» page', () => {
     await screen.findByTestId('manager');
     expect(managerProps).toHaveBeenCalledWith(expect.objectContaining({ treeId: 'T1', workspaceId: 'ws', slug: 'fam' }));
     expect(screen.getByRole('link', { name: /العودة للشجرة/ })).toHaveAttribute('href', '/workspaces/fam/tree?treeId=T1');
+  });
+
+  it('hands the workspace birth-date hiding to the list (the people picker rows)', async () => {
+    apiFetch.mockResolvedValue(workspace('workspace_admin', { hideBirthDateForFemale: true, hideBirthDateForMale: false }));
+    render(<SourcesPage />);
+    await screen.findByTestId('manager');
+    expect(managerProps).toHaveBeenCalledWith(
+      expect.objectContaining({ birthPrivacy: { hideBirthDateForFemale: true, hideBirthDateForMale: false } }),
+    );
   });
 });

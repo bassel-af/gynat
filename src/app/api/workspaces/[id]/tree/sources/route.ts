@@ -58,11 +58,6 @@ interface SourceListItem extends SourceEntryDto {
   people: { id: string; name: string }[];
   peopleCount: number;
   fileCount: number;
-  /**
-   * Compatibility for today's «المصادر» page until R6 reads `people`: the
-   * first person's name, null for a source linked to nobody.
-   */
-  personName: string | null;
 }
 
 // GET /api/workspaces/[id]/tree/sources?treeId=&q=&visibility=&scope=&filter=&cursor=&limit=
@@ -137,7 +132,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       people,
       peopleCount: linkCount(row),
       fileCount: row.files?.length ?? 0,
-      personName: people[0]?.name ?? null,
     };
   });
   const nextCursor = cursor + limit < inTab.length ? cursor + limit : null;

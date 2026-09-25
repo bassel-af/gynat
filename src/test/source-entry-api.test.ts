@@ -684,7 +684,7 @@ describe('GET sources (admin list)', () => {
     expect((await list(EDITOR_USER)).status).toBe(403);
   });
 
-  test('lists every entry of the resolved tree only, with the person name', async () => {
+  test('lists every entry of the resolved tree only, with its people', async () => {
     const res = await list(ADMIN_USER);
     expect(res.headers.get('Cache-Control')).toBe('private, no-store');
     const json = await res.json();
@@ -692,8 +692,12 @@ describe('GET sources (admin list)', () => {
     // The tree-wide entry has its own card on the page — never a list row, never in «تحديد الكل».
     expect(ids.sort()).toEqual([E_ADMINS, E_MEMBERS, E_PRIV, E_MINE_ADMINS].sort());
     const priv = json.data.entries.find((e: Row) => e.id === E_PRIV);
-    expect(priv).toMatchObject({ individualId: PRIV, personName: 'سرّي', fileCount: 0 });
-    expect(json.data.entries.find((e: Row) => e.id === E_MEMBERS).personName).toBe('محمد السعيد');
+    expect(priv).toMatchObject({ people: [{ id: PRIV, name: 'سرّي' }], peopleCount: 1, fileCount: 0 });
+    expect(json.data.entries.find((e: Row) => e.id === E_MEMBERS).people).toEqual([
+      expect.objectContaining({ name: 'محمد السعيد' }),
+    ]);
+    // The pre-shared-sources compatibility field is gone.
+    expect(json.data.entries.some((e: Row) => 'personName' in e)).toBe(false);
     expect(hasBytesOrUndefined(json)).toBe(false);
   });
 
@@ -947,12 +951,12 @@ describe('shared-source model — links and isTreeWide', () => {
     expect((await patch(ADMIN_USER, ORPHAN, { text: 'مُعدّل' })).status).toBe(200);
   });
 
-  test('the admin list keeps an orphan (no person name) and never the tree-wide source', async () => {
+  test('the admin list keeps an orphan (nobody) and never the tree-wide source', async () => {
     addOrphan();
     as(ADMIN_USER);
     const { GET } = await listRoute();
     const { data } = await (await GET(req('sources'), wp)).json();
-    expect(data.entries.find((e: Row) => e.id === ORPHAN)).toMatchObject({ personName: null, individualId: null });
+    expect(data.entries.find((e: Row) => e.id === ORPHAN)).toMatchObject({ people: [], peopleCount: 0, individualId: null });
     expect(data.entries.some((e: Row) => e.id === E_TREE)).toBe(false);
   });
 

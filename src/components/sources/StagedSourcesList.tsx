@@ -2,9 +2,10 @@
 
 import { forwardRef, useId } from 'react';
 import clsx from 'clsx';
-import type { SourceEntryDto } from '@/lib/tree/source-entries-api';
-import { rowState, stagedCount, type StagedSource } from '@/lib/tree/source-staging';
+import type { SourceEntryDto, SourceSummaryDto } from '@/lib/tree/source-entries-api';
+import { rowState, stagedCount, stagedSharedCount, type StagedSource } from '@/lib/tree/source-staging';
 import { SourceRow } from './SourceRow';
+import { FamilySourceHints } from './FamilySourceHints';
 import { SourceFileThumbs } from './SourceFileThumbs';
 import { toArabicDigits } from './arabicDigits';
 import { BookIcon, DocumentIcon, PencilIcon, PlusIcon, TrashIcon } from './SourceIcons';
@@ -19,9 +20,15 @@ export interface StagedSourcesListProps {
   items: readonly StagedSource[];
   /** The tree-wide entry this person inherits — muted, read-only. */
   inherited?: SourceEntryDto | null;
+  /** «مصادر أسرته» (edit mode, a person with no sources): «إضافة» stages a link. */
+  familyHints?: readonly SourceSummaryDto[];
+  /** The person's sex (the hints' title). */
+  sex?: string;
+  onAddHint?: (hint: SourceSummaryDto) => void;
   onAdd: () => void;
   onEdit: (key: string) => void;
-  onToggleDelete: (key: string) => void;
+  /** Remove a row from this person (or restore a removed one). */
+  onRemove: (key: string) => void;
   /** Polite announcement («أُضيف المصدر إلى القائمة»). */
   announcement?: string;
 }
@@ -31,7 +38,7 @@ export interface StagedSourcesListProps {
  * form has staged. Nothing here saves — the person form's «حفظ» does.
  */
 export const StagedSourcesList = forwardRef<HTMLButtonElement, StagedSourcesListProps>(function StagedSourcesList(
-  { workspaceId, treeId, mode, items, inherited, onAdd, onEdit, onToggleDelete, announcement },
+  { workspaceId, treeId, mode, items, inherited, familyHints = [], sex, onAddHint, onAdd, onEdit, onRemove, announcement },
   addButtonRef,
 ) {
   const titleId = useId();
@@ -52,8 +59,11 @@ export const StagedSourcesList = forwardRef<HTMLButtonElement, StagedSourcesList
             const state = rowState(item);
             const draft = item.draft;
             const entry = item.entry;
-            const text = (draft ? draft.text.trim() : entry?.text) || null;
-            const visibility = draft?.visibility ?? entry?.visibility;
+            const linked = draft?.linkSource;
+            const text = (linked ? linked.text : draft ? draft.text.trim() : entry?.text) || null;
+            const visibility = linked?.visibility ?? draft?.visibility ?? entry?.visibility;
+            const gone = state === 'deleted' || state === 'unlinked';
+            const shared = (entry?.sharedCount ?? 0) > 0;
             const removed = new Set(draft?.removeFileIds ?? []);
             const savedFiles = (entry?.files ?? []).filter((f) => !removed.has(f.id));
             const newFiles = draft?.addFiles ?? [];
@@ -63,6 +73,7 @@ export const StagedSourcesList = forwardRef<HTMLButtonElement, StagedSourcesList
             if (state === 'added') tags.push(mode === 'create' ? 'يُحفظ مع الشخص' : 'جديد');
             if (state === 'edited') tags.push('مُعدَّل');
             if (state === 'deleted') tags.push(hasFiles ? 'سيُحذف مع ملفاته' : 'سيُحذف');
+            if (state === 'unlinked') tags.push('سيُزال عن هذا الشخص');
             if (item.failed) tags.push('تعذّر الحفظ');
 
             return (
@@ -71,12 +82,13 @@ export const StagedSourcesList = forwardRef<HTMLButtonElement, StagedSourcesList
                 className={clsx(styles.row, {
                   [styles.rowAdded]: state === 'added',
                   [styles.rowEdited]: state === 'edited',
-                  [styles.rowDeleted]: state === 'deleted',
+                  [styles.rowDeleted]: gone,
                   [styles.rowFailed]: item.failed,
                 })}
-                textClassName={state === 'deleted' ? styles.struck : undefined}
+                textClassName={gone ? styles.struck : undefined}
                 text={text}
                 locked={visibility === 'admins'}
+                sharedCount={gone ? 0 : stagedSharedCount(item)}
                 thumbs={
                   <>
                     {entry && savedFiles.length > 0 && (
@@ -95,17 +107,17 @@ export const StagedSourcesList = forwardRef<HTMLButtonElement, StagedSourcesList
                   </>
                 }
                 tag={tags.map((t) => (
-                  <span key={t} className={clsx(styles.tag, { [styles.tagDanger]: t === 'تعذّر الحفظ' || state === 'deleted' })}>
+                  <span key={t} className={clsx(styles.tag, { [styles.tagDanger]: t === 'تعذّر الحفظ' || gone })}>
                     {t}
                   </span>
                 ))}
                 actions={
-                  state === 'deleted' ? (
+                  gone ? (
                     <button
                       type="button"
                       className={styles.restoreButton}
-                      aria-label="تراجع عن حذف المصدر"
-                      onClick={() => onToggleDelete(item.key)}
+                      aria-label={state === 'deleted' ? 'تراجع عن حذف المصدر' : 'تراجع عن إزالة المصدر'}
+                      onClick={() => onRemove(item.key)}
                     >
                       تراجع
                     </button>
@@ -122,8 +134,8 @@ export const StagedSourcesList = forwardRef<HTMLButtonElement, StagedSourcesList
                       <button
                         type="button"
                         className={clsx(sectionStyles.iconButton, sectionStyles.iconButtonDanger, styles.iconButton)}
-                        aria-label="حذف المصدر"
-                        onClick={() => onToggleDelete(item.key)}
+                        aria-label={shared ? 'إزالة المصدر عن هذا الشخص' : 'حذف المصدر'}
+                        onClick={() => onRemove(item.key)}
                       >
                         <TrashIcon size={13} />
                       </button>
@@ -144,6 +156,10 @@ export const StagedSourcesList = forwardRef<HTMLButtonElement, StagedSourcesList
           </p>
           <SourceFileThumbs workspaceId={workspaceId} treeId={treeId} entryId={inherited.id} files={inherited.files} />
         </div>
+      )}
+
+      {onAddHint && items.length === 0 && (
+        <FamilySourceHints workspaceId={workspaceId} treeId={treeId} hints={familyHints} sex={sex} onAdd={onAddHint} />
       )}
 
       <button ref={addButtonRef} type="button" className={sectionStyles.addButton} onClick={onAdd}>

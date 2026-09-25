@@ -2,15 +2,16 @@
  * Sources («المصادر») inside the person edit form — the STAGED list model.
  *
  * Nothing here talks to the server. The form keeps a list of rows (the
- * person's saved entries plus drafts), the user adds / edits / marks rows for
- * deletion, and «حفظ» turns the list into ONE plan (`buildSourcePlan`) that
- * `usePersonActions` persists in order: creates → updates → deletes. After a
- * partly-failed save `applyPlanResult` drops what succeeded, so the retry
- * never repeats a create.
+ * person's saved sources plus drafts), the user adds / edits / removes rows,
+ * and «حفظ» turns the list into ONE plan (`buildSourcePlan`) that
+ * `usePersonActions` persists in order: creates → links → updates → unlinks
+ * → deletes. The starting person appears in a plan as `SOURCE_SELF` (a new
+ * person has no id until it is created). After a partly-failed save
+ * `applyPlanResult` drops what succeeded, so the retry never repeats a create.
  *
  * PII: texts may name living people — never log them.
  */
-import type { SourceEntryDto } from '@/lib/tree/source-entries-api';
+import type { PersonSourceDto, SourceEntryDto } from '@/lib/tree/source-entries-api';
 import type { SourceVisibilityLevel } from '@/lib/tree/source-visibility';
 import type { SourceEntryPatch } from '@/lib/tree/source-entry-undo';
 import type { SourceSummaryDto } from '@/lib/tree/source-links';
@@ -54,65 +55,101 @@ export interface SourceDraft {
   linkSource?: SourceSummaryDto;
 }
 
+/** The starting person in a plan's `personIds` (resolved when the plan is saved). */
+export const SOURCE_SELF = 'self';
+
+/**
+ * A saved source as the person route sends it: with the OTHER people this
+ * viewer may see (`people` capped, `sharedCount` not).
+ */
+export type StagedEntry = SourceEntryDto & Partial<Pick<PersonSourceDto, 'people' | 'sharedCount'>>;
+
+/**
+ * How a saved row leaves this person: `unlink` = «إزالته عن … فقط» (the
+ * source stays for the others; `onLastLink: 'keep'` = the answer to
+ * «هذا آخر شخص لهذا المصدر»), `delete` = the source goes.
+ */
+export type SourceRemoval = { kind: 'delete' } | { kind: 'unlink'; onLastLink?: 'keep' };
+
 export interface StagedSource {
   key: string;
-  /** The saved entry; absent for a row added in this form. */
-  entry?: SourceEntryDto;
+  /** The saved source; absent for a row added in this form. */
+  entry?: StagedEntry;
   /** Pending changes (always set for an added row). */
   draft?: SourceDraft;
-  markedForDeletion?: boolean;
+  removal?: SourceRemoval;
   /** The last «حفظ» could not save this row. */
   failed?: boolean;
 }
 
-export type SourceRowState = 'saved' | 'added' | 'edited' | 'deleted';
+export type SourceRowState = 'saved' | 'added' | 'edited' | 'unlinked' | 'deleted';
 
 export interface SourcePlanCreate {
   key: string;
   text: string | null;
   visibility: SourceVisibilityLevel;
   fileIds: string[];
+  /** `SOURCE_SELF` first, then the other people. */
+  personIds: string[];
+}
+
+/** Reuse: an existing source gains the starting person (and the others). */
+export interface SourcePlanLink {
+  key: string;
+  sourceId: string;
+  personIds: string[];
 }
 
 export interface SourcePlanUpdate {
   id: string;
-  before: SourceEntryDto;
+  before: StagedEntry;
   patch: SourceEntryPatch;
   removeFileIds: string[];
+  addPersonIds: string[];
+  removePersonIds: string[];
+}
+
+export interface SourcePlanUnlink {
+  id: string;
+  before: StagedEntry;
+  onLastLink?: 'keep';
 }
 
 export interface SourcePlanDelete {
   id: string;
-  before: SourceEntryDto;
+  before: StagedEntry;
 }
 
 export interface SourcePlan {
   creates: SourcePlanCreate[];
+  links: SourcePlanLink[];
   updates: SourcePlanUpdate[];
+  unlinks: SourcePlanUnlink[];
   deletes: SourcePlanDelete[];
 }
 
 /** What a (partly) failed save did, for `applyPlanResult`. */
 export interface SourcePlanResult {
-  /** Create key → the saved entry. */
-  created: Record<string, SourceEntryDto>;
+  /** Create / link key → the saved source. */
+  created: Record<string, StagedEntry>;
   failedCreates: string[];
-  /** Entry id → the entry after its PATCH (the PATCH itself succeeded). */
-  updated: Record<string, SourceEntryDto>;
-  /** Entry id of every update not fully saved (its PATCH or a file removal failed). */
+  /** Source id → the source after its PATCH (the PATCH itself succeeded). */
+  updated: Record<string, StagedEntry>;
+  /** Source id of every update not fully saved (its PATCH or a file removal failed). */
   failedUpdates: string[];
-  /** Entry id → the files removed before a later removal failed. */
+  /** Source id → the files removed before a later removal failed. */
   removedFileIds?: Record<string, string[]>;
+  /** Sources that left this person (unlinked or deleted). */
   deleted: string[];
   failedDeletes: string[];
 }
 
-export const EMPTY_SOURCE_PLAN: SourcePlan = { creates: [], updates: [], deletes: [] };
+export const EMPTY_SOURCE_PLAN: SourcePlan = { creates: [], links: [], updates: [], unlinks: [], deletes: [] };
 
 let keyCounter = 0;
 const nextKey = () => `staged-source-${++keyCounter}`;
 
-export function stagedFromEntries(entries: readonly SourceEntryDto[]): StagedSource[] {
+export function stagedFromEntries(entries: readonly StagedEntry[]): StagedSource[] {
   return entries.map((entry) => ({ key: `saved-${entry.id}`, entry }));
 }
 
@@ -124,12 +161,19 @@ export function replaceDraft(items: readonly StagedSource[], key: string, draft:
   return items.map((item) => (item.key === key ? { ...item, draft, failed: false } : item));
 }
 
-/** Mark a saved row for deletion (or restore it); an added row is removed outright. */
-export function toggleDelete(items: readonly StagedSource[], key: string): StagedSource[] {
+/**
+ * Remove a saved row from this person (or restore it when already removed);
+ * an added row is removed outright.
+ */
+export function toggleRemoval(
+  items: readonly StagedSource[],
+  key: string,
+  removal: SourceRemoval = { kind: 'delete' },
+): StagedSource[] {
   const item = items.find((i) => i.key === key);
   if (!item) return [...items];
   if (!item.entry) return items.filter((i) => i.key !== key);
-  return items.map((i) => (i.key === key ? { ...i, markedForDeletion: !i.markedForDeletion, failed: false } : i));
+  return items.map((i) => (i.key === key ? { ...i, removal: i.removal ? undefined : removal, failed: false } : i));
 }
 
 const normText = (text: string | null | undefined): string | null => {
@@ -149,51 +193,86 @@ function patchOf(entry: SourceEntryDto, draft: SourceDraft): SourceEntryPatch {
 
 function isEdited(entry: SourceEntryDto, draft: SourceDraft | undefined): boolean {
   if (!draft) return false;
-  return Object.keys(patchOf(entry, draft)).length > 0 || draft.removeFileIds.length > 0;
+  return (
+    Object.keys(patchOf(entry, draft)).length > 0 ||
+    draft.removeFileIds.length > 0 ||
+    (draft.addPersonIds?.length ?? 0) > 0 ||
+    (draft.removePersonIds?.length ?? 0) > 0
+  );
 }
 
 export function rowState(item: StagedSource): SourceRowState {
   if (!item.entry) return 'added';
-  if (item.markedForDeletion) return 'deleted';
+  if (item.removal) return item.removal.kind === 'delete' ? 'deleted' : 'unlinked';
   return isEdited(item.entry, item.draft) ? 'edited' : 'saved';
 }
 
+const isGone = (state: SourceRowState) => state === 'deleted' || state === 'unlinked';
+
 /** «المصادر (N)» — the rows as they will be after saving. */
 export function stagedCount(items: readonly StagedSource[]): number {
-  return items.filter((i) => rowState(i) !== 'deleted').length;
+  return items.filter((i) => !isGone(rowState(i))).length;
 }
+
+/** How many OTHER people the row's source will be for after saving («مشترك مع …»). */
+export function stagedSharedCount(item: StagedSource): number {
+  const draft = item.draft;
+  if (!item.entry) return (draft?.people?.length ?? 0) + (draft?.linkSource?.peopleCount ?? 0);
+  const added = draft?.addPersonIds?.length ?? 0;
+  const removed = draft?.removePersonIds?.length ?? 0;
+  return Math.max(0, (item.entry.sharedCount ?? 0) + added - removed);
+}
+
+const othersOf = (draft: SourceDraft) => (draft.people ?? []).map((p) => p.id);
 
 export function hasStagedChanges(items: readonly StagedSource[]): boolean {
   return items.some((i) => rowState(i) !== 'saved');
 }
 
 export function buildSourcePlan(items: readonly StagedSource[]): SourcePlan {
-  const plan: SourcePlan = { creates: [], updates: [], deletes: [] };
+  const plan: SourcePlan = { creates: [], links: [], updates: [], unlinks: [], deletes: [] };
   for (const item of items) {
     const state = rowState(item);
-    if (state === 'added' && item.draft) {
-      plan.creates.push({
-        key: item.key,
-        text: normText(item.draft.text),
-        visibility: item.draft.visibility,
-        fileIds: item.draft.addFiles.map((f) => f.id),
-      });
-    } else if (state === 'edited' && item.entry && item.draft) {
+    const { entry, draft } = item;
+    if (state === 'added' && draft) {
+      const personIds = [SOURCE_SELF, ...othersOf(draft)];
+      if (draft.linkSource) {
+        plan.links.push({ key: item.key, sourceId: draft.linkSource.id, personIds });
+      } else {
+        plan.creates.push({
+          key: item.key,
+          text: normText(draft.text),
+          visibility: draft.visibility,
+          fileIds: draft.addFiles.map((f) => f.id),
+          personIds,
+        });
+      }
+    } else if (state === 'edited' && entry && draft) {
       plan.updates.push({
-        id: item.entry.id,
-        before: item.entry,
-        patch: patchOf(item.entry, item.draft),
-        removeFileIds: [...item.draft.removeFileIds],
+        id: entry.id,
+        before: entry,
+        patch: patchOf(entry, draft),
+        removeFileIds: [...draft.removeFileIds],
+        addPersonIds: [...(draft.addPersonIds ?? [])],
+        removePersonIds: [...(draft.removePersonIds ?? [])],
       });
-    } else if (state === 'deleted' && item.entry) {
-      plan.deletes.push({ id: item.entry.id, before: item.entry });
+    } else if (state === 'unlinked' && entry && item.removal?.kind === 'unlink') {
+      plan.unlinks.push({
+        id: entry.id,
+        before: entry,
+        ...(item.removal.onLastLink ? { onLastLink: item.removal.onLastLink } : {}),
+      });
+    } else if (state === 'deleted' && entry) {
+      plan.deletes.push({ id: entry.id, before: entry });
     }
   }
   return plan;
 }
 
 export function isPlanEmpty(plan: SourcePlan): boolean {
-  return plan.creates.length + plan.updates.length + plan.deletes.length === 0;
+  return (
+    plan.creates.length + plan.links.length + plan.updates.length + plan.unlinks.length + plan.deletes.length === 0
+  );
 }
 
 /** Any file work — none of it can be redone after an undo. */

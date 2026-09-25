@@ -5,11 +5,10 @@ const api = vi.hoisted(() => ({
   fetchTreeEntry: vi.fn(),
   putTreeEntry: vi.fn(),
   deleteTreeEntry: vi.fn(),
-  createSourceEntry: vi.fn(),
-  updateSourceEntry: vi.fn(),
+  createSource: vi.fn(),
+  patchSource: vi.fn(),
   uploadSourceFile: vi.fn(),
   deleteSourceFile: vi.fn(),
-  fetchSourceSuggestions: vi.fn(),
   fetchSourceFileBlob: vi.fn(),
 }));
 vi.mock('@/lib/tree/source-entries-api', () =>
@@ -41,7 +40,6 @@ const textbox = () => screen.getByLabelText('المصدر') as HTMLTextAreaEleme
 
 beforeEach(() => {
   Object.values(api).forEach((m) => m.mockReset());
-  api.fetchSourceSuggestions.mockResolvedValue([]);
   showToast.mockReset();
   notifySourcesChanged.mockReset();
 });
@@ -65,7 +63,7 @@ describe('TreeSourceCard', () => {
     await waitFor(() =>
       expect(api.putTreeEntry).toHaveBeenCalledWith('ws', { text: 'كتاب الأنساب', visibility: 'admins' }, 'T1'),
     );
-    expect(api.createSourceEntry).not.toHaveBeenCalled();
+    expect(api.createSource).not.toHaveBeenCalled();
     expect(await screen.findByText('كتاب الأنساب')).toBeInTheDocument();
     expect(notifySourcesChanged).toHaveBeenCalled();
   });
@@ -88,7 +86,7 @@ describe('TreeSourceCard', () => {
     await waitFor(() =>
       expect(api.putTreeEntry).toHaveBeenCalledWith('ws', { text: 'سجلات مصححة', visibility: 'members' }, undefined),
     );
-    expect(api.updateSourceEntry).not.toHaveBeenCalled();
+    expect(api.patchSource).not.toHaveBeenCalled();
   });
 
   it('removes the entry only after confirmation', async () => {

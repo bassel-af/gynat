@@ -27,13 +27,10 @@ import {
   buildUpdateAncestryJumpInverse,
   buildDeleteAncestryJumpInverse,
   buildMoveJumpToNewFatherInverse,
+  type Inverse,
 } from '@/lib/tree/undo-builders';
-import {
-  fetchPersonSources,
-  restorableSourceEntries,
-  type RestorableSourceEntry,
-} from '@/lib/tree/source-entries-api';
-import { isPlanEmpty, type SourcePlan, type SourcePlanResult } from '@/lib/tree/source-staging';
+import { fetchPersonSources } from '@/lib/tree/source-entries-api';
+import { EMPTY_SOURCE_PLAN, isPlanEmpty, type SourcePlan, type SourcePlanResult } from '@/lib/tree/source-staging';
 import { applySourcePlan, composeInverses, type AppliedSourcePlan } from '@/lib/tree/source-plan-apply';
 import { notifySourcesChanged } from '@/hooks/usePersonSources';
 import { toArabicDigits } from '@/components/sources/arabicDigits';
@@ -149,6 +146,24 @@ const SOURCES_PARTIAL_FAILURE = 'حُفظت بيانات الشخص، وتعذّ
 const SOURCE_ADMINS_ONLY_NOTICE = 'أُضيف المصدر، ويراه المشرفون فقط.';
 const sourcesCreateFailedNotice = (n: number) =>
   `أُضيف الشخص، وتعذّر حفظ ${toArabicDigits(n)} من المصادر. أضِفها من لوحة الشخص.`;
+
+/**
+ * A person-create undo when sources were saved with the person: take the
+ * sources back off FIRST (a source outlives its people, so deleting the
+ * person alone would leave «ليس مصدرًا لأحد» orphans), then the person.
+ * A redo could not bring them back, so the entry is undo-only.
+ */
+function withQueuedSources(entry: UndoEntry, undoSources: Inverse['undo'] | null): UndoEntry {
+  if (!undoSources) return entry;
+  return {
+    ...entry,
+    undoOnly: true,
+    undo: async () => {
+      await undoSources();
+      await entry.undo();
+    },
+  };
+}
 
 export interface UsePersonActionsReturn {
   formMode: FormMode | null;
@@ -339,15 +354,27 @@ export function usePersonActions({
   );
 
   /**
-   * Create modes: the queued entries go on the person just created. The form
-   * has already closed; failures are a toast. Returns how many were saved.
+   * Create modes: the queued sources (new ones and reused ones) go on the
+   * person just created. The form has already closed; failures are a toast.
+   * Returns what takes them back off (for the person-create undo), or null
+   * when nothing was saved.
    */
   const saveQueuedSources = useCallback(
-    async (individualId: string, plan: SourcePlan | undefined): Promise<number> => {
-      if (!workspace || !plan || plan.creates.length === 0) return 0;
-      const applied = await runSourcePlan(individualId, { creates: plan.creates, updates: [], deletes: [] });
+    async (individualId: string, plan: SourcePlan | undefined): Promise<Inverse['undo'] | null> => {
+      if (!workspace || !plan || plan.creates.length + plan.links.length === 0) return null;
+      const applied = await runSourcePlan(individualId, {
+        ...EMPTY_SOURCE_PLAN,
+        creates: plan.creates,
+        links: plan.links,
+      });
       if (applied.failedCount > 0) onNotice?.(sourcesCreateFailedNotice(applied.failedCount));
-      return applied.createdCount;
+      if (applied.createdCount === 0) return null;
+      const all = [...applied.inverses, ...applied.undoOnlyInverses];
+      return async () => {
+        // Best-effort, newest first: the person undo runs either way.
+        for (const inverse of all.reverse()) await inverse.undo().catch(() => undefined);
+        notifySourcesChanged();
+      };
     },
     [workspace, runSourcePlan, onNotice],
   );
@@ -501,7 +528,7 @@ export function usePersonActions({
       succeeded = true;
       setFormMode(null);
     });
-    const savedSources = succeeded && newIndividualId ? await saveQueuedSources(newIndividualId, sourcePlan) : 0;
+    const undoSources = succeeded && newIndividualId ? await saveQueuedSources(newIndividualId, sourcePlan) : null;
     if (succeeded && onPushUndo && newIndividualId) {
       const inverse = buildCreateIndividualInverse({
         workspaceId: workspace.workspaceId,
@@ -509,14 +536,12 @@ export function usePersonActions({
         createPayload,
         treeId: activeTreeId,
       });
-      onPushUndo({
+      onPushUndo(withQueuedSources({
         label: buildUndoLabel({ kind: 'addChild', name: childName }),
         workspaceId: workspace.workspaceId,
         undo: inverse.undo,
         redo: inverse.redo,
-        // Undo deletes the person and their sources; a redo could not bring the sources back.
-        ...(savedSources > 0 ? { undoOnly: true } : {}),
-      });
+      }, undoSources));
     }
   }, [workspace, person, data, personId, formMode, createIndividual, addChildToFamily, createFamily, isPointed, withFormAction, activeTreeId, onPushUndo, saveQueuedSources]);
 
@@ -556,15 +581,14 @@ export function usePersonActions({
       setFormError('');
       succeeded = true;
     });
-    const savedSources = succeeded && newIndividualId ? await saveQueuedSources(newIndividualId, sourcePlan) : 0;
+    const undoSources = succeeded && newIndividualId ? await saveQueuedSources(newIndividualId, sourcePlan) : null;
     if (succeeded && onPushUndo && newIndividualId && newFamilyId) {
       const capturedIndividualId = newIndividualId;
       const capturedFamilyId = newFamilyId;
       const wsId = workspace.workspaceId;
-      onPushUndo({
+      onPushUndo(withQueuedSources({
         label: buildUndoLabel({ kind: 'addSpouse', sex: spouseSex, name: spouseName }),
         workspaceId: wsId,
-        ...(savedSources > 0 ? { undoOnly: true } : {}),
         undo: async () => {
           // Delete family first (it refers to both individuals), then the new individual.
           const famRes = await apiFetch(`/api/workspaces/${wsId}/tree/families/${capturedFamilyId}`, {
@@ -608,7 +632,7 @@ export function usePersonActions({
           });
           if (!famRes.ok) throw new Error(`undo API error: ${famRes.status}`);
         },
-      });
+      }, undoSources));
     }
   }, [workspace, person, personId, createIndividual, createFamily, isPointed, withFormAction, withTreeId, activeTreeId, deleteInit, onPushUndo, saveQueuedSources]);
 
@@ -684,7 +708,7 @@ export function usePersonActions({
     });
     if (!moved) return;
     const movedIds = moved as { individual: { id: string }; family: { id: string } };
-    const savedSources = await saveQueuedSources(movedIds.individual.id, sourcePlan);
+    const undoSources = await saveQueuedSources(movedIds.individual.id, sourcePlan);
     if (!onPushUndo) return;
     const inverse = buildMoveJumpToNewFatherInverse({
       workspaceId: wsId,
@@ -696,13 +720,12 @@ export function usePersonActions({
       preMoveRange,
       treeId: activeTreeId,
     });
-    onPushUndo({
+    onPushUndo(withQueuedSources({
       label: buildUndoLabel({ kind: 'moveAncestryJumpToFather', name: formData.givenName }),
       workspaceId: wsId,
       undo: inverse.undo,
       redo: inverse.redo,
-      ...(savedSources > 0 ? { undoOnly: true } : {}),
-    });
+    }, undoSources));
   }, [workspace, person, data, personId, isPointed, withFormAction, withTreeId, setFormMode, activeTreeId, onPushUndo, saveQueuedSources]);
 
   const handleAddParentSubmit = useCallback(async (formData: IndividualFormData, sourcePlan?: SourcePlan) => {
@@ -750,16 +773,15 @@ export function usePersonActions({
       setFormMode(null);
       succeeded = true;
     });
-    const savedSources = succeeded && newIndividualId ? await saveQueuedSources(newIndividualId, sourcePlan) : 0;
+    const undoSources = succeeded && newIndividualId ? await saveQueuedSources(newIndividualId, sourcePlan) : null;
     if (succeeded && onPushUndo && newIndividualId) {
       const wsId = workspace.workspaceId;
       const capturedInd = newIndividualId;
       const capturedPatchedFam = patchedFamilyId;
       const capturedCreatedFam = createdFamilyId;
-      onPushUndo({
+      onPushUndo(withQueuedSources({
         label: buildUndoLabel({ kind: 'addParent', sex: parentSex, name: parentName }),
         workspaceId: wsId,
-        ...(savedSources > 0 ? { undoOnly: true } : {}),
         undo: async () => {
           // Reverse the structural op first, then delete the new individual.
           if (capturedPatchedFam) {
@@ -819,7 +841,7 @@ export function usePersonActions({
             if (!r.ok) throw new Error(`undo API error: ${r.status}`);
           }
         },
-      });
+      }, undoSources));
     }
   }, [workspace, person, data, personId, formMode, handleMoveJumpToNewFather, createIndividual, patchFamily, createFamily, isPointed, withFormAction, withTreeId, activeTreeId, deleteInit, onPushUndo, saveQueuedSources]);
 
@@ -836,7 +858,7 @@ export function usePersonActions({
       setFormMode(null);
       succeeded = true;
     });
-    const savedSources = succeeded && newIndividualId ? await saveQueuedSources(newIndividualId, sourcePlan) : 0;
+    const undoSources = succeeded && newIndividualId ? await saveQueuedSources(newIndividualId, sourcePlan) : null;
     if (succeeded && onPushUndo && newIndividualId) {
       const inverse = buildCreateIndividualInverse({
         workspaceId: workspace.workspaceId,
@@ -844,13 +866,12 @@ export function usePersonActions({
         createPayload,
         treeId: activeTreeId,
       });
-      onPushUndo({
+      onPushUndo(withQueuedSources({
         label: buildUndoLabel({ kind: 'addChild', name: childName }),
         workspaceId: workspace.workspaceId,
         undo: inverse.undo,
         redo: inverse.redo,
-        ...(savedSources > 0 ? { undoOnly: true } : {}),
-      });
+      }, undoSources));
     }
   }, [workspace, formMode, createIndividual, addChildToFamily, isPointed, withFormAction, activeTreeId, onPushUndo, saveQueuedSources]);
 
@@ -1668,17 +1689,18 @@ export function usePersonActions({
     }) : null;
     const personName = person?.name;
     setDeleteState({ kind: 'loading' });
-    // Sources («المصادر»): the delete cascades the person's entries away, so
-    // capture their text entries first for the undo to re-create. Only simple
+    // Sources («المصادر»): sources outlive a person delete (only the links
+    // go), so capture the ids of the person's sources for the undo to RE-LINK
+    // them — text and files come back, nothing is duplicated. Only simple
     // deletes are undoable. Best-effort: a failed fetch never blocks the
-    // delete, it just leaves nothing to restore.
-    let sourceEntries: RestorableSourceEntry[] = [];
+    // delete, it just leaves nothing to re-link.
+    let sourceIds: string[] = [];
     if (isSimple && onPushUndo) {
       try {
         const { entries } = await fetchPersonSources(workspace.workspaceId, personId, activeTreeId);
-        sourceEntries = restorableSourceEntries(entries, workspace.isAdmin === true);
+        sourceIds = entries.map((e) => e.id);
       } catch {
-        sourceEntries = [];
+        sourceIds = [];
       }
     }
     try {
@@ -1722,7 +1744,7 @@ export function usePersonActions({
           workspaceId: workspace.workspaceId,
           deletedId: personId,
           snapshot: deleteSnapshot,
-          sourceEntries,
+          sourceIds,
           treeId: activeTreeId,
         });
         onPushUndo({

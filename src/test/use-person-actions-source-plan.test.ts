@@ -1,19 +1,20 @@
 /**
  * The person form's «حفظ» with staged sources («المصادر»):
- *  - edit: person PATCH first, then creates → updates (text/level, then file
- *    removals) → deletes; ONE composite undo entry per press (undoOnly when
+ *  - edit: person PATCH first, then creates → links → updates (content +
+ *    people, then file removals) → unlinks → deletes; ONE composite undo entry per press (undoOnly when
  *    files were involved); a partly-failed save keeps the form open and a
  *    retry never repeats what saved.
  *  - create modes: the person first, then the queued entries under the new
  *    id; the form always closes; failures surface as a toast; the person-create
- *    undo is undoOnly when sources were saved with it.
+ *    undo is undoOnly when sources were saved with it, and it takes the
+ *    sources back off BEFORE deleting the person (no orphan is left behind).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import type { Individual, GedcomData } from '@/lib/gedcom/types';
 import type { UndoEntry } from '@/lib/undo/types';
 import type { IndividualFormData } from '@/components/tree/IndividualForm/IndividualForm';
-import type { SourcePlan, SourcePlanResult } from '@/lib/tree/source-staging';
+import { SOURCE_SELF, type SourcePlan, type SourcePlanResult } from '@/lib/tree/source-staging';
 import type { SourceEntryDto } from '@/lib/tree/source-entries-api';
 
 vi.mock('@/lib/api/client', () => ({ apiFetch: vi.fn() }));
@@ -73,7 +74,7 @@ function route(...rules: Rule[]) {
       return ok(entry('S-NEW', { individualId: body?.personIds?.[0], text: body?.text ?? null, visibility: body?.visibility, files: (body?.fileIds ?? []).map((id: string) => ({ ...pdf, id })) }), 201);
     }
     if (/\/sources\/[^/]+$/.test(path) && method === 'PATCH') {
-      return ok(entry(path.split('/').slice(-1)[0], { text: body?.text ?? 'نص', visibility: body?.visibility ?? 'members' }));
+      return ok({ ...entry(path.split('/').slice(-1)[0], { text: body?.text ?? 'نص', visibility: body?.visibility ?? 'members' }), people: [], peopleCount: 1 });
     }
     return ok({});
   });
@@ -116,7 +117,7 @@ function setup(opts: { isAdmin?: boolean; formKind?: 'edit' | 'addChild' | 'addS
 }
 
 function plan(over: Partial<SourcePlan> = {}): SourcePlan {
-  return { creates: [], updates: [], deletes: [], ...over };
+  return { creates: [], links: [], updates: [], unlinks: [], deletes: [], ...over };
 }
 
 beforeEach(() => {
@@ -133,8 +134,8 @@ describe('edit «حفظ» with a sources plan', () => {
       await result.current.handleEditSubmit(
         formData(),
         plan({
-          creates: [{ key: 'k1', text: 'جديد', visibility: 'members', fileIds: [] }],
-          updates: [{ id: 'b', before: b, patch: { text: 'معدل' }, removeFileIds: ['F1'] }],
+          creates: [{ key: 'k1', text: 'جديد', visibility: 'members', fileIds: [], personIds: [SOURCE_SELF] }],
+          updates: [{ id: 'b', before: b, patch: { text: 'معدل' }, removeFileIds: ['F1'], addPersonIds: [], removePersonIds: [] }],
           deletes: [{ id: 'c', before: entry('c') }],
         }),
       );
@@ -155,7 +156,7 @@ describe('edit «حفظ» with a sources plan', () => {
     const { result, onPushUndo } = setup();
     let ret: SourcePlanResult | void = undefined;
     await act(async () => {
-      ret = await result.current.handleEditSubmit(formData(), plan({ creates: [{ key: 'k1', text: 'x', visibility: 'members', fileIds: [] }] }));
+      ret = await result.current.handleEditSubmit(formData(), plan({ creates: [{ key: 'k1', text: 'x', visibility: 'members', fileIds: [], personIds: [SOURCE_SELF] }] }));
     });
     expect(calls()).toEqual([`PATCH /individuals/${PID}`]);
     expect(ret).toBeUndefined();
@@ -170,8 +171,8 @@ describe('edit «حفظ» with a sources plan', () => {
       await result.current.handleEditSubmit(
         formData(),
         plan({
-          creates: [{ key: 'k1', text: 'جديد', visibility: 'members', fileIds: [] }],
-          updates: [{ id: 'b', before: entry('b'), patch: { visibility: 'public' }, removeFileIds: [] }],
+          creates: [{ key: 'k1', text: 'جديد', visibility: 'members', fileIds: [], personIds: [SOURCE_SELF] }],
+          updates: [{ id: 'b', before: entry('b'), patch: { visibility: 'public' }, removeFileIds: [], addPersonIds: [], removePersonIds: [] }],
           deletes: [{ id: 'c', before: entry('c', { text: 'قديم' }) }],
         }),
       );
@@ -185,7 +186,7 @@ describe('edit «حفظ» with a sources plan', () => {
     expect(undone).toContain(`PATCH /individuals/${PID}`);
     expect(undone).toContain('DELETE /sources/S-NEW');
     expect(undone).toContain('PATCH /sources/b');
-    expect(undone).toContain(`POST /individuals/${PID}/sources`);
+    expect(undone).toContain(`POST /sources [${PID}]`);
     // Reverse order: the delete is restored first, the person reverted last.
     expect(undone[undone.length - 1]).toBe(`PATCH /individuals/${PID}`);
   });
@@ -197,7 +198,7 @@ describe('edit «حفظ» with a sources plan', () => {
       await result.current.handleEditSubmit(
         formData(),
         plan({
-          creates: [{ key: 'k1', text: 'صورة', visibility: 'members', fileIds: ['UP1'] }],
+          creates: [{ key: 'k1', text: 'صورة', visibility: 'members', fileIds: ['UP1'], personIds: [SOURCE_SELF] }],
           deletes: [{ id: 'c', before: entry('c', { files: [pdf] }) }],
         }),
       );
@@ -226,8 +227,8 @@ describe('edit «حفظ» with a sources plan', () => {
         formData(),
         plan({
           creates: [
-            { key: 'k1', text: 'أول', visibility: 'members', fileIds: [] },
-            { key: 'k2', text: 'ثان', visibility: 'members', fileIds: [] },
+            { key: 'k1', text: 'أول', visibility: 'members', fileIds: [], personIds: [SOURCE_SELF] },
+            { key: 'k2', text: 'ثان', visibility: 'members', fileIds: [], personIds: [SOURCE_SELF] },
           ],
         }),
       );
@@ -241,7 +242,7 @@ describe('edit «حفظ» with a sources plan', () => {
     // The retry carries only the failed create (the form dropped the rest).
     mockApiFetch.mockClear();
     await act(async () => {
-      await result.current.handleEditSubmit(formData(), plan({ creates: [{ key: 'k2', text: 'ثان', visibility: 'members', fileIds: [] }] }));
+      await result.current.handleEditSubmit(formData(), plan({ creates: [{ key: 'k2', text: 'ثان', visibility: 'members', fileIds: [], personIds: [SOURCE_SELF] }] }));
     });
     // The person already saved — not PATCHed again.
     expect(calls()).toEqual([`POST /sources [${PID}]`]);
@@ -252,6 +253,75 @@ describe('edit «حفظ» with a sources plan', () => {
     expect(calls()).toEqual(['DELETE /sources/S-NEW']);
   });
 
+  it('saves shared work: a source for several people, a reused source, people changes and a removal from this person only', async () => {
+    // The reused source is already P2's: its undo must not take P2 off.
+    route((path, method) =>
+      path.endsWith('/sources/S-D') && method === 'GET'
+        ? ok({ ...entry('S-D'), people: [{ id: 'P2', name: 'فاطمة' }], peopleCount: 1 })
+        : undefined,
+    );
+    const { result, onPushUndo } = setup();
+    await act(async () => {
+      await result.current.handleEditSubmit(
+        formData(),
+        plan({
+          creates: [{ key: 'k1', text: 'دفتر', visibility: 'members', fileIds: [], personIds: [SOURCE_SELF, 'P2', 'P3'] }],
+          links: [{ key: 'k2', sourceId: 'S-D', personIds: [SOURCE_SELF, 'P2'] }],
+          updates: [{ id: 'b', before: entry('b'), patch: {}, removeFileIds: [], addPersonIds: ['P4'], removePersonIds: ['P5'] }],
+          unlinks: [{ id: 'u', before: entry('u'), onLastLink: 'keep' }],
+        }),
+      );
+    });
+    expect(calls()).toEqual([
+      `PATCH /individuals/${PID}`,
+      `POST /sources [${PID},P2,P3]`,
+      'GET /sources/S-D',
+      'PATCH /sources/S-D',
+      'PATCH /sources/b',
+      'PATCH /sources/u',
+    ]);
+    const bodies = mockApiFetch.mock.calls.slice(3).map(([, i]) => JSON.parse((i as { body: string }).body));
+    expect(bodies[0]).toEqual({ addPersonIds: [PID, 'P2'] });
+    expect(bodies[1]).toEqual({ addPersonIds: ['P4'], removePersonIds: ['P5'] });
+    expect(bodies[2]).toEqual({ removePersonIds: [PID], onLastLink: 'keep' });
+
+    // ONE undo step, redoable (no files), that reverses every part.
+    const undo = onPushUndo.mock.calls[0][0];
+    expect(undo.undoOnly).toBeFalsy();
+    mockApiFetch.mockClear();
+    await undo.undo();
+    const undone = mockApiFetch.mock.calls.map(([p, i]) => [
+      String(p).replace(`/api/workspaces/${WS}/tree`, ''),
+      JSON.parse((i as { body?: string }).body ?? 'null'),
+    ]);
+    expect(undone).toContainEqual(['/sources/u', { addPersonIds: [PID] }]);
+    expect(undone).toContainEqual(['/sources/b', { addPersonIds: ['P5'], removePersonIds: ['P4'], onLastLink: 'keep' }]);
+    expect(undone).toContainEqual(['/sources/S-D', { removePersonIds: [PID], onLastLink: 'keep' }]);
+    expect(undone).toContainEqual(['/sources/S-NEW', null]);
+
+    // Redo re-creates the new source for ALL its people.
+    mockApiFetch.mockClear();
+    await undo.redo();
+    expect(calls()).toContain(`POST /sources [${PID},P2,P3]`);
+  });
+
+  it('deleting a shared source for a non-admin that stays for hidden people is undone by re-linking it', async () => {
+    route((path, method) =>
+      path.endsWith('/sources/c') && method === 'DELETE' ? ok({ deleted: false }) : undefined,
+    );
+    const { result, onPushUndo } = setup({ isAdmin: false });
+    await act(async () => {
+      await result.current.handleEditSubmit(
+        formData(),
+        plan({ deletes: [{ id: 'c', before: entry('c', { files: [pdf] }) }] }),
+      );
+    });
+    const undo = onPushUndo.mock.calls[0][0];
+    mockApiFetch.mockClear();
+    await undo.undo();
+    expect(calls()).toContain('PATCH /sources/c');
+  });
+
   it('tells a non-admin once that «المشرفون فقط» entries are hidden from them', async () => {
     route();
     const { result, onNotice } = setup({ isAdmin: false });
@@ -260,8 +330,8 @@ describe('edit «حفظ» with a sources plan', () => {
         formData(),
         plan({
           creates: [
-            { key: 'k1', text: 'أ', visibility: 'admins', fileIds: [] },
-            { key: 'k2', text: 'ب', visibility: 'admins', fileIds: [] },
+            { key: 'k1', text: 'أ', visibility: 'admins', fileIds: [], personIds: [SOURCE_SELF] },
+            { key: 'k2', text: 'ب', visibility: 'admins', fileIds: [], personIds: [SOURCE_SELF] },
           ],
         }),
       );
@@ -289,7 +359,7 @@ describe('create modes with queued sources', () => {
     await act(async () => {
       await result.current.handleAddChildSubmit(
         formData({ givenName: 'حسن' }),
-        plan({ creates: [{ key: 'k1', text: 'ابن سعد', visibility: 'members', fileIds: [] }] }),
+        plan({ creates: [{ key: 'k1', text: 'ابن سعد', visibility: 'members', fileIds: [], personIds: [SOURCE_SELF] }] }),
       );
     });
     const all = calls();
@@ -297,6 +367,31 @@ describe('create modes with queued sources', () => {
     expect(result.current.formMode).toBeNull();
     expect(onPushUndo).toHaveBeenCalledTimes(1);
     expect(onPushUndo.mock.calls[0][0].undoOnly).toBe(true);
+  });
+
+  it('a queued shared source and a reused one go on the new person; undo takes them off BEFORE deleting the person', async () => {
+    route();
+    const { result, onPushUndo } = setup({ formKind: 'addChild' });
+    await act(async () => {
+      await result.current.handleAddChildSubmit(
+        formData({ givenName: 'حسن' }),
+        plan({
+          creates: [{ key: 'k1', text: 'دفتر', visibility: 'members', fileIds: [], personIds: [SOURCE_SELF, 'P2'] }],
+          links: [{ key: 'k2', sourceId: 'S-D', personIds: [SOURCE_SELF] }],
+        }),
+      );
+    });
+    expect(calls()).toContain('POST /sources [P-NEW,P2]');
+    expect(calls()).toContain('PATCH /sources/S-D');
+    const undo = onPushUndo.mock.calls[0][0];
+    expect(undo.undoOnly).toBe(true);
+    mockApiFetch.mockClear();
+    await undo.undo();
+    const undone = calls();
+    expect(undone).toContain('DELETE /sources/S-NEW');
+    expect(undone).toContain('PATCH /sources/S-D');
+    // The person goes last: the sources never become «ليس مصدرًا لأحد» orphans.
+    expect(undone[undone.length - 1]).toBe('DELETE /individuals/P-NEW');
   });
 
   it('closes anyway and toasts how many failed', async () => {
@@ -309,8 +404,8 @@ describe('create modes with queued sources', () => {
         formData({ givenName: 'حسن' }),
         plan({
           creates: [
-            { key: 'k1', text: 'أ', visibility: 'members', fileIds: [] },
-            { key: 'k2', text: 'ب', visibility: 'members', fileIds: [] },
+            { key: 'k1', text: 'أ', visibility: 'members', fileIds: [], personIds: [SOURCE_SELF] },
+            { key: 'k2', text: 'ب', visibility: 'members', fileIds: [], personIds: [SOURCE_SELF] },
           ],
         }),
       );
@@ -331,7 +426,7 @@ describe('create modes with queued sources', () => {
     await act(async () => {
       await result.current[handler](
         formData({ givenName: 'حسن', sex: kind === 'addSpouse' ? 'F' : 'M' }),
-        plan({ creates: [{ key: 'k1', text: 'ابن سعد', visibility: 'members', fileIds: [] }] }),
+        plan({ creates: [{ key: 'k1', text: 'ابن سعد', visibility: 'members', fileIds: [], personIds: [SOURCE_SELF] }] }),
       );
     });
     expect(calls()).toContain('POST /sources [P-NEW]');

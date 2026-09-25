@@ -32,8 +32,6 @@ export interface SourceListItem extends SourceEntryDto {
   people: { id: string; name: string }[];
   peopleCount: number;
   fileCount: number;
-  /** @deprecated compatibility until the «المصادر» page reads `people`. */
-  personName: string | null;
 }
 
 export interface SourceListPage {
@@ -46,12 +44,6 @@ export interface SourceListPage {
   scanTruncated: boolean;
   /** Tab sizes for the current search / level: «الكل» · «مشترك» · «ليس مصدرًا لأحد». */
   counts: { all: number; shared: number; unlinked: number };
-}
-
-/** What a restore (undo) needs to re-create a text entry. */
-export interface RestorableSourceEntry {
-  text: string;
-  visibility: SourceVisibilityLevel;
 }
 
 const base = (workspaceId: string) => `/api/workspaces/${workspaceId}/tree`;
@@ -105,17 +97,6 @@ export async function createSource(
   );
 }
 
-/** One-person create (today's form): `createSource` with that person only. */
-export async function createSourceEntry(
-  workspaceId: string,
-  individualId: string,
-  /** `text` or `fileIds` (staged uploads) — at least one. */
-  body: { text?: string | null; fileIds?: string[]; visibility?: SourceVisibilityLevel },
-  treeId?: string,
-): Promise<PersonSourceDto> {
-  return createSource(workspaceId, { ...body, personIds: [individualId] }, treeId);
-}
-
 /** Body of `PATCH sources/[id]`. */
 export interface PatchSourceBody {
   /** `null` clears the text (the source must keep a file). */
@@ -162,17 +143,6 @@ export async function patchSource(
   if (!res.ok) throw new Error(`sources API error: ${res.status}`);
   const payload = (await res.json()) as { data: SourceWithPeopleDto | null; deleted?: boolean };
   return payload.deleted ? null : payload.data;
-}
-
-export async function updateSourceEntry(
-  workspaceId: string,
-  entryId: string,
-  /** `text: null` clears the text (the entry must keep a file). */
-  body: { text?: string | null; fileIds?: string[]; visibility?: SourceVisibilityLevel },
-  treeId?: string,
-): Promise<SourceEntryDto> {
-  // Content only: never removes a person, so never deletes the source.
-  return (await patchSource(workspaceId, entryId, body, treeId)) as SourceEntryDto;
 }
 
 /**
@@ -281,27 +251,6 @@ export async function fetchSourceSuggestionSummaries(
     await apiFetch(`${base(workspaceId)}/sources/suggestions${query({ q, treeId })}`),
   );
   return data.suggestions;
-}
-
-/** Text-only suggestions (distinct texts) for today's form. */
-export async function fetchSourceSuggestions(workspaceId: string, q: string, treeId?: string): Promise<string[]> {
-  const rows = await fetchSourceSuggestionSummaries(workspaceId, q, treeId);
-  return [...new Set(rows.map((r) => r.text).filter((t): t is string => typeof t === 'string' && t !== ''))];
-}
-
-/**
- * The text entries an undo can re-create. A non-admin may only create at
- * «المشرفون فقط», so their restore lowers the level to that (keeps the text;
- * an admin can raise it again). File-only entries carry no text: not
- * restorable (files are never restored by undo).
- */
-export function restorableSourceEntries(
-  entries: readonly SourceEntryDto[],
-  isAdmin: boolean,
-): RestorableSourceEntry[] {
-  return entries
-    .filter((e): e is SourceEntryDto & { text: string } => typeof e.text === 'string' && e.text !== '')
-    .map((e) => ({ text: e.text, visibility: isAdmin ? e.visibility : 'admins' }));
 }
 
 // ---------------------------------------------------------------------------

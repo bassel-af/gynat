@@ -69,11 +69,9 @@ describe('file URL and delete', () => {
 
 import {
   createSource,
-  createSourceEntry,
   patchSource,
   deleteSourceEntry,
   fetchSourcePreview,
-  fetchSourceSuggestions,
   fetchSourceSuggestionSummaries,
   LastLinkError,
 } from '@/lib/tree/source-entries-api';
@@ -86,14 +84,6 @@ describe('shared-source wrappers', () => {
     expect(url).toBe('/api/workspaces/ws/tree/sources');
     expect(init.method).toBe('POST');
     expect(JSON.parse(init.body)).toEqual({ text: 'دفتر', personIds: ['p1', 'p2'], treeId: 't1' });
-  });
-
-  test('createSourceEntry (one person) goes through POST sources with that person', async () => {
-    mockApiFetch.mockResolvedValue(ok({ id: 's1' }, 201));
-    await createSourceEntry('ws', 'p1', { text: 'x' });
-    const [url, init] = mockApiFetch.mock.calls[0];
-    expect(url).toBe('/api/workspaces/ws/tree/sources');
-    expect(JSON.parse(init.body)).toEqual({ text: 'x', personIds: ['p1'] });
   });
 
   test('patchSource sends link deltas and returns the source', async () => {
@@ -140,7 +130,5 @@ describe('shared-source wrappers', () => {
     mockApiFetch.mockResolvedValue(ok({ suggestions: rows }));
     expect(await fetchSourceSuggestionSummaries('ws', 'ط', 't1')).toEqual(rows);
     expect(mockApiFetch.mock.calls[0][0]).toBe('/api/workspaces/ws/tree/sources/suggestions?q=%D8%B7&treeId=t1');
-    mockApiFetch.mockResolvedValue(ok({ suggestions: rows }));
-    expect(await fetchSourceSuggestions('ws', 'ط')).toEqual(['طبقات']);
   });
 });

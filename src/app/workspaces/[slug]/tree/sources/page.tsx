@@ -16,11 +16,14 @@ interface WorkspaceInfo {
   slug: string;
   nameAr: string;
   currentUserRole: string;
+  hideBirthDateForFemale?: boolean;
+  hideBirthDateForMale?: boolean;
 }
 
 /**
- * «المصادر» — admins-only page listing every source entry of the tree, with
- * the tree-wide entry card on top. `?treeId=` targets an `extra` tree, like
+ * «المصادر» — admins-only page listing every source of the tree (one row per
+ * source, with who it is «مصدر لـ»), with the tree-wide source card on top.
+ * `?treeId=` targets an `extra` tree, like
  * the editor. Non-admins get the same no-access treatment as the audit page
  * (the API is admin-only regardless).
  */
@@ -97,7 +100,15 @@ function SourcesPageInner() {
           كل مصادر الشجرة في مكان واحد: ابحث، وحدّد، وغيّر من يرى المصادر أو احذفها دفعة واحدة.
         </p>
         <TreeSourceCard workspaceId={workspace.id} treeId={treeId} />
-        <SourcesManager workspaceId={workspace.id} slug={slug} treeId={treeId} />
+        <SourcesManager
+          workspaceId={workspace.id}
+          slug={slug}
+          treeId={treeId}
+          birthPrivacy={{
+            hideBirthDateForFemale: workspace.hideBirthDateForFemale,
+            hideBirthDateForMale: workspace.hideBirthDateForMale,
+          }}
+        />
       </div>
     </main>
   );

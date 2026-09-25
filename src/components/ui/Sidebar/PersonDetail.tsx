@@ -465,7 +465,9 @@ export function PersonDetail({ personId }: PersonDetailProps) {
     // The anonymous public viewer reads the public route instead (below).
     enabled: !!workspace && !workspace.publicSlug && !!person && !person._pointed,
   });
-  const personHasSourceFiles = personSources.entries.some((e) => e.files.length > 0);
+  // Sources survive a person delete; an admin learns where the ones only this
+  // person had end up (the «المصادر» page is admins only).
+  const personHasOwnSources = workspace?.isAdmin === true && personSources.entries.some((e) => e.sharedCount === 0);
 
   const {
     formMode, setFormMode,
@@ -770,8 +772,10 @@ export function PersonDetail({ personId }: PersonDetailProps) {
         workspaceId: workspace.workspaceId,
         treeId: workspace.activeTreeId,
         isAdmin: workspace.isAdmin === true,
+        individualId: personId,
         entries: personSources.entries,
         inherited: personSources.inherited,
+        familyHints: personSources.familyHints,
       };
     }
     return {
@@ -781,7 +785,7 @@ export function PersonDetail({ personId }: PersonDetailProps) {
       entries: NO_SOURCE_ENTRIES,
       inherited: treeSourceEntry,
     };
-  }, [workspace, person, formMode, formSubmitHandler, personSources.loaded, personSources.entries, personSources.inherited, treeSourceEntry]);
+  }, [workspace, person, personId, formMode, formSubmitHandler, personSources.loaded, personSources.entries, personSources.inherited, personSources.familyHints, treeSourceEntry]);
 
   const formLockedSex = formMode?.kind === 'addParent' ? formMode.lockedSex
     : formMode?.kind === 'addSpouse' ? formMode.lockedSex
@@ -1513,6 +1517,8 @@ export function PersonDetail({ personId }: PersonDetailProps) {
             workspaceId={workspace.workspaceId}
             treeId={workspace.activeTreeId}
             individualId={personId}
+            personName={person.givenName || person.name}
+            personSex={person.sex ?? undefined}
             canEdit={canEdit}
             isAdmin={isAdmin}
             sources={personSources}
@@ -1549,8 +1555,10 @@ export function PersonDetail({ personId }: PersonDetailProps) {
           ) : deleteState.kind === 'simpleConfirm' ? (
             <div className={styles.deleteConfirm}>
               <span className={styles.deleteConfirmText}>هل أنت متأكد؟</span>
-              {personHasSourceFiles && (
-                <span className={styles.deleteConfirmNote}>ملفات مصادره لا تعود عند التراجع عن الحذف.</span>
+              {personHasOwnSources && (
+                <span className={styles.deleteConfirmNote}>
+                  المصادر التي ليست لغيره تبقى في صفحة «المصادر» تحت «ليس مصدرًا لأحد».
+                </span>
               )}
               <div className={styles.deleteConfirmActions}>
                 <button

@@ -43,6 +43,20 @@ describe('PersonSourcesCard (member person page)', () => {
     expect(screen.queryByRole('button', { name: /إضافة|تعديل|حذف/ })).toBeNull();
   });
 
+  it('tags a shared source with how many others it is for — never their names', async () => {
+    mockFetchPersonSources.mockResolvedValue({
+      entries: [
+        entry('a', 'دفتر العائلة', { people: [{ id: 'W1', name: 'فاطمة' }, { id: 'K1', name: 'أحمد' }], sharedCount: 2 }),
+        entry('b', 'جواز سفر', { people: [], sharedCount: 0 }),
+      ],
+      inherited: null,
+    });
+    render(<PersonSourcesCard workspaceId="ws" individualId="P1" />);
+    expect(await screen.findByText('مشترك مع شخصين آخرين')).toBeInTheDocument();
+    expect(screen.getAllByText(/مشترك مع/)).toHaveLength(1);
+    expect(screen.queryByText(/فاطمة|أحمد/)).toBeNull();
+  });
+
   it('renders nothing when the viewer has nothing to see', async () => {
     mockFetchPersonSources.mockResolvedValue({ entries: [], inherited: null });
     const { container } = render(<PersonSourcesCard workspaceId="ws" individualId="P1" />);

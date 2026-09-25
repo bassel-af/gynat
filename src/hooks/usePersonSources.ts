@@ -1,7 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { fetchPersonSources, type SourceEntryDto } from '@/lib/tree/source-entries-api';
+import {
+  fetchPersonSources,
+  type PersonSourceDto,
+  type SourceEntryDto,
+  type SourceSummaryDto,
+} from '@/lib/tree/source-entries-api';
 
 /**
  * Sources («المصادر») of one person, for the sidebar panel and the member
@@ -22,8 +27,11 @@ export function notifySourcesChanged(): void {
 }
 
 export interface PersonSourcesState {
-  entries: SourceEntryDto[];
+  /** Each carries the OTHER people this viewer may see (`people` capped, `sharedCount`). */
+  entries: PersonSourceDto[];
   inherited: SourceEntryDto | null;
+  /** «مصادر أسرته» — editors only, only when `entries` is empty. */
+  familyHints: SourceSummaryDto[];
   /** The first answer for the CURRENT person has arrived (or failed). */
   loaded: boolean;
   error: boolean;
@@ -36,8 +44,9 @@ export function usePersonSources(
   individualId: string,
   { enabled = true }: { enabled?: boolean } = {},
 ): PersonSourcesState {
-  const [entries, setEntries] = useState<SourceEntryDto[]>([]);
+  const [entries, setEntries] = useState<PersonSourceDto[]>([]);
   const [inherited, setInherited] = useState<SourceEntryDto | null>(null);
+  const [familyHints, setFamilyHints] = useState<SourceSummaryDto[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
   // Every request gets a ticket; only the newest one may write state.
@@ -51,11 +60,13 @@ export function usePersonSources(
       if (ticket !== ticketRef.current) return;
       setEntries(data.entries);
       setInherited(data.inherited);
+      setFamilyHints(data.familyHints ?? []);
       setError(false);
     } catch {
       if (ticket !== ticketRef.current) return;
       setEntries([]);
       setInherited(null);
+      setFamilyHints([]);
       setError(true);
     } finally {
       if (ticket === ticketRef.current) setLoaded(true);
@@ -67,6 +78,7 @@ export function usePersonSources(
     ticketRef.current++;
     setEntries([]);
     setInherited(null);
+    setFamilyHints([]);
     setLoaded(false);
     setError(false);
     void load();
@@ -81,5 +93,5 @@ export function usePersonSources(
     };
   }, [enabled, load]);
 
-  return { entries, inherited, loaded, error, refetch: load };
+  return { entries, inherited, familyHints, loaded, error, refetch: load };
 }

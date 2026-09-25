@@ -5,20 +5,28 @@ const api = {
   listTreeSources: vi.fn(),
   bulkSources: vi.fn(),
   fetchSourceFileBlob: vi.fn(),
+  patchSource: vi.fn(),
+  fetchSourcePreview: vi.fn(),
 };
-vi.mock('@/lib/tree/source-entries-api', () => ({
+vi.mock('@/lib/tree/source-entries-api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/tree/source-entries-api')>()),
   listTreeSources: (...a: unknown[]) => api.listTreeSources(...a),
   bulkSources: (...a: unknown[]) => api.bulkSources(...a),
   fetchSourceFileBlob: (...a: unknown[]) => api.fetchSourceFileBlob(...a),
+  patchSource: (...a: unknown[]) => api.patchSource(...a),
+  fetchSourcePreview: (...a: unknown[]) => api.fetchSourcePreview(...a),
 }));
 vi.mock('@/hooks/useTreePublishLevel', () => ({ useTreePublishLevel: () => 'private' }));
-vi.mock('@/lib/api/client', () => ({ apiFetch: vi.fn() }));
+const apiFetch = vi.fn();
+vi.mock('@/lib/api/client', () => ({ apiFetch: (...a: unknown[]) => apiFetch(...a) }));
 const showToast = vi.fn();
 vi.mock('@/context/ToastContext', () => ({ useToast: () => ({ showToast }) }));
 const notifySourcesChanged = vi.fn();
 vi.mock('@/hooks/usePersonSources', () => ({ notifySourcesChanged: () => notifySourcesChanged() }));
 
 import { SourcesManager } from '@/components/sources/SourcesManager';
+import { LastLinkError } from '@/lib/tree/source-entries-api';
+import { buildPickerFamily } from './helpers/source-people-fixture';
 
 const ID = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 
@@ -31,7 +39,8 @@ function item(n: number, over: Record<string, unknown> = {}) {
     createdAt: '',
     updatedAt: '',
     files: [],
-    personName: `شخص ${n}`,
+    people: [{ id: `P${n}`, name: `شخص ${n}` }],
+    peopleCount: 1,
     fileCount: 0,
     ...over,
   };
@@ -45,6 +54,7 @@ function page(over: Record<string, unknown> = {}) {
     matchedIds: [ID(1), ID(2), ID(3)],
     matchedIdsTruncated: false,
     scanTruncated: false,
+    counts: { all: 3, shared: 1, unlinked: 1 },
     ...over,
   };
 }
@@ -57,10 +67,13 @@ const lastListParams = () => api.listTreeSources.mock.calls[api.listTreeSources.
 
 beforeEach(() => {
   Object.values(api).forEach((m) => m.mockReset());
+  apiFetch.mockReset();
   showToast.mockReset();
   notifySourcesChanged.mockReset();
   api.listTreeSources.mockResolvedValue(page());
   api.bulkSources.mockResolvedValue({ updated: 3 });
+  api.patchSource.mockResolvedValue({});
+  apiFetch.mockResolvedValue({ ok: true, json: async () => ({ data: buildPickerFamily() }) });
 });
 
 afterEach(() => {
@@ -74,25 +87,23 @@ describe('SourcesManager — list', () => {
     expect(api.listTreeSources).toHaveBeenCalledWith('ws', expect.objectContaining({ treeId: 'T1' }));
   });
 
-  it('links a person to the tree canvas focused on them, keeping treeId', async () => {
-    renderManager({ treeId: 'T1' });
-    const link = await screen.findByRole('link', { name: 'شخص 1' });
-    expect(link).toHaveAttribute('href', '/workspaces/fam/tree?treeId=T1&focus=P1');
-  });
-
-  it('links a person without treeId on the main tree', async () => {
-    renderManager();
-    const link = await screen.findByRole('link', { name: 'شخص 2' });
-    expect(link).toHaveAttribute('href', '/workspaces/fam/tree?focus=P2');
-  });
-
-  it('shows the tree-wide entry row without a person link', async () => {
+  it('shows who each source is for as a short names list', async () => {
     api.listTreeSources.mockResolvedValue(
-      page({ entries: [item(9, { individualId: null, personName: null })], total: 1, nextCursor: null, matchedIds: [ID(9)] }),
+      page({
+        entries: [
+          item(1, {
+            people: [
+              { id: 'M', name: 'محمد' },
+              { id: 'W1', name: 'فاطمة' },
+              { id: 'K1', name: 'أحمد' },
+            ],
+            peopleCount: 10,
+          }),
+        ],
+      }),
     );
     renderManager();
-    expect(await screen.findByText('مصدر 9')).toBeInTheDocument();
-    expect(screen.queryByRole('link')).toBeNull();
+    expect(await screen.findByText(/محمد، فاطمة و٨ آخرون/)).toBeInTheDocument();
   });
 
   it('«عرض المزيد» fetches the next page from the cursor and appends it', async () => {
@@ -166,7 +177,7 @@ describe('SourcesManager — selection', () => {
   it('a row checkbox selects that one entry', async () => {
     renderManager();
     await screen.findByText('مصدر 1');
-    fireEvent.click(screen.getByRole('checkbox', { name: 'تحديد شخص 2' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'تحديد مصدر 2' }));
     expect(screen.getByText('تم تحديد ١')).toBeInTheDocument();
   });
 });
@@ -243,5 +254,182 @@ describe('SourcesManager — bulk actions', () => {
     fireEvent.click(screen.getByRole('button', { name: 'حذف' }));
     fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'حذف' }));
     await waitFor(() => expect(api.listTreeSources.mock.calls.length).toBeGreaterThan(calls));
+  });
+});
+
+describe('SourcesManager — tabs', () => {
+  it('shows every tab with its count from the server', async () => {
+    renderManager();
+    await screen.findByText('مصدر 1');
+    expect(screen.getByRole('button', { name: 'الكل (٣)' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'مشترك (١)' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'ليس مصدرًا لأحد (١)' })).toBeInTheDocument();
+  });
+
+  it('«مشترك» and «ليس مصدرًا لأحد» send their filter; «الكل» clears it', async () => {
+    renderManager();
+    await screen.findByText('مصدر 1');
+    fireEvent.click(screen.getByRole('button', { name: 'مشترك (١)' }));
+    await waitFor(() => expect(lastListParams()).toEqual(expect.objectContaining({ filter: 'shared', cursor: 0 })));
+    fireEvent.click(screen.getByRole('button', { name: 'ليس مصدرًا لأحد (١)' }));
+    await waitFor(() => expect(lastListParams()).toEqual(expect.objectContaining({ filter: 'unlinked' })));
+    fireEvent.click(screen.getByRole('button', { name: 'الكل (٣)' }));
+    await waitFor(() => expect(lastListParams().filter).toBeUndefined());
+  });
+});
+
+describe('SourcesManager — «مصدر لـ» names', () => {
+  const shared = () =>
+    item(1, {
+      people: [
+        { id: 'M', name: 'محمد' },
+        { id: 'W1', name: 'فاطمة' },
+      ],
+      peopleCount: 2,
+    });
+
+  async function expandFirst(entries = [shared()]) {
+    api.listTreeSources.mockResolvedValue(page({ entries }));
+    renderManager({ treeId: 'T1' });
+    fireEvent.click(await screen.findByRole('button', { name: /محمد وفاطمة/ }));
+  }
+
+  it('expanding lists every name, each linking to the tree focused on that person', async () => {
+    await expandFirst();
+    expect(screen.getByRole('link', { name: 'فاطمة' })).toHaveAttribute('href', '/workspaces/fam/tree?treeId=T1&focus=W1');
+    expect(screen.getByRole('button', { name: 'إزالة محمد' })).toBeInTheDocument();
+  });
+
+  it('fetches the full list when the row carries only the first names', async () => {
+    api.fetchSourcePreview.mockResolvedValue({
+      ...shared(),
+      people: [
+        { id: 'M', name: 'محمد' },
+        { id: 'W1', name: 'فاطمة' },
+        { id: 'K1', name: 'أحمد' },
+      ],
+      peopleCount: 3,
+    });
+    api.listTreeSources.mockResolvedValue(page({ entries: [{ ...shared(), peopleCount: 3 }] }));
+    renderManager({ treeId: 'T1' });
+    fireEvent.click(await screen.findByRole('button', { name: /محمد، فاطمة وشخص آخر/ }));
+    expect(await screen.findByRole('link', { name: 'أحمد' })).toBeInTheDocument();
+    expect(api.fetchSourcePreview).toHaveBeenCalledWith('ws', ID(1), 'T1');
+  });
+
+  it('× removes that one person and refreshes the list', async () => {
+    await expandFirst();
+    const calls = api.listTreeSources.mock.calls.length;
+    fireEvent.click(screen.getByRole('button', { name: 'إزالة فاطمة' }));
+    await waitFor(() =>
+      expect(api.patchSource).toHaveBeenCalledWith('ws', ID(1), { removePersonIds: ['W1'] }, 'T1'),
+    );
+    await waitFor(() => expect(api.listTreeSources.mock.calls.length).toBeGreaterThan(calls));
+    expect(notifySourcesChanged).toHaveBeenCalled();
+  });
+
+  it('× on the last person asks «هذا آخر شخص لهذا المصدر»; «إبقاؤه» keeps the source', async () => {
+    const single = item(1, { people: [{ id: 'M', name: 'محمد' }], peopleCount: 1 });
+    api.listTreeSources.mockResolvedValue(page({ entries: [single] }));
+    api.patchSource.mockRejectedValueOnce(new LastLinkError()).mockResolvedValueOnce({ ...single, people: [], peopleCount: 0 });
+    renderManager({ treeId: 'T1' });
+    fireEvent.click(await screen.findByRole('button', { name: /^محمد/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'إزالة محمد' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('ماذا تريد أن تفعل بالمصدر وملفاته؟')).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'إبقاؤه في صفحة المصادر' }));
+    await waitFor(() =>
+      expect(api.patchSource).toHaveBeenLastCalledWith(
+        'ws',
+        ID(1),
+        { removePersonIds: ['M'], onLastLink: 'keep' },
+        'T1',
+      ),
+    );
+  });
+
+  it('cancelling the last-person question changes nothing', async () => {
+    const single = item(1, { people: [{ id: 'M', name: 'محمد' }], peopleCount: 1 });
+    api.listTreeSources.mockResolvedValue(page({ entries: [single] }));
+    api.patchSource.mockRejectedValueOnce(new LastLinkError());
+    renderManager();
+    fireEvent.click(await screen.findByRole('button', { name: /^محمد/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'إزالة محمد' }));
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'إغلاق' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(api.patchSource).toHaveBeenCalledTimes(1);
+    expect(notifySourcesChanged).not.toHaveBeenCalled();
+  });
+
+  it('«＋ إضافة أشخاص» opens the people picker (search only, nobody locked) and adds the new ones', async () => {
+    await expandFirst();
+    fireEvent.click(screen.getByRole('button', { name: '＋ إضافة أشخاص' }));
+    const picker = await screen.findByRole('dialog', { name: 'اختيار الأشخاص' });
+    expect(apiFetch).toHaveBeenCalledWith('/api/workspaces/ws/tree?treeId=T1', expect.anything());
+    expect(within(picker).queryByRole('group', { name: 'اختيار سريع' })).toBeNull();
+    fireEvent.change(within(picker).getByRole('searchbox'), { target: { value: 'أحمد' } });
+    fireEvent.click(within(picker).getByRole('checkbox', { name: /^أحمد/ }));
+    fireEvent.click(within(picker).getByRole('button', { name: 'تم' }));
+    await waitFor(() =>
+      expect(api.patchSource).toHaveBeenCalledWith('ws', ID(1), { addPersonIds: ['K1'] }, 'T1'),
+    );
+    expect(screen.queryByRole('dialog', { name: 'اختيار الأشخاص' })).toBeNull();
+  });
+
+  it('adding only people already on the source sends nothing', async () => {
+    await expandFirst();
+    fireEvent.click(screen.getByRole('button', { name: '＋ إضافة أشخاص' }));
+    const picker = await screen.findByRole('dialog', { name: 'اختيار الأشخاص' });
+    fireEvent.change(within(picker).getByRole('searchbox'), { target: { value: 'فاطمة' } });
+    fireEvent.click(within(picker).getByRole('checkbox', { name: /^فاطمة/ }));
+    fireEvent.click(within(picker).getByRole('button', { name: 'تم' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'اختيار الأشخاص' })).toBeNull());
+    expect(api.patchSource).not.toHaveBeenCalled();
+  });
+});
+
+describe('SourcesManager — «ليس مصدرًا لأحد» rows', () => {
+  const orphan = () => item(4, { individualId: null, people: [], peopleCount: 0 });
+
+  it('an orphan row says «ليس مصدرًا لأحد» and «ربط بأشخاص» adds people', async () => {
+    api.listTreeSources.mockResolvedValue(page({ entries: [orphan()] }));
+    renderManager();
+    const row = (await screen.findByText('مصدر 4')).closest('li') as HTMLElement;
+    expect(within(row).getByText('ليس مصدرًا لأحد')).toBeInTheDocument();
+    fireEvent.click(within(row).getByRole('button', { name: 'ربط بأشخاص' }));
+    const picker = await screen.findByRole('dialog', { name: 'اختيار الأشخاص' });
+    fireEvent.change(within(picker).getByRole('searchbox'), { target: { value: 'خالد' } });
+    fireEvent.click(within(picker).getByRole('checkbox', { name: /^خالد/ }));
+    fireEvent.click(within(picker).getByRole('button', { name: 'تم' }));
+    await waitFor(() =>
+      expect(api.patchSource).toHaveBeenCalledWith('ws', ID(4), { addPersonIds: ['K3'] }, undefined),
+    );
+  });
+
+  it('an orphan row\'s «حذف» deletes that one source after confirming', async () => {
+    api.listTreeSources.mockResolvedValue(page({ entries: [orphan()] }));
+    api.bulkSources.mockResolvedValue({ deleted: 1 });
+    renderManager();
+    const row = (await screen.findByText('مصدر 4')).closest('li') as HTMLElement;
+    fireEvent.click(within(row).getByRole('button', { name: 'حذف' }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText('سيُحذف مصدر واحد مع ملفاته، ولا يمكن التراجع')).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'حذف' }));
+    await waitFor(() => expect(api.bulkSources).toHaveBeenCalledWith('ws', { ids: [ID(4)], action: 'delete' }, undefined));
+  });
+});
+
+describe('SourcesManager — selection-only mode (publish flow)', () => {
+  it('has no tabs and no people actions', async () => {
+    api.listTreeSources.mockResolvedValue(
+      page({ entries: [item(1, { people: [{ id: 'M', name: 'محمد' }, { id: 'W1', name: 'فاطمة' }], peopleCount: 2 }), item(4, { people: [], peopleCount: 0 })] }),
+    );
+    renderManager({ selection: { selected: new Set(), onChange: vi.fn() } });
+    await screen.findByText('مصدر 1');
+    expect(screen.getByText('محمد وفاطمة')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /مشترك/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /محمد وفاطمة/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'ربط بأشخاص' })).toBeNull();
+    expect(lastListParams()).toEqual(expect.objectContaining({ scope: 'pending' }));
   });
 });

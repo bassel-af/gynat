@@ -255,6 +255,11 @@
   .textarea {
     font-size: 16px;
   }
+
+  /* «حفظ» / «إلغاء»: 44px touch targets. */
+  .action {
+    min-height: 44px;
+  }
 }
 
 /* Deferred mode: a saved file marked for removal until the person form saves. */

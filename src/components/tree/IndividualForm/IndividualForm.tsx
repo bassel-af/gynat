@@ -8,12 +8,12 @@ import { Button } from '@/components/ui/Button';
 import { getDisplayNameWithNasab } from '@/lib/gedcom/display';
 import { getAddRelationshipLabel } from '@/lib/tree/relationship-labels';
 import type { GedcomData } from '@/lib/gedcom/types';
-import type { SourceEntryDto } from '@/lib/tree/source-entries-api';
+import type { SourceEntryDto, SourceSummaryDto } from '@/lib/tree/source-entries-api';
 import {
   stagedFromEntries,
   addDraft,
   replaceDraft,
-  toggleDelete,
+  toggleRemoval,
   hasStagedChanges,
   buildSourcePlan,
   applyPlanResult,
@@ -21,10 +21,13 @@ import {
   type SourceDraft,
   type SourcePlan,
   type SourcePlanResult,
+  type SourceRemoval,
+  type StagedEntry,
   type StagedSource,
 } from '@/lib/tree/source-staging';
 import { StagedSourcesList } from '@/components/sources/StagedSourcesList';
 import { SourceEntryForm } from '@/components/sources/SourceEntryForm';
+import { LastLinkDialog } from '@/components/sources/LastLinkDialog';
 import styles from './IndividualForm.module.css';
 
 export interface IndividualFormData {
@@ -59,10 +62,17 @@ export interface IndividualFormSources {
   workspaceId: string;
   treeId?: string;
   isAdmin: boolean;
-  /** The person's saved entries (empty in create modes). */
-  entries: readonly SourceEntryDto[];
+  /**
+   * Edit mode: the person — the locked «مصدر لـ» chip of every source form
+   * opened here. Absent in create modes (the chip reads «هذا الشخص (جديد)»).
+   */
+  individualId?: string;
+  /** The person's saved sources, each with the other people it is for (empty in create modes). */
+  entries: readonly StagedEntry[];
   /** The tree-wide entry the person inherits — read-only here. */
   inherited?: SourceEntryDto | null;
+  /** «مصادر أسرته» (edit mode, a person with no sources). */
+  familyHints?: readonly SourceSummaryDto[];
 }
 
 interface IndividualFormProps {
@@ -214,6 +224,8 @@ export function IndividualForm({
   const [sourceForm, setSourceForm] = useState<{ key?: string } | null>(null);
   const [sourceAnnouncement, setSourceAnnouncement] = useState('');
   const [showDiscard, setShowDiscard] = useState(false);
+  // A one-person source asked to go: «هذا آخر شخص لهذا المصدر» — delete or keep.
+  const [lastLinkKey, setLastLinkKey] = useState<string | null>(null);
   const addSourceRef = useRef<HTMLButtonElement>(null);
   // The saved entries arrived or changed (a refetch): take them while nothing is staged.
   useEffect(() => {
@@ -245,6 +257,40 @@ export function IndividualForm({
       return replaceDraft(prev, key, draft);
     });
   }, []);
+
+  const stageRemoval = useCallback((key: string, removal?: SourceRemoval) => {
+    setShowDiscard(false);
+    setSourceItems((prev) => {
+      const gone = prev.find((i) => i.key === key);
+      // An added row goes outright — its previews with it.
+      if (gone && !gone.entry) for (const url of draftFileUrls([gone])) URL.revokeObjectURL(url);
+      return toggleRemoval(prev, key, removal);
+    });
+  }, []);
+
+  // A saved row shared with others leaves this person only; a one-person
+  // source asks what to do with it first. An added or removed row toggles.
+  const handleSourceRemove = useCallback((key: string) => {
+    const item = sourceItems.find((i) => i.key === key);
+    if (!item?.entry || item.removal) {
+      stageRemoval(key);
+    } else if ((item.entry.sharedCount ?? 0) > 0) {
+      stageRemoval(key, { kind: 'unlink' });
+    } else {
+      setLastLinkKey(key);
+    }
+  }, [sourceItems, stageRemoval]);
+
+  const handleAddHint = useCallback((hint: SourceSummaryDto) => {
+    handleSourceDraft(undefined, {
+      text: '',
+      visibility: hint.visibility,
+      addFiles: [],
+      removeFileIds: [],
+      people: [],
+      linkSource: hint,
+    });
+  }, [handleSourceDraft]);
 
   const showBranchToggle = allowBranchLink && mode === 'create' && !!onBranchLink;
   const showUmmWaladCheckbox = enableUmmWalad && (
@@ -857,15 +903,10 @@ export function IndividualForm({
                 setSourceForm({});
               }}
               onEdit={(key) => setSourceForm({ key })}
-              onToggleDelete={(key) => {
-                setShowDiscard(false);
-                setSourceItems((prev) => {
-                  const gone = prev.find((i) => i.key === key);
-                  // An added row goes outright — its previews with it.
-                  if (gone && !gone.entry) for (const url of draftFileUrls([gone])) URL.revokeObjectURL(url);
-                  return toggleDelete(prev, key);
-                });
-              }}
+              onRemove={handleSourceRemove}
+              familyHints={mode === 'edit' ? sources.familyHints : undefined}
+              sex={formData.sex}
+              onAddHint={mode === 'edit' ? handleAddHint : undefined}
             />
           </>
         )}
@@ -880,6 +921,8 @@ export function IndividualForm({
             mode={item ? 'edit' : 'create'}
             workspaceId={sources.workspaceId}
             treeId={sources.treeId}
+            individualId={mode === 'edit' ? sources.individualId : undefined}
+            newPerson={mode === 'create'}
             entry={item?.entry}
             initialDraft={item?.draft}
             isAdmin={sources.isAdmin}
@@ -890,6 +933,20 @@ export function IndividualForm({
           />
         );
       })()}
+      {lastLinkKey && (
+        <LastLinkDialog
+          stacked
+          onDelete={() => {
+            stageRemoval(lastLinkKey, { kind: 'delete' });
+            setLastLinkKey(null);
+          }}
+          onKeep={() => {
+            stageRemoval(lastLinkKey, { kind: 'unlink', onLastLink: 'keep' });
+            setLastLinkKey(null);
+          }}
+          onCancel={() => setLastLinkKey(null)}
+        />
+      )}
     </Modal>
   );
 }

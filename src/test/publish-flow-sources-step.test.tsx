@@ -38,6 +38,7 @@ const TREE_ENTRY = 'eeeeeeee-1111-4000-8000-000000000001';
 interface Setup {
   pendingIds?: string[];
   publicCount?: number;
+  publicPeopleCount?: number;
   treeEntry?: { id: string; visibility: string } | null;
   patchOk?: boolean;
   bulkOk?: boolean;
@@ -51,6 +52,7 @@ let summaryGate: Promise<void> | null = null;
 function setup({
   pendingIds = [id(1), id(2), id(3)],
   publicCount = 0,
+  publicPeopleCount = 0,
   treeEntry = null,
   patchOk = true,
   bulkOk = true,
@@ -65,7 +67,7 @@ function setup({
     if (url.includes('/publish-preview')) return ok(preview);
     if (url.includes('/sources/publish-summary')) {
       if (summaryGate) await summaryGate;
-      return ok({ data: { pendingIds, publicCount, treeEntry } });
+      return ok({ data: { pendingIds, publicCount, publicPeopleCount, treeEntry } });
     }
     if (url.includes('/tree/visibility') && method === 'PATCH') {
       return patchOk
@@ -81,13 +83,14 @@ function setup({
         data: {
           entries: pendingIds.slice(0, 20).map((eid, i) => ({
             id: eid, individualId: `p-${i}`, text: `مصدر ${i}`, visibility: 'admins',
-            createdAt: '', updatedAt: '', files: [], personName: `شخص ${i}`, fileCount: 0,
+            createdAt: '', updatedAt: '', files: [], people: [{ id: `p-${i}`, name: `شخص ${i}` }], peopleCount: 1, fileCount: 0,
           })),
           total: pendingIds.length,
           nextCursor: null,
           matchedIds: pendingIds.slice(0, 500),
           matchedIdsTruncated: pendingIds.length > 500,
           scanTruncated: false,
+          counts: { all: pendingIds.length, shared: 0, unlinked: 0 },
         },
       });
     }
@@ -123,12 +126,20 @@ describe('publish flow — «المصادر في الشجرة المنشورة»
   });
 
   test('asks with the counts, and «لا شيء» is the default', async () => {
-    setup({ pendingIds: [id(1), id(2), id(3)], publicCount: 2 });
+    setup({ pendingIds: [id(1), id(2), id(3)], publicCount: 2, publicPeopleCount: 42 });
     await chooseLinkAndContinue();
     const step = (await screen.findByText('المصادر في الشجرة المنشورة')).closest('[role="dialog"]') as HTMLElement;
     expect(step).toHaveTextContent('لديك ٣ مصادر يراها أعضاء مساحة العائلة أو المشرفون فقط');
-    expect(step).toHaveTextContent('ومصدران يظهر لهم أصلًا');
+    expect(step).toHaveTextContent('ومصدران (تظهر على ٤٢ شخصًا) يظهر لهم أصلًا');
     expect(within(step).getByRole('radio', { name: 'لا شيء' })).toBeChecked();
+  });
+
+  test('the already-public line leaves out the people count when those sources show on nobody', async () => {
+    setup({ pendingIds: [id(1)], publicCount: 1, publicPeopleCount: 0 });
+    await chooseLinkAndContinue();
+    const step = (await screen.findByText('المصادر في الشجرة المنشورة')).closest('[role="dialog"]') as HTMLElement;
+    expect(step).toHaveTextContent('ومصدر واحد يظهر لهم أصلًا');
+    expect(step).not.toHaveTextContent('تظهر على');
   });
 
   test('«لا شيء» (default) publishes and sends nothing about sources', async () => {
@@ -197,7 +208,7 @@ describe('publish flow — «المصادر في الشجرة المنشورة»
       return c!;
     });
     expect(listCall.url).toContain('scope=pending');
-    fireEvent.click(await screen.findByRole('checkbox', { name: 'تحديد شخص 1' }));
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'تحديد مصدر 1' }));
     fireEvent.click(screen.getByText('متابعة'));
     await publish();
     await waitFor(() => expect(bulkCalls()).toHaveLength(1));

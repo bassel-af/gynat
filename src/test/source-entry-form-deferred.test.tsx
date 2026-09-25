@@ -8,20 +8,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
 const api = {
-  createSourceEntry: vi.fn(),
-  updateSourceEntry: vi.fn(),
+  createSource: vi.fn(),
+  patchSource: vi.fn(),
   uploadSourceFile: vi.fn(),
   deleteSourceFile: vi.fn(),
-  fetchSourceSuggestions: vi.fn(),
   fetchSourceFileBlob: vi.fn(),
   putTreeEntry: vi.fn(),
 };
 vi.mock('@/lib/tree/source-entries-api', () => ({
-  createSourceEntry: (...a: unknown[]) => api.createSourceEntry(...a),
-  updateSourceEntry: (...a: unknown[]) => api.updateSourceEntry(...a),
+  createSource: (...a: unknown[]) => api.createSource(...a),
+  patchSource: (...a: unknown[]) => api.patchSource(...a),
   uploadSourceFile: (...a: unknown[]) => api.uploadSourceFile(...a),
   deleteSourceFile: (...a: unknown[]) => api.deleteSourceFile(...a),
-  fetchSourceSuggestions: (...a: unknown[]) => api.fetchSourceSuggestions(...a),
   fetchSourceFileBlob: (...a: unknown[]) => api.fetchSourceFileBlob(...a),
   putTreeEntry: (...a: unknown[]) => api.putTreeEntry(...a),
 }));
@@ -64,7 +62,6 @@ const fileInput = () => document.querySelector('input[type="file"]') as HTMLInpu
 
 beforeEach(() => {
   Object.values(api).forEach((m) => m.mockReset());
-  api.fetchSourceSuggestions.mockResolvedValue([]);
   api.fetchSourceFileBlob.mockResolvedValue(new Blob(['x']));
   createObjectURL.mockReset().mockReturnValue('blob:preview');
   revokeObjectURL.mockReset();
@@ -79,8 +76,8 @@ describe('SourceEntryForm — deferred (onDraft)', () => {
     await waitFor(() => expect(onDraft).toHaveBeenCalled());
     expect(onDraft).toHaveBeenCalledWith({ text: 'ابن سعد', visibility: 'admins', addFiles: [], removeFileIds: [] });
     expect(onClose).toHaveBeenCalled();
-    expect(api.createSourceEntry).not.toHaveBeenCalled();
-    expect(api.updateSourceEntry).not.toHaveBeenCalled();
+    expect(api.createSource).not.toHaveBeenCalled();
+    expect(api.patchSource).not.toHaveBeenCalled();
   });
 
   it('still validates: text or a file', async () => {

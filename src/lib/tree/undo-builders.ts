@@ -128,11 +128,12 @@ export interface DeleteIndividualInverseParams {
   deletedId: string;
   snapshot: Record<string, unknown>;
   /**
-   * Sources («المصادر»): the person's TEXT entries, captured before the delete
-   * (whatever the actor could see). The delete cascades them away; undo
-   * re-creates each under the person's NEW id. Files are never restored.
+   * Sources («المصادر»): the ids of the person's sources, captured before the
+   * delete (whatever the actor could see). Sources survive a person delete
+   * (only the links cascade), so undo RE-LINKS each one to the person's NEW
+   * id — text and files come back, nothing is duplicated.
    */
-  sourceEntries?: ReadonlyArray<{ text: string; visibility: string }>;
+  sourceIds?: readonly string[];
   treeId?: string;
 }
 
@@ -140,7 +141,7 @@ export function buildDeleteIndividualInverse({
   workspaceId,
   deletedId: _deletedId,
   snapshot,
-  sourceEntries = [],
+  sourceIds = [],
   treeId,
 }: DeleteIndividualInverseParams): Inverse {
   let currentId: string | null = null;
@@ -151,14 +152,15 @@ export function buildDeleteIndividualInverse({
     undo: async () => {
       const { id } = await postJson(createUrl, snapshot, treeId);
       if (id) currentId = id;
-      if (!id || sourceEntries.length === 0) return;
-      // Best-effort, in order: the person is back either way, and one refused
-      // entry must not make the stack believe the whole undo failed (redo
-      // would then delete a person it thinks is absent).
-      for (const entry of sourceEntries) {
-        await postJson(
-          `/api/workspaces/${workspaceId}/tree/individuals/${id}/sources`,
-          { text: entry.text, visibility: entry.visibility },
+      if (!id) return;
+      // Best-effort, in order: the person is back either way. A source deleted
+      // since (404) or refused is skipped — one failure must not make the stack
+      // believe the whole undo failed (redo would then delete a person it
+      // thinks is absent).
+      for (const sourceId of sourceIds) {
+        await patchJson(
+          `/api/workspaces/${workspaceId}/tree/sources/${sourceId}`,
+          { addPersonIds: [id] },
           treeId,
         ).catch(() => undefined);
       }
@@ -517,45 +519,62 @@ export function buildMoveJumpToNewFatherInverse({
 }
 
 // ---------------------------------------------------------------------------
-// Source entry («مصدر») — text-only (step 4)
+// Source («مصدر») — one source for many people
 //
-// Creating an entry, editing its text or level, and deleting a text-only entry
-// are undoable. Uploading/deleting a file is not (files are never restored).
-// A re-created entry gets a NEW id, so each builder re-captures it.
+// Creating a source, editing its text / level / people, and deleting a
+// text-only source are undoable. Uploading/deleting a file is not (files are
+// never restored). A re-created source gets a NEW id, so each builder
+// re-captures it. Every create goes through `POST sources` with `personIds`.
 // ---------------------------------------------------------------------------
+
+/** What re-creating a text source needs. */
+export interface SourceCreatePayload {
+  text: string;
+  visibility?: string;
+  /** Everyone the source is for (1..500). */
+  personIds: readonly string[];
+}
+
+const sourcesUrl = (workspaceId: string) => `/api/workspaces/${workspaceId}/tree/sources`;
 
 export interface CreateSourceEntryInverseParams {
   workspaceId: string;
-  individualId: string;
   createdId: string;
-  createPayload: { text: string; visibility?: string };
+  createPayload: SourceCreatePayload;
   treeId?: string;
 }
 
 export function buildCreateSourceEntryInverse({
   workspaceId,
-  individualId,
   createdId,
   createPayload,
   treeId,
 }: CreateSourceEntryInverseParams): Inverse {
   let currentId = createdId;
-  const createUrl = `/api/workspaces/${workspaceId}/tree/individuals/${individualId}/sources`;
   return {
-    undo: () => del(`/api/workspaces/${workspaceId}/tree/sources/${currentId}`, treeId),
+    undo: () => del(`${sourcesUrl(workspaceId)}/${currentId}`, treeId),
     redo: async () => {
-      const { id } = await postJson(createUrl, createPayload, treeId);
+      const { id } = await postJson(sourcesUrl(workspaceId), createPayload, treeId);
       if (id) currentId = id;
     },
   };
 }
 
+/** A `PATCH sources/[id]` body: content and/or people. */
+export interface SourcePatchBody {
+  /** `text: null` = the source had no text (it kept files). */
+  text?: string | null;
+  visibility?: string;
+  addPersonIds?: string[];
+  removePersonIds?: string[];
+  onLastLink?: 'delete' | 'keep';
+}
+
 export interface UpdateSourceEntryInverseParams {
   workspaceId: string;
   entryId: string;
-  /** `text: null` = the entry had no text (it kept files). */
-  before: { text?: string | null; visibility?: string };
-  after: { text?: string | null; visibility?: string };
+  before: SourcePatchBody;
+  after: SourcePatchBody;
   treeId?: string;
 }
 
@@ -566,7 +585,7 @@ export function buildUpdateSourceEntryInverse({
   after,
   treeId,
 }: UpdateSourceEntryInverseParams): Inverse {
-  const url = `/api/workspaces/${workspaceId}/tree/sources/${entryId}`;
+  const url = `${sourcesUrl(workspaceId)}/${entryId}`;
   return {
     undo: () => patchJson(url, before, treeId),
     redo: () => patchJson(url, after, treeId),
@@ -575,30 +594,45 @@ export function buildUpdateSourceEntryInverse({
 
 export interface DeleteSourceEntryInverseParams {
   workspaceId: string;
-  individualId: string;
   deletedId: string;
-  snapshot: { text: string; visibility: string };
+  snapshot: SourceCreatePayload;
   treeId?: string;
 }
 
 export function buildDeleteSourceEntryInverse({
   workspaceId,
-  individualId,
   deletedId,
   snapshot,
   treeId,
 }: DeleteSourceEntryInverseParams): Inverse {
   let currentId = deletedId;
-  const createUrl = `/api/workspaces/${workspaceId}/tree/individuals/${individualId}/sources`;
   return {
     undo: async () => {
-      const { id } = await postJson(
-        createUrl,
-        { text: snapshot.text, visibility: snapshot.visibility },
-        treeId,
-      );
+      const { id } = await postJson(sourcesUrl(workspaceId), snapshot, treeId);
       if (id) currentId = id;
     },
-    redo: () => del(`/api/workspaces/${workspaceId}/tree/sources/${currentId}`, treeId),
+    redo: () => del(`${sourcesUrl(workspaceId)}/${currentId}`, treeId),
+  };
+}
+
+export interface PartialSourceDeleteInverseParams {
+  workspaceId: string;
+  sourceId: string;
+  /** The people the delete removed (the source stayed for people hidden from the actor). */
+  personIds: string[];
+  treeId?: string;
+}
+
+/** A non-admin's delete that kept the source: undo re-links, redo deletes again. */
+export function buildPartialSourceDeleteInverse({
+  workspaceId,
+  sourceId,
+  personIds,
+  treeId,
+}: PartialSourceDeleteInverseParams): Inverse {
+  const url = `${sourcesUrl(workspaceId)}/${sourceId}`;
+  return {
+    undo: () => patchJson(url, { addPersonIds: personIds }, treeId),
+    redo: () => del(url, treeId),
   };
 }

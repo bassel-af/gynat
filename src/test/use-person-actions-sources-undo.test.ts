@@ -1,8 +1,9 @@
 /**
- * Sources («المصادر») step 4 — undoing a person delete restores their text
- * entries. The hook captures the entries (via the member GET route, so only
- * what the actor can see) BEFORE the delete cascades them away, and the undo
- * re-creates them under the person's new id.
+ * Sources («المصادر») — undoing a person delete RE-LINKS their sources.
+ * Sources outlive the person (only the links cascade), so the hook captures
+ * the ids of the person's sources (via the member GET route, so only what the
+ * actor can see) BEFORE the delete, and the undo links each one to the
+ * person's new id. It never creates a source (no duplicates; files return).
  */
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
@@ -32,7 +33,8 @@ const json = (data: unknown, status = 200) =>
 
 const SOURCES = {
   entries: [
-    { id: 'S1', individualId: PID, text: 'طبقات', visibility: 'members', createdAt: '', updatedAt: '' },
+    { id: 'S1', individualId: PID, text: 'طبقات', visibility: 'members', createdAt: '', updatedAt: '', files: [] },
+    { id: 'S2', individualId: PID, text: null, visibility: 'admins', createdAt: '', updatedAt: '', files: [{ id: 'F1' }] },
   ],
   inherited: { id: 'T', individualId: null, text: 'مصدر الشجرة', visibility: 'members', createdAt: '', updatedAt: '' },
 };
@@ -74,7 +76,7 @@ function sourcePosts() {
   );
 }
 
-describe('usePersonActions — person-delete undo restores sources', () => {
+describe('usePersonActions — person-delete undo re-links sources', () => {
   let onPushUndo: Mock<(e: UndoEntry) => void>;
   beforeEach(() => {
     mockApiFetch.mockReset();
@@ -91,21 +93,19 @@ describe('usePersonActions — person-delete undo restores sources', () => {
     expect(getIdx).toBeLessThan(delIdx);
   });
 
-  it('undo re-creates the own entries (not the inherited tree entry) under the new id', async () => {
+  it('undo re-links every own source (files too, not the inherited tree entry) to the new id — no source is created', async () => {
     routeFetch(() => json(SOURCES));
     const entry = await deleteAndGetUndo(true, onPushUndo);
+    mockApiFetch.mockClear();
     await entry.undo();
-    const posts = sourcePosts();
-    expect(posts).toHaveLength(1);
-    expect(posts[0][0]).toBe('/api/workspaces/ws-1/tree/individuals/P-NEW/sources');
-    expect(JSON.parse((posts[0][1] as { body: string }).body)).toEqual({ text: 'طبقات', visibility: 'members' });
-  });
-
-  it('a non-admin editor restores at «المشرفون فقط»', async () => {
-    routeFetch(() => json(SOURCES));
-    const entry = await deleteAndGetUndo(false, onPushUndo);
-    await entry.undo();
-    expect(JSON.parse((sourcePosts()[0][1] as { body: string }).body).visibility).toBe('admins');
+    expect(sourcePosts()).toHaveLength(0);
+    const patches = mockApiFetch.mock.calls
+      .filter(([, init]) => (init as { method?: string })?.method === 'PATCH')
+      .map(([path, init]) => [path, JSON.parse((init as { body: string }).body)]);
+    expect(patches).toEqual([
+      ['/api/workspaces/ws-1/tree/sources/S1', { addPersonIds: ['P-NEW'] }],
+      ['/api/workspaces/ws-1/tree/sources/S2', { addPersonIds: ['P-NEW'] }],
+    ]);
   });
 
   it('a failed sources fetch does not block the delete or its undo entry', async () => {
@@ -114,5 +114,6 @@ describe('usePersonActions — person-delete undo restores sources', () => {
     expect(entry.label).toBe('حذف: علي');
     await entry.undo();
     expect(sourcePosts()).toHaveLength(0);
+    expect(mockApiFetch.mock.calls.some(([, i]) => (i as { method?: string })?.method === 'PATCH')).toBe(false);
   });
 });

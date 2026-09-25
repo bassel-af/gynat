@@ -8,7 +8,7 @@ import {
   type PublishSourcesMode,
 } from '@/lib/tree/publish-sources';
 import { SourcesManager } from '@/components/sources/SourcesManager';
-import { sourceCountLabel } from '@/components/sources/arabicDigits';
+import { peopleCountLabel, sourceCountLabel } from '@/components/sources/arabicDigits';
 import styles from './PublishSourcesStep.module.css';
 
 export interface PublishSourcesStepProps {
@@ -61,7 +61,13 @@ export function PublishSourcesStep({
         <>
           <p className={styles.lead}>
             لديك {sourceCountLabel(pending)} يراها أعضاء مساحة العائلة أو المشرفون فقط
-            {summary.publicCount > 0 && <>، و{sourceCountLabel(summary.publicCount)} يظهر لهم أصلًا</>}
+            {summary.publicCount > 0 && (
+              <>
+                ، و{sourceCountLabel(summary.publicCount)}
+                {summary.publicPeopleCount > 0 && <> (تظهر على {peopleCountLabel(summary.publicPeopleCount)})</>} يظهر
+                لهم أصلًا
+              </>
+            )}
             . أيّها يظهر لزوار الشجرة المنشورة؟
           </p>
 
