@@ -314,3 +314,11 @@ Files: `src/lib/tree/branch-pointer-deep-copy.ts`, `src/lib/collections/copy.ts`
 - **2026-09-25: model changed** from "every entry stands alone" to shared sources (owner approval, Update 5 in memory). Steps 1–7 of the old model are committed and are reworked by R1–R6 above; nothing is deployed.
 - **Step 8 is still NOT started.** It was stopped before touching any file (no partial copy-path or import changes exist). It restarts against §10 only after R7.
 - **2026-09-27, R1 done:** migration `20260927120000_shared_sources`. **Carry-over for R5:** undoing a person delete currently RE-CREATES the person's text sources as new entries. Sources now survive a person delete (§2.6), so this duplicates them. R5 must change it to re-link the existing sources, in `usePersonActions.ts`. Also for R2: the DTO still carries `individualId` (the person asked about, else the first link) for backward compatibility, and the audit snapshot still has no `personIds`/`peopleCount`.
+- **2026-09-27, R2 + R3 done.** Carry-overs:
+  - **R5:** `undo-builders.ts` (around lines 160, 543 and 592) still posts to the REMOVED per-person create route. Switch it to `POST sources` with `personIds`. Until then, undo re-create fails with 404 in the running app. (This comes on top of R1's "re-link, don't duplicate" item.)
+  - **R4:** the form must pass `treeId` to suggestions. Suggestions are now per tree, so extra trees get main-tree suggestions today.
+  - **R6:** drop the compatibility field `personName` from the admin list, and move `SourcesManager` to the per-source rows. Remove the legacy wrappers (`createSourceEntry` / `updateSourceEntry` / `fetchSourceSuggestions`) once R4 and R5 no longer use them. No dead code may remain.
+  - **API behaviour** (decided in R2):
+    - For a non-admin, private people count as hidden. A private id in their remove list is silently ignored, which avoids revealing whether that person is linked.
+    - A partial DELETE returns 200 `{deleted:false}`; a full DELETE returns 204.
+    - A person who can't be linked gets one generic 400.

@@ -70,7 +70,7 @@ function route(...rules: Rule[]) {
     if (path.endsWith('/tree/individuals') && method === 'POST') return ok({ id: 'P-NEW' }, 201);
     if (path.endsWith('/tree/families') && method === 'POST') return ok({ id: 'FAM-NEW' }, 201);
     if (path.endsWith('/sources') && method === 'POST') {
-      return ok(entry('S-NEW', { individualId: path.split('/').slice(-2)[0], text: body?.text ?? null, visibility: body?.visibility, files: (body?.fileIds ?? []).map((id: string) => ({ ...pdf, id })) }), 201);
+      return ok(entry('S-NEW', { individualId: body?.personIds?.[0], text: body?.text ?? null, visibility: body?.visibility, files: (body?.fileIds ?? []).map((id: string) => ({ ...pdf, id })) }), 201);
     }
     if (/\/sources\/[^/]+$/.test(path) && method === 'PATCH') {
       return ok(entry(path.split('/').slice(-1)[0], { text: body?.text ?? 'نص', visibility: body?.visibility ?? 'members' }));
@@ -79,8 +79,18 @@ function route(...rules: Rule[]) {
   });
 }
 
+/** Shared sources (R2): a create is `POST /sources` with `personIds` — shown as `POST /sources [ids]`. */
 const calls = () =>
-  mockApiFetch.mock.calls.map(([p, i]) => `${(i as { method?: string })?.method ?? 'GET'} ${String(p).replace(`/api/workspaces/${WS}/tree`, '')}`);
+  mockApiFetch.mock.calls.map(([p, i]) => {
+    const init = i as { method?: string; body?: string } | undefined;
+    const method = init?.method ?? 'GET';
+    const path = String(p).replace(`/api/workspaces/${WS}/tree`, '');
+    if (method === 'POST' && path === '/sources') {
+      const ids = (JSON.parse(init?.body ?? '{}') as { personIds?: string[] }).personIds ?? [];
+      return `POST /sources [${ids.join(',')}]`;
+    }
+    return `${method} ${path}`;
+  });
 
 function setup(opts: { isAdmin?: boolean; formKind?: 'edit' | 'addChild' | 'addSpouse' | 'addParent' | 'addSibling' } = {}) {
   const onPushUndo = vi.fn<(e: UndoEntry) => void>();
@@ -131,7 +141,7 @@ describe('edit «حفظ» with a sources plan', () => {
     });
     expect(calls()).toEqual([
       `PATCH /individuals/${PID}`,
-      `POST /individuals/${PID}/sources`,
+      `POST /sources [${PID}]`,
       'PATCH /sources/b',
       'DELETE /sources/b/files/F1',
       'DELETE /sources/c',
@@ -203,7 +213,7 @@ describe('edit «حفظ» with a sources plan', () => {
   it('a partly-failed save keeps the form open, reports what failed, and the retry repeats nothing that saved', async () => {
     let createAttempts = 0;
     route((path, method, body) => {
-      if (path.endsWith(`/individuals/${PID}/sources`) && method === 'POST') {
+      if (path.endsWith('/sources') && method === 'POST' && (body as { personIds?: string[] }).personIds?.[0] === PID) {
         createAttempts++;
         if ((body as { text: string }).text === 'ثان' && createAttempts <= 2) return fail();
       }
@@ -234,7 +244,7 @@ describe('edit «حفظ» with a sources plan', () => {
       await result.current.handleEditSubmit(formData(), plan({ creates: [{ key: 'k2', text: 'ثان', visibility: 'members', fileIds: [] }] }));
     });
     // The person already saved — not PATCHed again.
-    expect(calls()).toEqual([`POST /individuals/${PID}/sources`]);
+    expect(calls()).toEqual([`POST /sources [${PID}]`]);
     expect(result.current.formMode).toBeNull();
     expect(onPushUndo).toHaveBeenCalledTimes(2);
     mockApiFetch.mockClear();
@@ -283,14 +293,16 @@ describe('create modes with queued sources', () => {
       );
     });
     const all = calls();
-    expect(all.indexOf('POST /individuals/P-NEW/sources')).toBeGreaterThan(all.indexOf('POST /individuals'));
+    expect(all.indexOf('POST /sources [P-NEW]')).toBeGreaterThan(all.indexOf('POST /individuals'));
     expect(result.current.formMode).toBeNull();
     expect(onPushUndo).toHaveBeenCalledTimes(1);
     expect(onPushUndo.mock.calls[0][0].undoOnly).toBe(true);
   });
 
   it('closes anyway and toasts how many failed', async () => {
-    route((path, method) => (path.endsWith('/P-NEW/sources') && method === 'POST' ? fail() : undefined));
+    route((path, method, body) =>
+      path.endsWith('/sources') && method === 'POST' && (body as { personIds?: string[] }).personIds?.[0] === 'P-NEW' ? fail() : undefined,
+    );
     const { result, onNotice, onPushUndo } = setup({ formKind: 'addChild' });
     await act(async () => {
       await result.current.handleAddChildSubmit(
@@ -322,7 +334,7 @@ describe('create modes with queued sources', () => {
         plan({ creates: [{ key: 'k1', text: 'ابن سعد', visibility: 'members', fileIds: [] }] }),
       );
     });
-    expect(calls()).toContain('POST /individuals/P-NEW/sources');
+    expect(calls()).toContain('POST /sources [P-NEW]');
     expect(onPushUndo.mock.calls[0][0].undoOnly).toBe(true);
   });
 });

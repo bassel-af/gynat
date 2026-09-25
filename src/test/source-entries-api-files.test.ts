@@ -62,3 +62,85 @@ describe('file URL and delete', () => {
     expect(JSON.parse(init.body)).toEqual({ treeId: 't1' });
   });
 });
+
+// ===========================================================================
+// R2 — shared-source wrappers
+// ===========================================================================
+
+import {
+  createSource,
+  createSourceEntry,
+  patchSource,
+  deleteSourceEntry,
+  fetchSourcePreview,
+  fetchSourceSuggestions,
+  fetchSourceSuggestionSummaries,
+  LastLinkError,
+} from '@/lib/tree/source-entries-api';
+
+describe('shared-source wrappers', () => {
+  test('createSource posts the people with the content', async () => {
+    mockApiFetch.mockResolvedValue(ok({ id: 's1', people: [], sharedCount: 0 }, 201));
+    await createSource('ws', { text: 'دفتر', personIds: ['p1', 'p2'] }, 't1');
+    const [url, init] = mockApiFetch.mock.calls[0];
+    expect(url).toBe('/api/workspaces/ws/tree/sources');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body)).toEqual({ text: 'دفتر', personIds: ['p1', 'p2'], treeId: 't1' });
+  });
+
+  test('createSourceEntry (one person) goes through POST sources with that person', async () => {
+    mockApiFetch.mockResolvedValue(ok({ id: 's1' }, 201));
+    await createSourceEntry('ws', 'p1', { text: 'x' });
+    const [url, init] = mockApiFetch.mock.calls[0];
+    expect(url).toBe('/api/workspaces/ws/tree/sources');
+    expect(JSON.parse(init.body)).toEqual({ text: 'x', personIds: ['p1'] });
+  });
+
+  test('patchSource sends link deltas and returns the source', async () => {
+    mockApiFetch.mockResolvedValue(ok({ id: 's1', people: [], peopleCount: 0 }));
+    const res = await patchSource('ws', 's1', { addPersonIds: ['p2'], removePersonIds: ['p3'] });
+    expect(res).toMatchObject({ id: 's1' });
+    const [url, init] = mockApiFetch.mock.calls[0];
+    expect(url).toBe('/api/workspaces/ws/tree/sources/s1');
+    expect(init.method).toBe('PATCH');
+    expect(JSON.parse(init.body)).toEqual({ addPersonIds: ['p2'], removePersonIds: ['p3'] });
+  });
+
+  test('patchSource returns null when the last person was removed with delete', async () => {
+    mockApiFetch.mockResolvedValue(new Response(JSON.stringify({ data: null, deleted: true }), { status: 200 }));
+    expect(await patchSource('ws', 's1', { removePersonIds: ['p1'], onLastLink: 'delete' })).toBeNull();
+  });
+
+  test('patchSource throws LastLinkError on the last-person 409', async () => {
+    mockApiFetch.mockResolvedValue(
+      new Response(JSON.stringify({ error: 'هذا آخر شخص لهذا المصدر', code: 'last_link' }), { status: 409 }),
+    );
+    await expect(patchSource('ws', 's1', { removePersonIds: ['p1'] })).rejects.toBeInstanceOf(LastLinkError);
+  });
+
+  test('deleteSourceEntry tells a full delete from a partial one', async () => {
+    mockApiFetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
+    expect(await deleteSourceEntry('ws', 's1')).toEqual({ deleted: true });
+    mockApiFetch.mockResolvedValueOnce(ok({ deleted: false }));
+    expect(await deleteSourceEntry('ws', 's1')).toEqual({ deleted: false });
+  });
+
+  test('fetchSourcePreview reads one source with treeId in the query', async () => {
+    mockApiFetch.mockResolvedValue(ok({ id: 's1', people: [], peopleCount: 0 }));
+    await fetchSourcePreview('ws', 's1', 't1');
+    expect(mockApiFetch.mock.calls[0][0]).toBe('/api/workspaces/ws/tree/sources/s1?treeId=t1');
+  });
+
+  test('suggestion summaries come back whole; the text-only helper keeps distinct texts', async () => {
+    const rows = [
+      { id: 'a', text: 'طبقات', visibility: 'members', fileCount: 0, peopleCount: 1, firstPersonName: 'محمد' },
+      { id: 'b', text: 'طبقات', visibility: 'members', fileCount: 0, peopleCount: 1, firstPersonName: 'علي' },
+      { id: 'c', text: null, visibility: 'members', fileCount: 2, peopleCount: 3, firstPersonName: null },
+    ];
+    mockApiFetch.mockResolvedValue(ok({ suggestions: rows }));
+    expect(await fetchSourceSuggestionSummaries('ws', 'ط', 't1')).toEqual(rows);
+    expect(mockApiFetch.mock.calls[0][0]).toBe('/api/workspaces/ws/tree/sources/suggestions?q=%D8%B7&treeId=t1');
+    mockApiFetch.mockResolvedValue(ok({ suggestions: rows }));
+    expect(await fetchSourceSuggestions('ws', 'ط')).toEqual(['طبقات']);
+  });
+});

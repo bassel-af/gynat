@@ -217,6 +217,8 @@ vi.mock('@/lib/db', () => {
     },
     individual: {
       findFirst: async ({ where }: { where: Row }) => individuals.find((i) => matches(i, where)) ?? null,
+      findMany: async ({ where }: { where: Row }) =>
+        individuals.filter((i) => matches(i, where)).map((i) => ({ id: i.id, isPrivate: i.isPrivate })),
     },
     sourceEntry: {
       findFirst: async ({ where, orderBy }: { where: Row; orderBy?: unknown }) => {
@@ -271,6 +273,10 @@ vi.mock('@/lib/db', () => {
         links.push(row);
         return row;
       },
+      createMany: async ({ data }: { data: Row[] }) => {
+        data.forEach((d) => links.push({ createdAt: new Date(), ...d }));
+        return { count: data.length };
+      },
     },
     treeEditLog: {
       create: async ({ data }: { data: Row }) => {
@@ -308,6 +314,11 @@ function req(path: string, method = 'GET', body?: unknown) {
 }
 
 const personRoute = () => import('@/app/api/workspaces/[id]/tree/individuals/[individualId]/sources/route');
+/** Shared sources (R2): a person's source is created by `POST sources` with `personIds`. */
+async function postSourceFor(individualId: string, body: Record<string, unknown>) {
+  const { POST } = await listRoute();
+  return POST(req('sources', 'POST', { ...body, personIds: [individualId] }), wp);
+}
 const entryRoute = () => import('@/app/api/workspaces/[id]/tree/sources/[entryId]/route');
 const treeEntryRoute = () => import('@/app/api/workspaces/[id]/tree/sources/tree-entry/route');
 const listRoute = () => import('@/app/api/workspaces/[id]/tree/sources/route');
@@ -410,7 +421,7 @@ describe('GET person sources', () => {
     const json = await (await getPerson(PERSON)).json();
     expect(hasBytesOrUndefined(json)).toBe(false);
     expect(Object.keys(json.data.entries[0]).sort()).toEqual(
-      ['createdAt', 'files', 'id', 'individualId', 'text', 'updatedAt', 'visibility'].sort(),
+      ['createdAt', 'files', 'id', 'individualId', 'people', 'sharedCount', 'text', 'updatedAt', 'visibility'].sort(),
     );
   });
 
@@ -443,11 +454,10 @@ describe('GET person sources', () => {
 // POST individuals/[individualId]/sources
 // ===========================================================================
 
-describe('POST person source', () => {
-  async function post(user: { id: string }, individualId: string, body: unknown) {
+describe('POST sources for one person', () => {
+  async function post(user: { id: string }, individualId: string, body: Record<string, unknown>) {
     as(user);
-    const { POST } = await personRoute();
-    return POST(req(`individuals/${individualId}/sources`, 'POST', body), pp(individualId));
+    return postSourceFor(individualId, body);
   }
 
   test('a plain member (no tree_editor) is refused', async () => {
@@ -482,8 +492,8 @@ describe('POST person source', () => {
     expect((await res.json()).data.visibility).toBe('public');
   });
 
-  test('a person outside the tree is a 404', async () => {
-    expect((await post(ADMIN_USER, FOREIGN_PERSON, { text: 'x' })).status).toBe(404);
+  test('a person outside the tree is refused (400, nothing linked)', async () => {
+    expect((await post(ADMIN_USER, FOREIGN_PERSON, { text: 'x' })).status).toBe(400);
   });
 
   test('writes one encrypted source_entry audit row', async () => {
@@ -773,38 +783,40 @@ describe('POST sources/bulk', () => {
 // ===========================================================================
 
 describe('GET sources/suggestions', () => {
-  async function suggest(user: { id: string }, q: string) {
+  async function suggest(user: { id: string }, q: string, query = '') {
     as(user);
     const { GET } = await suggestionsRoute();
-    return GET(req(`sources/suggestions?q=${encodeURIComponent(q)}`), wp);
+    return GET(req(`sources/suggestions?q=${encodeURIComponent(q)}${query}`), wp);
   }
+  const texts = (json: { data: { suggestions: { text: string | null }[] } }) => json.data.suggestions.map((s) => s.text);
 
   test('a plain member (no tree_editor) is refused', async () => {
     expect((await suggest(MEMBER_USER, 'ت')).status).toBe(403);
   });
 
-  test('returns plain strings only', async () => {
+  test('returns source summaries (R2), never bytes', async () => {
     const json = await (await suggest(ADMIN_USER, '')).json();
-    expect(json.data.suggestions.every((s: unknown) => typeof s === 'string')).toBe(true);
+    expect(json.data.suggestions.every((s: Row) => typeof s.id === 'string' && 'peopleCount' in s)).toBe(true);
+    expect(hasBytesOrUndefined(json)).toBe(false);
   });
 
-  test('is workspace-scoped: other trees of the workspace yes, other workspaces no', async () => {
-    const json = await (await suggest(ADMIN_USER, '')).json();
-    expect(json.data.suggestions).toContain('تاريخ الطبري');
-    expect(json.data.suggestions).not.toContain('مصدر غريب');
+  test('is tree-scoped: the ?treeId tree only, never another workspace', async () => {
+    expect(texts(await (await suggest(ADMIN_USER, '')).json())).not.toContain('تاريخ الطبري');
+    expect(texts(await (await suggest(ADMIN_USER, '', `&treeId=${EXTRA}`)).json())).toEqual(['تاريخ الطبري']);
+    expect(texts(await (await suggest(ADMIN_USER, '')).json())).not.toContain('مصدر غريب');
   });
 
-  test('a non-admin editor is only offered texts they may see', async () => {
+  test('a non-admin editor is only offered sources they may see', async () => {
     const json = await (await suggest(EDITOR_USER, '')).json();
-    expect(json.data.suggestions).not.toContain('سجل سري');
-    expect(json.data.suggestions).not.toContain('وثيقة خاصة');
-    expect(json.data.suggestions).toContain('طبقات ابن سعد، ص ٩٠');
+    expect(texts(json)).not.toContain('سجل سري');
+    expect(texts(json)).not.toContain('وثيقة خاصة');
+    expect(texts(json)).toContain('طبقات ابن سعد، ص ٩٠');
   });
 
-  test('matches diacritic-insensitively and dedupes', async () => {
+  test('matches diacritic-insensitively; two sources with the same text stay two sources', async () => {
     entries.push(entry('eeeeeeee-0000-4000-8000-000000000010', MAIN, PERSON_BARE, 'members', 'طبقات ابن سعد، ص ٩٠'));
     const json = await (await suggest(ADMIN_USER, 'طَبَقَات')).json();
-    expect(json.data.suggestions).toEqual(['طبقات ابن سعد، ص ٩٠']);
+    expect(texts(json)).toEqual(['طبقات ابن سعد، ص ٩٠', 'طبقات ابن سعد، ص ٩٠']);
   });
 
   test('caps at 10', async () => {
@@ -866,7 +878,7 @@ describe('GET sources/publish-summary', () => {
 
   test('is scoped to the ?treeId tree', async () => {
     const { data } = await (await summary(ADMIN_USER, `?treeId=${EXTRA}`)).json();
-    expect(data).toEqual({ pendingIds: [E_EXTRA], publicCount: 0, treeEntry: null });
+    expect(data).toEqual({ pendingIds: [E_EXTRA], publicCount: 0, publicPeopleCount: 0, treeEntry: null });
   });
 
   test('a foreign tree id → 404', async () => {
@@ -899,8 +911,7 @@ describe('shared-source model — links and isTreeWide', () => {
 
   test('POST writes exactly one link, to the path person in the resolved tree', async () => {
     as(EDITOR_USER);
-    const { POST } = await personRoute();
-    const res = await POST(req(`individuals/${PERSON}/sources`, 'POST', { text: 'طبقات' }), pp(PERSON));
+    const res = await postSourceFor(PERSON, { text: 'طبقات' });
     const { data } = await res.json();
     const created = entries.find((e) => e.id === data.id)!;
     expect(created.isTreeWide).toBe(false);
@@ -950,10 +961,10 @@ describe('shared-source model — links and isTreeWide', () => {
     const { GET } = await suggestionsRoute();
     as(ADMIN_USER);
     const admin = await (await GET(req('sources/suggestions?q=بلا'), wp)).json();
-    expect(admin.data.suggestions).toContain('بلا أشخاص');
+    expect(admin.data.suggestions.map((s: Row) => s.id)).toContain(ORPHAN);
     as(EDITOR_USER);
     const editor = await (await GET(req('sources/suggestions?q=بلا'), wp)).json();
-    expect(editor.data.suggestions).not.toContain('بلا أشخاص');
+    expect(editor.data.suggestions.map((s: Row) => s.id)).not.toContain(ORPHAN);
   });
 
   test('deleting a source drops its links (FK cascade in the fake mirrors the DB)', async () => {

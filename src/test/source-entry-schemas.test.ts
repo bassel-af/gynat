@@ -212,3 +212,80 @@ describe('text-or-files (step 5)', () => {
     expect(snap).toEqual({ id: UUID, individualId: null, visibility: 'members', text: null, fileCount: 2 });
   });
 });
+
+// ===========================================================================
+// R2 — shared sources: create with people, link deltas, list filter, audit
+// ===========================================================================
+
+import {
+  createSourceSchema,
+  MAX_LINKS_PER_SOURCE,
+} from '@/lib/tree/source-entry-schemas';
+
+describe('createSourceSchema', () => {
+  const P = 'cccccccc-0000-4000-8000-000000000001';
+
+  test('needs at least one person', () => {
+    expect(createSourceSchema.safeParse({ text: 'x', personIds: [] }).success).toBe(false);
+    expect(createSourceSchema.safeParse({ text: 'x' }).success).toBe(false);
+  });
+
+  test('caps people at 500', () => {
+    const ids = Array.from({ length: MAX_LINKS_PER_SOURCE + 1 }, () => P);
+    expect(MAX_LINKS_PER_SOURCE).toBe(500);
+    expect(createSourceSchema.safeParse({ text: 'x', personIds: ids }).success).toBe(false);
+  });
+
+  test('rejects a malformed person id', () => {
+    expect(createSourceSchema.safeParse({ text: 'x', personIds: ['nope'] }).success).toBe(false);
+  });
+
+  test('still needs text or a file', () => {
+    expect(createSourceSchema.safeParse({ personIds: [P] }).success).toBe(false);
+    expect(createSourceSchema.parse({ text: ' ب ', personIds: [P] })).toMatchObject({ text: 'ب', personIds: [P] });
+  });
+});
+
+describe('updateSourceEntrySchema — link deltas', () => {
+  const P = 'cccccccc-0000-4000-8000-000000000001';
+  const Q = 'cccccccc-0000-4000-8000-000000000002';
+
+  test('a links-only patch is a valid patch', () => {
+    expect(updateSourceEntrySchema.safeParse({ addPersonIds: [P] }).success).toBe(true);
+    expect(updateSourceEntrySchema.safeParse({ removePersonIds: [P], onLastLink: 'keep' }).success).toBe(true);
+  });
+
+  test('empty delta arrays alone are still an empty patch', () => {
+    expect(updateSourceEntrySchema.safeParse({ addPersonIds: [], removePersonIds: [] }).success).toBe(false);
+  });
+
+  test('add and remove must be disjoint', () => {
+    expect(updateSourceEntrySchema.safeParse({ addPersonIds: [P, Q], removePersonIds: [Q] }).success).toBe(false);
+  });
+
+  test('caps each list at 500 and refuses a bad onLastLink', () => {
+    const ids = Array.from({ length: MAX_LINKS_PER_SOURCE + 1 }, () => P);
+    expect(updateSourceEntrySchema.safeParse({ addPersonIds: ids }).success).toBe(false);
+    expect(updateSourceEntrySchema.safeParse({ removePersonIds: [P], onLastLink: 'maybe' }).success).toBe(false);
+  });
+});
+
+describe('listSourceEntriesQuerySchema — filter', () => {
+  test('accepts shared and unlinked, refuses anything else', () => {
+    expect(listSourceEntriesQuerySchema.parse({ filter: 'shared' }).filter).toBe('shared');
+    expect(listSourceEntriesQuerySchema.parse({ filter: 'unlinked' }).filter).toBe('unlinked');
+    expect(listSourceEntriesQuerySchema.safeParse({ filter: 'all-of-it' }).success).toBe(false);
+  });
+});
+
+describe('snapshotSourceEntry — people', () => {
+  test('records the linked person ids and their count (ids only)', () => {
+    const snap = snapshotSourceEntry({
+      id: UUID,
+      visibility: 'members',
+      text: 'نص',
+      personIds: ['p1', 'p2'],
+    });
+    expect(snap).toEqual({ id: UUID, visibility: 'members', text: 'نص', personIds: ['p1', 'p2'], peopleCount: 2 });
+  });
+});

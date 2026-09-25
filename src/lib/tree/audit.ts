@@ -294,27 +294,35 @@ export function snapshotAncestryJump(record: {
 
 export interface SourceEntrySnapshot extends JsonObject {
   id: string;
-  /** Null for the tree-wide entry. */
-  individualId: string | null;
+  /**
+   * Legacy one-person field (rows written before shared sources, and the
+   * tree-wide source's `null`). New snapshots carry `personIds` instead.
+   */
+  individualId?: string | null;
   visibility: string;
   text: string | null;
   /** How many files the entry holds — counts only, never names or bytes. */
   fileCount?: number;
+  /** The people the source is «مصدر لـ» — ids only, never names. */
+  personIds?: string[];
+  peopleCount?: number;
 }
 
 export function snapshotSourceEntry(record: {
   id: string;
-  individualId: string | null;
+  individualId?: string | null;
   visibility: string;
   text: string | null;
   fileCount?: number;
+  personIds?: readonly string[];
 }): SourceEntrySnapshot {
   return {
     id: record.id,
-    individualId: record.individualId ?? null,
+    ...(record.individualId !== undefined ? { individualId: record.individualId ?? null } : {}),
     visibility: record.visibility,
     text: record.text ?? null,
     ...(typeof record.fileCount === 'number' ? { fileCount: record.fileCount } : {}),
+    ...(record.personIds ? { personIds: [...record.personIds], peopleCount: record.personIds.length } : {}),
   };
 }
 

@@ -51,6 +51,7 @@ const FIELD_LABELS: Record<string, string> = {
   visibility: 'من يرى هذا المصدر',
   entries: 'المصادر',
   fileCount: 'عدد الملفات',
+  peopleCount: 'عدد الأشخاص',
 };
 
 const SOURCE_VISIBILITY_LABELS: Record<string, string> = {
@@ -74,6 +75,7 @@ const ID_FIELDS = new Set([
   'husbandId', 'wifeId', 'fosterFatherId', 'fosterMotherId',
   'childrenIds', 'familyId', 'individualId', 'radaFamilyId',
   'descendantId', 'ancestorFamilyId',
+  'personIds',
 ]);
 
 function formatValue(key: string, value: unknown): string {

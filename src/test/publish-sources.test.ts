@@ -1,7 +1,7 @@
 import { describe, test, expect } from 'vitest';
 import { idsToPublish, shouldAskAboutSources, chunk, DEFAULT_PUBLISH_SOURCES_CHOICE } from '@/lib/tree/publish-sources';
 
-const summary = { pendingIds: ['a', 'b', 'c'], publicCount: 1, treeEntry: null };
+const summary = { pendingIds: ['a', 'b', 'c'], publicCount: 1, publicPeopleCount: 0, treeEntry: null };
 
 describe('publish flow sources helpers', () => {
   test('«لا شيء» publishes no ids', () => {
@@ -15,9 +15,9 @@ describe('publish flow sources helpers', () => {
 
   test('asks only when something could change for visitors', () => {
     expect(shouldAskAboutSources(null)).toBe(false);
-    expect(shouldAskAboutSources({ pendingIds: [], publicCount: 3, treeEntry: null })).toBe(false);
-    expect(shouldAskAboutSources({ pendingIds: [], publicCount: 0, treeEntry: { id: 't', visibility: 'public' } })).toBe(false);
-    expect(shouldAskAboutSources({ pendingIds: [], publicCount: 0, treeEntry: { id: 't', visibility: 'admins' } })).toBe(true);
+    expect(shouldAskAboutSources({ pendingIds: [], publicCount: 3, publicPeopleCount: 0, treeEntry: null })).toBe(false);
+    expect(shouldAskAboutSources({ pendingIds: [], publicCount: 0, publicPeopleCount: 0, treeEntry: { id: 't', visibility: 'public' } })).toBe(false);
+    expect(shouldAskAboutSources({ pendingIds: [], publicCount: 0, publicPeopleCount: 0, treeEntry: { id: 't', visibility: 'admins' } })).toBe(true);
     expect(shouldAskAboutSources(summary)).toBe(true);
     // A malformed answer (e.g. an error body) skips the step — nothing changes.
     expect(shouldAskAboutSources({} as never)).toBe(false);

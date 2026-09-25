@@ -9,7 +9,6 @@ import {
   SOURCE_ENTRY_SELECT,
   decryptEntryText,
   resolveSourceTreeOr404,
-  primaryIndividualId,
   type SourceEntryRow,
 } from '@/lib/tree/source-entry-route-helpers';
 import {
@@ -25,6 +24,10 @@ type RouteParams = { params: Promise<{ id: string }> };
 
 // POST /api/workspaces/[id]/tree/sources/bulk — admins only.
 // `{ treeId?, ids (≤ 500), action: 'setVisibility' | 'delete', visibility? }`
+//
+// Ids are SOURCE ids: `delete` removes whole sources — every person's link
+// and every file go with them (FK cascade); `setVisibility` changes the one
+// level every linked person shares.
 //
 // Only ids that belong to the resolved tree are touched; anything else is
 // silently ignored (never an existence oracle — the count covers own-tree ids
@@ -64,7 +67,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
   const key = await getWorkspaceKey(workspaceId);
   const before = rows.map((r) =>
-    snapshotSourceEntry({ ...r, individualId: primaryIndividualId(r), text: decryptEntryText(r, key) }),
+    snapshotSourceEntry({
+      ...r,
+      text: decryptEntryText(r, key),
+      personIds: (r.links ?? []).map((l) => l.individualId),
+    }),
   );
   const auditAction = action === 'delete' ? 'delete' : 'update';
 

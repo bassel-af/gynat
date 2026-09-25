@@ -257,6 +257,8 @@ const fake: Row = {
   },
   individual: {
     findFirst: async ({ where }: { where: Row }) => individuals.find((i) => matches(i, where)) ?? null,
+    findMany: async ({ where }: { where: Row }) =>
+      individuals.filter((i) => matches(i, where)).map((i) => ({ id: i.id, isPrivate: i.isPrivate })),
   },
   sourceEntry: {
     findFirst: async ({ where }: { where: Row }) => {
@@ -292,6 +294,10 @@ const fake: Row = {
       const row = { createdAt: new Date(), ...data };
       links.push(row);
       return row;
+    },
+    createMany: async ({ data }: { data: Row[] }) => {
+      data.forEach((d) => links.push({ createdAt: new Date(), ...d }));
+      return { count: data.length };
     },
   },
   sourceFile: {
@@ -621,9 +627,10 @@ describe('POST sources/uploads', () => {
 // ===========================================================================
 
 describe('attaching staged files', () => {
-  async function createOn(individualId: string, body: unknown) {
-    const { POST } = await personRoute();
-    return POST(jsonReq(`individuals/${individualId}/sources`, 'POST', body), pp(individualId));
+  // Shared sources (R2): created by `POST sources` with the person in `personIds`.
+  async function createOn(individualId: string, body: Record<string, unknown>) {
+    const { POST } = await listRoute();
+    return POST(jsonReq('sources', 'POST', { ...body, personIds: [individualId] }), wp);
   }
 
   test('a file-only entry is created with the file attached', async () => {
@@ -760,6 +767,31 @@ describe('serving a file', () => {
     // E_MEMBERS loses its only link → orphan.
     links = links.filter((l) => l.sourceId !== E_MEMBERS);
     expect((await serve(E_MEMBERS, F_MEMBERS)).status).toBe(404);
+    as(ADMIN_USER);
+    expect((await serve(E_MEMBERS, F_MEMBERS)).status).toBe(200);
+  });
+
+  test('item 4: a source linked ONLY to a private person — member and editor 404, admin 200', async () => {
+    const bodies = new Set<string>();
+    for (const user of [MEMBER_USER, EDITOR_USER]) {
+      as(user);
+      const res = await serve(E_PRIV, F_PRIV);
+      expect(res.status).toBe(404);
+      bodies.add(await res.text());
+    }
+    as(ADMIN_USER);
+    expect((await serve(E_PRIV, F_PRIV)).status).toBe(200);
+    // The refusals are byte-identical to a nonexistent file.
+    as(MEMBER_USER);
+    bodies.add(await (await serve(E_PRIV, ABSENT)).text());
+    expect(bodies.size).toBe(1);
+  });
+
+  test('item 4: a members-level orphan — editor 404, admin 200; no bytes read on the refusal', async () => {
+    links = links.filter((l) => l.sourceId !== E_MEMBERS);
+    as(EDITOR_USER);
+    expect((await serve(E_MEMBERS, F_MEMBERS)).status).toBe(404);
+    expect(dataReads).toEqual([]);
     as(ADMIN_USER);
     expect((await serve(E_MEMBERS, F_MEMBERS)).status).toBe(200);
   });

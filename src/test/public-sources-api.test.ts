@@ -444,3 +444,97 @@ describe('public tree-wide entry file', () => {
     expect(dataReads).toEqual([]);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Shared-source leak tests (rework R3, goal doc §8 items 5, 6, 9)
+// ---------------------------------------------------------------------------
+
+describe('shared sources — public never learns who else a source is for', () => {
+  /** E_PUBLIC becomes one source for DEAD, DEAD_NO_OWN, PRIV and LIVING. */
+  function shareEPublic() {
+    for (const individualId of [DEAD_NO_OWN, PRIV, LIVING]) {
+      links.push({ sourceId: E_PUBLIC, individualId, treeId: MAIN });
+    }
+  }
+
+  test('item 5: DTO keys stay exactly id/text/files — no people, counts or links', async () => {
+    shareEPublic();
+    const body = await (await list('pub-main', DEAD)).json();
+    const shared = body.data.entries.find((e: Row) => e.id === E_PUBLIC);
+    expect(Object.keys(shared).sort()).toEqual(['files', 'id', 'text']);
+    const json = JSON.stringify(body);
+    for (const key of ['people', 'sharedCount', 'peopleCount', 'personIds', 'links', 'individualId']) {
+      expect(json).not.toContain(`"${key}"`);
+    }
+  });
+
+  test('item 5: no other linked person id appears anywhere in the response', async () => {
+    shareEPublic();
+    const json = JSON.stringify(await (await list('pub-main', DEAD)).json());
+    for (const other of [DEAD_NO_OWN, PRIV, LIVING]) expect(json).not.toContain(other);
+  });
+
+  test('item 5: the other shown linked person sees the same source, still without people', async () => {
+    shareEPublic();
+    const body = await (await list('pub-main', DEAD_NO_OWN)).json();
+    expect(body.data.entries.map((e: Row) => e.id)).toEqual([E_PUBLIC]);
+    expect(JSON.stringify(body)).not.toContain(DEAD);
+  });
+
+  test('item 6: the shared file under a PRIVATE linked person → the generic 404, no bytes read', async () => {
+    shareEPublic();
+    await expectGeneric404(await file('pub-main', PRIV, E_PUBLIC, F_PUB_IMG));
+    expect(dataReads).toEqual([]);
+  });
+
+  test('item 6: the shared file under a LIVING linked person → the generic 404, no bytes read', async () => {
+    shareEPublic();
+    await expectGeneric404(await file('pub-main', LIVING, E_PUBLIC, F_PUB_IMG));
+    expect(dataReads).toEqual([]);
+  });
+
+  test('item 6: the hidden linked people get the SAME 404 on their list as an unknown person', async () => {
+    shareEPublic();
+    const bodies = new Set<string>();
+    for (const id of [PRIV, LIVING, ABSENT]) {
+      const res = await list('pub-main', id);
+      expect(res.status).toBe(404);
+      bodies.add(await res.text());
+    }
+    expect(bodies.size).toBe(1);
+  });
+});
+
+describe('orphan sources are never the tree-wide source publicly (item 9)', () => {
+  const ORPHAN = 'eeeeeeee-0000-4000-8000-0000000000a0';
+  const F_ORPHAN = 'ffffffff-0000-4000-8000-0000000000a0';
+
+  function addPublicOrphan() {
+    entries.push({
+      id: ORPHAN, treeId: MAIN, isTreeWide: false, visibility: 'public', text: enc('بلا أشخاص'),
+      createdById: 'u-admin', createdAt: new Date(Date.UTC(2025, 0, 1)), updatedAt: new Date(Date.UTC(2025, 0, 1)),
+    });
+    files.push({ id: F_ORPHAN, entryId: ORPHAN, treeId: MAIN, mimeType: 'image/jpeg', sizeBytes: JPEG_BYTES.length, fileName: enc('يتيم.jpg'), createdById: 'u-admin', createdAt: new Date() });
+    fileData.push({ fileId: F_ORPHAN, data: encryptBytes(JPEG_BYTES, KEY) });
+  }
+
+  test('a public orphan is never inherited, even with no tree-wide source', async () => {
+    addPublicOrphan();
+    entries = entries.filter((e) => e.id !== E_TREE);
+    const body = await (await list('pub-main', DEAD_NO_OWN)).json();
+    expect(body.data).toEqual({ entries: [], inherited: null });
+  });
+
+  test('the real tree-wide source still wins over an older public orphan', async () => {
+    addPublicOrphan();
+    const body = await (await list('pub-main', DEAD_NO_OWN)).json();
+    expect(body.data.inherited.id).toBe(E_TREE);
+  });
+
+  test('an orphan\'s file is served by neither the tree-entry route nor any person path', async () => {
+    addPublicOrphan();
+    await expectGeneric404(await treeFile('pub-main', F_ORPHAN));
+    await expectGeneric404(await file('pub-main', DEAD, ORPHAN, F_ORPHAN));
+    expect(dataReads).toEqual([]);
+  });
+});

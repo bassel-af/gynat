@@ -53,14 +53,35 @@ export const TEXT_OR_FILES_MESSAGE = 'أضف نص المصدر أو ملفًا �
 
 export const sourceVisibilitySchema = z.enum(['admins', 'members', 'public']);
 
+const sourceContentFields = {
+  treeId: targetTreeIdSchema,
+  text: optionalSourceTextSchema.optional().transform((v) => v ?? null),
+  fileIds: fileIdsSchema.optional(),
+  visibility: sourceVisibilitySchema.optional(),
+};
+
+const hasTextOrFiles = (d: { text: string | null; fileIds?: string[] }) =>
+  d.text !== null || (d.fileIds?.length ?? 0) > 0;
+
+/** Content only (text / files / level) — the shape shared by every create. */
 export const createSourceEntrySchema = z
-  .object({
-    treeId: targetTreeIdSchema,
-    text: optionalSourceTextSchema.optional().transform((v) => v ?? null),
-    fileIds: fileIdsSchema.optional(),
-    visibility: sourceVisibilitySchema.optional(),
-  })
-  .refine((d) => d.text !== null || (d.fileIds?.length ?? 0) > 0, { message: TEXT_OR_FILES_MESSAGE });
+  .object(sourceContentFields)
+  .refine(hasTextOrFiles, { message: TEXT_OR_FILES_MESSAGE });
+
+/** Most people one source may be «مصدر لـ» (also the per-request delta cap). */
+export const MAX_LINKS_PER_SOURCE = 500;
+
+export const personIdsSchema = z
+  .array(z.string().uuid())
+  .max(MAX_LINKS_PER_SOURCE, `لا يمكن ربط المصدر بأكثر من ${MAX_LINKS_PER_SOURCE} شخص`);
+
+/**
+ * `POST sources` — one source and the people it is «مصدر لـ», in one save.
+ * `personIds[0]` is the starting person (the panel the form opened from).
+ */
+export const createSourceSchema = z
+  .object({ ...sourceContentFields, personIds: personIdsSchema.min(1, 'اختر شخصًا واحدًا على الأقل') })
+  .refine(hasTextOrFiles, { message: TEXT_OR_FILES_MESSAGE });
 
 export const updateSourceEntrySchema = z
   .object({
@@ -69,10 +90,29 @@ export const updateSourceEntrySchema = z
     text: optionalSourceTextSchema.optional(),
     fileIds: fileIdsSchema.optional(),
     visibility: sourceVisibilitySchema.optional(),
+    /** People to add to «مصدر لـ» (already linked ones are no-ops). */
+    addPersonIds: personIdsSchema.optional(),
+    /** People to remove (not linked ones are no-ops). */
+    removePersonIds: personIdsSchema.optional(),
+    /** The answer to «هذا آخر شخص لهذا المصدر» when the op removes the last person. */
+    onLastLink: z.enum(['delete', 'keep']).optional(),
   })
-  .refine((d) => d.text !== undefined || d.visibility !== undefined || (d.fileIds?.length ?? 0) > 0, {
-    message: 'لا يوجد ما يُعدَّل',
-  });
+  .refine(
+    (d) =>
+      d.text !== undefined ||
+      d.visibility !== undefined ||
+      (d.fileIds?.length ?? 0) > 0 ||
+      (d.addPersonIds?.length ?? 0) > 0 ||
+      (d.removePersonIds?.length ?? 0) > 0,
+    { message: 'لا يوجد ما يُعدَّل' },
+  )
+  .refine(
+    (d) => {
+      const removed = new Set(d.removePersonIds ?? []);
+      return !(d.addPersonIds ?? []).some((id) => removed.has(id));
+    },
+    { message: 'لا يمكن إضافة شخص وإزالته في الطلب نفسه', path: ['removePersonIds'] },
+  );
 
 /** The tree-wide entry («مصدر الشجرة») — upsert, at most one per tree. */
 /** Omitted `text` keeps the stored text; `null` / `''` clears it (files must remain). */
@@ -102,6 +142,8 @@ export const listSourceEntriesQuerySchema = z.object({
   visibility: sourceVisibilitySchema.optional(),
   /** `pending` = entries not yet at the public level (the publish flow's «أختار بنفسي»). */
   scope: z.enum(['pending']).optional(),
+  /** Tabs: `shared` = ≥ 2 people, `unlinked` = «ليس مصدرًا لأحد». Absent = «الكل». */
+  filter: z.enum(['shared', 'unlinked']).optional(),
   cursor: z.coerce.number().int().min(0).max(1_000_000).optional(),
   limit: z.coerce.number().int().min(1).max(MAX_SOURCE_PAGE).default(20),
 });
@@ -113,6 +155,7 @@ export const sourceSuggestionsQuerySchema = z.object({
 
 export type SourceVisibilityInput = z.infer<typeof sourceVisibilitySchema>;
 export type CreateSourceEntryInput = z.infer<typeof createSourceEntrySchema>;
+export type CreateSourceInput = z.infer<typeof createSourceSchema>;
 export type UpdateSourceEntryInput = z.infer<typeof updateSourceEntrySchema>;
 export type PutTreeEntryInput = z.infer<typeof putTreeEntrySchema>;
 export type BulkSourceEntriesInput = z.infer<typeof bulkSourceEntriesSchema>;
