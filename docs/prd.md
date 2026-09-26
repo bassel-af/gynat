@@ -262,22 +262,25 @@ The family tree belongs to the workspace and is shared by all workspace members.
 
 ### 5.13 Sources («المصادر»)
 
-**Status: built and tested locally, NOT deployed** (2026-09-25; waiting for the owner to test). Spec: `docs/sources-v1-goal.md`; owner rulings: memory `project_sources_decisions.md`; how it works: `docs/implementation.md` §4.10.
+**Status: DEPLOYED to production 2026-09-26 (commit `669274d`)** — 3 migrations (`20260925120000_add_source_entries`, `20260926120000_source_file_staging`, `20260927120000_shared_sources`), nginx `client_max_body_size 9m`, smoke 30/30; pre-deploy backup `/mnt/encrypted/gynat/backups/pre-deploy-sources-final-20260926-072638.dump` (copy in `~/gynat-backups/`). Owner rulings: memory `project_sources_decisions.md`; how it works: `docs/implementation.md` §4.10.
+
+**Pre-deploy security hardening** (in `669274d`): cross-family copies carry a level-3 source only for people the public tree shows (living people's documents stay behind); PDFs with any stream filter other than one FlateDecode are refused (image codecs on image XObjects excepted, so scans still pass) and the active-content denylist is wider; source DTOs never expose a link the viewer can't see; the creator delete-bypass is narrowed; `safeJsonLd` escapes every JSON-LD `<script>` (fixed a pre-existing public-page XSS).
 
 - **Problem**: families want trustworthy trees — evidence for who someone is and how they connect (a book reference, a scan of a دفتر العائلة, a birth certificate) — with control over who may see each piece of evidence, because many documents are ID papers of living people.
 - **What it is**: a source is a free-text reference and/or files (JPEG, PNG, WebP, PDF; up to 20 files of 8 MB each), with ONE visibility level, attached to one or many people through the «مصدر لـ:» line. One دفتر العائلة is entered once and attached to the whole household; a book cited at different pages per person is one source per person (no page field). A tree can also carry one tree-wide source («مصدر الشجرة»), shown as «من مصدر الشجرة» on people with no source of their own.
 - **Product rules** (owner decisions, 2026-09-24/25 — do not re-open):
   - Visibility is one 3-level choice «من يرى هذا المصدر؟»: «المشرفون فقط» (default) / «أعضاء مساحة العائلة» / «أعضاء مساحة العائلة وزوار الشجرة المنشورة — فقط إذا قمت بنشرها للعامة», with a live line describing the tree's current publish state. Level 3 with files shows a soft warning about personal data of living people.
   - Admins see every source, including on private people. Members never see sources on a private person. Public visitors see level-3 sources only on people the public tree already shows — and never who else a source belongs to.
+  - Links are explicit: quick buttons turn into a fixed list of people at pick time; coverage is never computed later (a child added in 2030 is not silently "proven" by a 1974 دفتر).
   - No source library, types or citation fields; no create-source-first step. Sources are added from a person (sidebar, person edit form, add child/spouse/parent form). The person you start from can never be removed from the «مصدر لـ» line. Earlier sources are reused by linking (never re-uploading) or by copying their text.
   - Removing a source's last person asks: delete the source and its files, or keep it on the «المصادر» page under «ليس مصدرًا لأحد». Deleting a person never deletes their sources.
   - Publishing a tree asks once about sources: كلها / لا شيء / أختار بنفسي. The admin «المصادر» page supports search, select-all and bulk level change — admins never have to edit per person.
   - Copies: a same-family whole-tree copy carries every source; a copy into another family carries only level-3 sources, only for non-private people who were copied, re-encrypted for that family. Storage quota never blocks a copy (files that don't fit are left out).
   - GEDCOM import does not bring sources in; it tells the user how many were left out.
-- **Deploy prerequisites** (before the first production deploy of Sources):
-  - Production nginx: add `client_max_body_size 9m;` to the gynat.com vhost — it currently has the 1 MB default, so every upload over 1 MB would fail.
-  - `sharp` must load on the production server (hz): after deploy, smoke one image upload so a re-encode actually runs.
-  - Apply the three migrations in order: `20260925120000_add_source_entries`, `20260926120000_source_file_staging`, `20260927120000_shared_sources` (`prisma migrate deploy`; back up the prod DB first).
+- **Open follow-ups**:
+  - Antivirus scanning of uploads (ClamAV) — deferred until after v1.
+  - Pre-existing bugs found by the Sources e2e (outside Sources): undoing a person delete loses their family link (`buildDeleteIndividualInverse`); deleting a workspace that is the source of a broken branch pointer fails on `branch_pointers_source_workspace_id_fkey`.
+  - Owner to confirm copy the builders added: «إلغاء الربط»; «الأب: X» / «الأم: X» when only one parent is known; «ليس مصدرًا لأحد» on suggestions; «سيُزال عن هذا الشخص», «إزالة المصدر عن هذا الشخص», «تراجع عن إزالة المصدر», «تعذّر إزالة المصدر», «تعذّر إضافة المصدر»; the publish line «…ومصدر واحد (تظهر على شخص واحد) يظهر لهم أصلًا»; the admin tabs «الكل / مشترك / ليس مصدرًا لأحد»; ▾ on one-person rows.
 - **Later (v2)**: sources on marriages and individual facts, GEDCOM export/import of sources, `/islamic-gedcom` documentation, a «الأبناء والأحفاد» quick button, a page field.
 
 ---

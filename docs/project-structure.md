@@ -59,10 +59,6 @@ The project is at Phase 5 (Branch Pointers) with Phases 1-5 complete.
 - `ancestor-gap-research-notes.md` - «قفزة نسب» (ancestry jump) research + owner rulings
 - `specs/ancestry-jump-spec.md` - «قفزة نسب» implementation spec (data model, API, graph, nasab, GEDCOM, canvas)
 - `specs/ancestry-jump-security-review.md` - «قفزة نسب» security review (findings + fixes)
-- `sources-v1-goal.md` - Sources («المصادر») v1 spec + build status notes (temporary working doc)
-- `sources-shared-design.md` - Sources shared-source designs + review
-- `sources-design-notes.md` - Sources security threat model and early design notes
-- `sources-edit-form-spec.md` - Sources inside the person edit form spec
 - `gedcom-marriage-explainer.html` - Standalone HTML explainer for GEDCOM marriage concepts
 - `screenshots/` - Mobile UI screenshots (`mobile-fab-test.png`, `mobile-sidebar-open.png`)
 

@@ -1,6 +1,6 @@
 /**
  * Sources («المصادر») — the undo entries the person UI pushes, built on the
- * inverse builders (docs/sources-v1-goal.md §6).
+ * inverse builders (docs/implementation.md §4.10, Undo).
  *
  * - Create: undoable; redo re-creates the source for EVERY person it was for.
  *   Created WITH files → `undoOnly` (undo deletes the files for good).

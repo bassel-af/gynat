@@ -2,7 +2,7 @@
  * Sources («المصادر») — links between one source and the people it is
  * «مصدر لـ». Shared by the member source routes.
  *
- * Rules (docs/sources-v1-goal.md §3–§5):
+ * Rules (docs/implementation.md §4.10):
  *   - Every linked person is NATIVE to the source's tree. A borrowed-branch
  *     person has no row in this tree, so the tree-scoped lookup already
  *     refuses it.

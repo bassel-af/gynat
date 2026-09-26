@@ -78,6 +78,8 @@ What it does:
 4. `pnpm build` — Next.js production build with strict type-check
 5. `pm2 restart gynat` — talks to the encrypted PM2 daemon
 
+**Deploy carrying migrations** (back up the DB first, §9): run `npx prisma migrate deploy && npx prisma generate` after `pnpm install` and **before** `pnpm build`, so the build type-checks against the new client. `sharp` (image re-encoding for source uploads) is a direct dependency with a native binary — after install, check it loads: `node -e "require('sharp')"`.
+
 Verify:
 
 ```bash
@@ -170,6 +172,7 @@ If the Cloudflare API token ever gets revoked, regenerate at Cloudflare → My P
 - **Docker Compose `restart` doesn't re-read `.env`** — use `docker compose up -d <service>` after editing `docker/.env` to actually pick up new values. Applies to GoTrue env changes like `GOOGLE_CLIENT_SECRET`.
 - **Port 8000 conflict** — some other docker-proxy on hz binds `0.0.0.0:8000`. Kong must bind to `127.0.0.1:8002` instead (set via `KONG_HOST_BIND` in `docker/.env`). nginx proxies `/auth/v1/*` to `127.0.0.1:8002`.
 - **PM2 daemon confusion** — see §3.
+- **Source uploads fail over 1 MB (413 from nginx)** — the gynat.com vhost needs `client_max_body_size 9m;` (source files are capped at 8 MB). Set 2026-09-26; the pre-change config is backed up at `/root/gynat.com.nginx.bak-20260926-072703`. Re-add it if the vhost is ever regenerated, then `nginx -t && systemctl reload nginx`.
 
 ## 13. First-time deployment (reference)
 
@@ -183,6 +186,6 @@ For standing up a fresh production environment from scratch — e.g., new server
 6. `pnpm install --frozen-lockfile && npx prisma migrate deploy && npx prisma generate && pnpm build`
 7. Create admin user via GoTrue admin API (§8), sync to `public.users`, then `pnpm seed`
 8. `PM2_HOME=/mnt/encrypted/gynat/pm2 pm2 start pnpm --name gynat --cwd /mnt/encrypted/gynat/app -- start`, then `pm2 save` and `pm2 startup systemd -u root --hp /root --service-name pm2-gynat`
-9. nginx vhost + Let's Encrypt cert (DNS-01 with Cloudflare token)
+9. nginx vhost (with `client_max_body_size 9m;`, see §12) + Let's Encrypt cert (DNS-01 with Cloudflare token)
 10. Set Cloudflare SSL mode to **Full (strict)**, enable **Always Use HTTPS**
 11. Add UFW rule for docker→host:4000: `ufw allow from 172.16.0.0/12 to any port 4000 proto tcp`
