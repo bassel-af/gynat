@@ -15,6 +15,7 @@ import {
   SOURCE_ENTRY_WITH_FILES_SELECT,
   NO_STORE_HEADERS,
   sourceEntryDto,
+  visibleIndividualId,
   decryptEntryText,
   viewerFor,
   isWorkspaceAdmin,
@@ -128,7 +129,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   const page: SourceListItem[] = inTab.slice(cursor, cursor + limit).map(({ row, text }) => {
     const people = namedPeopleFromLinks(row, row.links, key, viewer, { limit: LIST_NAMES_CAP });
     return {
-      ...sourceEntryDto(row, text, sourceFileDtos(row.files, key)),
+      ...sourceEntryDto(row, text, sourceFileDtos(row.files, key), visibleIndividualId(row, viewer)),
       people,
       peopleCount: linkCount(row),
       fileCount: row.files?.length ?? 0,

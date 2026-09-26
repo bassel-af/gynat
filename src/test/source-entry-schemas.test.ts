@@ -197,14 +197,33 @@ describe('text-or-files (step 5)', () => {
   test('the DTO individualId is the first linked person unless the route names one', () => {
     const row = {
       id: UUID,
-      visibility: 'admins' as const,
+      visibility: 'members' as const,
       createdAt: new Date('2026-01-01T00:00:00Z'),
       updatedAt: new Date('2026-01-01T00:00:00Z'),
-      links: [{ individualId: 'P1' }, { individualId: 'P2' }],
+      links: [
+        { individualId: 'P1', individual: { isPrivate: false } },
+        { individualId: 'P2', individual: { isPrivate: false } },
+      ],
     };
     expect(sourceEntryDto(row, 'x').individualId).toBe('P1');
     expect(sourceEntryDto(row, 'x', [], 'P2').individualId).toBe('P2');
     expect(sourceEntryDto({ ...row, links: [] }, 'x').individualId).toBeNull();
+  });
+
+  test('by default the DTO individualId skips a private (or unknown) first link — fail-closed', () => {
+    const row = {
+      id: UUID,
+      visibility: 'members' as const,
+      createdAt: new Date('2026-01-01T00:00:00Z'),
+      updatedAt: new Date('2026-01-01T00:00:00Z'),
+      links: [
+        { individualId: 'PRIV', individual: { isPrivate: true } },
+        { individualId: 'GONE', individual: null },
+        { individualId: 'P1', individual: { isPrivate: false } },
+      ],
+    };
+    expect(sourceEntryDto(row, 'x').individualId).toBe('P1');
+    expect(sourceEntryDto({ ...row, links: row.links.slice(0, 2) }, 'x').individualId).toBeNull();
   });
 
   test('snapshotSourceEntry adds fileCount only when given', () => {

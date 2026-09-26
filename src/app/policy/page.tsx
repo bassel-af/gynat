@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { PublicNav } from '@/components/heritage/PublicNav';
 import styles from './policy.module.css';
+import { safeJsonLd } from '@/lib/utils/safe-json-ld';
 
 export const metadata: Metadata = {
   title: 'السياسات والشروط',
@@ -36,7 +37,7 @@ export default function PolicyPage() {
     <div className={styles.container}>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbSchema) }}
       />
       <PublicNav currentPage="policy" />
       <div className={styles.content}>

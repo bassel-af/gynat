@@ -220,7 +220,7 @@ function entryJoined(e: Row): Row {
     links: links
       .filter((l) => l.sourceId === e.id)
       .map((l) => ({ ...l, individual: individuals.find((i) => i.id === l.individualId) ?? null })),
-    files: own.map(fileMeta),
+    files: own.map((f) => ({ ...fileMeta(f), createdById: f.createdById })),
     _count: { files: own.length },
   };
 }
@@ -877,6 +877,19 @@ describe('deleting a file', () => {
   test('an editor may delete a file on an admins-level entry they wrote', async () => {
     as(EDITOR_USER);
     expect((await removeFile(E_EDITOR_OWN, F_EDITOR_OWN)).status).toBe(200);
+  });
+
+  test('once an admin added a file to it, the writer can no longer delete files of their hidden entry', async () => {
+    const F_ADMIN_ON_OWN = 'ffffffff-0000-4000-8000-0000000000ee';
+    files.push({
+      id: F_ADMIN_ON_OWN, entryId: E_EDITOR_OWN, treeId: MAIN, mimeType: 'image/jpeg', sizeBytes: JPEG_BYTES.length,
+      fileName: enc('وثيقة.jpg'), createdById: 'u-admin', createdAt: new Date(),
+    });
+    fileData.push({ id: `d-${F_ADMIN_ON_OWN}`, fileId: F_ADMIN_ON_OWN, data: encryptBytes(JPEG_BYTES, KEY) });
+    as(EDITOR_USER);
+    expect((await removeFile(E_EDITOR_OWN, F_ADMIN_ON_OWN)).status).toBe(404);
+    expect((await removeFile(E_EDITOR_OWN, F_EDITOR_OWN)).status).toBe(404);
+    expect(fileRow(F_ADMIN_ON_OWN)).toBeDefined();
   });
 
   test('the tree-wide entry\'s files: admin only', async () => {

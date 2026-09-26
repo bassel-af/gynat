@@ -12,6 +12,7 @@ import { buildPersonJsonLd } from '@/lib/tree/person-jsonld';
 import { PRIVATE_PERSON_PLACEHOLDER } from '@/lib/tree/mapper';
 import PublicPersonView from './PublicPersonView';
 import styles from './page.module.css';
+import { safeJsonLd } from '@/lib/utils/safe-json-ld';
 
 // Dynamic SSR per request — no generateStaticParams, no build-time per-person work.
 export const dynamic = 'force-dynamic';
@@ -166,13 +167,13 @@ export default async function PublicPersonPage({ params }: PageParams) {
       {pageJsonLd && (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(pageJsonLd) }}
+          dangerouslySetInnerHTML={{ __html: safeJsonLd(pageJsonLd) }}
         />
       )}
       {jsonLd && (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }}
         />
       )}
       {/*

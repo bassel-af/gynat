@@ -73,6 +73,7 @@ const S_ORPHAN = 'eeeeeeee-0000-4000-8000-000000000005';
 const S_EXTRA = 'eeeeeeee-0000-4000-8000-000000000006';
 const S_FOREIGN = 'eeeeeeee-0000-4000-8000-000000000007';
 const S_MINE = 'eeeeeeee-0000-4000-8000-000000000008';
+const S_PRIV_FIRST = 'eeeeeeee-0000-4000-8000-000000000009';
 const S_ABSENT = 'eeeeeeee-0000-4000-8000-0000000fffff';
 
 const ADMIN_USER = { id: 'u-admin', email: 'a@x', user_metadata: {} };
@@ -605,6 +606,13 @@ describe('GET sources/[entryId] (preview)', () => {
     expect(JSON.stringify(data)).not.toContain(PRIV);
   });
 
+  test('editor: the DTO person is never a private first link', async () => {
+    entries.push(source(S_PRIV_FIRST, MAIN, 'members', 'أوله خاص', [PRIV, A]));
+    const { data } = await (await preview(EDITOR_USER, S_PRIV_FIRST)).json();
+    expect(data.individualId).toBe(A);
+    expect(JSON.stringify(data)).not.toContain(PRIV);
+  });
+
   test('admin: every person', async () => {
     const { data } = await (await preview(ADMIN_USER, S_SHARED)).json();
     expect(data.peopleCount).toBe(3);
@@ -642,6 +650,15 @@ describe('PATCH sources/[entryId] — people', () => {
     expect(linkedIds(S_SHARED)).toEqual([A, B, C, PRIV].sort());
     const { data } = await res.json();
     expect(data.peopleCount).toBe(3); // A, C, B — never PRIV for an editor
+    expect(JSON.stringify(data)).not.toContain(PRIV);
+  });
+
+  test('the answer to an editor never names a private first link as the DTO person', async () => {
+    entries.push(source(S_PRIV_FIRST, MAIN, 'members', 'أوله خاص', [PRIV, A]));
+    const res = await patch(EDITOR_USER, S_PRIV_FIRST, { text: 'نص جديد' });
+    expect(res.status).toBe(200);
+    const { data } = await res.json();
+    expect(data.individualId).toBe(A);
     expect(JSON.stringify(data)).not.toContain(PRIV);
   });
 

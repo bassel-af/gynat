@@ -9,6 +9,7 @@ import {
 } from '@/lib/collections/public-serve';
 import PublicCollectionPageClient from './PublicCollectionPageClient';
 import styles from './page.module.css';
+import { safeJsonLd } from '@/lib/utils/safe-json-ld';
 
 // Dynamic SSR per request — no generateStaticParams, no build-time per-slug work.
 export const dynamic = 'force-dynamic';
@@ -104,7 +105,7 @@ export default async function PublicCollectionPage({ params }: PageParams) {
       {jsonLd && (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }}
         />
       )}
       {/*

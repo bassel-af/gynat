@@ -9,11 +9,13 @@ import {
   SOURCE_ENTRY_WITH_FILES_SELECT,
   NO_STORE_HEADERS,
   sourceEntryDto,
+  visibleIndividualId,
   decryptEntryText,
   sourceNotFound,
   isUuid,
   viewerFor,
   isWorkspaceAdmin,
+  creatorMayDeleteHidden,
   adminOnlyVisibility,
   resolveSourceTreeOr404,
   type SourceEntryRow,
@@ -56,9 +58,23 @@ import {
 
 type RouteParams = { params: Promise<{ id: string; entryId: string }> };
 
-type Row = Omit<SourceEntryRow, 'links'> & { links: NamedLinkRow[] };
+type Row = Omit<SourceEntryRow, 'links' | 'files'> & {
+  links: (NamedLinkRow & { createdById: string | null })[];
+  files?: (NonNullable<SourceEntryRow['files']>[number] & { createdById: string | null })[];
+};
 
-const WITH_NAMES_SELECT = { ...SOURCE_ENTRY_WITH_FILES_SELECT, links: SOURCE_LINKS_WITH_NAMES_SELECT };
+/** Names for the people, plus link/file authors for the creator delete bypass. */
+const WITH_NAMES_SELECT = {
+  ...SOURCE_ENTRY_WITH_FILES_SELECT,
+  links: {
+    ...SOURCE_LINKS_WITH_NAMES_SELECT,
+    select: { ...SOURCE_LINKS_WITH_NAMES_SELECT.select, createdById: true },
+  },
+  files: {
+    ...SOURCE_ENTRY_WITH_FILES_SELECT.files,
+    select: { ...SOURCE_ENTRY_WITH_FILES_SELECT.files.select, createdById: true },
+  },
+};
 
 /** A source of the resolved tree (with its links and files), or null. */
 async function loadSource(treeId: string, entryId: string): Promise<Row | null> {
@@ -76,7 +92,7 @@ function visibleTo(entry: Row, viewer: SourceViewer): boolean {
 /** A source as a viewer sees it: its visible people and their count. */
 function withPeople(row: Row, text: string | null, key: Buffer, viewer: SourceViewer): SourceWithPeopleDto {
   return {
-    ...sourceEntryDto(row, text, sourceFileDtos(row.files, key)),
+    ...sourceEntryDto(row, text, sourceFileDtos(row.files, key), visibleIndividualId(row, viewer)),
     people: namedPeopleFromLinks(row, row.links, key, viewer, { limit: MAX_LINKS_PER_SOURCE }),
     peopleCount: visibleCount(row, row.links, viewer),
   };
@@ -321,10 +337,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
 // DELETE /api/workspaces/[id]/tree/sources/[entryId] — optional `{ treeId }`.
 //
-// Allowed when the editor can see the source, OR wrote it: a non-admin
-// editor's own source sits at «المشرفون فقط» (the only level they may set),
-// which they cannot see — without this, undoing their own create would always
-// fail. Deleting reveals nothing they did not already write.
+// Allowed when the editor can see the source, OR wrote it and it is still
+// untouched by anyone else (`creatorMayDeleteHidden`): a non-admin editor's
+// own source sits at «المشرفون فقط» (the only level they may set), which they
+// cannot see — without this, undoing their own create would always fail.
+// Once an admin took it over (linked someone / a private person, added a
+// file) the writer can no longer delete it.
 //
 // An admin deletes the source, its links and files (204). A non-admin whose
 // source is also linked to people hidden from them (private) removes only
@@ -350,7 +368,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   if (
     !existing ||
     existing.isTreeWide ||
-    (!visibleTo(existing, viewer) && existing.createdById !== result.user.id)
+    (!visibleTo(existing, viewer) && !creatorMayDeleteHidden(existing, result.user.id))
   ) {
     return sourceNotFound();
   }

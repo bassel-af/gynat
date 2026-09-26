@@ -9,9 +9,12 @@
  *   `.rotate()` applies the EXIF orientation, and no `withMetadata()` means
  *   EXIF/GPS/ICC/XMP never survive. `limitInputPixels` refuses pixel bombs.
  * - PDFs are stored as-is but refused when they carry active content
- *   (scripts, auto-actions, launchers, embedded files), including inside
- *   Flate-compressed streams and behind `#xx` name escapes. An encrypted PDF
- *   cannot be inspected, so it is refused too.
+ *   (scripts, auto-actions, launchers, links/remote actions, forms, embedded
+ *   files, rich media), including inside Flate-compressed streams and behind
+ *   `#xx` name escapes. A PDF the scan cannot fully inspect is refused too:
+ *   an encrypted one, or one with any stream filtered by anything other than
+ *   a single /FlateDecode (hex/ASCII85/LZW, chains, indirect filter refs).
+ *   Image codecs (DCT/JPX/CCITT/JBIG2 — scans) pass ONLY on image XObjects.
  * - 8 MB cap on the stored bytes (matches the DB CHECK).
  */
 import { inflateSync } from 'node:zlib';
@@ -86,7 +89,59 @@ export function detectSourceFileType(buf: Buffer): SourceFileMime | null {
 
 /** A banned name, whole — `/AA` must not match `/AAPL`. */
 const ACTIVE_NAME =
-  /\/(?:JavaScript|JS|OpenAction|Launch|EmbeddedFile|AA|Encrypt)(?=[\s()<>[\]{}/%]|$)/;
+  /\/(?:JavaScript|JS|OpenAction|Launch|EmbeddedFile|AA|Encrypt|URI|SubmitForm|GoToR|ImportData|RichMedia|XFA)(?=[\s()<>[\]{}/%]|$)/;
+
+/** Every `/Filter` value: a name, an array, or anything else (e.g. an indirect ref). */
+const FILTER_VALUE = /\/Filter(?=[\s()<>[\]{}/%])\s*(\/[^\s()<>[\]{}/%]*|\[[^\]]*\]?|[^\s])/g;
+const NAME_TOKEN = /\/[^\s()<>[\]{}/%]*/g;
+const OBJ_HEADER = /\d+\s+\d+\s+obj\b/g;
+const IMAGE_SUBTYPE = /\/Subtype\s*\/Image(?=[\s()<>[\]{}/%]|$)/;
+const OBJ_STREAM = /\/Type\s*\/ObjStm(?=[\s()<>[\]{}/%]|$)/;
+
+/**
+ * Image-only codecs: their output is pixels, never parsed as PDF syntax. Allowed
+ * ONLY on an image XObject (scans are DCT/JPX/CCITT/JBIG2 images).
+ */
+const IMAGE_CODECS = new Set(['/DCTDecode', '/JPXDecode', '/CCITTFaxDecode', '/JBIG2Decode']);
+
+/** The dictionary text around a `/Filter` at `at`: from its object header to `stream`/`endobj`. */
+function enclosingObject(text: string, at: number): string {
+  let start = 0;
+  OBJ_HEADER.lastIndex = 0;
+  for (let m = OBJ_HEADER.exec(text); m && m.index < at; m = OBJ_HEADER.exec(text)) start = m.index;
+  const ends = [text.indexOf('stream', at), text.indexOf('endobj', at)].filter((i) => i >= 0);
+  return text.slice(start, ends.length ? Math.min(...ends) : text.length);
+}
+
+/**
+ * True when some stream uses a filter the scan cannot see through. Passes:
+ * no filter, exactly ONE /FlateDecode (bare or a one-item array), or — on an
+ * image XObject (`/Subtype /Image`, never an object stream) only — one image
+ * codec, alone or after a single /FlateDecode.
+ */
+function hasUninspectableFilter(text: string): boolean {
+  for (const m of text.matchAll(FILTER_VALUE)) {
+    const value = m[1];
+    let names: string[];
+    if (value.startsWith('/')) names = [value];
+    else if (value.startsWith('[') && value.endsWith(']')) {
+      const inner = value.slice(1, -1);
+      names = inner.match(NAME_TOKEN) ?? [];
+      if (inner.replace(NAME_TOKEN, '').trim() !== '') return true; // non-names in the array
+    } else return true; // indirect reference or anything else
+
+    if (names.length === 0 || (names.length === 1 && names[0] === '/FlateDecode')) continue;
+
+    const codec = names[names.length - 1];
+    const prefixOk = names.length === 1 || (names.length === 2 && names[0] === '/FlateDecode');
+    if (prefixOk && IMAGE_CODECS.has(codec)) {
+      const dict = enclosingObject(text, m.index!);
+      if (IMAGE_SUBTYPE.test(dict) && !OBJ_STREAM.test(dict)) continue;
+    }
+    return true;
+  }
+  return false;
+}
 
 /** Cap on bytes inflated while inspecting one PDF (zip-bomb guard). */
 const MAX_INFLATED_BYTES = 64 * 1024 * 1024;
@@ -107,6 +162,7 @@ function textHasActiveName(text: string): boolean {
 export function pdfHasActiveContent(buf: Buffer): boolean {
   const raw = buf.toString('latin1');
   if (textHasActiveName(raw)) return true;
+  if (hasUninspectableFilter(decodeNameEscapes(raw))) return true;
 
   let inflatedTotal = 0;
   const streamRe = /stream\r?\n/g;

@@ -8,6 +8,7 @@ import {
 } from '@/lib/tree/public-serve';
 import PublicTreePageClient from './PublicTreePageClient';
 import styles from './page.module.css';
+import { safeJsonLd } from '@/lib/utils/safe-json-ld';
 
 // Dynamic SSR per request — no generateStaticParams, no build-time per-tree work.
 export const dynamic = 'force-dynamic';
@@ -94,7 +95,7 @@ export default async function PublicFamilyTreePage({ params }: PageParams) {
       {jsonLd && (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }}
         />
       )}
       {/*

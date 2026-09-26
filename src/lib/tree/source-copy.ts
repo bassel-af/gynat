@@ -10,7 +10,9 @@
  *   linked to nobody; links to every landed person; ciphertext copied as-is
  *   (one key).
  * - `cross` (a copy into another family's workspace): only level-3
- *   («public») sources; only links to landed people who are NOT private; a
+ *   («public») sources; only links to landed people the public tree SHOWS
+ *   (not private AND not presumed living — `isLinkedPersonShown`, the same
+ *   rule as the public serve; birth date read with the SOURCE key); a
  *   source left with no such link is not copied (no orphans in another
  *   family); text, file names and bytes re-encrypted under the target key;
  *   no user id of the source family is carried.
@@ -24,6 +26,7 @@
 import crypto from 'crypto';
 import type { Prisma } from '../../../generated/prisma/client';
 import { encryptBytes, decryptBytes } from '@/lib/crypto/workspace-encryption';
+import { isLinkedPersonShown } from '@/lib/tree/source-link-shown';
 
 export type SourceCopyMode =
   | { kind: 'same' }
@@ -83,7 +86,7 @@ export async function copySources(
           individualId: true,
           createdById: true,
           createdAt: true,
-          individual: { select: { isPrivate: true } },
+          individual: { select: { isPrivate: true, isDeceased: true, birthDate: true } },
         },
       },
       files: {
@@ -93,12 +96,13 @@ export async function copySources(
     },
   });
 
+  const now = new Date();
   const planned = rows
     .map((row) => ({
       row,
       links: row.links.filter(
-        // A missing person row counts as private (fail-closed).
-        (l) => idMap.has(l.individualId) && (!cross || l.individual?.isPrivate === false),
+        // A missing person row counts as not shown (fail-closed).
+        (l) => idMap.has(l.individualId) && (!cross || isLinkedPersonShown(l.individual, mode.sourceKey, now)),
       ),
     }))
     .filter(({ row, links }) => row.isTreeWide || !cross || links.length > 0);

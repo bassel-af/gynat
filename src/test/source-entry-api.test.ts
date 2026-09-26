@@ -601,6 +601,18 @@ describe('PATCH / DELETE sources/[entryId]', () => {
     expect((await del(EDITOR_USER, E_MINE_ADMINS)).status).toBe(204);
   });
 
+  test('once an admin linked another person to it, the writer can no longer delete their hidden entry', async () => {
+    links.push({ sourceId: E_MINE_ADMINS, individualId: PERSON, treeId: MAIN, createdById: 'u-admin', createdAt: new Date() });
+    expect((await del(EDITOR_USER, E_MINE_ADMINS)).status).toBe(404);
+    expect(entries.some((e) => e.id === E_MINE_ADMINS)).toBe(true);
+  });
+
+  test('once it is linked to a private person, the writer can no longer delete their hidden entry', async () => {
+    links.push({ sourceId: E_MINE_ADMINS, individualId: PRIV, treeId: MAIN, createdById: 'u-editor', createdAt: new Date() });
+    expect((await del(EDITOR_USER, E_MINE_ADMINS)).status).toBe(404);
+    expect(entries.some((e) => e.id === E_MINE_ADMINS)).toBe(true);
+  });
+
   test('another workspace\'s entry is a 404 and untouched', async () => {
     expect((await del(ADMIN_USER, E_FOREIGN)).status).toBe(404);
     expect(entries.some((e) => e.id === E_FOREIGN)).toBe(true);

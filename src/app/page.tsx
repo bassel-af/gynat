@@ -2,6 +2,7 @@ import { FigureCluster } from '@/components/heritage/FigureCluster';
 import LandingRedirector from './LandingRedirector';
 import { SITE_CONTACT_EMAIL } from '@/lib/site';
 import styles from './page.module.css';
+import { safeJsonLd } from '@/lib/utils/safe-json-ld';
 
 const faqItems = [
   {
@@ -328,12 +329,12 @@ export default function Home() {
       <script
         id="faq-jsonld"
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(faqSchema) }}
       />
       <script
         id="webapplication-jsonld"
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(webApplicationSchema) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(webApplicationSchema) }}
       />
     </main>
   );

@@ -4,6 +4,7 @@ import Script from 'next/script';
 import { GlobalProviders } from './global-providers';
 import { SITE_CONTACT_EMAIL } from '@/lib/site';
 import './globals.css';
+import { safeJsonLd } from '@/lib/utils/safe-json-ld';
 
 const notoSansArabic = Noto_Sans_Arabic({
   subsets: ['arabic'],
@@ -129,7 +130,7 @@ export default function RootLayout({
       <body>
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+          dangerouslySetInnerHTML={{ __html: safeJsonLd(organizationSchema) }}
         />
         <GlobalProviders>
           {children}

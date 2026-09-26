@@ -140,7 +140,20 @@ describe('PDF active content', () => {
     expect(out.bytes.equals(input)).toBe(true);
   });
 
-  test.each(['/JavaScript', '/JS', '/OpenAction', '/Launch', '/EmbeddedFile', '/AA'])(
+  test.each([
+    '/JavaScript',
+    '/JS',
+    '/OpenAction',
+    '/Launch',
+    '/EmbeddedFile',
+    '/AA',
+    '/URI',
+    '/SubmitForm',
+    '/GoToR',
+    '/ImportData',
+    '/RichMedia',
+    '/XFA',
+  ])(
     'refuses a PDF containing %s',
     async (token) => {
       const err = await rejects(pdf(`1 0 obj << ${token} (x) >> endobj`));
@@ -165,6 +178,82 @@ describe('PDF active content', () => {
     ]);
     expect(pdfHasActiveContent(body)).toBe(true);
   });
+
+  const streamPdf = (dict: string, data = 'q Q') =>
+    pdf(`4 0 obj << ${dict} /Length ${data.length} >>\nstream\n${data}\nendstream\nendobj`);
+
+  test.each([
+    '/Filter /ASCIIHexDecode',
+    '/Filter /ASCII85Decode',
+    '/Filter /LZWDecode',
+    '/Filter /RunLengthDecode',
+    '/Filter /DCTDecode',
+    '/Filter [/ASCII85Decode /FlateDecode]',
+    '/Filter [/FlateDecode /FlateDecode]',
+    '/Filter 7 0 R',
+    '/Filter /ASCIIHex#44ecode',
+  ])('refuses a PDF with a stream it cannot inspect (%s)', (dict) => {
+    expect(pdfHasActiveContent(streamPdf(dict))).toBe(true);
+  });
+
+  /** A scan-like PDF: one page drawing one image XObject with the given filter. */
+  async function scannedPdf(filter: string, flate = false): Promise<Buffer> {
+    const jpeg = await sharp({ create: { width: 8, height: 8, channels: 3, background: '#888' } }).jpeg().toBuffer();
+    const data = flate ? deflateSync(jpeg) : jpeg;
+    const content = 'q 8 0 0 8 0 0 cm /Im1 Do Q';
+    return Buffer.concat([
+      Buffer.from(
+        '%PDF-1.7\n1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n' +
+          '2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj\n' +
+          '3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 8 8] /Resources << /XObject << /Im1 5 0 R >> >> /Contents 4 0 R >> endobj\n' +
+          `4 0 obj << /Length ${content.length} >>\nstream\n${content}\nendstream\nendobj\n` +
+          `5 0 obj << /Type /XObject /Subtype /Image /Width 8 /Height 8 /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter ${filter} /Length ${data.length} >>\nstream\n`,
+        'latin1',
+      ),
+      data,
+      Buffer.from('\nendstream\nendobj\ntrailer << /Root 1 0 R >>\n%%EOF\n', 'latin1'),
+    ]);
+  }
+
+  test.each([
+    ['/DCTDecode', false],
+    ['[/DCTDecode]', false],
+    ['[/FlateDecode /DCTDecode]', true],
+  ] as const)('accepts a scanned PDF whose image XObject uses %s', async (filter, flate) => {
+    const input = await scannedPdf(filter, flate);
+    expect(pdfHasActiveContent(input)).toBe(false);
+    expect((await processSourceFile(input)).mimeType).toBe('application/pdf');
+  });
+
+  test.each(['/JPXDecode', '/CCITTFaxDecode', '/JBIG2Decode'])(
+    'accepts an image XObject filtered by %s',
+    (filter) => {
+      expect(pdfHasActiveContent(streamPdf(`/Type /XObject /Subtype /Image /Filter ${filter}`))).toBe(false);
+    },
+  );
+
+  test.each([
+    '/Type /ObjStm /N 1 /First 4 /Filter /DCTDecode',
+    '/Type /XObject /Subtype /Form /Filter /DCTDecode',
+    '/Filter [/FlateDecode /DCTDecode]',
+    '/Type /XObject /Subtype /Image /Filter /ASCIIHexDecode',
+    '/Type /XObject /Subtype /Image /Filter [/ASCII85Decode /DCTDecode]',
+    '/Type /XObject /Subtype /Image /Filter [/DCTDecode /FlateDecode]',
+  ])('refuses a non-image or non-image-codec stream (%s)', (dict) => {
+    expect(pdfHasActiveContent(streamPdf(dict))).toBe(true);
+  });
+
+  test('refuses a hex-encoded stream hiding /JavaScript', () => {
+    const hex = Buffer.from('<< /S /JavaScript >>', 'latin1').toString('hex') + '>';
+    expect(pdfHasActiveContent(streamPdf('/Filter /ASCIIHexDecode', hex))).toBe(true);
+  });
+
+  test.each(['', '/Filter /FlateDecode', '/Filter [/FlateDecode]', '/Filter[ /FlateDecode ]'])(
+    'accepts a stream with no filter or plain Flate (%s)',
+    (dict) => {
+      expect(pdfHasActiveContent(streamPdf(dict))).toBe(false);
+    },
+  );
 
   test('refuses an encrypted PDF (its streams cannot be inspected)', () => {
     expect(pdfHasActiveContent(pdf('trailer << /Encrypt 9 0 R >>'))).toBe(true);

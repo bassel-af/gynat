@@ -62,6 +62,10 @@ let links: LinkRow[];
 let files: FileRow[];
 let fileData: Map<string, Buffer>;
 let privateIds: Set<string>;
+/** Linked people NOT marked deceased (presumed living unless born 130+ years ago). */
+let livingIds: Set<string>;
+/** Plaintext birth dates, stored encrypted under the SOURCE key. */
+let birthDates: Map<string, string>;
 let quotaBytes: bigint;
 let usedBytes: number;
 let lockedWorkspaces: string[];
@@ -106,7 +110,16 @@ function makeTx() {
             ...e,
             links: links
               .filter((l) => l.sourceId === e.id)
-              .map((l) => ({ ...l, individual: { isPrivate: privateIds.has(l.individualId) } })),
+              .map((l) => ({
+                ...l,
+                individual: {
+                  isPrivate: privateIds.has(l.individualId),
+                  isDeceased: !livingIds.has(l.individualId),
+                  birthDate: birthDates.has(l.individualId)
+                    ? encryptField(birthDates.get(l.individualId)!, SOURCE_KEY)
+                    : null,
+                },
+              })),
             files: files.filter((f) => f.entryId === e.id),
           })),
       create: async ({ data }: { data: EntryRow }) => {
@@ -166,6 +179,8 @@ const ID_MAP = new Map([
   ['p2', 'n2'],
   ['p3', 'n3'],
   ['priv', 'n-priv'],
+  ['alive', 'n-alive'],
+  ['old', 'n-old'],
 ]);
 
 function crossInput(overrides: Partial<CopySourcesInput> = {}): CopySourcesInput {
@@ -195,6 +210,11 @@ beforeEach(() => {
   files = [];
   fileData = new Map();
   privateIds = new Set(['priv']);
+  livingIds = new Set(['alive', 'old']);
+  birthDates = new Map([
+    ['alive', '1 JAN 1990'],
+    ['old', '12 JAN 1850'],
+  ]);
   quotaBytes = BigInt(1_000_000);
   usedBytes = 0;
   lockedWorkspaces = [];
@@ -283,6 +303,46 @@ describe('copySources — links', () => {
     await copySources(makeTx() as never, crossInput());
 
     expect(copied()).toHaveLength(0);
+  });
+
+  test('a cross-family copy skips a source whose only landed person is presumed living', async () => {
+    addSource('s-living', { people: ['alive'] });
+
+    await copySources(makeTx() as never, crossInput());
+
+    expect(copied()).toHaveLength(0);
+  });
+
+  test('a cross-family copy carries the source of a deceased person the public tree shows', async () => {
+    addSource('s-deceased', { people: ['p1'] });
+
+    await copySources(makeTx() as never, crossInput());
+
+    expect(copiedLinks().map((l) => l.individualId)).toEqual(['n1']);
+  });
+
+  test('a cross-family copy treats someone born 130+ years ago as shown (birth date read with the source key)', async () => {
+    addSource('s-old', { people: ['old'] });
+
+    await copySources(makeTx() as never, crossInput());
+
+    expect(copiedLinks().map((l) => l.individualId)).toEqual(['n-old']);
+  });
+
+  test('a cross-family copy of a mixed source keeps only the links of shown people', async () => {
+    addSource('s-mixed', { people: ['p1', 'alive', 'priv', 'old'] });
+
+    await copySources(makeTx() as never, crossInput());
+
+    expect(copiedLinks().map((l) => l.individualId).sort()).toEqual(['n-old', 'n1']);
+  });
+
+  test('a same-workspace copy keeps the link to a living person', async () => {
+    addSource('s-book', { visibility: 'members', people: ['alive'] });
+
+    await copySources(makeTx() as never, sameInput());
+
+    expect(copiedLinks().map((l) => l.individualId)).toEqual(['n-alive']);
   });
 
   test('a same-workspace copy keeps the link to a private person', async () => {

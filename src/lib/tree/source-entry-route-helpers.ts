@@ -14,10 +14,11 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { decryptSourceEntryRow } from '@/lib/tree/encryption';
-import type {
-  SourcePersonContext,
-  SourceViewer,
-  SourceVisibilityLevel,
+import {
+  canViewSourceEntry,
+  type SourcePersonContext,
+  type SourceViewer,
+  type SourceVisibilityLevel,
 } from '@/lib/tree/source-visibility';
 import {
   SOURCE_FILE_META_SELECT,
@@ -30,9 +31,11 @@ export interface SourceEntryDto {
   id: string;
   /**
    * The person this source was read through (person routes), else its first
-   * linked person; null for the tree-wide source and for a source linked to
-   * nobody. Kept for today's one-person clients until the shared-source DTOs
-   * (rework R2) replace it.
+   * linked person THE VIEWER MAY SEE IT ON (`visibleIndividualId`) — never a
+   * private person to a non-admin; null for the tree-wide source, a source
+   * linked to nobody, or one with no link that passes the viewer's gate. Kept
+   * for today's one-person clients until the shared-source DTOs (rework R2)
+   * replace it.
    */
   individualId: string | null;
   text: string | null;
@@ -115,6 +118,17 @@ export function primaryIndividualId(row: { links?: SourceLinkRow[] }): string | 
 }
 
 /**
+ * The first linked person this viewer may see the source on, or null. With no
+ * viewer it applies the non-admin gate (fail-closed: never a private person).
+ */
+export function visibleIndividualId(
+  row: { visibility: SourceVisibilityLevel; links?: SourceLinkRow[] },
+  viewer: SourceViewer = { kind: 'member' },
+): string | null {
+  return linkedPeople(row).find((p) => canViewSourceEntry(row, p, viewer))?.id ?? null;
+}
+
+/**
  * Build the response DTO from a row plus the PLAINTEXT text the caller already
  * holds. The row's own `text` is a `Bytes` column and is deliberately not read.
  */
@@ -122,7 +136,7 @@ export function sourceEntryDto(
   row: Pick<SourceEntryRow, 'id' | 'visibility' | 'createdAt' | 'updatedAt' | 'links'>,
   text: string | null,
   files: SourceFileDto[] = [],
-  individualId: string | null = primaryIndividualId(row),
+  individualId: string | null = visibleIndividualId(row),
 ): SourceEntryDto {
   return {
     id: row.id,
@@ -182,6 +196,36 @@ export function isWorkspaceAdmin(membership: { role: string }): boolean {
 /** admin = workspace_admin of the workspace that owns the tree; else member. */
 export function viewerFor(membership: { role: string }): SourceViewer {
   return { kind: isWorkspaceAdmin(membership) ? 'admin' : 'member' };
+}
+
+/**
+ * The creator bypass for DELETING a source (or one of its files) the viewer
+ * cannot see. A non-admin editor's own source sits at «المشرفون فقط», hidden
+ * from them; without a bypass undoing their own create would always fail.
+ *
+ * Rule (state-based — the undo header is client-controlled, so it cannot be
+ * the gate): the bypass holds ONLY while the source is still exactly as a
+ * non-admin could have left it — they wrote it, it is still at `admins`,
+ * every link was made by them to a person who is not private, and every file
+ * was uploaded by them. Once an admin takes it over (links someone, links a
+ * private person, adds a file), the writer can no longer delete it.
+ * Fail-closed: a missing author or person row blocks the bypass.
+ */
+export function creatorMayDeleteHidden(
+  entry: {
+    createdById: string | null;
+    visibility: SourceVisibilityLevel;
+    links?: readonly { createdById?: string | null; individual?: { isPrivate: boolean } | null }[];
+    files?: readonly { createdById?: string | null }[];
+  },
+  userId: string,
+): boolean {
+  if (entry.createdById !== userId || entry.visibility !== 'admins') return false;
+  const linksOk = (entry.links ?? []).every(
+    (l) => l.createdById === userId && l.individual?.isPrivate === false,
+  );
+  const filesOk = (entry.files ?? []).every((f) => f.createdById === userId);
+  return linksOk && filesOk;
 }
 
 export const ADMIN_ONLY_VISIBILITY_MESSAGE = 'تغيير من يرى المصدر متاح للمشرفين فقط';

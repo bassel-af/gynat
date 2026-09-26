@@ -16,6 +16,7 @@ import {
   isUuid,
   viewerFor,
   isWorkspaceAdmin,
+  creatorMayDeleteHidden,
   linkedPeople,
   primaryIndividualId,
   SOURCE_LINKS_SELECT,
@@ -47,7 +48,9 @@ interface FileWithEntry {
     visibility: SourceVisibilityLevel;
     text: Uint8Array | Buffer | null;
     createdById: string | null;
-    links: SourceLinkRow[];
+    links: (SourceLinkRow & { createdById: string | null })[];
+    /** Authors only — for the creator delete bypass. */
+    files: { createdById: string | null }[];
   } | null;
 }
 
@@ -91,7 +94,8 @@ async function loadFile(
           visibility: true,
           text: true,
           createdById: true,
-          links: SOURCE_LINKS_SELECT,
+          links: { ...SOURCE_LINKS_SELECT, select: { ...SOURCE_LINKS_SELECT.select, createdById: true } },
+          files: { select: { createdById: true } },
         },
       },
     },
@@ -146,8 +150,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 // DELETE /api/workspaces/[id]/tree/sources/[entryId]/files/[fileId] — `{ treeId? }`.
 //
-// Tree editors, on an entry they can see or wrote (same rule as deleting the
-// entry); the tree-wide entry's files are admin only. Removing the last file
+// Tree editors, on an entry they can see, or wrote and nobody else touched
+// (`creatorMayDeleteHidden` — same rule as deleting the entry); the tree-wide entry's files are admin only. Removing the last file
 // of an entry without text deletes the entry too — an entry never ends with
 // neither. NOT undoable (files are never restored). The audit row holds
 // counts, the MIME type and the size only.
@@ -168,7 +172,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   const allowedToDelete =
     entry.isTreeWide
       ? isWorkspaceAdmin(result.membership)
-      : visibleTo(entry, result.membership) || entry.createdById === result.user.id;
+      : visibleTo(entry, result.membership) || creatorMayDeleteHidden(entry, result.user.id);
   if (!allowedToDelete) return fileNotFound();
 
   const key = await getWorkspaceKey(workspaceId);

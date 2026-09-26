@@ -3,9 +3,7 @@ import { prisma } from '@/lib/db';
 import { requireWorkspaceAdmin, isErrorResponse } from '@/lib/api/workspace-auth';
 import { NO_STORE_HEADERS, resolveSourceTreeOr404 } from '@/lib/tree/source-entry-route-helpers';
 import { getWorkspaceKey } from '@/lib/tree/encryption';
-import { decryptField } from '@/lib/crypto/workspace-encryption';
-import { isShownOnPublicTree } from '@/lib/tree/public-shown';
-import type { Individual } from '@/lib/gedcom/types';
+import { isLinkedPersonShown } from '@/lib/tree/source-link-shown';
 
 interface PublicSourceLinksRow {
   links: {
@@ -52,9 +50,7 @@ async function countPublicPeople(workspaceId: string, treeId: string): Promise<n
   const now = new Date();
   let shown = 0;
   for (const person of candidates.values()) {
-    const birth = person.birthDate ? decryptField(Buffer.from(person.birthDate), key) : '';
-    const ind = { isPrivate: person.isPrivate, isDeceased: person.isDeceased, birth } as Individual;
-    if (isShownOnPublicTree(ind, now)) shown += 1;
+    if (isLinkedPersonShown(person, key, now)) shown += 1;
   }
   return shown;
 }
