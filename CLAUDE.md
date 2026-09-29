@@ -11,7 +11,7 @@ The tree reads from the database via `GET /api/workspaces/[id]/tree`; static GED
 ## Where to look first
 
 - **Detailed per-file / per-route reference** (every lib function, hook, API route, component): `docs/code-reference.md`
-- **How each subsystem works today**: `docs/implementation.md` (§4.9 «قفزة نسب», §4.10 Sources, §5 Branch pointers, §5b Public tree, §6 Encryption, §7 Undo)
+- **How each subsystem works today**: `docs/implementation.md` (§4.9 «قفزة نسب», §4.10 Sources, §4.11 «اسم الشهرة», §5 Branch pointers, §5b Public tree, §6 Encryption, §7 Undo)
 - **Product definition** (vision, features, roadmap): `docs/prd.md`; Collections/public tree: `docs/prd-public-tree-collections.md`; admin dashboard: `docs/prd-admin-dashboard.md`
 - **Auth architecture decisions**: `docs/auth-provider-decisions.md`
 - **Encryption operator runbook**: `docs/encryption.md`
@@ -81,6 +81,13 @@ A claim "descendant P is من وَلَد ancestor family F" with collapsed gener
 - Sources NEVER enter the tree payload, `GedcomData`, SSR, OG, sitemap or JSON-LD; `stripSourceKeys` is the backstop in all redactors. Public viewers never get people lists or counts.
 - Uploads are staged then attached; magic-byte allow-list, images re-encoded with `sharp` (metadata stripped), active/encrypted PDFs refused, 8 MB cap, workspace quota under row lock.
 - Cross-workspace copies carry only level-3 sources linked to publicly-shown people, re-encrypted under the target key.
+
+### «اسم الشهرة» (famous name) — `docs/implementation.md` §4.11
+
+`Individual.famousName` (encrypted) + `famousNameInNasab` (nullable: `null` ⇒ default rule — the famous name leads unless it contains the whole word ابن/بنت/ابنة). Gated by the workspace `enableFamousName` toggle (off by default). **Every read surface and write route goes through `src/lib/tree/feature-strip.ts`** (`stripDisabledNameFeatures` on reads, `dropDisabledNameInput` on writes — also covers kunya); flipping either toggle calls `touchWorkspaceTreeTimestamps`.
+- The chosen (lead) name leads everywhere via `display.ts` helpers (`getLeadName`, `getLeadDisplayName`, `getAlternateNameLine`, `getNasabToken` — genitive أبو→أبي). `getDisplayName` stays the REAL name on purpose.
+- Every people list renders names through `PersonListName` and searches with `getPersonSearchText` / `withOtherNames` — no per-list variants.
+- GEDCOM: famous name = second `NAME` with `TYPE aka` (+ `2 _NASAB Y|N` only when explicit), read only from gynat files; the parser keeps the FIRST `NAME` as primary.
 
 ### Encryption
 

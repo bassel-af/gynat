@@ -189,7 +189,7 @@ The family tree belongs to the workspace and is shared by all workspace members.
 
 - **Import**: workspace admin or `tree_editor` can upload a `.ged` file to populate the tree (empty-tree only in v1)
 - **Export**: any workspace member can export the full tree as a `.ged` file at any time (GEDCOM 5.5.1 and 7.0)
-- Islamic extensions supported on both sides: `@#DHIJRI@` calendar escape, MARC/MARR/DIV, `_UMM_WALAD`, `_RADA_*`, `_KUNYA`, and the «قفزة نسب» ancestry jump (standard `ASSO`/`RELA ancestor` or `ROLE _ANCESTOR` + custom `_ANC_FAM`, `_GAP_MIN`/`_GAP_MAX`; see §5.12)
+- Islamic extensions supported on both sides: `@#DHIJRI@` calendar escape, MARC/MARR/DIV, `_UMM_WALAD`, `_RADA_*`, `_KUNYA`, the famous name (second `NAME` `TYPE aka` + `_NASAB`; §5.14), and the «قفزة نسب» ancestry jump (standard `ASSO`/`RELA ancestor` or `ROLE _ANCESTOR` + custom `_ANC_FAM`, `_GAP_MIN`/`_GAP_MAX`; see §5.12)
 
 ### 5.5 Policy Page
 
@@ -282,6 +282,10 @@ The family tree belongs to the workspace and is shared by all workspace members.
   - Pre-existing bugs found by the Sources e2e (outside Sources): undoing a person delete loses their family link (`buildDeleteIndividualInverse`); deleting a workspace that is the source of a broken branch pointer fails on `branch_pointers_source_workspace_id_fkey`.
   - Owner to confirm copy the builders added: «إلغاء الربط»; «الأب: X» / «الأم: X» when only one parent is known; «ليس مصدرًا لأحد» on suggestions; «سيُزال عن هذا الشخص», «إزالة المصدر عن هذا الشخص», «تراجع عن إزالة المصدر», «تعذّر إزالة المصدر», «تعذّر إضافة المصدر»; the publish line «…ومصدر واحد (تظهر على شخص واحد) يظهر لهم أصلًا»; the admin tabs «الكل / مشترك / ليس مصدرًا لأحد»; ▾ on one-person rows.
 - **Later (v2)**: sources on marriages and individual facts, GEDCOM export/import of sources, `/islamic-gedcom` documentation, a «الأبناء والأحفاد» quick button, a page field.
+
+### 5.14 Famous name («اسم الشهرة»)
+
+**Status: DEPLOYED to production 2026-09-29 (commit `7115439`)** — migration `20260928120000_add_famous_name`, smoke 30/30. A person can carry a famous name (أبو طالب for عبدمناف) and a per-person choice of which name the nasab uses; the chosen name leads everywhere, the other shows as a grey «واسمه …» / «ويُعرف بـ…» line, and every list finds a person by either name. Per-workspace opt-in, off by default. How it works and follow-ups: `docs/implementation.md` §4.11.
 
 ---
 

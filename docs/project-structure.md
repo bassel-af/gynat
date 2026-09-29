@@ -192,6 +192,7 @@ The project is at Phase 5 (Branch Pointers) with Phases 1-5 complete.
 - `CenteredCardLayout/` - Centered card page layout
 - `Input/` - Form input component
 - `Modal/` - Modal dialog component
+- `PersonListName/` - Shared name block for every people list (lead name + grey other-name line, search highlight)
 - `PlaceComboBox/` - Place search combobox with autocomplete
 - `Sidebar/` - Sidebar with person detail panel (`PersonDetail.tsx`, `PersonDetail.module.css`)
 - `Spinner/` - Loading spinner
@@ -294,6 +295,7 @@ Note: `CalendarPreferenceContext` is defined inside `src/hooks/useCalendarPrefer
 **Purpose:** Database-backed tree operations and branch pointer logic
 - `queries.ts` - Database query helpers for tree CRUD
 - `mapper.ts` - DB-to-GedcomData mapping + privacy redaction
+- `feature-strip.ts` - The ONE strip of switched-off name features (kunya, «اسم الشهرة») on reads and writes
 - `schemas.ts` - Zod validation schemas for tree API
 - `seed-helpers.ts` - Helpers for seeding tree data from GEDCOM
 - `seed-place-mapping.ts` - GEDCOM place string to Arabic name + Place ID resolution
