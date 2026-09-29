@@ -1,7 +1,7 @@
 ---
 name: deployer
 description: "Deploy to production server (hz) via SSH - git pull and build."
-model: haiku
+model: sonnet
 color: green
 ---
 
