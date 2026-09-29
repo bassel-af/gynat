@@ -67,10 +67,10 @@ describe('MotherRibbon — lead names', () => {
     expect(screen.getByRole('link', { name: 'أبي طالب' })).toHaveAccessibleDescription('واسمه عبدمناف');
   });
 
-  it('shows the other name as a small caption under a famous-name father', () => {
+  it('captions each famous-name father with his «واسمه …» line', () => {
     const { container } = render(<MotherRibbon mother={motherWith(ownerFathers)} hrefFor={hrefFor} />);
     const captions = [...container.querySelectorAll('[aria-hidden="true"]')].map((n) => n.textContent).filter(Boolean);
-    expect(captions).toEqual(['عبدمناف', 'شيبة', 'عمرو']);
+    expect(captions).toEqual(['واسمه عبدمناف', 'واسمه شيبة', 'واسمه عمرو']);
   });
 
   it('links a famous-name mother by her lead name', () => {

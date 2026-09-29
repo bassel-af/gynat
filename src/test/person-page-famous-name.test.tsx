@@ -79,10 +79,10 @@ describe('NasabRibbon — famous names', () => {
     expect(screen.getByRole('link', { name: 'أبي طالب' })).toHaveAccessibleDescription('واسمه عبدمناف');
   });
 
-  it('shows a caption «عبدمناف» next to the أبي طالب link', () => {
+  it('shows a caption «واسمه عبدمناف» next to the أبي طالب link', () => {
     renderAli();
     const link = screen.getByRole('link', { name: 'أبي طالب' });
-    expect(within(link.parentElement!).getByText('عبدمناف', { selector: '[aria-hidden="true"]' })).toBeInTheDocument();
+    expect(within(link.parentElement!).getByText('واسمه عبدمناف', { selector: '[aria-hidden="true"]' })).toBeInTheDocument();
   });
 
   it('describes عبدالمطلب with «واسمه شيبة»', () => {
@@ -90,10 +90,10 @@ describe('NasabRibbon — famous names', () => {
     expect(screen.getByRole('link', { name: 'عبدالمطلب' })).toHaveAccessibleDescription('واسمه شيبة');
   });
 
-  it('shows a caption «شيبة» next to the عبدالمطلب link', () => {
+  it('shows a caption «واسمه شيبة» next to the عبدالمطلب link', () => {
     renderAli();
     const link = screen.getByRole('link', { name: 'عبدالمطلب' });
-    expect(within(link.parentElement!).getByText('شيبة', { selector: '[aria-hidden="true"]' })).toBeInTheDocument();
+    expect(within(link.parentElement!).getByText('واسمه شيبة', { selector: '[aria-hidden="true"]' })).toBeInTheDocument();
   });
 
   it('describes هاشم with «واسمه عمرو»', () => {
@@ -101,10 +101,10 @@ describe('NasabRibbon — famous names', () => {
     expect(screen.getByRole('link', { name: 'هاشم' })).toHaveAccessibleDescription('واسمه عمرو');
   });
 
-  it('shows a caption «عمرو» next to the هاشم link', () => {
+  it('shows a caption «واسمه عمرو» next to the هاشم link', () => {
     renderAli();
     const link = screen.getByRole('link', { name: 'هاشم' });
-    expect(within(link.parentElement!).getByText('عمرو', { selector: '[aria-hidden="true"]' })).toBeInTheDocument();
+    expect(within(link.parentElement!).getByText('واسمه عمرو', { selector: '[aria-hidden="true"]' })).toBeInTheDocument();
   });
 
   it('gives an ancestor without a famous name no description', () => {
@@ -118,6 +118,19 @@ describe('NasabRibbon — famous names', () => {
     const chain = [chip('at', 'عبدمناف', 'أبو طالب', { famousNameInNasab: false })];
     render(<NasabRibbon subject={subjectOf('علي')} chain={chain} hrefFor={hrefFor} />);
     expect(screen.getByRole('link', { name: 'عبدمناف' })).toHaveAccessibleDescription('ويُعرف بأبي طالب');
+  });
+
+  it('shows the ribbon captions for علي as «واسمه …» lines', () => {
+    const { container } = renderAli();
+    const captions = [...container.querySelectorAll('[aria-hidden="true"]')].map((n) => n.textContent).filter(Boolean);
+    expect(captions).toEqual(['واسمه عبدمناف', 'واسمه شيبة', 'واسمه عمرو']);
+  });
+
+  it('captions an ancestor whose real name leads with «ويُعرف ب…», matching its description', () => {
+    const chain = [chip('at', 'عبدمناف', 'أبو طالب', { famousNameInNasab: false })];
+    render(<NasabRibbon subject={subjectOf('علي')} chain={chain} hrefFor={hrefFor} />);
+    const link = screen.getByRole('link', { name: 'عبدمناف' });
+    expect(within(link.parentElement!).getByText('ويُعرف بأبي طالب', { selector: '[aria-hidden="true"]' })).toBeInTheDocument();
   });
 
   it('leads the subject with the famous name in the nominative', () => {

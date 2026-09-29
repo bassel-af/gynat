@@ -211,6 +211,11 @@ a.personLinkLead:hover {
   color: var(--heritage-text-faint);
   line-height: 1.2;
   margin-top: 2px;
+  /* «واسمه …» stays on one line; when it is wider than the word, the column
+     box widens to fit it (centered), so it pushes neighbours apart instead of
+     overlapping them. */
+  white-space: nowrap;
+  text-align: center;
 }
 
 /* The subject's other name, in grey under the ribbon («واسمه عبدمناف»). */
@@ -597,6 +602,8 @@ a.lineageNode:hover .lineageName { color: var(--heritage-gold-bright); }
   color: var(--heritage-text-faint);
   line-height: 1.2;
   margin-top: 1px;
+  white-space: nowrap; /* one line; the column widens to fit, centered */
+  text-align: center;
 }
 .motherPrivate {
   font-size: 12.5px;

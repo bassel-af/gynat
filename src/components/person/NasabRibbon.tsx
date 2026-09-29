@@ -6,7 +6,6 @@ import {
   getAlternateNameLine,
   getLeadName,
   getNasabToken,
-  getOtherName,
 } from '@/lib/gedcom/display';
 import { asNamedIndividual } from './personNames';
 import { PersonLink } from './PersonLink';
@@ -97,7 +96,8 @@ export function NasabRibbon({
 /**
  * One ancestor in the ribbon: a link by his lead name in the genitive
  * («أبي طالب»), and — when he has a famous name — a tiny muted caption of his
- * other name, with «واسمه …» / «ويُعرف ب…» as the link's description. A private
+ * other-name line («واسمه …» / «ويُعرف ب…»), which is also the link's
+ * description. A private
  * placeholder stays a bare «خاص» token (no caption, no description).
  */
 function AncestorName({
@@ -118,12 +118,11 @@ function AncestorName({
   if (!altLine) {
     return <PersonLink chip={{ ...anc, name: token }} hrefFor={hrefFor} />;
   }
-  const caption = getOtherName(person);
   return (
     <span className={styles.ribbonName}>
       <PersonLink chip={{ ...anc, name: token }} hrefFor={hrefFor} describedBy={descId} />
       <span className={styles.ribbonCaption} aria-hidden="true">
-        {caption}
+        {altLine}
       </span>
       <span id={descId} hidden>
         {altLine}

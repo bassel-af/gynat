@@ -8,7 +8,6 @@ import { useCalendarPreference } from '@/hooks/useCalendarPreference';
 import {
   getAlternateNameLine,
   getNasabToken,
-  getOtherName,
   isFamousNameLead,
 } from '@/lib/gedcom/display';
 import { JumpDivider } from './JumpDivider';
@@ -20,7 +19,8 @@ import styles from './person.module.css';
  * Small inline father link tuned for the green mother-ribbon, following the
  * hero NasabRibbon: the father's LEAD name in the genitive after بن/بنت
  * («أبي طالب»), and — when he has a famous name — a tiny muted caption of his
- * other name, with «واسمه …» / «ويُعرف ب…» as the link's description. A father
+ * other-name line («واسمه …» / «ويُعرف ب…»), which is also the link's
+ * description. A father
  * without a famous name keeps his display name. A private father token (the
  * projection emits it as a locked `{ private: true, name: 'خاص' }` placeholder)
  * renders as a non-clickable «خاص» — never an `<a>`.
@@ -53,7 +53,7 @@ function MotherName({
         {token}
       </Link>
       <span className={styles.motherCaption} aria-hidden="true">
-        {getOtherName(person)}
+        {altLine}
       </span>
       <span id={descId} hidden>
         {altLine}
