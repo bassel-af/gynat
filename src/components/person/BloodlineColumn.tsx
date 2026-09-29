@@ -8,6 +8,8 @@ import { useCalendarPreference } from '@/hooks/useCalendarPreference';
 import { MotherDisclosure } from './MotherDisclosure';
 import { JumpDivider } from './JumpDivider';
 import { chipYears } from './yearFormat';
+import { getLeadName } from '@/lib/gedcom/display';
+import { asNamedIndividual, chipNameLines } from './personNames';
 import styles from './person.module.css';
 
 type Variant = 'paternal' | 'maternal';
@@ -26,6 +28,7 @@ function LineageNode({
 }) {
   const { preference } = useCalendarPreference();
   const years = chipYears(chip, preference);
+  const names = chip.private ? null : chipNameLines(chip);
 
   const inner = (
     <>
@@ -34,8 +37,9 @@ function LineageNode({
       </span>
       <span className={styles.lineageText}>
         <span className={styles.lineageName}>
-          {chip.private ? <span className={styles.privateName}>خاص</span> : chip.name}
+          {names ? names.lead : <span className={styles.privateName}>خاص</span>}
         </span>
+        {names?.alt && <span className={styles.altNameLine}>{names.alt}</span>}
         {years && <span className={styles.lineageYears}>{years}</span>}
       </span>
       {badge && <span className={styles.lineageBadge}>{badge}</span>}
@@ -143,7 +147,7 @@ export function BloodlineColumn({
             <NodeFigure gender={subject.gender} />
           </span>
           <span className={styles.lineageText}>
-            <span className={styles.lineageName}>{subject.givenName}</span>
+            <span className={styles.lineageName}>{getLeadName(asNamedIndividual(subject))}</span>
             <span className={styles.lineageYears}>الشخص المعروض</span>
           </span>
         </div>

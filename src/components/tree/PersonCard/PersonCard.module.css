@@ -36,6 +36,19 @@
   letter-spacing: 0.005em;
 }
 
+/* The other name («واسمه شيبة») — muted single line, clipped when long. */
+.personAltName {
+  font-family: var(--heritage-font-body);
+  font-weight: 400;
+  font-size: var(--font-size-xs);
+  line-height: 1.35;
+  color: rgba(26, 31, 46, 0.68);
+  margin-bottom: var(--space-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* Kunya (الكنية) — same readable body face as the name; the gold ink is what
    marks it as a distinct fact. Deliberately NOT softened on the deceased
    card — the ink sits at 4.8:1 on that darker parchment, so any further fade

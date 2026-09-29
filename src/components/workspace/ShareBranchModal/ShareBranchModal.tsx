@@ -6,9 +6,22 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { apiFetch } from '@/lib/api/client';
 import type { GedcomData, Individual } from '@/lib/gedcom/types';
-import { getDisplayName, getDisplayNameWithNasab } from '@/lib/gedcom';
+import {
+  getAlternateNameLine,
+  getDisplayNameWithNasab,
+  getPersonSearchText,
+  DEFAULT_NASAB_DEPTH,
+} from '@/lib/gedcom/display';
+import { PersonListName } from '@/components/ui/PersonListName';
 import { matchesSearch, searchRelevance } from '@/lib/utils/search';
 import styles from './ShareBranchModal.module.css';
+
+interface SearchRow {
+  person: Individual;
+  name: string;
+  alternate: string | null;
+  searchText: string;
+}
 
 interface ShareBranchModalProps {
   isOpen: boolean;
@@ -41,24 +54,32 @@ export function ShareBranchModal({
   const [generatedToken, setGeneratedToken] = useState('');
   const [copied, setCopied] = useState(false);
 
+  // Every searchable person's row text, built once per tree (not per keystroke).
+  const searchable = useMemo<SearchRow[]>(() => {
+    if (!treeData || !isOpen) return [];
+    return Object.values(treeData.individuals)
+      .filter((person) => !person.isPrivate)
+      .map((person) => {
+        const name = getDisplayNameWithNasab(treeData, person, DEFAULT_NASAB_DEPTH);
+        return {
+          person,
+          name,
+          alternate: getAlternateNameLine(person),
+          searchText: getPersonSearchText(treeData, person, name),
+        };
+      });
+  }, [treeData, isOpen]);
+
   // Filter people by search
   const searchResults = useMemo(() => {
-    if (!treeData || !searchQuery.trim()) return [];
-    const results: Individual[] = [];
-    for (const person of Object.values(treeData.individuals)) {
-      if (person.isPrivate) continue;
-      const name = getDisplayName(person);
-      const searchText = person.kunya ? `${name} ${person.kunya}` : name;
-      if (matchesSearch(searchText, searchQuery)) {
-        results.push(person);
-      }
-    }
-    results.sort((a, b) =>
-      searchRelevance(getDisplayName(a), searchQuery) -
-      searchRelevance(getDisplayName(b), searchQuery),
-    );
-    return results.slice(0, 20);
-  }, [treeData, searchQuery]);
+    if (!searchQuery.trim()) return [];
+    return searchable
+      .filter((row) => matchesSearch(row.searchText, searchQuery))
+      .map((row) => ({ row, score: searchRelevance(row.searchText, searchQuery) }))
+      .sort((a, b) => a.score - b.score)
+      .slice(0, 20)
+      .map((r) => r.row);
+  }, [searchable, searchQuery]);
 
   const selectedPerson = selectedPersonId && treeData
     ? treeData.individuals[selectedPersonId]
@@ -195,7 +216,7 @@ export function ShareBranchModal({
           <span className={styles.label}>اختر الشخص الجذر</span>
           {selectedPerson ? (
             <div className={styles.selectedPerson}>
-              <span>{getDisplayNameWithNasab(treeData!, selectedPerson, 2)}</span>
+              <span>{getDisplayNameWithNasab(treeData!, selectedPerson, DEFAULT_NASAB_DEPTH)}</span>
               <button
                 type="button"
                 className={styles.selectedPersonClear}
@@ -216,7 +237,7 @@ export function ShareBranchModal({
               />
               {searchResults.length > 0 && (
                 <div className={styles.searchResults}>
-                  {searchResults.map((person) => (
+                  {searchResults.map(({ person, name, alternate }) => (
                     <button
                       key={person.id}
                       type="button"
@@ -226,7 +247,7 @@ export function ShareBranchModal({
                         setSearchQuery('');
                       }}
                     >
-                      {getDisplayNameWithNasab(treeData!, person, 2)}
+                      <PersonListName main={name} alternate={alternate} query={searchQuery} />
                     </button>
                   ))}
                 </div>

@@ -40,6 +40,7 @@ function record(overrides: Partial<PublicTreeRecord>): PublicTreeRecord {
     lastModifiedAt: new Date(),
     publicSlug: 'slug',
     enableKunya: true,
+    enableFamousName: false,
     hideBirthDateForFemale: false,
     hideBirthDateForMale: false,
     personPagesIndexable: false,
@@ -253,6 +254,21 @@ describe('public person page — title and description carry the person', () => 
     expect(String(meta.title)).not.toContain('محمد');
     expect(String(meta.description)).not.toContain('محمد');
     expect(String(meta.title)).toContain('خاص');
+  });
+
+  test('a famous-name father leads the title in the genitive («علي بن أبي طالب»)', async () => {
+    const individuals = {
+      ali: makeInd({ id: 'ali', name: 'علي', givenName: 'علي', familyAsChild: 'F1', publicDisplay: 'full' }),
+      at: makeInd({
+        id: 'at', name: 'عبدمناف', givenName: 'عبدمناف', famousName: 'أبو طالب',
+        kunya: 'أبو طالب', publicDisplay: 'full',
+      }),
+    };
+    const families = { F1: makeFam({ id: 'F1', husband: 'at', children: ['ali'] }) };
+    mockGetPublicTreeForRequest.mockResolvedValue(record({ nameAr: 'بني هاشم', enableFamousName: true }));
+    mockBuildPublicTreePayload.mockResolvedValue(payloadWith(individuals, families));
+    const meta = await generateMetadata(params('slug', 'ali'));
+    expect(meta.title).toBe('علي بن أبي طالب — شجرة عائلة بني هاشم');
   });
 
   test('canonical + openGraph.url point at /family/{slug}/person/{id}', async () => {

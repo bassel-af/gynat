@@ -1,8 +1,9 @@
 /**
  * Shared "create one individual" step, used by the individuals POST route and
  * by the «قفزة نسب» move-to-new-father route (inside its transaction).
- * Encrypts the sensitive fields, applies the kunya-feature strip and the
- * `isDeceased` default, and builds the matching `create individual` audit row
+ * Encrypts the sensitive fields, drops disabled name features (kunya /
+ * famous name), applies the `isDeceased` default, and builds the matching
+ * `create individual` audit row
  * (plaintext snapshot wrapped in an encrypted envelope). The row is RETURNED,
  * not written — each caller writes it via `writeTreeEditLog` where its own
  * flow wants it (the POST alongside the tree touch; the move route with its
@@ -18,6 +19,7 @@ import {
   type TreeEditLogEntry,
 } from '@/lib/tree/audit';
 import { encryptIndividualInput, encryptSnapshot } from '@/lib/tree/encryption';
+import { dropDisabledNameInput, type NameFeatureFlags } from '@/lib/tree/feature-strip';
 
 /** The individual-create body, minus the `treeId` routing field. */
 export type CreateIndividualFields = Omit<z.infer<typeof createIndividualSchema>, 'treeId'>;
@@ -27,19 +29,16 @@ export interface CreateIndividualArgs {
   userId: string;
   input: CreateIndividualFields;
   workspaceKey: Buffer;
-  /** The workspace's kunya feature toggle — off strips any submitted kunya. */
-  enableKunya: boolean;
+  /** The workspace's name-feature toggles — an off feature's fields are dropped. */
+  features: NameFeatureFlags;
   isUndo: boolean;
 }
 
 export async function createIndividual(
   db: Pick<Prisma.TransactionClient, 'individual'>,
-  { treeId, userId, input, workspaceKey, enableKunya, isUndo }: CreateIndividualArgs,
+  { treeId, userId, input, workspaceKey, features, isUndo }: CreateIndividualArgs,
 ) {
-  const data = { ...input };
-  if (!enableKunya) {
-    delete data.kunya;
-  }
+  const data = dropDisabledNameInput(input, features);
 
   const { isPrivate, isDeceased, ...fields } = data;
   const deceased = isDeceased ?? (fields.deathDate != null);

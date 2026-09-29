@@ -67,6 +67,17 @@
   letter-spacing: -0.005em;
 }
 
+/* The other name («واسمه شيبة» / «ويُعرف بأبي طالب») — a quiet grey line
+   directly under the lead name, above the gold kunya. */
+.heroAlternate {
+  display: block;
+  margin: 0 0 var(--space-3);
+  font-family: var(--heritage-font-body);
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--heritage-text-muted);
+}
+
 /* Kunya (الكنية) — same readable body face as the name (matches the tree
    card); the gold ink is what marks it as a distinct fact. */
 .heroKunya {

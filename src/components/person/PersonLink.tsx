@@ -34,8 +34,11 @@ export function PersonLink({
   kind = 'default',
   interactive = true,
   hrefFor,
+  describedBy,
 }: {
   chip: LinkableChip;
+  /** id of an element describing the link (the ribbon's «واسمه …» line). */
+  describedBy?: string;
   kind?: 'default' | 'lead';
   /** When false, render the styled name as a non-clickable span (the subject). */
   interactive?: boolean;
@@ -60,7 +63,7 @@ export function PersonLink({
   }
 
   return (
-    <Link href={hrefFor(chip.id)} className={className}>
+    <Link href={hrefFor(chip.id)} className={className} aria-describedby={describedBy}>
       {chip.name}
     </Link>
   );

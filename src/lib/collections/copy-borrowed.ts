@@ -17,7 +17,8 @@
 
 import { prisma } from '@/lib/db';
 import { getTreeByIdWithIncludes } from '@/lib/tree/queries';
-import { dbTreeToGedcomData } from '@/lib/tree/mapper';
+import { dbTreeToGedcomData, redactPrivateIndividuals } from '@/lib/tree/mapper';
+import { applyPublicRedaction } from '@/lib/tree/public-serve';
 import { getWorkspaceKey } from '@/lib/tree/encryption';
 import { extractPointedSubtree } from '@/lib/tree/branch-pointer-merge';
 import { persistDeepCopy } from '@/lib/tree/branch-pointer-deep-copy';
@@ -49,14 +50,25 @@ export async function copyBorrowedBranchIntoNewExtraTree(
 
   // Source key decrypts; target key re-encrypts. Resolve both BEFORE the tx so
   // the master-key unwrap stays off the DB lock (matches the pointer-copy route).
-  const [sourceTree, sourceKey, targetKey] = await Promise.all([
+  const [sourceTree, sourceKey, targetKey, sourceSettings] = await Promise.all([
     // Fetch the SPECIFIC published tree (main OR extra) by id, scoped to the
     // source workspace — copies the actual borrowed tree, not always the main.
     getTreeByIdWithIncludes(source.sourceWorkspaceId, source.sourceTreeId),
     getWorkspaceKey(source.sourceWorkspaceId),
     getWorkspaceKey(addingWorkspaceId),
+    // The source family's public-page settings (kunya, famous name,
+    // birth-date toggles).
+    prisma.workspace.findUnique({
+      where: { id: source.sourceWorkspaceId },
+      select: {
+        enableKunya: true,
+        enableFamousName: true,
+        hideBirthDateForFemale: true,
+        hideBirthDateForMale: true,
+      },
+    }),
   ]);
-  if (!sourceTree) {
+  if (!sourceTree || !sourceSettings) {
     throw new Error('source tree not available');
   }
 
@@ -74,7 +86,18 @@ export async function copyBorrowedBranchIntoNewExtraTree(
           includeGrafts: source.includeGrafts,
         });
 
-  const snapshot = prepareTreeSnapshot(toCopy);
+  // PRIVACY: the copy carries no more than the borrower could SEE. A private
+  // share code showed the branch through the member view (private people
+  // blanked); anything else is a public borrow and gets the exact public-page
+  // redaction (private blanked, living birth hidden, source settings) —
+  // fail-closed to the stricter pass. Private people stay as blanked
+  // placeholders so the structure and the id map are unchanged.
+  const visible: GedcomData =
+    source.type === 'private-token'
+      ? redactPrivateIndividuals(toCopy)
+      : applyPublicRedaction(toCopy, sourceSettings);
+
+  const snapshot = prepareTreeSnapshot(visible);
   const peopleCount = Object.keys(snapshot.individuals).length;
 
   const sourceRootId =

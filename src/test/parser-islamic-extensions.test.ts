@@ -472,3 +472,436 @@ describe('parseGedcom — _KUNYA tag', () => {
     expect(reparsed.individuals[indKey].kunya).toBe('أبو محمد')
   })
 })
+
+// ============================================================================
+// Famous name («اسم الشهرة») import — NAME TYPE aka from gynat files only
+// ============================================================================
+
+const GYNAT_HEAD = `0 HEAD
+1 SOUR Gynat
+2 VERS 1.0
+2 NAME Gynat
+1 GEDC
+2 VERS 5.5.1
+2 FORM LINEAGE-LINKED
+1 CHAR UTF-8`
+
+const FOREIGN_HEAD = `0 HEAD
+1 SOUR FTM
+2 VERS 24.0
+2 NAME Family Tree Maker
+1 GEDC
+2 VERS 5.5.1
+1 CHAR UTF-8`
+
+const OWNER_EXAMPLES_BODY = `0 @I1@ INDI
+1 NAME شيبة
+2 GIVN شيبة
+1 NAME عبدالمطلب
+2 TYPE aka
+1 SEX M
+0 @I2@ INDI
+1 NAME عمرو
+2 GIVN عمرو
+1 NAME هاشم
+2 TYPE aka
+1 SEX M
+0 @I3@ INDI
+1 NAME عبدمناف
+2 GIVN عبدمناف
+1 NAME أبو طالب
+2 TYPE aka
+1 _KUNYA أبو طالب
+1 SEX M
+0 TRLR`
+
+describe('parseGedcom — famous name (NAME TYPE aka) import', () => {
+  it('reads the aka NAME as famousName in a gynat file', () => {
+    const data = parseGedcom(`${GYNAT_HEAD}\n${OWNER_EXAMPLES_BODY}`)
+    expect([
+      data.individuals['@I1@'].famousName,
+      data.individuals['@I2@'].famousName,
+      data.individuals['@I3@'].famousName,
+    ]).toEqual(['عبدالمطلب', 'هاشم', 'أبو طالب'])
+  })
+
+  it('keeps the primary names intact in a gynat file with aka NAMEs', () => {
+    const data = parseGedcom(`${GYNAT_HEAD}\n${OWNER_EXAMPLES_BODY}`)
+    expect([
+      data.individuals['@I1@'].givenName,
+      data.individuals['@I2@'].givenName,
+      data.individuals['@I3@'].givenName,
+    ]).toEqual(['شيبة', 'عمرو', 'عبدمناف'])
+  })
+
+  it('keeps _KUNYA alongside the famous name when both are written', () => {
+    const data = parseGedcom(`${GYNAT_HEAD}\n${OWNER_EXAMPLES_BODY}`)
+    expect(data.individuals['@I3@'].kunya).toBe('أبو طالب')
+  })
+
+  it('ignores aka NAMEs in a file from another program', () => {
+    const data = parseGedcom(`${FOREIGN_HEAD}\n${OWNER_EXAMPLES_BODY}`)
+    expect(Object.values(data.individuals).map((i) => i.famousName)).toEqual([
+      undefined,
+      undefined,
+      undefined,
+    ])
+  })
+
+  it('ignores aka NAMEs in a file without a HEAD', () => {
+    const data = parseGedcom(OWNER_EXAMPLES_BODY)
+    expect(data.individuals['@I1@'].famousName).toBeUndefined()
+  })
+
+  it('matches the 7.0 TYPE AKA case-insensitively', () => {
+    const data = parseGedcom(`0 HEAD
+1 GEDC
+2 VERS 7.0
+1 SOUR Gynat
+2 VERS 1.0
+0 @I1@ INDI
+1 NAME شيبة
+1 NAME عبدالمطلب
+2 TYPE AKA
+0 TRLR`)
+    expect(data.individuals['@I1@'].famousName).toBe('عبدالمطلب')
+  })
+
+  it('strips slashes from the famous name value', () => {
+    const data = parseGedcom(`${GYNAT_HEAD}
+0 @I1@ INDI
+1 NAME شيبة
+1 NAME عبدالمطلب /هاشم/
+2 TYPE aka
+0 TRLR`)
+    expect(data.individuals['@I1@'].famousName).toBe('عبدالمطلب هاشم')
+  })
+
+  it('takes only the first aka NAME as the famous name', () => {
+    const data = parseGedcom(`${GYNAT_HEAD}
+0 @I1@ INDI
+1 NAME شيبة
+1 NAME عبدالمطلب
+2 TYPE aka
+1 NAME شيبة الحمد
+2 TYPE aka
+0 TRLR`)
+    expect(data.individuals['@I1@'].famousName).toBe('عبدالمطلب')
+  })
+
+  it('does not read a later NAME of another TYPE as the famous name', () => {
+    const data = parseGedcom(`${GYNAT_HEAD}
+0 @I1@ INDI
+1 NAME Fatima /Ali/
+1 NAME Fatima /Hassan/
+2 TYPE married
+0 TRLR`)
+    expect(data.individuals['@I1@'].famousName).toBeUndefined()
+  })
+
+  it('does not read an aka NAME carrying a _KUNYA child as the famous name', () => {
+    const data = parseGedcom(`${GYNAT_HEAD}
+0 @I1@ INDI
+1 NAME أحمد
+1 NAME أبو محمد
+2 TYPE aka
+2 _KUNYA Y
+0 TRLR`)
+    expect(data.individuals['@I1@'].famousName).toBeUndefined()
+  })
+
+  it('ignores NICK in a gynat file', () => {
+    const data = parseGedcom(`${GYNAT_HEAD}
+0 @I1@ INDI
+1 NAME شيبة
+1 NICK عبدالمطلب
+0 TRLR`)
+    expect(data.individuals['@I1@'].famousName).toBeUndefined()
+  })
+
+  it('leaves famousNameInNasab undefined when the aka NAME has no _NASAB', () => {
+    const data = parseGedcom(`${GYNAT_HEAD}\n${OWNER_EXAMPLES_BODY}`)
+    expect(data.individuals['@I1@'].famousNameInNasab).toBeUndefined()
+  })
+
+  it('preserves the famous name through export and re-import', () => {
+    const data = parseGedcom(`${GYNAT_HEAD}
+0 @I1@ INDI
+1 NAME شيبة
+2 GIVN شيبة
+1 SEX M
+0 TRLR`)
+    data.individuals['@I1@'].famousName = 'عبدالمطلب'
+
+    const reparsed = parseGedcom(gedcomDataToGedcom(data, '5.5.1'))
+    expect(reparsed.individuals['@I1@'].famousName).toBe('عبدالمطلب')
+  })
+
+  it('preserves the famous name through a 7.0 export and re-import', () => {
+    const data = parseGedcom(`${GYNAT_HEAD}
+0 @I1@ INDI
+1 NAME شيبة
+2 GIVN شيبة
+1 SEX M
+0 TRLR`)
+    data.individuals['@I1@'].famousName = 'عبدالمطلب'
+
+    const reparsed = parseGedcom(gedcomDataToGedcom(data, '7.0'))
+    expect(reparsed.individuals['@I1@'].famousName).toBe('عبدالمطلب')
+  })
+})
+
+// ============================================================================
+// «يُذكر في النسب باسم» — `2 _NASAB Y|N` under the famous-name NAME
+// ============================================================================
+
+/** عبدالله / «ابن الزبير» with the given lines under the aka NAME. */
+function zubairFile(akaChildren: string, head: string = GYNAT_HEAD): string {
+  return `${head}
+0 @I1@ INDI
+1 NAME عبدالله
+2 GIVN عبدالله
+1 NAME ابن الزبير
+2 TYPE aka
+${akaChildren}
+1 SEX M
+0 TRLR`
+}
+
+describe('parseGedcom — famous-name nasab choice (2 _NASAB) import', () => {
+  it('reads _NASAB N under the famous name as false', () => {
+    const data = parseGedcom(zubairFile('2 _NASAB N'))
+    expect(data.individuals['@I1@'].famousNameInNasab).toBe(false)
+  })
+
+  it('reads _NASAB Y under the famous name as true', () => {
+    const data = parseGedcom(zubairFile('2 _NASAB Y'))
+    expect(data.individuals['@I1@'].famousNameInNasab).toBe(true)
+  })
+
+  it('reads lowercase y as true', () => {
+    const data = parseGedcom(zubairFile('2 _NASAB y'))
+    expect(data.individuals['@I1@'].famousNameInNasab).toBe(true)
+  })
+
+  it('reads lowercase n as false', () => {
+    const data = parseGedcom(zubairFile('2 _NASAB n'))
+    expect(data.individuals['@I1@'].famousNameInNasab).toBe(false)
+  })
+
+  it('ignores a _NASAB value other than Y or N', () => {
+    const data = parseGedcom(zubairFile('2 _NASAB YES'))
+    expect(data.individuals['@I1@'].famousNameInNasab).toBeUndefined()
+  })
+
+  it('ignores an empty _NASAB', () => {
+    const data = parseGedcom(zubairFile('2 _NASAB'))
+    expect(data.individuals['@I1@'].famousNameInNasab).toBeUndefined()
+  })
+
+  it('takes the first valid _NASAB when the block repeats it', () => {
+    const data = parseGedcom(zubairFile('2 _NASAB N\n2 _NASAB Y'))
+    expect(data.individuals['@I1@'].famousNameInNasab).toBe(false)
+  })
+
+  it('reads _NASAB written before TYPE in the block', () => {
+    const data = parseGedcom(`${GYNAT_HEAD}
+0 @I1@ INDI
+1 NAME عبدالله
+1 NAME ابن الزبير
+2 _NASAB N
+2 TYPE aka
+0 TRLR`)
+    expect(data.individuals['@I1@'].famousNameInNasab).toBe(false)
+  })
+
+  it('keeps the famous name read when the block carries _NASAB', () => {
+    const data = parseGedcom(zubairFile('2 _NASAB N'))
+    expect(data.individuals['@I1@'].famousName).toBe('ابن الزبير')
+  })
+
+  it('keeps the lines after the block read when it carries _NASAB', () => {
+    const data = parseGedcom(zubairFile('2 _NASAB N'))
+    expect(data.individuals['@I1@'].sex).toBe('M')
+  })
+
+  it('ignores _NASAB under the primary NAME', () => {
+    const data = parseGedcom(`${GYNAT_HEAD}
+0 @I1@ INDI
+1 NAME عبدالله
+2 _NASAB N
+1 NAME ابن الزبير
+2 TYPE aka
+0 TRLR`)
+    expect(data.individuals['@I1@'].famousNameInNasab).toBeUndefined()
+  })
+
+  it('keeps the primary name intact when it carries a _NASAB', () => {
+    const data = parseGedcom(`${GYNAT_HEAD}
+0 @I1@ INDI
+1 NAME عبدالله /الزبير/
+2 GIVN عبدالله
+2 _NASAB N
+2 SURN الزبير
+0 TRLR`)
+    const indi = data.individuals['@I1@']
+    expect({ givenName: indi.givenName, surname: indi.surname }).toEqual({
+      givenName: 'عبدالله',
+      surname: 'الزبير',
+    })
+  })
+
+  it('ignores _NASAB in a file from another program', () => {
+    const data = parseGedcom(zubairFile('2 _NASAB N', FOREIGN_HEAD))
+    expect(data.individuals['@I1@'].famousNameInNasab).toBeUndefined()
+  })
+
+  it('ignores _NASAB in a file without a HEAD', () => {
+    const data = parseGedcom(`0 @I1@ INDI
+1 NAME عبدالله
+1 NAME ابن الزبير
+2 TYPE aka
+2 _NASAB N
+0 TRLR`)
+    expect(data.individuals['@I1@'].famousNameInNasab).toBeUndefined()
+  })
+
+  it('ignores _NASAB under a legacy kunya NAME', () => {
+    const data = parseGedcom(zubairFile('2 _KUNYA Y\n2 _NASAB N'))
+    expect(data.individuals['@I1@'].famousNameInNasab).toBeUndefined()
+  })
+
+  it('still reads the legacy kunya NAME carrying _NASAB as the kunya', () => {
+    const data = parseGedcom(zubairFile('2 _KUNYA Y\n2 _NASAB N'))
+    expect(data.individuals['@I1@'].kunya).toBe('ابن الزبير')
+  })
+
+  it('ignores _NASAB under a second aka NAME', () => {
+    const data = parseGedcom(`${GYNAT_HEAD}
+0 @I1@ INDI
+1 NAME عبدالله
+1 NAME ابن الزبير
+2 TYPE aka
+1 NAME أبو خبيب
+2 TYPE aka
+2 _NASAB Y
+0 TRLR`)
+    expect(data.individuals['@I1@'].famousNameInNasab).toBeUndefined()
+  })
+
+  it('ignores _NASAB under a NAME of another TYPE', () => {
+    const data = parseGedcom(`${GYNAT_HEAD}
+0 @I1@ INDI
+1 NAME عبدالله
+1 NAME ابن الزبير
+2 TYPE married
+2 _NASAB N
+0 TRLR`)
+    expect(data.individuals['@I1@'].famousNameInNasab).toBeUndefined()
+  })
+
+  it('ignores a person-level 1 _NASAB', () => {
+    const data = parseGedcom(`${GYNAT_HEAD}
+0 @I1@ INDI
+1 NAME عبدالله
+1 NAME ابن الزبير
+2 TYPE aka
+1 _NASAB N
+0 TRLR`)
+    expect(data.individuals['@I1@'].famousNameInNasab).toBeUndefined()
+  })
+
+  describe.each(['5.5.1', '7.0'] as const)('round trip through a %s export', (version) => {
+    function roundTrip(famousName: string, inNasab: boolean | undefined): boolean | undefined {
+      const data = parseGedcom(`${GYNAT_HEAD}
+0 @I1@ INDI
+1 NAME عبدالله
+2 GIVN عبدالله
+1 SEX M
+0 TRLR`)
+      data.individuals['@I1@'].famousName = famousName
+      if (inNasab !== undefined) data.individuals['@I1@'].famousNameInNasab = inNasab
+      return parseGedcom(gedcomDataToGedcom(data, version)).individuals['@I1@'].famousNameInNasab
+    }
+
+    it('preserves true', () => {
+      expect(roundTrip('ابن الزبير', true)).toBe(true)
+    })
+
+    // «ابن الزبير» defaults to false, so this also locks an explicit default.
+    it('preserves false', () => {
+      expect(roundTrip('ابن الزبير', false)).toBe(false)
+    })
+
+    it('preserves no choice as undefined', () => {
+      expect(roundTrip('ابن الزبير', undefined)).toBeUndefined()
+    })
+
+    it('preserves an explicit true that equals the default', () => {
+      expect(roundTrip('أبو طالب', true)).toBe(true)
+    })
+  })
+})
+
+describe('parseGedcom — legacy kunya NAME form (2 _KUNYA Y)', () => {
+  const LEGACY = `0 @I1@ INDI
+1 NAME أحمد /سعيد/
+2 GIVN أحمد
+2 SURN سعيد
+1 NAME أبو أحمد
+2 TYPE aka
+2 _KUNYA Y
+1 SEX M
+0 TRLR`
+
+  it('reads the legacy kunya NAME value as the kunya', () => {
+    const data = parseGedcom(LEGACY)
+    expect(data.individuals['@I1@'].kunya).toBe('أبو أحمد')
+  })
+
+  it('reads the legacy kunya NAME in a gynat file as the kunya', () => {
+    const data = parseGedcom(`${GYNAT_HEAD}\n${LEGACY}`)
+    expect(data.individuals['@I1@'].kunya).toBe('أبو أحمد')
+  })
+
+  it('leaves the primary name untouched by the legacy kunya NAME', () => {
+    const data = parseGedcom(LEGACY)
+    const indi = data.individuals['@I1@']
+    expect({ name: indi.name, givenName: indi.givenName, surname: indi.surname })
+      .toEqual({ name: 'أحمد سعيد', givenName: 'أحمد', surname: 'سعيد' })
+  })
+
+  it('does not let a legacy kunya NAME replace an existing 1 _KUNYA', () => {
+    const data = parseGedcom(`0 @I1@ INDI
+1 NAME أحمد
+1 _KUNYA أبو محمد
+1 NAME أبو أحمد
+2 TYPE aka
+2 _KUNYA Y
+0 TRLR`)
+    expect(data.individuals['@I1@'].kunya).toBe('أبو محمد')
+  })
+
+  it('lets a later 1 _KUNYA win over a legacy kunya NAME', () => {
+    const data = parseGedcom(`0 @I1@ INDI
+1 NAME أحمد
+1 NAME أبو أحمد
+2 TYPE aka
+2 _KUNYA Y
+1 _KUNYA أبو محمد
+0 TRLR`)
+    expect(data.individuals['@I1@'].kunya).toBe('أبو محمد')
+  })
+
+  it('never takes a legacy kunya NAME listed first as the primary name', () => {
+    const data = parseGedcom(`0 @I1@ INDI
+1 NAME أبو أحمد
+2 TYPE aka
+2 _KUNYA Y
+1 NAME أحمد /سعيد/
+0 TRLR`)
+    const indi = data.individuals['@I1@']
+    expect({ name: indi.name, kunya: indi.kunya })
+      .toEqual({ name: 'أحمد سعيد', kunya: 'أبو أحمد' })
+  })
+})

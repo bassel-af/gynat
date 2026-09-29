@@ -57,7 +57,7 @@ function dbTree() {
 
 const RECORD = (kind: 'main' | 'extra'): PublicTreeRecord => ({
   treeId: 'tree-1', workspaceId: 'ws-1', workspaceNameAr: 'آل سعيد', nameAr: null, kind,
-  visibility: 'public_listed', lastModifiedAt: new Date(), publicSlug: 'abc', enableKunya: true,
+  visibility: 'public_listed', lastModifiedAt: new Date(), publicSlug: 'abc', enableKunya: true, enableFamousName: false,
   hideBirthDateForFemale: false, hideBirthDateForMale: false, personPagesIndexable: true,
 });
 

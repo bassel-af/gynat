@@ -6,6 +6,8 @@ import { getWorkspaceKey } from '@/lib/tree/encryption';
 import { getActivePointersForWorkspace } from '@/lib/tree/branch-pointer-queries';
 import { extractPointedSubtree, mergePointedSubtree } from '@/lib/tree/branch-pointer-merge';
 import { projectPerson, MEMBER_PROJECT_OPTIONS } from '@/lib/tree/person-projection';
+import { stripDisabledNameFeatures, nameFeatureFlags, NAME_FEATURE_SELECT } from '@/lib/tree/feature-strip';
+import { prisma } from '@/lib/db';
 import type { GedcomData } from '@/lib/gedcom/types';
 import { createHash } from 'crypto';
 
@@ -21,7 +23,10 @@ type RouteParams = { params: Promise<{ id: string; individualId: string }> };
 //  - v3: borrowed-ON-native nasab fix (split lateral/climb boundary — a borrowed
 //        branch grafted onto native ancestry climbs its full native lineage
 //        instead of dead-ending at the borrowed root). قريش regression.
-const PROJECTION_ETAG_VERSION = 'v4';
+//  - v4: «قفزة نسب» on the spine / subject.
+//  - v5: famous name (اسم الشهرة) on subject + chips; kunya / famous name
+//        stripped when the workspace has the feature off.
+const PROJECTION_ETAG_VERSION = 'v5';
 
 function computeETag(lastModifiedAt: Date, individualId: string): string {
   const hash = createHash('sha1')
@@ -56,7 +61,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     return new NextResponse(null, { status: 304, headers: { ETag: etag } });
   }
 
-  const workspaceKey = await getWorkspaceKey(workspaceId);
+  const [workspaceKey, workspace] = await Promise.all([
+    getWorkspaceKey(workspaceId),
+    prisma.workspace.findUnique({ where: { id: workspaceId }, select: NAME_FEATURE_SELECT }),
+  ]);
   let gedcomData: GedcomData = dbTreeToGedcomData(tree, workspaceKey);
 
   // Merge active branch pointers (same as the tree GET) so borrowed ancestry is
@@ -100,7 +108,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   // but lose PII (and keep `isPrivate`). `projectPerson` is the second line of
   // defense — it omits private people from every relation group and shows them
   // only as a non-clickable «خاص» placeholder in the direct-ancestor chain.
-  const safeData = redactPrivateIndividuals(gedcomData);
+  // Then drop the name features this workspace has switched off (kunya, famous
+  // name) — the same strip the member tree GET applies.
+  const safeData = stripDisabledNameFeatures(
+    redactPrivateIndividuals(gedcomData),
+    nameFeatureFlags(workspace),
+  );
 
   // Member surface options (unbounded female line, `_pointed` boundary, patriline
   // continues through a private ancestor as a nameless «خاص» placeholder).

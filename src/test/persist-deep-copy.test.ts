@@ -297,3 +297,87 @@ describe('persistDeepCopy', () => {
     expect(dec(rootData.fullName)).toBe('فدوى شربك');
   });
 });
+
+// ---------------------------------------------------------------------------
+// اسم الشهرة (famousName) — encrypted with the TARGET key; flag copied as-is
+// ---------------------------------------------------------------------------
+
+describe('persistDeepCopy — famousName / famousNameInNasab', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  const treeId = 'target-tree-uuid';
+
+  function copyResultWith(ind: Individual): DeepCopyResult {
+    return {
+      individuals: { [ind.id]: ind },
+      families: {},
+      idMap: new Map(),
+      stitchFamily: null,
+      ancestryJumps: {},
+      reuseStitch: null,
+    };
+  }
+
+  async function persistOne(ind: Individual) {
+    const { persistDeepCopy } = await import('@/lib/tree/branch-pointer-deep-copy');
+    const { tx, mocks } = makeMockTx();
+    await persistDeepCopy(tx, treeId, copyResultWith(ind), TEST_TARGET_KEY);
+    return mocks.individualCreateMany.mock.calls[0][0].data[0];
+  }
+
+  test('famousName is re-encrypted with the target key and decrypts to the source value', async () => {
+    const row = await persistOne(makeIndividual({ id: 'p1', famousName: 'الشيخ أبو خليل' }));
+    expect(Buffer.isBuffer(row.famousName) || row.famousName instanceof Uint8Array).toBe(true);
+    expect(dec(row.famousName)).toBe('الشيخ أبو خليل');
+  });
+
+  test('famousNameInNasab false is copied as false', async () => {
+    const row = await persistOne(
+      makeIndividual({ id: 'p1', famousName: 'أبو خليل', famousNameInNasab: false }),
+    );
+    expect(row.famousNameInNasab).toBe(false);
+  });
+
+  test('famousNameInNasab true is copied as true', async () => {
+    const row = await persistOne(
+      makeIndividual({ id: 'p1', famousName: 'أبو خليل', famousNameInNasab: true }),
+    );
+    expect(row.famousNameInNasab).toBe(true);
+  });
+
+  test('an unset famousNameInNasab stays null (user never chose)', async () => {
+    const row = await persistOne(makeIndividual({ id: 'p1', famousName: 'أبو خليل' }));
+    expect(row.famousNameInNasab).toBeNull();
+  });
+
+  test('a person with no famousName persists a null famousName', async () => {
+    const row = await persistOne(makeIndividual({ id: 'p1' }));
+    expect(dec(row.famousName)).toBeNull();
+  });
+
+  test('a private person blanked by prepareDeepCopy copies with no famousName', async () => {
+    const { prepareDeepCopy, persistDeepCopy } = await import('@/lib/tree/branch-pointer-deep-copy');
+    const source = {
+      individuals: {
+        secret: makeIndividual({
+          id: 'secret',
+          isPrivate: true,
+          famousName: 'الاسم المشهور السري',
+          famousNameInNasab: true,
+        }),
+      },
+      families: {},
+    };
+    const copy = prepareDeepCopy(source, {
+      anchorIndividualId: 'anchor-id',
+      relationship: 'child',
+      pointerId: 'ptr-1',
+    });
+    const { tx, mocks } = makeMockTx();
+    await persistDeepCopy(tx, treeId, copy, TEST_TARGET_KEY);
+
+    const row = mocks.individualCreateMany.mock.calls[0][0].data[0];
+    expect(row.isPrivate).toBe(true);
+    expect(dec(row.famousName) ?? '').toBe('');
+  });
+});

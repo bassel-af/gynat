@@ -1,5 +1,6 @@
 import type { Individual, Family, GedcomData } from '@/lib/gedcom/types';
-import { getDisplayName, getDisplayNameWithNasab } from '@/lib/gedcom';
+import { getDisplayNameWithNasab, getLeadDisplayName, getPersonSearchText } from '@/lib/gedcom';
+import { getAlternateNameLine } from '@/lib/gedcom/display';
 import { getAllDescendants } from '@/lib/gedcom/graph';
 import { validateJumpDescendant } from '@/lib/tree/ancestry-jump-validators';
 
@@ -161,6 +162,16 @@ export function canMoveSubtree(person: Individual): boolean {
   return person.familyAsChild !== null;
 }
 
+/** A family a subtree can move under, as the move picker lists it. */
+export interface MoveTargetFamily {
+  familyId: string;
+  parentNames: string;
+  /** Grey line: the parents' other names joined with « · », or null. */
+  alternate: string | null;
+  /** Every name the parents go by, for the picker search. */
+  searchText: string;
+}
+
 /**
  * Get all possible target families for move-subtree / assign-parents.
  * Works for both cases:
@@ -173,8 +184,8 @@ export function getTargetFamiliesForMove(
   person: Individual,
   data: GedcomData,
   subtreeIds: Set<string>,
-): Array<{ familyId: string; parentNames: string }> {
-  const results: Array<{ familyId: string; parentNames: string }> = [];
+): MoveTargetFamily[] {
+  const results: MoveTargetFamily[] = [];
   const currentFamilyId = person.familyAsChild;
 
   for (const [famId, family] of Object.entries(data.families)) {
@@ -191,17 +202,24 @@ export function getTargetFamiliesForMove(
     // Name + father + family name: a bare given name is ambiguous in the picker,
     // especially for a wife-less family where there is no second name to go by.
     const names: string[] = [];
-    if (family.husband) {
-      const h = data.individuals[family.husband];
-      if (h) names.push(getDisplayNameWithNasab(data, h));
+    const alternates: string[] = [];
+    const searchTexts: string[] = [];
+    for (const parentId of [family.husband, family.wife]) {
+      const parent = parentId ? data.individuals[parentId] : undefined;
+      if (!parent) continue;
+      const name = getDisplayNameWithNasab(data, parent);
+      names.push(name);
+      const alternate = getAlternateNameLine(parent);
+      if (alternate) alternates.push(alternate);
+      searchTexts.push(getPersonSearchText(data, parent, name));
     }
-    if (family.wife) {
-      const w = data.individuals[family.wife];
-      if (w) names.push(getDisplayNameWithNasab(data, w));
-    }
+    const parentNames = names.length > 0 ? names.join(' + ') : 'عائلة بدون والدين';
     results.push({
       familyId: famId,
-      parentNames: names.length > 0 ? names.join(' + ') : 'عائلة بدون والدين',
+      parentNames,
+      // The grey line: each parent's other name, in the same order as the label.
+      alternate: alternates.length > 0 ? alternates.join(' · ') : null,
+      searchText: searchTexts.length > 0 ? searchTexts.join(' + ') : parentNames,
     });
   }
   return results;
@@ -298,6 +316,9 @@ export function buildEditInitialData(person: Individual): Record<string, unknown
     deathNotes: person.deathNotes,
     deathHijriDate: person.deathHijriDate,
     kunya: person.kunya ?? '',
+    famousName: person.famousName ?? '',
+    // Keep the saved choice exactly: never `|| false`.
+    famousNameInNasab: person.famousNameInNasab ?? null,
     isDeceased: person.isDeceased,
     isPrivate: person.isPrivate,
     notes: person.notes,
@@ -340,8 +361,10 @@ export function serializeIndividualForm(formData: {
   birthDate: string; birthPlace: string; birthPlaceId?: string | null; birthDescription: string; birthNotes: string; birthHijriDate: string;
   deathDate: string; deathPlace: string; deathPlaceId?: string | null; deathDescription: string; deathNotes: string; deathHijriDate: string;
   kunya?: string;
+  famousName?: string; famousNameInNasab?: boolean | null;
   isDeceased: boolean; isPrivate: boolean; notes: string;
 }): Record<string, unknown> {
+  const famousName = formData.famousName || null;
   return {
     givenName: formData.givenName || null,
     surname: formData.surname || null,
@@ -359,9 +382,42 @@ export function serializeIndividualForm(formData: {
     deathNotes: formData.deathNotes || null,
     deathHijriDate: formData.deathHijriDate || null,
     kunya: formData.kunya || null,
+    famousName,
+    // No famous name ⇒ no choice to keep.
+    famousNameInNasab: famousName ? (formData.famousNameInNasab ?? null) : null,
     isDeceased: formData.isDeceased,
     isPrivate: formData.isPrivate,
     notes: formData.notes || null,
+  };
+}
+
+/**
+ * The person as an individuals API payload — the "before" state an undo
+ * restores. Same field mapping as the edit form's initial data.
+ */
+export function personUndoSnapshot(person: Individual): Record<string, unknown> {
+  return serializeIndividualForm(
+    buildEditInitialData(person) as Parameters<typeof serializeIndividualForm>[0],
+  );
+}
+
+/** The edit form's live «اسم الشهرة» preview: the person's own row. */
+export interface FamousNamePreview {
+  /** Lead name with nasab. */
+  main: string;
+  /** The grey line with the other name, or null. */
+  alternate: string | null;
+}
+
+/**
+ * How the draft person (the form's unsaved values) reads in their own row.
+ * In edit mode the draft replaces the saved person.
+ */
+export function famousNamePreview(data: GedcomData, draft: Individual): FamousNamePreview {
+  const view: GedcomData = { ...data, individuals: { ...data.individuals, [draft.id]: draft } };
+  return {
+    main: getDisplayNameWithNasab(view, draft),
+    alternate: getAlternateNameLine(draft),
   };
 }
 
@@ -490,7 +546,7 @@ export function getFamiliesForPicker(
     const spouse = spouseId ? data.individuals[spouseId] : null;
     return {
       familyId,
-      spouseName: spouse ? getDisplayName(spouse) : null,
+      spouseName: spouse ? getLeadDisplayName(spouse) : null,
     };
   });
 }

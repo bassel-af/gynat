@@ -9,7 +9,8 @@ import {
   type ReactNode,
 } from 'react';
 import type { GedcomData, RootAncestor, TreeConfig } from '@/lib/gedcom';
-import { findRootAncestors, findDefaultRoot, getDisplayNameWithNasab, DEFAULT_NASAB_DEPTH, getAllDescendants, getTreeVisibleIndividuals, getConnectedIndividuals, findTopmostAncestor, computeGraftDescriptors } from '@/lib/gedcom';
+import { getAlternateNameLine } from '@/lib/gedcom/display';
+import { findRootAncestors, findDefaultRoot, getDisplayNameWithNasab, getPersonSearchText, DEFAULT_NASAB_DEPTH, getAllDescendants, getTreeVisibleIndividuals, getConnectedIndividuals, findTopmostAncestor, computeGraftDescriptors } from '@/lib/gedcom';
 
 export type RootFilterStrategy = 'all' | 'descendants';
 export type ViewMode = 'single' | 'multi';
@@ -89,10 +90,15 @@ export function TreeProvider({ children, forcedRootId }: TreeProviderProps) {
     setDataState(newData);
 
     // Build list of all individuals
-    const allRoots = findRootAncestors(newData).map((person) => ({
-      id: person.id,
-      text: getDisplayNameWithNasab(newData, person, DEFAULT_NASAB_DEPTH) + (person.birth ? ` (${person.birth})` : ''),
-    }));
+    const allRoots = findRootAncestors(newData).map((person) => {
+      const text = getDisplayNameWithNasab(newData, person, DEFAULT_NASAB_DEPTH) + (person.birth ? ` (${person.birth})` : '');
+      return {
+        id: person.id,
+        text,
+        searchText: getPersonSearchText(newData, person, text),
+        alternate: getAlternateNameLine(person),
+      };
+    });
     setAllRootsList(allRoots);
 
     // Determine the root to use

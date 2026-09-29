@@ -13,6 +13,7 @@ import {
 } from '@/lib/tree/source-people';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
+import { PersonListName } from '@/components/ui/PersonListName';
 import { selectedPeopleLabel } from './arabicDigits';
 import styles from './SourcePeoplePicker.module.css';
 
@@ -96,10 +97,7 @@ export function SourcePeoplePicker({
   }, [data, lockedId, groups, query, listed, birthPrivacy]);
 
   const count = selected.size + (hasLocked ? 1 : 0);
-  const lockedName = lockedId
-    ? pickerRow(data, null, lockedId, birthPrivacy).name
-    : NEW_PERSON_LABEL;
-  const lockedSub = lockedId ? pickerRow(data, null, lockedId, birthPrivacy).sub : null;
+  const lockedRow = lockedId ? pickerRow(data, null, lockedId, birthPrivacy) : null;
 
   const actions = (
     <div className={styles.footer}>
@@ -147,8 +145,10 @@ export function SourcePeoplePicker({
               <label className={clsx(styles.row, styles.rowLocked)}>
                 <input type="checkbox" checked disabled readOnly className={styles.check} />
                 <span className={styles.names}>
-                  <span className={styles.name}>{lockedName}</span>
-                  {lockedSub && <span className={styles.sub}>{lockedSub}</span>}
+                  <span className={styles.name}>
+                    <PersonListName main={lockedRow?.name ?? NEW_PERSON_LABEL} alternate={lockedRow?.alternate} />
+                  </span>
+                  {lockedRow?.sub && <span className={styles.sub}>{lockedRow.sub}</span>}
                   <span className={styles.why}>{LOCKED_NOTE}</span>
                 </span>
               </label>
@@ -165,7 +165,9 @@ export function SourcePeoplePicker({
                   onChange={() => toggle(r.id)}
                 />
                 <span className={styles.names}>
-                  <span className={styles.name}>{r.name}</span>
+                  <span className={styles.name}>
+                    <PersonListName main={r.name} alternate={r.alternate} query={query} />
+                  </span>
                   {r.sub && <span className={styles.sub}>{r.sub}</span>}
                 </span>
               </label>

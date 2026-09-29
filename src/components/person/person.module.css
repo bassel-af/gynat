@@ -197,6 +197,31 @@ a.personLinkLead:hover {
 .ribbon .ribbonSegment:nth-last-child(5) .personLink { opacity: 0.5; font-size: 18px; }
 .ribbon .ribbonSegment:nth-last-child(6) .personLink { opacity: 0.4; font-size: 17px; }
 
+/* An ancestor with a famous name: the lead-name link over a tiny muted
+   caption of his other name (the «واسمه …» line is the link's description). */
+.ribbonName {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+}
+.ribbonCaption {
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--heritage-text-faint);
+  line-height: 1.2;
+  margin-top: 2px;
+}
+
+/* The subject's other name, in grey under the ribbon («واسمه عبدمناف»). */
+.heroAltName {
+  margin: 4px 0 0;
+  font-family: var(--heritage-font-body);
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--heritage-text-soft);
+}
+
 .privateInline {
   font-size: 18px;
   color: var(--heritage-text-faint);
@@ -412,6 +437,14 @@ a.lineageNode:hover {
 a.lineageNode:hover .lineageName { color: var(--heritage-gold-bright); }
 .colMaternal a.lineageNode:hover .lineageName { color: var(--heritage-emerald-glow); }
 .lineageYears { font-size: 11px; color: var(--heritage-text-muted); }
+/* The other name under a lead name (lineage cards, relation chips). */
+.altNameLine {
+  font-family: var(--heritage-font-body);
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--heritage-text-faint);
+  line-height: 1.2;
+}
 
 .lineageBadge {
   margin-inline-start: auto;
@@ -549,6 +582,21 @@ a.lineageNode:hover .lineageName { color: var(--heritage-gold-bright); }
 .motherLink:hover {
   color: var(--heritage-emerald-glow);
   border-bottom-color: rgba(46, 152, 118, 0.5);
+}
+/* A father with a famous name: lead-name link over a tiny muted caption of his
+   other name — same pattern as .ribbonName/.ribbonCaption. */
+.motherName {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+}
+.motherCaption {
+  font-family: var(--heritage-font-body);
+  font-size: 10.5px;
+  font-weight: 400;
+  color: var(--heritage-text-faint);
+  line-height: 1.2;
+  margin-top: 1px;
 }
 .motherPrivate {
   font-size: 12.5px;

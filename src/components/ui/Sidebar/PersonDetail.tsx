@@ -12,8 +12,10 @@ import { useOptionalToast } from '@/context/ToastContext';
 import { usePersonSources } from '@/hooks/usePersonSources';
 import { useTreeSourceEntry } from '@/hooks/useTreeSourceEntry';
 import { PersonSourcesSection, PublicPersonSourcesCard } from '@/components/sources';
-import { getDisplayName, getDisplayNameWithNasab, getPersonRelationships, getRadaRelationships, getAllDescendants, findTopmostAncestor, hasExternalFamily } from '@/lib/gedcom';
+import { getDisplayNameWithNasab, getLeadDisplayName, getPersonSearchText, getPersonRelationships, getRadaRelationships, getAllDescendants, findTopmostAncestor, hasExternalFamily } from '@/lib/gedcom';
 import type { Individual } from '@/lib/gedcom';
+import { getAlternateNameLine, getLeadName, shouldShowKunya } from '@/lib/gedcom/display';
+import { PersonListName } from '@/components/ui/PersonListName';
 import { IndividualForm, type IndividualFormData } from '@/components/tree/IndividualForm/IndividualForm';
 import { FamilyPickerModal } from '@/components/tree/FamilyPickerModal/FamilyPickerModal';
 import { FamilyEventForm } from '@/components/tree/FamilyEventForm/FamilyEventForm';
@@ -148,7 +150,7 @@ function RelationshipSection({ title, people, visiblePersonIds, onPersonClick, h
       <h3 className={styles.sectionTitle}>{title}</h3>
       {visiblePeople.map((person) => {
         const isVisible = visiblePersonIds.has(person.id);
-        const name = getDisplayName(person);
+        const nameBlock = <PersonListName main={getLeadDisplayName(person)} alternate={getAlternateNameLine(person)} />;
         const personHideBirth = shouldHideBirthDate(person, {
           hideBirthDateForFemale: wsCtx?.hideBirthDateForFemale,
           hideBirthDateForMale: wsCtx?.hideBirthDateForMale,
@@ -166,7 +168,7 @@ function RelationshipSection({ title, people, visiblePersonIds, onPersonClick, h
               onClick={() => onPersonClick(person.id)}
             >
               <div className={styles.relPersonInfo}>
-                <span className={styles.relPersonName}>{name}</span>
+                <span className={styles.relPersonName}>{nameBlock}</span>
                 <DateInfo person={person} className={styles.relPersonDates} compact hideBirthDate={personHideBirth} />
               </div>
               <svg className={styles.relChevron} width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -186,7 +188,7 @@ function RelationshipSection({ title, people, visiblePersonIds, onPersonClick, h
             })}
           >
             <div className={styles.relPersonInfo}>
-              <span className={styles.relPersonName}>{name}</span>
+              <span className={styles.relPersonName}>{nameBlock}</span>
               <DateInfo person={person} className={styles.relPersonDates} compact hideBirthDate={personHideBirth} />
             </div>
           </span>
@@ -215,7 +217,6 @@ function RadaPersonItem({
   onClick: (id: string) => void;
 }) {
   const wsCtx = useOptionalWorkspaceTree();
-  const name = getDisplayName(person);
   const personHideBirth = shouldHideBirthDate(person, {
     hideBirthDateForFemale: wsCtx?.hideBirthDateForFemale,
     hideBirthDateForMale: wsCtx?.hideBirthDateForMale,
@@ -235,8 +236,11 @@ function RadaPersonItem({
     >
       <div className={styles.relPersonInfo}>
         <span className={styles.relPersonName}>
-          {name}
-          <span className={styles.radaRoleTag}>{roleTag}</span>
+          <PersonListName
+            main={getLeadDisplayName(person)}
+            alternate={getAlternateNameLine(person)}
+            aside={<span className={styles.radaRoleTag}>{roleTag}</span>}
+          />
         </span>
         <DateInfo person={person} className={styles.relPersonDates} compact hideBirthDate={personHideBirth} />
       </div>
@@ -886,15 +890,22 @@ export function PersonDetail({ personId }: PersonDetailProps) {
       kind: 'family',
       familyId: f.familyId,
       parentNames: f.parentNames,
+      alternate: f.alternate,
+      searchText: f.searchText,
     }));
-    const soloOpts: MoveSubtreeOption[] = soloCandidates.map((p) => ({
-      kind: 'solo',
-      individualId: p.id,
+    const soloOpts: MoveSubtreeOption[] = soloCandidates.map((p) => {
       // soloCandidates is itself empty when data is null, so this branch only runs with
       // a real GedcomData — the assertion documents that invariant for the type-checker.
-      name: getDisplayNameWithNasab(data!, p),
-      sex: p.sex as 'M' | 'F',
-    }));
+      const name = getDisplayNameWithNasab(data!, p);
+      return {
+        kind: 'solo',
+        individualId: p.id,
+        name,
+        sex: p.sex as 'M' | 'F',
+        alternate: getAlternateNameLine(p),
+        searchText: getPersonSearchText(data!, p, name),
+      };
+    });
     return [...familyOpts, ...soloOpts];
   }, [targetFamilies, soloCandidates, data]);
 
@@ -919,7 +930,7 @@ export function PersonDetail({ personId }: PersonDetailProps) {
   }, [person, data]);
 
   const orphanedParentNames = useMemo(
-    () => orphanedPreviousParents.map((p) => getDisplayName(p)),
+    () => orphanedPreviousParents.map((p) => getLeadDisplayName(p)),
     [orphanedPreviousParents],
   );
 
@@ -945,7 +956,8 @@ export function PersonDetail({ personId }: PersonDetailProps) {
     return false;
   }, [person, data]);
 
-  const name = getDisplayName(person);
+  const name = getLeadDisplayName(person);
+  const alternateName = getAlternateNameLine(person);
 
   return (
     <div className={styles.container}>
@@ -958,7 +970,8 @@ export function PersonDetail({ personId }: PersonDetailProps) {
 
       <div className={styles.hero}>
         <h2 className={styles.heroName}>{name}</h2>
-        {person.kunya && <span className={styles.heroKunya}>{person.kunya}</span>}
+        {alternateName && <span className={styles.heroAlternate}>{alternateName}</span>}
+        {shouldShowKunya(person) && <span className={styles.heroKunya}>{person.kunya}</span>}
         <DateInfo person={person} className={styles.heroDates} calendarPreference={calendarPreference} hideBirthDate={hideBirth} />
         <div className={styles.heroActions}>
           {person.sex && (
@@ -1384,7 +1397,7 @@ export function PersonDetail({ personId }: PersonDetailProps) {
               const spouseId = family.husband === personId ? family.wife : family.husband;
               const spouse = spouseId ? data.individuals[spouseId] : null;
               if (spouse?.isPrivate) return null;
-              const spouseName = spouse ? getDisplayName(spouse) : null;
+              const spouseName = spouse ? getLeadDisplayName(spouse) : null;
               const isUmmWaladFamily = family.isUmmWalad === true;
               const hasAnyEvent = !isUmmWaladFamily &&
                 (family.marriageContract.date || family.marriageContract.hijriDate ||
@@ -1517,7 +1530,7 @@ export function PersonDetail({ personId }: PersonDetailProps) {
             workspaceId={workspace.workspaceId}
             treeId={workspace.activeTreeId}
             individualId={personId}
-            personName={person.givenName || person.name}
+            personName={getLeadName(person)}
             personSex={person.sex ?? undefined}
             canEdit={canEdit}
             isAdmin={isAdmin}
@@ -1617,9 +1630,18 @@ export function PersonDetail({ personId }: PersonDetailProps) {
               : undefined
           }
           anchorSex={person?.sex || ''}
-          anchorName={person ? getDisplayName(person) : ''}
+          anchorName={person ? getLeadDisplayName(person) : ''}
           enableUmmWalad={workspace?.enableUmmWalad}
           enableKunya={workspace?.enableKunya}
+          enableFamousName={workspace?.enableFamousName}
+          previewTree={
+            data && person
+              ? {
+                  data,
+                  personId: formMode.kind === 'edit' ? person.id : undefined,
+                }
+              : undefined
+          }
           isAddSpouse={formMode.kind === 'addSpouse'}
           ummWaladFamilyId={formMode.kind === 'edit' ? formMode.ummWaladFamilyId : undefined}
           ummWaladInitialValue={formMode.kind === 'edit' ? formMode.ummWaladInitialValue : undefined}
@@ -1641,7 +1663,7 @@ export function PersonDetail({ personId }: PersonDetailProps) {
 
       {jumpDialog && person && personJump && (
         <AncestryJumpMoveDialog
-          personName={person.givenName || person.name}
+          personName={getLeadName(person)}
           ancestorName={personJump.ancestorName}
           onMove={jumpDialog === 'move' ? handleJumpMoveConfirm : undefined}
           onCancel={() => setJumpDialog(null)}
@@ -1654,7 +1676,7 @@ export function PersonDetail({ personId }: PersonDetailProps) {
           onClose={() => setFamilyPickerMode(null)}
           onConfirm={handleMoveSubtreeConfirm}
           options={moveOptions}
-          personName={getDisplayName(person)}
+          personName={getLeadDisplayName(person)}
           descendantCount={descendantCount}
           intent={moveIntent}
           orphanedParentNames={orphanedParentNames}
@@ -1736,6 +1758,7 @@ export function PersonDetail({ personId }: PersonDetailProps) {
           error={formError}
           workspaceId={workspace?.workspaceId}
           enableKunya={workspace?.enableKunya}
+          enableFamousName={workspace?.enableFamousName}
           defaultDeceased={workspace?.defaultNewPersonDeceased}
         />
       )}

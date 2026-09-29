@@ -107,6 +107,7 @@ const INDIVIDUAL_FIELDS = [
   'deathNotes',
   'deathHijriDate',
   'kunya',
+  'famousName',
   'notes',
 ] as const;
 

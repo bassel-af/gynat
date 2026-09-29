@@ -73,7 +73,10 @@ const branch: GedcomData = {
   },
   families: {},
 };
-vi.mock('@/lib/tree/mapper', () => ({ dbTreeToGedcomData: () => branch }));
+vi.mock('@/lib/tree/mapper', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/tree/mapper')>()),
+  dbTreeToGedcomData: () => branch,
+}));
 vi.mock('@/lib/tree/branch-pointer-merge', () => ({ extractPointedSubtree: () => branch }));
 
 const mockPersistDeepCopy = vi.fn(async (..._a: unknown[]) => undefined);

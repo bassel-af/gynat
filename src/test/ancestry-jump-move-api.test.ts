@@ -274,6 +274,14 @@ describe('POST move-to-new-father', () => {
     expect(m.individualCreate.mock.calls[0][0].data.kunya).toBeUndefined();
   });
 
+  test('drops the famous name when the workspace has it off', async () => {
+    m.workspace.mockResolvedValue({ enableKunya: true, enableFamousName: false });
+    const POST = await moveRoute();
+    await POST(req('move-to-new-father', { father: { ...FATHER, famousName: 'الشهير', famousNameInNasab: true } }), params());
+    const data = m.individualCreate.mock.calls[0][0].data;
+    expect('famousName' in data || 'famousNameInNasab' in data).toBe(false);
+  });
+
   test('400 when the father is not male — nothing written', async () => {
     const POST = await moveRoute();
     const res = await POST(req('move-to-new-father', { father: { ...FATHER, sex: 'F' } }), params());

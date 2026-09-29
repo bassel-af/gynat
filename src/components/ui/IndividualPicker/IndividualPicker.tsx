@@ -3,10 +3,16 @@
 import { useState, useRef, useCallback, useMemo, useId, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import type { GedcomData, Individual } from '@/lib/gedcom/types';
-import { getDisplayNameWithNasab, DEFAULT_NASAB_DEPTH } from '@/lib/gedcom/display';
+import {
+  getAlternateNameLine,
+  getDisplayNameWithNasab,
+  getPersonSearchText,
+  DEFAULT_NASAB_DEPTH,
+} from '@/lib/gedcom/display';
 import { matchesSearch, searchRelevance } from '@/lib/utils/search';
 import { useOptionalWorkspaceTree } from '@/context/WorkspaceTreeContext';
 import { shouldHideBirthDate } from '@/lib/tree/birth-date-privacy';
+import { PersonListName } from '@/components/ui/PersonListName';
 import styles from './IndividualPicker.module.css';
 
 export interface IndividualPickerProps {
@@ -50,28 +56,19 @@ export function IndividualPicker({
 
   const results = useMemo(() => {
     if (!query.trim()) return [];
-    const matches: Individual[] = [];
+    const matches: { person: Individual; score: number }[] = [];
     for (const person of Object.values(individuals)) {
       if (person.isPrivate) continue;
       if (exclude?.has(person.id)) continue;
       if (sexFilter && person.sex && person.sex !== sexFilter) continue;
       const name = getDisplayNameWithNasab(data, person, DEFAULT_NASAB_DEPTH);
-      const searchText = person.kunya ? `${name} ${person.kunya}` : name;
+      const searchText = getPersonSearchText(data, person, name);
       if (matchesSearch(searchText, query)) {
-        matches.push(person);
+        matches.push({ person, score: searchRelevance(searchText, query) });
       }
     }
-    matches.sort((a, b) =>
-      searchRelevance(
-        getDisplayNameWithNasab(data, a, DEFAULT_NASAB_DEPTH),
-        query,
-      ) -
-      searchRelevance(
-        getDisplayNameWithNasab(data, b, DEFAULT_NASAB_DEPTH),
-        query,
-      ),
-    );
-    return matches.slice(0, MAX_RESULTS);
+    matches.sort((a, b) => a.score - b.score);
+    return matches.slice(0, MAX_RESULTS).map((m) => m.person);
   }, [query, data, exclude, sexFilter]);
 
   const selectPerson = useCallback(
@@ -306,10 +303,14 @@ export function IndividualPicker({
                           : styles.sexIndicatorUnknown
                     }
                   />
-                  <span className={styles.optionName}>{name}</span>
-                  {birthYear && (
-                    <span className={styles.optionYear}>{birthYear}</span>
-                  )}
+                  <span className={styles.optionName}>
+                    <PersonListName
+                      main={name}
+                      alternate={getAlternateNameLine(person)}
+                      query={query}
+                      aside={birthYear ? <span className={styles.optionYear}>{birthYear}</span> : undefined}
+                    />
+                  </span>
                 </li>
               );
             })}

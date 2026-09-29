@@ -121,6 +121,10 @@ export interface PersonChip {
   /** Display name; `'خاص'` only in the private chain-placeholder case. */
   name: string;
   givenName: string;
+  /** اسم الشهرة; `''` when none (always `''` on the «خاص» placeholder). */
+  famousName: string;
+  /** The person's own in-nasab choice; absent when never chosen (and on the placeholder). */
+  famousNameInNasab?: boolean;
   gender: Gender;
   // Raw dates carried for CLIENT-side calendar formatting (NOT formatted here):
   birth: string;
@@ -202,6 +206,10 @@ export interface PersonSubject {
   givenName: string;
   surname: string;
   kunya: string;
+  /** اسم الشهرة; `''` when none. */
+  famousName: string;
+  /** The subject's own in-nasab choice; absent when never chosen. */
+  famousNameInNasab?: boolean;
   gender: Gender;
   birth: string;
   birthHijriDate: string;
@@ -324,6 +332,7 @@ function toChip(ind: Individual, allowPlaceholder = false): PersonChip {
     return {
       name: PRIVATE_PLACEHOLDER,
       givenName: PRIVATE_PLACEHOLDER,
+      famousName: '',
       gender: toGender(ind.sex),
       birth: '',
       birthHijriDate: '',
@@ -339,6 +348,7 @@ function toChip(ind: Individual, allowPlaceholder = false): PersonChip {
     // name (the nasab ribbon/relation chips use the latter).
     name: getDisplayName(ind),
     givenName: ind.givenName?.trim() || ind.name?.trim() || '',
+    ...famousNameFields(ind),
     gender: toGender(ind.sex),
     birth: ind.birth ?? '',
     birthHijriDate: ind.birthHijriDate ?? '',
@@ -349,6 +359,14 @@ function toChip(ind: Individual, allowPlaceholder = false): PersonChip {
   };
   chip.living = ind.publicDisplay === 'living' ? true : !ind.isDeceased;
   return chip;
+}
+
+/** Famous-name fields of a NON-private person; the flag only when chosen. */
+function famousNameFields(ind: Individual): Pick<PersonChip, 'famousName' | 'famousNameInNasab'> {
+  return {
+    famousName: ind.famousName?.trim() ?? '',
+    ...(typeof ind.famousNameInNasab === 'boolean' ? { famousNameInNasab: ind.famousNameInNasab } : {}),
+  };
 }
 
 /** A non-private visible individual by id, or null (private → null). */
@@ -791,6 +809,7 @@ export function projectPerson(
     givenName: subject.givenName?.trim() || subject.name?.trim() || '',
     surname,
     kunya: subject.kunya ?? '',
+    ...famousNameFields(subject),
     gender: toGender(subject.sex),
     birth: subject.birth ?? '',
     birthHijriDate: subject.birthHijriDate ?? '',

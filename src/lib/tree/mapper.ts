@@ -68,6 +68,8 @@ export interface DbIndividual {
   deathNotes: Enc
   deathHijriDate: Enc
   kunya: Enc
+  famousName: Enc
+  famousNameInNasab: boolean | null
   notes: Enc
   isDeceased: boolean
   isPrivate: boolean
@@ -105,6 +107,8 @@ export interface DecryptedIndividual {
   deathNotes: string | null
   deathHijriDate: string | null
   kunya: string | null
+  famousName: string | null
+  famousNameInNasab: boolean | null
   notes: string | null
   isDeceased: boolean
   isPrivate: boolean
@@ -430,6 +434,9 @@ function mapIndividual(
 
   if (dbInd.birthPlaceId) result.birthPlaceId = dbInd.birthPlaceId
   if (dbInd.deathPlaceId) result.deathPlaceId = dbInd.deathPlaceId
+  if (dbInd.famousName != null) result.famousName = dbInd.famousName
+  // null = never chosen → key absent, so display falls back to the default.
+  if (dbInd.famousNameInNasab != null) result.famousNameInNasab = dbInd.famousNameInNasab
 
   return result
 }
@@ -464,7 +471,8 @@ export const PRIVATE_PERSON_PLACEHOLDER = 'خاص'
 
 /**
  * Blank all PII on a private individual IN PLACE: name → placeholder, every
- * birth/death/kunya/notes field cleared, and the place-id references removed.
+ * birth/death/kunya/famousName/notes field cleared, the famous-name nasab flag
+ * dropped, and the place-id references removed.
  * Structural data (id, sex, family references) is preserved so the tree layout
  * still works. Shared by the member redactor (`redactPrivateIndividuals`) and
  * the public redactor (`redactForPublic`) so the blanked field set can't drift.
@@ -484,6 +492,8 @@ export function blankPrivatePerson(ind: Individual): void {
   ind.deathNotes = ''
   ind.deathHijriDate = ''
   ind.kunya = ''
+  ind.famousName = ''
+  delete ind.famousNameInNasab
   ind.notes = ''
   delete ind.birthPlaceId
   delete ind.deathPlaceId

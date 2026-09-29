@@ -8,7 +8,7 @@ import type {
 } from './types';
 import { validateAncestryJump } from '../tree/ancestry-jump-validators';
 
-function emptyFamilyEvent(): FamilyEvent {
+export function emptyFamilyEvent(): FamilyEvent {
   return { date: '', hijriDate: '', place: '', description: '', notes: '' };
 }
 
@@ -87,6 +87,31 @@ function parsePositiveInt(value: string | null): number | null {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
+/** What gynat's own exporter writes as `1 SOUR` in HEAD. */
+const GYNAT_HEAD_SOURCE = 'Gynat';
+
+/**
+ * One level-1 `NAME` block of an INDI, buffered until its children are read:
+ * whether it is the primary name, the famous name or a legacy kunya depends
+ * on `TYPE` / `_KUNYA` lines that come after the NAME line itself.
+ */
+interface PendingName {
+  raw: string;
+  givn: string | undefined;
+  surn: string | undefined;
+  type: string | null;
+  /** Legacy documented kunya form: `2 _KUNYA Y` under a NAME. */
+  isKunya: boolean;
+  /** `2 _NASAB Y|N` — honored only when this block resolves as the famous name. */
+  nasab: boolean | null;
+}
+
+/** `Y` → true, `N` → false (case-insensitive); anything else → null. */
+function parseNasabFlag(value: string | null): boolean | null {
+  const flag = (value ?? '').trim().toUpperCase();
+  return flag === 'Y' ? true : flag === 'N' ? false : null;
+}
+
 /** Mirrors the API's `notes` ceiling so a crafted file cannot exceed it. */
 const MAX_JUMP_NOTES_LENGTH = 5000;
 
@@ -159,6 +184,12 @@ export function parseGedcom(text: string): GedcomData {
   let currentLevel1Tag: string | null = null;
   let currentLevel2Tag: string | null = null;
   let currentStandaloneNoteId: string | null = null;
+  /** The first level-1 NAME of an INDI is its primary name; later NAMEs never overwrite it. */
+  let primaryNameSeen = false;
+  let pendingName: PendingName | null = null;
+  /** Set from HEAD: famous names (`TYPE aka`) are read from gynat's own files only. */
+  let isGynatFile = false;
+  let inHead = false;
   const ancestryJumps: Record<string, AncestryJump> = {};
   const collectedAssos: PendingAsso[] = [];
   let pendingAsso: PendingAsso | null = null;
@@ -172,6 +203,54 @@ export function parseGedcom(text: string): GedcomData {
       collectedAssos.push(pendingAsso);
     }
     pendingAsso = null;
+  };
+
+  /**
+   * Resolve the open NAME block onto its INDI:
+   * - a `_KUNYA` child → the kunya (a `1 _KUNYA` wins), never a name;
+   * - else the first NAME → the primary name;
+   * - else, in a gynat file, the first `TYPE aka` → the famous name;
+   * - anything else is ignored.
+   */
+  const flushPendingName = (): void => {
+    const block = pendingName;
+    pendingName = null;
+    if (!block || currentRecord?.type !== 'INDI') return;
+    const indi = currentRecord as Individual;
+    const plain = block.raw.replace(/\//g, '').trim();
+
+    if (block.isKunya) {
+      if (!indi.kunya && plain) indi.kunya = plain;
+      return;
+    }
+
+    if (!primaryNameSeen) {
+      primaryNameSeen = true;
+      indi.name = plain;
+      // Extract givenName and surname from NAME line format: "GivenName /Surname/"
+      const surnameMatch = block.raw.match(/\/([^/]*)\//);
+      if (surnameMatch) {
+        indi.surname = surnameMatch[1].trim();
+        indi.givenName = block.raw.substring(0, block.raw.indexOf('/')).trim();
+      }
+      if (block.givn !== undefined) indi.givenName = block.givn;
+      if (block.surn !== undefined) indi.surname = block.surn;
+      // Check if name indicates a private individual
+      if (plain.toUpperCase() === 'PRIVATE') {
+        indi.isPrivate = true;
+      }
+      return;
+    }
+
+    if (
+      isGynatFile &&
+      block.type?.toLowerCase() === 'aka' &&
+      indi.famousName === undefined &&
+      plain
+    ) {
+      indi.famousName = plain;
+      if (block.nasab !== null) indi.famousNameInNasab = block.nasab;
+    }
   };
 
   for (const line of lines) {
@@ -198,10 +277,13 @@ export function parseGedcom(text: string): GedcomData {
 
     if (level === 0) {
       flushPendingAsso();
+      flushPendingName();
+      inHead = tag === 'HEAD';
       currentSubRecord = null;
       currentLevel1Tag = null;
       currentLevel2Tag = null;
       currentStandaloneNoteId = null;
+      primaryNameSeen = false;
       if (tag === 'NOTE' && id) {
         // Standalone NOTE record: "0 @ID@ NOTE [optional first line]"
         currentRecord = null;
@@ -266,9 +348,12 @@ export function parseGedcom(text: string): GedcomData {
       } else {
         standaloneNotes[currentStandaloneNoteId] += (value || '');
       }
+    } else if (inHead && level === 1 && tag === 'SOUR') {
+      isGynatFile = (value ?? '').trim() === GYNAT_HEAD_SOURCE;
     } else if (currentRecord) {
       if (level === 1) {
         flushPendingAsso();
+        flushPendingName();
         currentSubRecord = tag;
         currentLevel1Tag = tag;
         currentLevel2Tag = null;
@@ -286,19 +371,8 @@ export function parseGedcom(text: string): GedcomData {
               notes: '',
             };
           } else if (tag === 'NAME') {
-            const rawName = value || '';
-            const parsedName = rawName.replace(/\//g, '').trim();
-            indi.name = parsedName;
-            // Extract givenName and surname from NAME line format: "GivenName /Surname/"
-            const surnameMatch = rawName.match(/\/([^/]*)\//)
-            if (surnameMatch) {
-              indi.surname = surnameMatch[1].trim();
-              indi.givenName = rawName.substring(0, rawName.indexOf('/')).trim();
-            }
-            // Check if name indicates a private individual
-            if (parsedName.toUpperCase() === 'PRIVATE' || parsedName.toLowerCase() === 'private') {
-              indi.isPrivate = true;
-            }
+            // Resolved by flushPendingName() once its children are read.
+            pendingName = { raw: value || '', givn: undefined, surn: undefined, type: null, isKunya: false, nasab: null };
           } else if (tag === 'SEX') {
             indi.sex = value === 'M' ? 'M' : value === 'F' ? 'F' : null;
           } else if (tag === 'BIRT') {
@@ -387,11 +461,17 @@ export function parseGedcom(text: string): GedcomData {
             } else {
               currentLevel2Tag = tag;
             }
-          } else if (currentSubRecord === 'NAME') {
+          } else if (currentSubRecord === 'NAME' && pendingName) {
             if (tag === 'GIVN') {
-              indi.givenName = value || '';
+              pendingName.givn = value || '';
             } else if (tag === 'SURN') {
-              indi.surname = value || '';
+              pendingName.surn = value || '';
+            } else if (tag === 'TYPE') {
+              pendingName.type = (value ?? '').trim();
+            } else if (tag === '_KUNYA') {
+              pendingName.isKunya = true;
+            } else if (tag === '_NASAB' && pendingName.nasab === null) {
+              pendingName.nasab = parseNasabFlag(value);
             }
           } else if (tag === 'DATE') {
             const dateVal = value || '';
@@ -522,6 +602,7 @@ export function parseGedcom(text: string): GedcomData {
   }
 
   flushPendingAsso();
+  flushPendingName();
 
   // -------------------------------------------------------------------------
   // Resolve ancestry jumps («قفزة نسب»). Deferred to here so `_ANC_FAM`, the

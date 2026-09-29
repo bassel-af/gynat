@@ -80,6 +80,7 @@ model Workspace {
   enableRadaa              Boolean             @default(false) @map("enable_radaa")
   enableAncestryJumps      Boolean             @default(false) @map("enable_ancestry_jumps")
   enableKunya              Boolean             @default(false) @map("enable_kunya")
+  enableFamousName         Boolean             @default(false) @map("enable_famous_name")
   enableAuditLog           Boolean             @default(false) @map("enable_audit_log")
   enableVersionControl     Boolean             @default(false) @map("enable_version_control")
   enableCollections        Boolean             @default(false) @map("enable_collections")
@@ -295,34 +296,36 @@ model CopyProvenance {
 }
 
 model Individual {
-  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  treeId           String   @map("tree_id") @db.Uuid
-  gedcomId         String?  @map("gedcom_id") // original GEDCOM ID if imported
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  treeId            String   @map("tree_id") @db.Uuid
+  gedcomId          String?  @map("gedcom_id") // original GEDCOM ID if imported
   // Phase 10b: all fields below are AES-256-GCM ciphertext (nonce || tag || data)
   // produced by src/lib/tree/encryption.ts using the workspace's data key.
-  givenName        Bytes?   @map("given_name")
-  surname          Bytes?
-  fullName         Bytes?   @map("full_name")
-  sex              String? // M, F, or null — plaintext: needed for gender validation, tree layout
-  birthDate        Bytes?   @map("birth_date")
-  birthPlace       Bytes?   @map("birth_place")
-  birthPlaceId     String?  @map("birth_place_id") @db.Uuid
-  birthDescription Bytes?   @map("birth_description")
-  birthNotes       Bytes?   @map("birth_notes")
-  deathDate        Bytes?   @map("death_date")
-  deathPlace       Bytes?   @map("death_place")
-  deathPlaceId     String?  @map("death_place_id") @db.Uuid
-  deathDescription Bytes?   @map("death_description")
-  deathNotes       Bytes?   @map("death_notes")
-  birthHijriDate   Bytes?   @map("birth_hijri_date")
-  kunya            Bytes?
-  notes            Bytes?
-  deathHijriDate   Bytes?   @map("death_hijri_date")
-  isDeceased       Boolean  @default(false) @map("is_deceased")
-  isPrivate        Boolean  @default(false) @map("is_private")
-  createdById      String?  @map("created_by") @db.Uuid
-  updatedAt        DateTime @updatedAt @map("updated_at")
-  createdAt        DateTime @default(now()) @map("created_at")
+  givenName         Bytes?   @map("given_name")
+  surname           Bytes?
+  fullName          Bytes?   @map("full_name")
+  sex               String? // M, F, or null — plaintext: needed for gender validation, tree layout
+  birthDate         Bytes?   @map("birth_date")
+  birthPlace        Bytes?   @map("birth_place")
+  birthPlaceId      String?  @map("birth_place_id") @db.Uuid
+  birthDescription  Bytes?   @map("birth_description")
+  birthNotes        Bytes?   @map("birth_notes")
+  deathDate         Bytes?   @map("death_date")
+  deathPlace        Bytes?   @map("death_place")
+  deathPlaceId      String?  @map("death_place_id") @db.Uuid
+  deathDescription  Bytes?   @map("death_description")
+  deathNotes        Bytes?   @map("death_notes")
+  birthHijriDate    Bytes?   @map("birth_hijri_date")
+  kunya             Bytes?
+  famousName        Bytes?   @map("famous_name")
+  famousNameInNasab Boolean? @map("famous_name_in_nasab")
+  notes             Bytes?
+  deathHijriDate    Bytes?   @map("death_hijri_date")
+  isDeceased        Boolean  @default(false) @map("is_deceased")
+  isPrivate         Boolean  @default(false) @map("is_private")
+  createdById       String?  @map("created_by") @db.Uuid
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  createdAt         DateTime @default(now()) @map("created_at")
 
   // Relations
   tree                       FamilyTree            @relation(fields: [treeId], references: [id], onDelete: Cascade)

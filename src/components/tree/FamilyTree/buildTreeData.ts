@@ -2,7 +2,7 @@ import type { Node, Edge } from '@xyflow/react';
 
 import type { AncestryJump, GedcomData, Individual } from '@/lib/gedcom';
 import {
-  getDisplayName,
+  getLeadDisplayName,
   getAllDescendants,
   findTopmostAncestor,
   hasExternalFamily,
@@ -782,7 +782,7 @@ export function buildTreeData(
       const list = childrenElsewhereByPerson.get(personId) ?? [];
       list.push({
         spouseId: bucket.spouseId,
-        spouseName: getDisplayName(spouse),
+        spouseName: getLeadDisplayName(spouse),
         count: bucket.total,
         canonicalNodeId: bucket.spouseId, // resolved (and filtered) below
       });

@@ -6,6 +6,7 @@ import { dbTreeToGedcomData, redactPrivateIndividuals } from '@/lib/tree/mapper'
 import { getWorkspaceKey } from '@/lib/tree/encryption';
 import { getActivePointersForWorkspace } from '@/lib/tree/branch-pointer-queries';
 import { extractPointedSubtree, mergePointedSubtree } from '@/lib/tree/branch-pointer-merge';
+import { stripDisabledNameFeatures, nameFeatureFlags, NAME_FEATURE_SELECT } from '@/lib/tree/feature-strip';
 import type { GedcomData } from '@/lib/gedcom/types';
 import { createHash } from 'crypto';
 
@@ -94,20 +95,16 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     });
   }
 
-  let safeData = redactPrivateIndividuals(gedcomData);
-
-  // Strip kunya when feature is disabled
+  // Strip the name features this workspace has switched off (fail-closed:
+  // a missing workspace row strips both).
   const workspace = await prisma.workspace.findUnique({
     where: { id: workspaceId },
-    select: { enableKunya: true },
+    select: NAME_FEATURE_SELECT,
   });
-  if (!workspace?.enableKunya) {
-    const strippedIndividuals: Record<string, typeof safeData.individuals[string]> = {};
-    for (const [id, ind] of Object.entries(safeData.individuals)) {
-      strippedIndividuals[id] = { ...ind, kunya: '' };
-    }
-    safeData = { ...safeData, individuals: strippedIndividuals };
-  }
+  const safeData = stripDisabledNameFeatures(
+    redactPrivateIndividuals(gedcomData),
+    nameFeatureFlags(workspace),
+  );
 
   // Build pointer metadata for the frontend
   const pointerMetadata = pointers.map((p) => ({

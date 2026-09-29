@@ -27,6 +27,13 @@ export interface Individual {
   deathNotes: string;
   deathHijriDate: string;
   kunya: string;
+  /** The name the person is best known by («أبو طالب», «هاشم»). */
+  famousName?: string;
+  /**
+   * Whether `famousName` replaces the real name in names and nasab chains.
+   * Undefined = `defaultFamousNameInNasab(famousName)`.
+   */
+  famousNameInNasab?: boolean;
   notes: string;
   isDeceased: boolean;
   isPrivate: boolean;
@@ -127,6 +134,10 @@ export interface GedcomData {
 export interface RootAncestor {
   id: string;
   text: string;
+  /** What the root filter matches: `text` plus the person's other names. */
+  searchText?: string;
+  /** The grey other-name line («واسمه شيبة»), if the person has a famous name. */
+  alternate?: string | null;
 }
 
 export interface TreeConfig {

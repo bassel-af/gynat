@@ -41,6 +41,7 @@ interface WorkspaceInfo {
   enableRadaa?: boolean;
   enableAncestryJumps?: boolean;
   enableKunya?: boolean;
+  enableFamousName?: boolean;
   enableAuditLog?: boolean;
   enableTreeExport?: boolean;
   allowMemberExport?: boolean;
@@ -172,6 +173,7 @@ function TreeShellGate({
     enableRadaa: workspace.enableRadaa,
     enableAncestryJumps: workspace.enableAncestryJumps,
     enableKunya: workspace.enableKunya,
+    enableFamousName: workspace.enableFamousName,
     enableAuditLog: workspace.enableAuditLog,
     enableTreeExport: workspace.enableTreeExport,
     allowMemberExport: workspace.allowMemberExport,
@@ -299,7 +301,7 @@ function TreeShell({
 }
 
 function EmptyTreeWithForm({ canEdit }: { canEdit: boolean }) {
-  const { workspaceId, activeTreeId, refreshTree, enableKunya, defaultNewPersonDeceased } = useWorkspaceTree();
+  const { workspaceId, activeTreeId, refreshTree, enableKunya, enableFamousName, defaultNewPersonDeceased } = useWorkspaceTree();
   const { showToast } = useToast();
   const [showForm, setShowForm] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
@@ -413,6 +415,7 @@ function EmptyTreeWithForm({ canEdit }: { canEdit: boolean }) {
           isLoading={formLoading}
           error={formError}
           enableKunya={enableKunya}
+          enableFamousName={enableFamousName}
           workspaceId={workspaceId}
           defaultDeceased={defaultNewPersonDeceased}
         />

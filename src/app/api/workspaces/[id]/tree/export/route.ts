@@ -6,6 +6,7 @@ import { dbTreeToGedcomData, redactPrivateIndividuals } from '@/lib/tree/mapper'
 import { getWorkspaceKey } from '@/lib/tree/encryption'
 import { getActivePointersForWorkspace } from '@/lib/tree/branch-pointer-queries'
 import { extractPointedSubtree, mergePointedSubtree } from '@/lib/tree/branch-pointer-merge'
+import { stripDisabledNameFeatures } from '@/lib/tree/feature-strip'
 import { gedcomDataToGedcom } from '@/lib/gedcom/exporter'
 import { prisma } from '@/lib/db'
 import type { GedcomData } from '@/lib/gedcom/types'
@@ -26,11 +27,17 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   const { allowed, retryAfterSeconds } = treeExportLimiter.check(result.user.id)
   if (!allowed) return rateLimitResponse(retryAfterSeconds)
 
-  // Load export-permission toggles + slug in a single query.
+  // Load export-permission toggles, name-feature toggles + slug in one query.
   // This is the server trust boundary — UI hiding elsewhere is purely UX.
   const workspace = await prisma.workspace.findUnique({
     where: { id: workspaceId },
-    select: { slug: true, enableTreeExport: true, allowMemberExport: true },
+    select: {
+      slug: true,
+      enableTreeExport: true,
+      allowMemberExport: true,
+      enableKunya: true,
+      enableFamousName: true,
+    },
   })
   if (!workspace || !workspace.enableTreeExport) {
     return NextResponse.json(
@@ -136,8 +143,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     })
   }
 
-  // Redact private individuals
-  const safeData = redactPrivateIndividuals(gedcomData)
+  // Redact private individuals, then strip the name features this workspace
+  // has switched off (kunya, famous name).
+  const safeData = stripDisabledNameFeatures(redactPrivateIndividuals(gedcomData), workspace)
 
   // Serialize to GEDCOM (exporter skips _pointed records internally)
   const gedcomText = gedcomDataToGedcom(safeData, version)

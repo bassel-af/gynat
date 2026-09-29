@@ -7,6 +7,7 @@ import type {
   AncestryJump,
 } from '@/lib/gedcom/types';
 import { encryptFieldNullable } from '@/lib/crypto/workspace-encryption';
+import { redactPrivateIndividuals } from '@/lib/tree/mapper';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -115,14 +116,19 @@ export function copyAncestryJumps(
  * - Removes placeId fields (string place names preserved)
  * - Removes _pointed and _sourceWorkspaceId flags
  * - Creates a stitch family to connect the copied root to the anchor
+ * - PRIVACY: blanks private people with the member redaction first. Every
+ *   caller copies ANOTHER family's branch, which the target only ever saw
+ *   through the member tree merge (`redactPrivateIndividuals`); the copy must
+ *   not carry more than that. Placeholders keep structure and the id map.
  *
  * Pure function — does not mutate input.
  */
 export function prepareDeepCopy(
-  pointed: GedcomData,
+  source: GedcomData,
   config: DeepCopyConfig,
 ): DeepCopyResult {
   const { anchorIndividualId, relationship } = config;
+  const pointed = redactPrivateIndividuals(source);
 
   // Step 1: Generate new UUIDs for all entities
   const idMap = new Map<string, string>();
@@ -358,6 +364,8 @@ export async function persistDeepCopy(
     deathNotes: enc(ind.deathNotes || null),
     deathHijriDate: enc(ind.deathHijriDate || null),
     kunya: enc(ind.kunya || null),
+    famousName: enc(ind.famousName || null),
+    famousNameInNasab: ind.famousNameInNasab ?? null,
     notes: enc(ind.notes || null),
     isDeceased: ind.isDeceased,
     isPrivate: ind.isPrivate,

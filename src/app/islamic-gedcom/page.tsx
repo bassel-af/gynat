@@ -35,6 +35,10 @@ export const metadata: Metadata = {
     'Kunya GEDCOM',
     '_KUNYA',
     'Abu Umm',
+    'اسم الشهرة',
+    'famous name GEDCOM',
+    'NAME TYPE aka',
+    '_NASAB',
     'قفزة نسب',
     'ancestry jump GEDCOM',
     'ASSO RELA ancestor',
@@ -89,7 +93,7 @@ export default function IslamicGedcomPage() {
           <p className={styles.pageSubtitle}>
             مرجع شامل لتوثيق الأنساب وفق المفاهيم الشرعية الإسلامية،
             باستخدام علامات GEDCOM القياسية (5.5.1 و 7.0) وامتدادات مخصصة
-            تشمل التقويم الهجري، أحداث الزواج، الرضاعة، والكنية.
+            تشمل التقويم الهجري، أحداث الزواج، الرضاعة، اسم الشهرة، والكنية.
           </p>
         </header>
 
@@ -617,12 +621,151 @@ export default function IslamicGedcomPage() {
           </div>
         </section>
 
+        {/* ─── Famous Name ─── */}
+        <section id="famous-name" className={styles.section}>
+          <h2 className={styles.sectionTitle}>اسم الشهرة</h2>
+          <p className={styles.desc}>
+            اسم الشهرة هو الاسم الذي عُرف به الشخص بدل اسمه: عبدالمطلب واسمه شيبة،
+            وهاشم واسمه عمرو. يُسجَّل الاسم بآلية الأسماء المتعددة القياسية في
+            GEDCOM، ولاختيار الاسم الذي يُذكر في النسب علامة مخصصة واحدة.
+          </p>
+
+          <div className={styles.tagBlock}>
+            <div className={styles.tagHeader}>
+              <span className={`${styles.tagBadge} ${styles.tagBadgeStandard}`}>NAME</span>
+              <span className={`${styles.tagBadge} ${styles.tagBadgeStandard}`}>TYPE</span>
+              <span className={styles.tagLabel}>قياسي</span>
+              <span className={styles.tagName}>اسم الشهرة</span>
+            </div>
+            <p className={styles.tagDesc}>
+              الاسم الحقيقي هو دائماً أول <span className={styles.inlineCode}>NAME</span>{' '}
+              في سجل الفرد، فتعرضه كل البرامج اسماً للشخص. واسم الشهرة{' '}
+              <span className={styles.inlineCode}>NAME</span> ثانٍ من نوع{' '}
+              <span className={styles.inlineCode}>aka</span>، ولا يكون للشخص إلا
+              اسم شهرة واحد.
+            </p>
+            <p className={styles.tagDesc}>
+              <strong>GEDCOM 5.5.1:</strong> نوع الاسم يُحدد
+              بـ <span className={styles.inlineCode}>2 TYPE aka</span>.
+            </p>
+            <div className={styles.codeBlock}>
+              <span className={styles.codeComment}>{"// GEDCOM 5.5.1"}</span>{'\n'}
+              <span className={styles.codeId}>0 @I1@ INDI</span>{'\n'}
+              <span className={styles.codeTag}>1 NAME</span> <span className={styles.codeVal}>شيبة</span>{'\n'}
+              <span className={styles.codeTag}>2 GIVN</span> <span className={styles.codeVal}>شيبة</span>{'\n'}
+              <span className={styles.codeTag}>1 NAME</span> <span className={styles.codeVal}>عبدالمطلب</span>{'\n'}
+              <span className={styles.codeTag}>2 TYPE</span> <span className={styles.codeVal}>aka</span>{'\n'}
+              {'\n'}
+              <span className={styles.codeId}>0 @I2@ INDI</span>{'\n'}
+              <span className={styles.codeTag}>1 NAME</span> <span className={styles.codeVal}>عمرو</span>{'\n'}
+              <span className={styles.codeTag}>2 GIVN</span> <span className={styles.codeVal}>عمرو</span>{'\n'}
+              <span className={styles.codeTag}>1 NAME</span> <span className={styles.codeVal}>هاشم</span>{'\n'}
+              <span className={styles.codeTag}>2 TYPE</span> <span className={styles.codeVal}>aka</span>{'\n'}
+              {'\n'}
+              <span className={styles.codeId}>0 @I3@ INDI</span>{'\n'}
+              <span className={styles.codeTag}>1 NAME</span> <span className={styles.codeVal}>عبدمناف</span>{'\n'}
+              <span className={styles.codeTag}>2 GIVN</span> <span className={styles.codeVal}>عبدمناف</span>{'\n'}
+              <span className={styles.codeTag}>1 NAME</span> <span className={styles.codeVal}>أبو طالب</span>{'\n'}
+              <span className={styles.codeTag}>2 TYPE</span> <span className={styles.codeVal}>aka</span>{'\n'}
+              <span className={styles.codeCustomTag}>1 _KUNYA</span> <span className={styles.codeVal}>أبو طالب</span>
+            </div>
+            <p className={styles.tagDesc}>
+              <strong>GEDCOM 7.0:</strong> نوع الاسم يُحدد
+              بـ <span className={styles.inlineCode}>2 TYPE AKA</span> من تعداد
+              الأنواع القياسي، دون <span className={styles.inlineCode}>PHRASE</span>.
+            </p>
+            <div className={styles.codeBlock}>
+              <span className={styles.codeComment}>{"// GEDCOM 7.0"}</span>{'\n'}
+              <span className={styles.codeId}>0 @I1@ INDI</span>{'\n'}
+              <span className={styles.codeTag}>1 NAME</span> <span className={styles.codeVal}>شيبة</span>{'\n'}
+              <span className={styles.codeTag}>2 GIVN</span> <span className={styles.codeVal}>شيبة</span>{'\n'}
+              <span className={styles.codeTag}>1 NAME</span> <span className={styles.codeVal}>عبدالمطلب</span>{'\n'}
+              <span className={styles.codeTag}>2 TYPE</span> <span className={styles.codeVal}>AKA</span>{'\n'}
+              {'\n'}
+              <span className={styles.codeId}>0 @I2@ INDI</span>{'\n'}
+              <span className={styles.codeTag}>1 NAME</span> <span className={styles.codeVal}>عمرو</span>{'\n'}
+              <span className={styles.codeTag}>2 GIVN</span> <span className={styles.codeVal}>عمرو</span>{'\n'}
+              <span className={styles.codeTag}>1 NAME</span> <span className={styles.codeVal}>هاشم</span>{'\n'}
+              <span className={styles.codeTag}>2 TYPE</span> <span className={styles.codeVal}>AKA</span>{'\n'}
+              {'\n'}
+              <span className={styles.codeId}>0 @I3@ INDI</span>{'\n'}
+              <span className={styles.codeTag}>1 NAME</span> <span className={styles.codeVal}>عبدمناف</span>{'\n'}
+              <span className={styles.codeTag}>2 GIVN</span> <span className={styles.codeVal}>عبدمناف</span>{'\n'}
+              <span className={styles.codeTag}>1 NAME</span> <span className={styles.codeVal}>أبو طالب</span>{'\n'}
+              <span className={styles.codeTag}>2 TYPE</span> <span className={styles.codeVal}>AKA</span>{'\n'}
+              <span className={styles.codeCustomTag}>1 _KUNYA</span> <span className={styles.codeVal}>أبو طالب</span>
+            </div>
+            <div className={styles.note}>
+              إذا كانت الكنية هي اسم الشهرة تُكتب في الموضعين، كما في مثال
+              أبي طالب أعلاه: مرة اسماً من نوع <span className={styles.inlineCode}>aka</span>{' '}
+              ومرة في <span className={styles.inlineCode}>_KUNYA</span>.
+              <br /><br />
+              الشخص الخاص يُصدَّر بـ <span className={styles.inlineCode}>1 NAME PRIVATE</span>{' '}
+              فقط، دون اسم شهرة ودون كنية.
+            </div>
+          </div>
+
+          {/* _NASAB */}
+          <div className={styles.tagBlock}>
+            <div className={styles.tagHeader}>
+              <span className={`${styles.tagBadge} ${styles.tagBadgeCustom}`}>_NASAB</span>
+              <span className={styles.tagLabel}>امتداد</span>
+              <span className={styles.tagName}>يُذكر في النسب باسم</span>
+            </div>
+            <p className={styles.tagDesc}>
+              يُذكر الشخص في نسب أبنائه وأحفاده باسم شهرته في الأصل:
+              &laquo;العباس بن عبدالمطلب&raquo; لا &laquo;العباس بن شيبة&raquo;.
+              إلا إذا كان في اسم الشهرة كلمة &laquo;ابن&raquo; أو &laquo;بنت&raquo;،
+              كعبدالله بن الزبير المعروف بـ&laquo;ابن الزبير&raquo;، فيُذكر
+              باسمه الحقيقي: &laquo;خبيب بن عبدالله&raquo;.
+            </p>
+            <p className={styles.tagDesc}>
+              إذا حدّد صاحب الشجرة أيّ الاسمين يُذكر في النسب، يُكتب اختياره
+              في <span className={styles.inlineCode}>2 _NASAB</span> تحت اسم
+              الشهرة: <span className={styles.inlineCode}>Y</span> لاسم الشهرة،
+              و<span className={styles.inlineCode}>N</span> للاسم الحقيقي.
+              ويُكتب الاختيار ولو وافق الأصل، فيبقى ثابتاً إذا تغيّر اسم الشهرة.
+              وإذا لم يحدّد شيئاً لا تُكتب العلامة ويُتّبع الأصل.
+            </p>
+            <div className={styles.codeBlock}>
+              <span className={styles.codeComment}>{"// GEDCOM 5.5.1"}</span>{'\n'}
+              <span className={styles.codeId}>0 @I4@ INDI</span>{'\n'}
+              <span className={styles.codeTag}>1 NAME</span> <span className={styles.codeVal}>عبدالله</span>{'\n'}
+              <span className={styles.codeTag}>2 GIVN</span> <span className={styles.codeVal}>عبدالله</span>{'\n'}
+              <span className={styles.codeTag}>1 NAME</span> <span className={styles.codeVal}>ابن الزبير</span>{'\n'}
+              <span className={styles.codeTag}>2 TYPE</span> <span className={styles.codeVal}>aka</span>{'\n'}
+              <span className={styles.codeCustomTag}>2 _NASAB</span> <span className={styles.codeVal}>N</span>
+            </div>
+            <p className={styles.tagDesc}>
+              <strong>GEDCOM 7.0:</strong> البنية نفسها، وتُعرَّف العلامة في
+              كتلة <span className={styles.inlineCode}>SCHMA</span> داخل الترويسة.
+            </p>
+            <div className={styles.codeBlock}>
+              <span className={styles.codeComment}>{"// GEDCOM 7.0"}</span>{'\n'}
+              <span className={styles.codeTag}>0 HEAD</span>{'\n'}
+              <span className={styles.codeTag}>1 SCHMA</span>{'\n'}
+              <span className={styles.codeTag}>2 TAG</span> <span className={styles.codeCustomTag}>_NASAB</span> <span className={styles.codeVal}>https://gynat.com/gedcom/ext/_NASAB</span>{'\n'}
+              {'\n'}
+              <span className={styles.codeId}>0 @I4@ INDI</span>{'\n'}
+              <span className={styles.codeTag}>1 NAME</span> <span className={styles.codeVal}>عبدالله</span>{'\n'}
+              <span className={styles.codeTag}>2 GIVN</span> <span className={styles.codeVal}>عبدالله</span>{'\n'}
+              <span className={styles.codeTag}>1 NAME</span> <span className={styles.codeVal}>ابن الزبير</span>{'\n'}
+              <span className={styles.codeTag}>2 TYPE</span> <span className={styles.codeVal}>AKA</span>{'\n'}
+              <span className={styles.codeCustomTag}>2 _NASAB</span> <span className={styles.codeVal}>N</span>
+            </div>
+            <div className={styles.note}>
+              البرامج التي لا تعرف العلامة تتجاهلها، ويبقى اسم الشهرة عندها
+              اسماً ثانياً عادياً.
+            </div>
+          </div>
+        </section>
+
         {/* ─── Kunya ─── */}
         <section id="kunya" className={styles.section}>
           <h2 className={styles.sectionTitle}>الكنية</h2>
           <p className={styles.desc}>
             الكنية هي أن يُنادى الشخص بـ &laquo;أبو فلان&raquo; أو &laquo;أم فلان&raquo;
-            نسبةً إلى أحد أبنائه. وهي أسلوب مخاطبة متوارث في الثقافة العربية،
+            نسبةً إلى أحد أبنائه. وهي أسلوب مخاطبة متوارث في الثقافة العربية.
           </p>
           <p className={styles.desc}>
             لا يوجد في معيار GEDCOM علامة مخصصة للكنية.
@@ -640,37 +783,25 @@ export default function IslamicGedcomPage() {
               <span className={styles.tagName}>الكنية</span>
             </div>
             <p className={styles.tagDesc}>
-              توضع كعلامة فرعية تحت سجل اسم إضافي من نوع{' '}
-              <span className={styles.inlineCode}>aka</span> على سجل الفرد
-              (<span className={styles.inlineCode}>INDI</span>).
-              الاسم الإضافي يحتوي على نص الكنية (مثل &laquo;أبو أحمد&raquo;)،
-              والعلامة <span className={styles.inlineCode}>_KUNYA Y</span> تُميّزه ككنية.
-            </p>
-            <p className={styles.tagDesc}>
-              <strong>GEDCOM 5.5.1:</strong> نوع الاسم يُحدد
-              بـ <span className={styles.inlineCode}>2 TYPE aka</span>.
+              علامة مخصصة على مستوى سجل الفرد
+              (<span className={styles.inlineCode}>INDI</span>)، قيمتها نص الكنية
+              نفسه (مثل &laquo;أبو أحمد&raquo;). الصيغة واحدة في 5.5.1 و7.0.
             </p>
             <div className={styles.codeBlock}>
-              <span className={styles.codeComment}>{"// GEDCOM 5.5.1"}</span>{'\n'}
+              <span className={styles.codeComment}>{"// GEDCOM 5.5.1 / 7.0"}</span>{'\n'}
               <span className={styles.codeId}>0 @I1@ INDI</span>{'\n'}
               <span className={styles.codeTag}>1 NAME</span> <span className={styles.codeVal}>محمد /بن عبدالله/</span>{'\n'}
-              <span className={styles.codeTag}>1 NAME</span> <span className={styles.codeVal}>أبو أحمد //</span>{'\n'}
-              <span className={styles.codeTag}>2 TYPE</span> <span className={styles.codeVal}>aka</span>{'\n'}
-              <span className={styles.codeCustomTag}>2 _KUNYA</span> <span className={styles.codeVal}>Y</span>
+              <span className={styles.codeCustomTag}>1 _KUNYA</span> <span className={styles.codeVal}>أبو أحمد</span>
             </div>
             <p className={styles.tagDesc}>
-              <strong>GEDCOM 7.0:</strong> نوع الاسم يُحدد
-              بـ <span className={styles.inlineCode}>2 TYPE OTHER</span> مع علامة
-              فرعية <span className={styles.inlineCode}>3 PHRASE Kunya</span>.
+              <strong>GEDCOM 7.0:</strong> تُعرَّف العلامة في كتلة{' '}
+              <span className={styles.inlineCode}>SCHMA</span> داخل الترويسة.
             </p>
             <div className={styles.codeBlock}>
-              <span className={styles.codeComment}>{"// GEDCOM 7.0"}</span>{'\n'}
-              <span className={styles.codeId}>0 @I1@ INDI</span>{'\n'}
-              <span className={styles.codeTag}>1 NAME</span> <span className={styles.codeVal}>محمد /بن عبدالله/</span>{'\n'}
-              <span className={styles.codeTag}>1 NAME</span> <span className={styles.codeVal}>أبو أحمد //</span>{'\n'}
-              <span className={styles.codeTag}>2 TYPE</span> <span className={styles.codeVal}>OTHER</span>{'\n'}
-              <span className={styles.codeTag}>3 PHRASE</span> <span className={styles.codeVal}>Kunya</span>{'\n'}
-              <span className={styles.codeCustomTag}>2 _KUNYA</span> <span className={styles.codeVal}>Y</span>
+              <span className={styles.codeComment}>{"// تعريف الامتداد في ترويسة GEDCOM 7.0"}</span>{'\n'}
+              <span className={styles.codeTag}>0 HEAD</span>{'\n'}
+              <span className={styles.codeTag}>1 SCHMA</span>{'\n'}
+              <span className={styles.codeTag}>2 TAG</span> <span className={styles.codeCustomTag}>_KUNYA</span> <span className={styles.codeVal}>https://gynat.com/gedcom/ext/_KUNYA</span>
             </div>
             <div className={styles.note}>
               الكنية قد تكون للأم أيضاً: &laquo;أم أحمد&raquo; — بنفس البنية تماماً.
@@ -729,7 +860,9 @@ export default function IslamicGedcomPage() {
               <p className={styles.compatDesc}>
                 العلامات القياسية (<span className={styles.inlineCode}>MARC</span>,{' '}
                 <span className={styles.inlineCode}>MARR</span>,{' '}
-                <span className={styles.inlineCode}>DIV</span>) مدعومة بالكامل.
+                <span className={styles.inlineCode}>DIV</span>) مدعومة بالكامل،
+                واسم الشهرة اسم ثانٍ <span className={styles.inlineCode}>NAME</span>{' '}
+                من نوع <span className={styles.inlineCode}>aka</span>.
                 التاريخ الهجري يُسجّل عبر معرّف التقويم{' '}
                 <span className={styles.inlineCode}>@#DHIJRI@</span>.{' '}
                 العلامات المخصصة (<span className={styles.inlineCode}>_RADA_FAM</span>,{' '}
@@ -739,6 +872,7 @@ export default function IslamicGedcomPage() {
                 <span className={styles.inlineCode}>_RADA_CHIL</span>,{' '}
                 <span className={styles.inlineCode}>_UMM_WALAD</span>,{' '}
                 <span className={styles.inlineCode}>_KUNYA</span>,{' '}
+                <span className={styles.inlineCode}>_NASAB</span>,{' '}
                 <span className={styles.inlineCode}>_ANC_FAM</span>,{' '}
                 <span className={styles.inlineCode}>_GAP_MIN</span>,{' '}
                 <span className={styles.inlineCode}>_GAP_MAX</span>) تتبع
@@ -754,6 +888,10 @@ export default function IslamicGedcomPage() {
                 متوافق بالكامل. GEDCOM 7 يوفر آلية رسمية لتسجيل الامتدادات
                 المخصصة عبر{' '}
                 <span className={styles.inlineCode}>GEDCOM-registries</span>.
+                اسم الشهرة يستخدم <span className={styles.inlineCode}>TYPE AKA</span>{' '}
+                القياسي، و<span className={styles.inlineCode}>_KUNYA</span>{' '}
+                و<span className={styles.inlineCode}>_NASAB</span> مُعرَّفتان
+                في كتلة <span className={styles.inlineCode}>SCHMA</span>.
                 قيمة <span className={styles.inlineCode}>_ANCESTOR</span> تحت{' '}
                 <span className={styles.inlineCode}>ROLE</span> وسائر علامات قفزة
                 النسب مُعرَّفة في كتلة{' '}

@@ -37,6 +37,7 @@ const sourceData: GedcomData = {
       id: ROOT_IND, type: 'INDI', name: 'الجد', givenName: 'الجد', surname: '',
       sex: 'M', familiesAsSpouse: ['fam-1'], familyAsChild: null,
       birth: '', death: '', isDeceased: true, isPrivate: false,
+      famousName: 'هاشم', famousNameInNasab: true,
     } as never,
     'ind-child': {
       id: 'ind-child', type: 'INDI', name: 'الابن', givenName: 'الابن', surname: '',
@@ -55,7 +56,8 @@ const sourceData: GedcomData = {
   },
 };
 const mockDbTreeToGedcomData = vi.fn((..._a: unknown[]): GedcomData => sourceData);
-vi.mock('@/lib/tree/mapper', () => ({
+vi.mock('@/lib/tree/mapper', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/tree/mapper')>()),
   dbTreeToGedcomData: (...a: unknown[]) => mockDbTreeToGedcomData(...a),
 }));
 
@@ -74,6 +76,10 @@ vi.mock('@/lib/tree/source-copy', async (importOriginal) => ({
 
 const mockTreeCreate = vi.fn((..._a: unknown[]): Promise<{ id: string }> => Promise.resolve({ id: NEW_TREE_ID }));
 const mockTreeCount = vi.fn((..._a: unknown[]): Promise<number> => Promise.resolve(0));
+const SOURCE_SETTINGS = {
+  enableKunya: true, enableFamousName: true, hideBirthDateForFemale: false, hideBirthDateForMale: false,
+};
+const mockWorkspaceFindUnique = vi.fn((..._a: unknown[]): Promise<unknown> => Promise.resolve(SOURCE_SETTINGS));
 const mockTransaction = vi.fn((fn: (tx: unknown) => unknown) =>
   fn({ familyTree: { create: (...a: unknown[]) => mockTreeCreate(...a) } }),
 );
@@ -81,6 +87,9 @@ vi.mock('@/lib/db', () => ({
   prisma: {
     $transaction: (fn: (tx: unknown) => unknown) => mockTransaction(fn),
     familyTree: { count: (...a: unknown[]) => mockTreeCount(...a) },
+    workspace: {
+      findUnique: (...a: unknown[]) => mockWorkspaceFindUnique(...a),
+    },
   },
 }));
 
@@ -98,6 +107,7 @@ beforeEach(() => {
   mockTreeCreate.mockResolvedValue({ id: NEW_TREE_ID });
   mockTreeCount.mockResolvedValue(0);
   mockCopySources.mockResolvedValue({ skippedSourceFiles: 0 });
+  mockWorkspaceFindUnique.mockResolvedValue(SOURCE_SETTINGS);
 });
 
 describe('copyBorrowedBranchIntoNewExtraTree — TWO-KEY cross-workspace deep copy', () => {
@@ -262,5 +272,35 @@ describe('copyBorrowedBranchIntoNewExtraTree — sources (step 8)', () => {
     mockCopySources.mockResolvedValue({ skippedSourceFiles: 2 });
     const res = await copyBorrowedBranchIntoNewExtraTree({ addingWorkspaceId: ADDING_WS, source: branch, nameAr: 'فرع' });
     expect(res.skippedSourceFiles).toBe(2);
+  });
+});
+
+describe('copyBorrowedBranchIntoNewExtraTree — famous name follows the source family setting', () => {
+  const wholeTree = {
+    type: 'public-slug' as const, sourceWorkspaceId: SOURCE_WS, sourceTreeId: SOURCE_TREE_ID,
+    rootIndividualId: WHOLE_TREE_ROOT, depthLimit: null, includeGrafts: false,
+    isPublic: true, shareTokenId: null, allowReuse: true,
+  };
+  const copiedRoot = () =>
+    (mockPersistDeepCopy.mock.calls[0][2] as { individuals: Record<string, Record<string, unknown>> })
+      .individuals;
+
+  test('reads the source family\'s famous-name toggle', async () => {
+    await copyBorrowedBranchIntoNewExtraTree({ addingWorkspaceId: ADDING_WS, source: wholeTree, nameAr: 'شجرة' });
+    const query = mockWorkspaceFindUnique.mock.calls[0][0] as { select: Record<string, boolean> };
+    expect(query.select.enableFamousName).toBe(true);
+  });
+
+  test('a public copy carries no famous name when the source has the feature off', async () => {
+    mockWorkspaceFindUnique.mockResolvedValue({ ...SOURCE_SETTINGS, enableFamousName: false });
+    await copyBorrowedBranchIntoNewExtraTree({ addingWorkspaceId: ADDING_WS, source: wholeTree, nameAr: 'شجرة' });
+    const people = Object.values(copiedRoot());
+    expect(people.some((p) => p.famousName !== undefined)).toBe(false);
+  });
+
+  test('a public copy keeps the famous name when the source has the feature on', async () => {
+    await copyBorrowedBranchIntoNewExtraTree({ addingWorkspaceId: ADDING_WS, source: wholeTree, nameAr: 'شجرة' });
+    const people = Object.values(copiedRoot());
+    expect(people.some((p) => p.famousName === 'هاشم')).toBe(true);
   });
 });

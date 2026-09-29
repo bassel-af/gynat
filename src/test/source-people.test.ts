@@ -51,6 +51,12 @@ describe('quickGroups', () => {
     expect(summary(quickGroups(data, 'OTHER'))[0]).toEqual(['الأب: عبد الله', ['GF']]);
   });
 
+  it('names a spouse by the name they lead with', () => {
+    const d = buildPickerFamily();
+    d.individuals.W1 = { ...d.individuals.W1, famousName: 'أم أحمد' };
+    expect(summary(quickGroups(d, 'M'))[0]).toEqual(['الزوجة: أم أحمد', ['W1']]);
+  });
+
   it('an unknown person has no quick buttons', () => {
     expect(quickGroups(data, 'NOPE')).toEqual([]);
   });
@@ -74,9 +80,15 @@ describe('pickerRow', () => {
     expect(pickerRow(data, 'M', 'K1')).toEqual({
       id: 'K1',
       name: 'أحمد بن محمد العطار',
+      alternate: null,
       sub: 'ابن · مواليد ١٣٧٥هـ',
       disabled: false,
     });
+  });
+  it('carries the other-name line when the person has a famous name', () => {
+    const d = buildPickerFamily();
+    d.individuals.K3 = { ...d.individuals.K3, famousName: 'أبو الفضل' };
+    expect(pickerRow(d, 'M', 'K3').alternate).toBe('واسمه خالد');
   });
   it('no relation and no birth → no second line', () => {
     expect(pickerRow(data, 'K1', 'W2').sub).toBeNull(); // a stepmother: no label in the list
@@ -104,6 +116,18 @@ describe('searchPickerPeople', () => {
   });
   it('an empty query finds nobody', () => {
     expect(searchPickerPeople(data, '  ')).toEqual([]);
+  });
+  it('finds a person whose famous name leads by their real name', () => {
+    const d = buildPickerFamily();
+    d.individuals.K3 = { ...d.individuals.K3, famousName: 'أبو الفضل' };
+    expect(searchPickerPeople(d, 'خالد').map((p) => p.id)).toEqual(['K3']);
+    expect(searchPickerPeople(d, 'الفضل').map((p) => p.id)).toEqual(['K3']);
+  });
+  it('ranks a main-name match above a person matched only through their real name', () => {
+    const d = buildPickerFamily();
+    d.individuals.K3 = { ...d.individuals.K3, famousName: 'أبو الفضل' };
+    d.individuals.K4 = { ...d.individuals.K1, id: 'K4', name: 'خالد', givenName: 'خالد' };
+    expect(searchPickerPeople(d, 'خالد').map((p) => p.id)).toEqual(['K4', 'K3']);
   });
 });
 

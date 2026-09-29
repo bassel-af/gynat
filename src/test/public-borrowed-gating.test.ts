@@ -93,6 +93,7 @@ const HOME_RECORD: PublicTreeRecord = {
   lastModifiedAt: new Date('2026-06-15'),
   publicSlug: 'home-abc123',
   enableKunya: true,
+  enableFamousName: false,
   hideBirthDateForFemale: false,
   hideBirthDateForMale: false,
   personPagesIndexable: false,

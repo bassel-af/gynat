@@ -23,6 +23,62 @@ export function matchesSearch(text: string, query: string): boolean {
   return tokens.every(token => normalizedText.includes(stripArabicDiacritics(token)));
 }
 
+/** A piece of text and whether it matched a search query. */
+export interface HighlightSegment {
+  text: string;
+  hit: boolean;
+}
+
+const DIACRITIC_SET = new Set(ARABIC_DIACRITICS_CHARS);
+
+/**
+ * Split `text` into highlighted / plain pieces for a search `query`, matching
+ * the way `matchesSearch` does: every whitespace-delimited token, case-
+ * insensitive, ignoring tashkeel on both sides. Tashkeel inside or right after
+ * a hit stays in the hit. Pure char walk — no RegExp is built from the query.
+ * The pieces always rejoin to `text`.
+ */
+export function highlightSegments(text: string, query: string): HighlightSegment[] {
+  if (!text) return [];
+  const tokens = query
+    .trim()
+    .split(/\s+/)
+    .map(stripArabicDiacritics)
+    .filter(Boolean);
+  if (tokens.length === 0) return [{ text, hit: false }];
+
+  // Normalized text (no tashkeel, lower case) + each char's index in `text`.
+  let normalized = '';
+  const origin: number[] = [];
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (DIACRITIC_SET.has(ch)) continue;
+    const lower = ch.toLowerCase();
+    normalized += lower.length === 1 ? lower : ch;
+    origin.push(i);
+  }
+
+  const hit = new Array<boolean>(text.length).fill(false);
+  for (const token of tokens) {
+    for (let at = normalized.indexOf(token); at !== -1; at = normalized.indexOf(token, at + 1)) {
+      const start = origin[at];
+      let end = origin[at + token.length - 1] + 1;
+      while (end < text.length && DIACRITIC_SET.has(text[end])) end++;
+      hit.fill(true, start, end);
+    }
+  }
+
+  const segments: HighlightSegment[] = [];
+  let from = 0;
+  for (let i = 1; i <= text.length; i++) {
+    if (i === text.length || hit[i] !== hit[from]) {
+      segments.push({ text: text.slice(from, i), hit: hit[from] });
+      from = i;
+    }
+  }
+  return segments;
+}
+
 /**
  * Score search relevance for ranking (lower = better). Returns -1 if no match.
  *

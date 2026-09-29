@@ -201,6 +201,8 @@ describe('PersonDetail Phase 3 – edit form pre-fill', () => {
       deathDescription: 'سبب وفاة',
       deathHijriDate: '15 محرم 1442',
       kunya: '',
+      famousName: '',
+      famousNameInNasab: null,
       isDeceased: true,
       isPrivate: false,
       notes: 'ملاحظة',

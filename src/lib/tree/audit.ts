@@ -44,6 +44,8 @@ export interface IndividualSnapshot extends JsonObject {
   deathNotes: string | null;
   deathHijriDate: string | null;
   kunya: string | null;
+  famousName: string | null;
+  famousNameInNasab: boolean | null;
   notes: string | null;
   isDeceased: boolean;
   isPrivate: boolean;
@@ -68,6 +70,8 @@ export function snapshotIndividual(record: {
   deathNotes?: string | null;
   deathHijriDate?: string | null;
   kunya?: string | null;
+  famousName?: string | null;
+  famousNameInNasab?: boolean | null;
   notes?: string | null;
   isDeceased?: boolean;
   isPrivate?: boolean;
@@ -91,6 +95,8 @@ export function snapshotIndividual(record: {
     deathNotes: record.deathNotes ?? null,
     deathHijriDate: record.deathHijriDate ?? null,
     kunya: record.kunya ?? null,
+    famousName: record.famousName ?? null,
+    famousNameInNasab: record.famousNameInNasab ?? null,
     notes: record.notes ?? null,
     isDeceased: record.isDeceased ?? false,
     isPrivate: record.isPrivate ?? false,

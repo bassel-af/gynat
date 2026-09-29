@@ -413,11 +413,11 @@ describe('projection.ancestryJump', () => {
 // ---------------------------------------------------------------------------
 
 describe('PROJECTION_ETAG_VERSION', () => {
-  test('is bumped to v4 — a logic-only projection change leaves lastModifiedAt alone', () => {
+  test('is bumped to v5 — a logic-only projection change leaves lastModifiedAt alone', () => {
     const route = readFileSync(
       join(process.cwd(), 'src/app/api/workspaces/[id]/tree/person/[individualId]/route.ts'),
       'utf-8',
     );
-    expect(route).toContain("const PROJECTION_ETAG_VERSION = 'v4'");
+    expect(route).toContain("const PROJECTION_ETAG_VERSION = 'v5'");
   });
 });

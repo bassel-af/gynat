@@ -39,6 +39,7 @@ function subject(overrides: Partial<PersonSubject> = {}): PersonSubject {
     id: 'p1',
     name: 'عبدالله',
     givenName: 'عبدالله',
+    famousName: '',
     surname: '',
     kunya: '',
     gender: 'male',
@@ -165,6 +166,7 @@ describe('PersonPage — empty-section hiding', () => {
         id: 'f1',
         name: 'هاشم',
         givenName: 'هاشم',
+        famousName: '',
         gender: 'male',
         birth: '',
         birthHijriDate: '',
@@ -195,6 +197,7 @@ describe('PersonPage — marriage label (ordinal only when plural)', () => {
   function spouseChip(id: string, name: string): PersonChip {
     return {
       id, name, givenName: name, gender: 'female',
+      famousName: '',
       birth: '', birthHijriDate: '', death: '', deathHijriDate: '',
       isDeceased: false, private: false, living: true,
     };
@@ -231,6 +234,7 @@ describe('BloodlineColumn — empty-column hiding', () => {
     id: 'f1',
     name: 'هاشم',
     givenName: 'هاشم',
+    famousName: '',
     gender: 'male',
     birth: '',
     birthHijriDate: '',

@@ -1,7 +1,7 @@
 'use client';
 
 import { useTree } from '@/context/TreeContext';
-import { getDisplayName } from '@/lib/gedcom';
+import { getLeadDisplayName } from '@/lib/gedcom';
 import styles from './RootBackChip.module.css';
 
 /**
@@ -19,7 +19,7 @@ export function RootBackChip() {
   const initialRoot = data.individuals[initialRootId];
   if (!initialRoot) return null;
 
-  const rootName = getDisplayName(initialRoot);
+  const rootName = getLeadDisplayName(initialRoot);
 
   const handleClick = () => {
     setSelectedRootId(initialRootId);

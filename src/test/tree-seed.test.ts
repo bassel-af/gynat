@@ -870,3 +870,53 @@ describe('seedTreeFromGedcomData', () => {
     expect(dec(indData[0].kunya)).toBeNull();
   });
 });
+
+describe('seedTreeFromGedcomData — famousName / famousNameInNasab', () => {
+  const workspaceId = 'workspace-uuid-1';
+  const treeId = 'tree-uuid-1';
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockWorkspaceFindUnique.mockResolvedValue({ encryptedKey: TEST_WRAPPED_KEY });
+    mockTransaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) =>
+      fn({
+        familyTree: { findUnique: mockFamilyTreeFindUnique, findFirst: mockFamilyTreeFindUnique, create: mockFamilyTreeCreate },
+        individual: { createMany: mockIndividualCreateMany, count: mockIndividualCount },
+        family: { createMany: mockFamilyCreateMany },
+        familyChild: { createMany: mockFamilyChildCreateMany },
+        workspace: { findUnique: mockWorkspaceFindUnique, update: mockWorkspaceUpdate },
+      }),
+    );
+    mockFamilyTreeFindUnique.mockResolvedValue(null);
+    mockFamilyTreeCreate.mockResolvedValue({ id: treeId, workspaceId, individuals: [], families: [] });
+    mockIndividualCount.mockResolvedValue(0);
+    mockIndividualCreateMany.mockResolvedValue({ count: 1 });
+  });
+
+  async function seedOne(ind: Individual) {
+    await seedTreeFromGedcomData(
+      workspaceId,
+      makeGedcomData({ individuals: { [ind.id]: ind } }),
+      createMockPrisma(),
+    );
+    return mockIndividualCreateMany.mock.calls[0][0].data[0];
+  }
+
+  test('famousName is encrypted and decrypts to the parsed value', async () => {
+    const row = await seedOne(makeTestIndividual({ id: '@I1@', famousName: 'أبو خليل' }));
+    expect(dec(row.famousName)).toBe('أبو خليل');
+  });
+
+  test('famousNameInNasab false is stored as false', async () => {
+    const row = await seedOne(
+      makeTestIndividual({ id: '@I1@', famousName: 'أبو خليل', famousNameInNasab: false }),
+    );
+    expect(row.famousNameInNasab).toBe(false);
+  });
+
+  test('an unset famousNameInNasab is stored as null', async () => {
+    const row = await seedOne(makeTestIndividual({ id: '@I1@' }));
+    expect(row.famousNameInNasab).toBeNull();
+    expect(dec(row.famousName)).toBeNull();
+  });
+});

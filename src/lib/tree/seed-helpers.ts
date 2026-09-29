@@ -161,6 +161,8 @@ export async function seedTreeFromGedcomData(
           deathNotes: enc(ind.deathNotes || null),
           deathHijriDate: enc(ind.deathHijriDate || null),
           kunya: enc(ind.kunya || null),
+          famousName: enc(ind.famousName || null),
+          famousNameInNasab: ind.famousNameInNasab ?? null,
           notes: enc(ind.notes || null),
           isDeceased: ind.isDeceased,
           isPrivate: ind.isPrivate,

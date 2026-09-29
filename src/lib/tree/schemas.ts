@@ -37,6 +37,9 @@ export const individualFieldsSchema = z.object({
   birthHijriDate: z.string().max(50).nullable().optional(),
   deathHijriDate: z.string().max(50).nullable().optional(),
   kunya: z.string().max(200).nullable().optional(),
+  famousName: z.string().max(200).nullable().optional(),
+  // null = the user never chose → display applies the default.
+  famousNameInNasab: z.boolean().nullable().optional(),
   isDeceased: z.boolean().optional(),
   isPrivate: z.boolean().optional(),
   notes: z.string().max(5000).nullable().optional(),

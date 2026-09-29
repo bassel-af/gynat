@@ -9,7 +9,7 @@ exports[`depth-2 one-line names are unchanged > ancestry-jump.ged 1`] = `
 
 exports[`depth-2 one-line names are unchanged > saeed-family.ged 1`] = `
 {
-  "digest": "a031996ddce97fef59c360cc386266b8ef685799a32345a41f330715fd9bdb28",
+  "digest": "bb116a9aecc5ec11acf29be4b27f764fd1b5a364e97b3830d29065f78546a35b",
   "people": 485,
 }
 `;

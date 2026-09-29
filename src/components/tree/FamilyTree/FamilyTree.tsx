@@ -19,7 +19,8 @@ import {
 import '@xyflow/react/dist/style.css';
 
 import type { Individual } from '@/lib/gedcom';
-import { getDisplayName, getAllAncestors, getAllDescendants } from '@/lib/gedcom';
+import { getLeadDisplayName, getAllAncestors, getAllDescendants } from '@/lib/gedcom';
+import { getAlternateNameLine, shouldShowKunya, withOtherNames } from '@/lib/gedcom/display';
 import { useTree } from '@/context/TreeContext';
 import { useOptionalWorkspaceTree } from '@/context/WorkspaceTreeContext';
 import { shouldHideBirthDate } from '@/lib/tree/birth-date-privacy';
@@ -75,7 +76,7 @@ export function PersonNode({ data }: { data: PersonNodeData }) {
       className="spouse-family-badge"
       role="button"
       tabIndex={0}
-      aria-label={`عرض عائلة ${getDisplayName(p)}`}
+      aria-label={`عرض عائلة ${getLeadDisplayName(p)}`}
       onClick={(e) => {
         e.stopPropagation();
         onRerootToAncestor(topAncestorId, p.id);
@@ -104,7 +105,8 @@ export function PersonNode({ data }: { data: PersonNodeData }) {
     linkedTo?: string,
     multiOccurrence?: boolean,
   ) => {
-    const displayName = getDisplayName(p);
+    const displayName = getLeadDisplayName(p);
+    const alternateName = getAlternateNameLine(p);
     const sexClass = p.sex === 'M' ? 'male' : p.sex === 'F' ? 'female' : '';
     const rootClass = isMainPerson && isRoot ? 'root' : '';
     const deceasedClass = p.isDeceased ? 'deceased' : '';
@@ -114,8 +116,10 @@ export function PersonNode({ data }: { data: PersonNodeData }) {
       hideBirthDateForFemale: wsContext?.hideBirthDateForFemale,
       hideBirthDateForMale: wsContext?.hideBirthDateForMale,
     });
+    // Matches the card by any name the person goes by (famous, real, kunya).
     const isMatch =
-      searchQuery && displayName.toLowerCase().includes(searchQuery.toLowerCase());
+      searchQuery &&
+      withOtherNames(displayName, p).toLowerCase().includes(searchQuery.toLowerCase());
     const matchClass = isMatch ? 'search-match' : '';
 
     // Highlight class
@@ -164,7 +168,10 @@ export function PersonNode({ data }: { data: PersonNodeData }) {
             <NodeSilhouette sex={p.sex} size={48} />
           </div>
           <div className="person-name">{displayName}</div>
-          {p.kunya && <div className="person-kunya">{p.kunya}</div>}
+          {alternateName && (
+            <div className="person-alt-name" title={alternateName}>{alternateName}</div>
+          )}
+          {shouldShowKunya(p) && <div className="person-kunya">{p.kunya}</div>}
           {((!hideBirth && p.birth) || p.death || p.isDeceased) && (
             <div className="person-dates-container">
               {!hideBirth && p.birth && (

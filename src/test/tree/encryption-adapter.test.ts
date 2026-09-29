@@ -37,7 +37,7 @@ beforeAll(() => {
 // ---------------------------------------------------------------------------
 
 describe('field lists', () => {
-  test('INDIVIDUAL_ENCRYPTED_FIELDS contains exactly the 15 sensitive fields', () => {
+  test('INDIVIDUAL_ENCRYPTED_FIELDS contains exactly the 16 sensitive fields', () => {
     expect([...INDIVIDUAL_ENCRYPTED_FIELDS].sort()).toEqual(
       [
         'givenName',
@@ -54,6 +54,7 @@ describe('field lists', () => {
         'deathNotes',
         'deathHijriDate',
         'kunya',
+        'famousName',
         'notes',
       ].sort(),
     );

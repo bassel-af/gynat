@@ -29,6 +29,7 @@ function p(id: string, name: string, gender: G, birth = '', death = ''): PersonC
     id,
     name,
     givenName: name,
+    famousName: '',
     gender,
     birth,
     birthHijriDate: '',
@@ -48,6 +49,7 @@ function priv(_key: string, gender: G): PersonChip {
   return {
     name: 'خاص',
     givenName: 'خاص',
+    famousName: '',
     gender,
     birth: '',
     birthHijriDate: '',
@@ -82,6 +84,7 @@ const projection: PersonProjection = {
     id: 'p-basel',
     name: 'باسل آل السعيد',
     givenName: 'باسل',
+    famousName: '',
     surname: 'آل السعيد',
     kunya: 'أبو عمر',
     gender: 'male',

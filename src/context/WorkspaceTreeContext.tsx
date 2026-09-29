@@ -34,6 +34,8 @@ interface WorkspaceTreeContextValue {
   enableAncestryJumps?: boolean;
   /** Whether the workspace has kunya feature enabled */
   enableKunya?: boolean;
+  /** Whether the workspace has «اسم الشهرة» (famous name) feature enabled */
+  enableFamousName?: boolean;
   /** Whether the workspace has audit log feature enabled */
   enableAuditLog?: boolean;
   /** Whether tree export is available in this workspace */
@@ -72,6 +74,7 @@ interface WorkspaceTreeProviderProps {
   enableRadaa?: boolean;
   enableAncestryJumps?: boolean;
   enableKunya?: boolean;
+  enableFamousName?: boolean;
   enableAuditLog?: boolean;
   enableTreeExport?: boolean;
   allowMemberExport?: boolean;
@@ -95,6 +98,7 @@ export function WorkspaceTreeProvider({
   enableRadaa,
   enableAncestryJumps,
   enableKunya,
+  enableFamousName,
   enableAuditLog,
   enableTreeExport,
   allowMemberExport,
@@ -106,7 +110,7 @@ export function WorkspaceTreeProvider({
   publicSlug,
 }: WorkspaceTreeProviderProps) {
   return (
-    <WorkspaceTreeContext.Provider value={{ workspaceId, canEdit, isAdmin, refreshTree, activeTreeId, pointers, enableUmmWalad, enableRadaa, enableAncestryJumps, enableKunya, enableAuditLog, enableTreeExport, allowMemberExport, hideBirthDateForFemale, hideBirthDateForMale, description, familyName, defaultNewPersonDeceased, publicSlug }}>
+    <WorkspaceTreeContext.Provider value={{ workspaceId, canEdit, isAdmin, refreshTree, activeTreeId, pointers, enableUmmWalad, enableRadaa, enableAncestryJumps, enableKunya, enableFamousName, enableAuditLog, enableTreeExport, allowMemberExport, hideBirthDateForFemale, hideBirthDateForMale, description, familyName, defaultNewPersonDeceased, publicSlug }}>
       {children}
     </WorkspaceTreeContext.Provider>
   );

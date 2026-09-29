@@ -6,7 +6,7 @@ import type {
   RadaFamily,
   AncestryJump,
 } from './types'
-import { getDisplayName, JUMP_CONNECTOR } from './display'
+import { effectiveFamousName, getDisplayName, JUMP_CONNECTOR } from './display'
 
 // ---------------------------------------------------------------------------
 // Reverse month maps (number → GEDCOM code)
@@ -27,6 +27,7 @@ const HIJRI_MONTHS: Record<string, string> = {
 const EXT_URIS: Record<string, string> = {
   '_UMM_WALAD': 'https://gynat.com/gedcom/ext/_UMM_WALAD',
   '_KUNYA': 'https://gynat.com/gedcom/ext/_KUNYA',
+  '_NASAB': 'https://gynat.com/gedcom/ext/_NASAB',
   '_RADA_FAM': 'https://gynat.com/gedcom/ext/_RADA_FAM',
   '_RADA_HUSB': 'https://gynat.com/gedcom/ext/_RADA_HUSB',
   '_RADA_WIFE': 'https://gynat.com/gedcom/ext/_RADA_WIFE',
@@ -331,6 +332,14 @@ function collectCustomTags(data: GedcomData): Set<string> {
     }
   }
 
+  for (const ind of Object.values(data.individuals)) {
+    if (ind._pointed || ind.isPrivate) continue
+    if (nasabChoiceLine(ind) !== null) {
+      tags.add('_NASAB')
+      break
+    }
+  }
+
   for (const fam of Object.values(data.families)) {
     if (fam._pointed) continue
     if (fam.isUmmWalad) {
@@ -371,6 +380,44 @@ function collectCustomTags(data: GedcomData): Set<string> {
 // Individual serialization
 // ---------------------------------------------------------------------------
 
+/**
+ * Emit the famous name (اسم الشهرة) as a second `1 NAME` after the primary one,
+ * typed `aka` (5.5.1) / `AKA` (7.0 enumeration). Written only when the famous
+ * name is effective (display.ts#effectiveFamousName owns that rule). Slashes
+ * are stripped so the value is never read back as a `/surname/` marker.
+ */
+function famousNameLine(ind: Individual): string | null {
+  const effective = effectiveFamousName(ind)
+  if (!effective) return null
+  const famous = sanitizeLine(effective).replace(/\//g, '').trim()
+  return famous || null
+}
+
+/**
+ * «يُذكر في النسب باسم» as `2 _NASAB Y|N` under the aka NAME. Written only for
+ * an explicit boolean (any value, even the default, so an explicit choice
+ * survives a round-trip) and only when the aka NAME itself is written.
+ * Callers handle the private / pointed gates.
+ */
+function nasabChoiceLine(ind: Individual): string | null {
+  if (typeof ind.famousNameInNasab !== 'boolean') return null
+  if (famousNameLine(ind) === null) return null
+  return `2 _NASAB ${ind.famousNameInNasab ? 'Y' : 'N'}`
+}
+
+function emitFamousName(
+  lines: string[],
+  ind: Individual,
+  version: '5.5.1' | '7.0',
+): void {
+  const famous = famousNameLine(ind)
+  if (!famous) return
+  lines.push(`1 NAME ${famous}`)
+  lines.push(`2 TYPE ${version === '7.0' ? 'AKA' : 'aka'}`)
+  const nasab = nasabChoiceLine(ind)
+  if (nasab) lines.push(nasab)
+}
+
 function emitIndividual(
   lines: string[],
   ind: Individual,
@@ -407,6 +454,9 @@ function emitIndividual(
       lines.push(`2 SURN ${sanitizeLine(ind.surname)}`)
     }
   }
+
+  // Famous name (اسم الشهرة): a second NAME typed aka/AKA
+  emitFamousName(lines, ind, version)
 
   // Kunya
   if (ind.kunya) {

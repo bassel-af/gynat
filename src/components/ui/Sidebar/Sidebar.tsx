@@ -5,9 +5,11 @@ import clsx from 'clsx';
 import { useParams, usePathname, useRouter } from 'next/navigation';
 import { useTree } from '@/context/TreeContext';
 import { useWorkspaceTree } from '@/context/WorkspaceTreeContext';
-import { getDisplayNameWithNasab, DEFAULT_NASAB_DEPTH, findTopmostAncestor, resolveNavigationRoot } from '@/lib/gedcom';
+import { getDisplayNameWithNasab, getPersonSearchText, DEFAULT_NASAB_DEPTH, findTopmostAncestor, resolveNavigationRoot } from '@/lib/gedcom';
 import { shouldHideBirthDate } from '@/lib/tree/birth-date-privacy';
 import { getViewMode, viewModeFromPathname } from '@/lib/tree/view-modes';
+import { getAlternateNameLine } from '@/lib/gedcom/display';
+import { PersonListName } from '@/components/ui/PersonListName';
 import { PersonDetail } from './PersonDetail';
 import { matchesSearch, searchRelevance } from '@/lib/utils/search';
 import { shouldCollapseDrawerOnPersonView, isDrawerViewport } from '@/lib/utils/viewport';
@@ -16,6 +18,7 @@ import styles from './Sidebar.module.css';
 interface PersonItem {
   id: string;
   name: string;
+  alternate: string | null;
   searchText: string;
   dates: string;
   sex: string;
@@ -126,7 +129,7 @@ export function Sidebar() {
   const selectedRootText = selectedRoot?.text || '';
 
   // Filter roots for dropdown
-  const filteredRoots = rootsList.filter((r) => matchesSearch(r.text, rootFilter));
+  const filteredRoots = rootsList.filter((r) => matchesSearch(r.searchText ?? r.text, rootFilter));
 
   // Build list of all individuals with their info (excluding private)
   const allIndividuals = useMemo<PersonItem[]>(() => {
@@ -148,7 +151,8 @@ export function Sidebar() {
       individuals.push({
         id: person.id,
         name,
-        searchText: person.kunya ? `${name} ${person.kunya}` : name,
+        alternate: getAlternateNameLine(person),
+        searchText: getPersonSearchText(data, person, name),
         dates,
         sex: person.sex || 'U',
         deceased: person.isDeceased,
@@ -401,7 +405,9 @@ export function Sidebar() {
                   })}
                   onClick={() => handlePersonClick(person.id)}
                 >
-                  <span className={styles.personName}>{person.name}</span>
+                  <span className={styles.personName}>
+                    <PersonListName main={person.name} alternate={person.alternate} query={searchFilter} />
+                  </span>
                   {person.dates && <span className={styles.personDates}>{person.dates}</span>}
                 </li>
               ))}
@@ -458,7 +464,7 @@ export function Sidebar() {
                                 })}
                                 onMouseDown={() => handleRootSelect(root.id, root.text)}
                               >
-                                {root.text}
+                                <PersonListName main={root.text} alternate={root.alternate} query={rootFilter} />
                               </li>
                             ))
                           )}

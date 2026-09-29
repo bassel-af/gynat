@@ -23,6 +23,7 @@ import {
 } from '@/lib/tree/audit';
 import { getWorkspaceKey, encryptSnapshot } from '@/lib/tree/encryption';
 import { createIndividual } from '@/lib/tree/create-individual';
+import { nameFeatureFlags, NAME_FEATURE_SELECT } from '@/lib/tree/feature-strip';
 import { isDuplicateJumpError, jumpDto } from '@/lib/tree/ancestry-jump-route-helpers';
 
 type RouteParams = { params: Promise<{ id: string; jumpId: string }> };
@@ -67,7 +68,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   const [tree, workspaceKey, workspace] = await Promise.all([
     resolveTargetTreeOr404(workspaceId, parsed.data.treeId),
     getWorkspaceKey(workspaceId),
-    prisma.workspace.findUnique({ where: { id: workspaceId }, select: { enableKunya: true } }),
+    prisma.workspace.findUnique({ where: { id: workspaceId }, select: NAME_FEATURE_SELECT }),
   ]);
   if (isErrorResponse(tree)) return tree;
 
@@ -103,7 +104,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         userId: result.user.id,
         input: parsed.data.father,
         workspaceKey,
-        enableKunya: !!workspace?.enableKunya,
+        features: nameFeatureFlags(workspace),
         isUndo,
       });
 

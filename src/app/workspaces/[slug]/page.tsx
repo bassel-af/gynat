@@ -42,6 +42,7 @@ interface Workspace {
   enableRadaa?: boolean;
   enableAncestryJumps?: boolean;
   enableKunya?: boolean;
+  enableFamousName?: boolean;
   enableCollections?: boolean;
   enableAuditLog?: boolean;
   enableVersionControl?: boolean;
@@ -340,7 +341,7 @@ export default function WorkspaceDetailPage() {
   }
 
   async function handleToggleFeature(
-    featureKey: 'enableUmmWalad' | 'enableRadaa' | 'enableAncestryJumps' | 'enableKunya' | 'enableAuditLog' | 'enableVersionControl' | 'hideBirthDateForFemale' | 'hideBirthDateForMale' | 'defaultNewPersonDeceased',
+    featureKey: 'enableUmmWalad' | 'enableRadaa' | 'enableAncestryJumps' | 'enableKunya' | 'enableFamousName' | 'enableAuditLog' | 'enableVersionControl' | 'hideBirthDateForFemale' | 'hideBirthDateForMale' | 'defaultNewPersonDeceased',
     newVal: boolean,
   ) {
     if (!workspace) return;
@@ -544,6 +545,30 @@ export default function WorkspaceDetailPage() {
                 onChange={(val) => handleToggleFeature('enableKunya', val)}
                 disabled={!isAdmin}
                 loading={togglingFeature === 'enableKunya'}
+              />
+            </div>
+
+            {/* «اسم الشهرة» */}
+            <div className={styles.featureCard}>
+              <div className={styles.featureContent}>
+                <div className={styles.featureNameRow}>
+                  <span id="toggle-famous-name-label" className={styles.featureName}>
+                    اسم الشهرة
+                  </span>
+                  {(workspace.enableFamousName ?? false) && (
+                    <span className={styles.featureBadge}>مفعّل</span>
+                  )}
+                </div>
+                <p className={styles.featureDescription}>
+                  الاسم الذي عُرف به الشخص بدل اسمه، ويُختار أيّ الاسمين يُذكر في النسب.
+                </p>
+              </div>
+              <ToggleSwitch
+                checked={workspace.enableFamousName ?? false}
+                onChange={(val) => handleToggleFeature('enableFamousName', val)}
+                disabled={!isAdmin}
+                loading={togglingFeature === 'enableFamousName'}
+                aria-labelledby="toggle-famous-name-label"
               />
             </div>
 

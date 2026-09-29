@@ -1,0 +1,53 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.mainLine {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  max-width: 100%;
+}
+
+.main {
+  min-width: 0;
+}
+
+.aside {
+  flex-shrink: 0;
+  font-size: var(--font-size-sm);
+  opacity: 0.6;
+}
+
+/* Grey line: muted, smaller text under the main name. */
+.alternate {
+  margin-top: 1px;
+  font-size: var(--font-size-sm);
+  line-height: 1.4;
+  color: var(--person-list-name-alt-color, var(--heritage-text-muted));
+  border-radius: var(--space-2);
+  transition: background 150ms, color 150ms;
+}
+
+/* The search matched only the grey line: lift it so the row shows why. */
+.alternateHit {
+  margin-top: var(--space-1);
+  padding: 1px var(--space-3);
+  color: var(--person-list-name-hit-color, var(--heritage-gold-bright));
+  background: rgba(200, 168, 101, 0.13);
+  box-shadow: 0 0 0 1px rgba(200, 168, 101, 0.28);
+}
+
+.mark {
+  padding: 0 1px;
+  border-radius: 3px;
+  color: var(--person-list-name-hit-color, var(--heritage-gold-bright));
+  background: rgba(200, 168, 101, 0.3);
+}
+
+.alternateHit .mark {
+  background: rgba(230, 207, 158, 0.3);
+}

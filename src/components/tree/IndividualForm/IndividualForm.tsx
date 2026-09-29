@@ -1,13 +1,16 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef, type FormEvent } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef, type FormEvent, type KeyboardEvent } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { PlaceComboBox } from '@/components/ui/PlaceComboBox';
 import { Button } from '@/components/ui/Button';
-import { getDisplayNameWithNasab } from '@/lib/gedcom/display';
+import { SegmentedControl } from '@/components/ui/SegmentedControl';
+import { PersonListName } from '@/components/ui/PersonListName';
+import { effectiveFamousName, getDisplayNameWithNasab, isFamousNameLead } from '@/lib/gedcom/display';
+import { famousNamePreview } from '@/lib/person-detail-helpers';
 import { getAddRelationshipLabel } from '@/lib/tree/relationship-labels';
-import type { GedcomData } from '@/lib/gedcom/types';
+import type { GedcomData, Individual } from '@/lib/gedcom/types';
 import type { SourceEntryDto, SourceSummaryDto } from '@/lib/tree/source-entries-api';
 import {
   stagedFromEntries,
@@ -47,6 +50,10 @@ export interface IndividualFormData {
   deathNotes: string;
   deathHijriDate: string;
   kunya: string;
+  /** «اسم الشهرة»; empty = none. */
+  famousName?: string;
+  /** Saved choice kept as-is: null = no explicit choice (server default). Never coerce to false. */
+  famousNameInNasab?: boolean | null;
   isDeceased: boolean;
   isPrivate: boolean;
   notes: string;
@@ -119,6 +126,13 @@ interface IndividualFormProps {
   /** In edit mode: whether the family has existing MARC/MARR data (triggers confirmation) */
   ummWaladHasMarriageData?: boolean;
   sources?: IndividualFormSources;
+  /** Whether the workspace has the «اسم الشهرة» feature enabled */
+  enableFamousName?: boolean;
+  /**
+   * The tree the «اسم الشهرة» preview reads the nasab from. `personId`: the
+   * person being edited.
+   */
+  previewTree?: { data: GedcomData; personId?: string };
 }
 
 /** Names the form's own submit button, which reads «إضافة» in create modes. */
@@ -158,6 +172,29 @@ const EMPTY_FORM: IndividualFormData = {
   notes: '',
 };
 
+/** The unsaved person the «اسم الشهرة» preview is drawn for in create modes. */
+const DRAFT_PERSON: Individual = {
+  id: '__draft__',
+  type: 'INDI',
+  name: '',
+  givenName: '',
+  surname: '',
+  sex: null,
+  birth: '', birthPlace: '', birthDescription: '', birthNotes: '', birthHijriDate: '',
+  death: '', deathPlace: '', deathDescription: '', deathNotes: '', deathHijriDate: '',
+  kunya: '',
+  notes: '',
+  isDeceased: false,
+  isPrivate: false,
+  familiesAsSpouse: [],
+  familyAsChild: null,
+};
+
+const EMPTY_TREE: GedcomData = { individuals: {}, families: {} };
+
+type FamousChoice = 'famous' | 'real';
+const CHOICE_KEYS = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']);
+
 export function IndividualForm({
   mode,
   initialData,
@@ -180,6 +217,8 @@ export function IndividualForm({
   ummWaladHasMarriageData,
   defaultDeceased = false,
   sources,
+  enableFamousName = false,
+  previewTree,
 }: IndividualFormProps) {
   const [formData, setFormData] = useState<IndividualFormData>(() => {
     const base = { ...EMPTY_FORM, ...initialData };
@@ -346,6 +385,54 @@ export function IndividualForm({
       return next;
     });
   }, []);
+
+  // «اسم الشهرة»: which name the nasab uses. Untouched, the saved choice (or
+  // null, the server default) is kept; a click stores an explicit boolean.
+  const famousName = (formData.famousName ?? '').trim();
+  const givenName = formData.givenName.trim();
+  // The form's names as a person, so display.ts's famous-name rules decide.
+  const namesDraft: Individual = {
+    ...DRAFT_PERSON,
+    name: givenName,
+    givenName,
+    famousName,
+    famousNameInNasab: formData.famousNameInNasab ?? undefined,
+  };
+  const showFamousChoice = enableFamousName && !!givenName && effectiveFamousName(namesDraft) !== null;
+  const famousLeads = isFamousNameLead(namesDraft);
+  const choiceRef = useRef<HTMLDivElement>(null);
+
+  const pickFamousChoice = useCallback(
+    (value: FamousChoice) => updateField('famousNameInNasab', value === 'famous'),
+    [updateField],
+  );
+
+  // Arrow keys move the selection (two options: any arrow goes to the other).
+  const handleChoiceKeyDown = useCallback((e: KeyboardEvent<HTMLDivElement>) => {
+    if (!CHOICE_KEYS.has(e.key)) return;
+    e.preventDefault();
+    const next: FamousChoice = famousLeads ? 'real' : 'famous';
+    pickFamousChoice(next);
+    const radios = choiceRef.current?.querySelectorAll<HTMLButtonElement>('[role="radio"]');
+    radios?.[next === 'famous' ? 0 : 1]?.focus();
+  }, [famousLeads, pickFamousChoice]);
+
+  const preview = useMemo(() => {
+    if (!showFamousChoice) return null;
+    const data = previewTree?.data ?? EMPTY_TREE;
+    const saved = previewTree?.personId ? data.individuals[previewTree.personId] : undefined;
+    const surname = formData.surname.trim();
+    const draft: Individual = {
+      ...(saved ?? DRAFT_PERSON),
+      name: [givenName, surname].filter(Boolean).join(' '),
+      givenName,
+      surname,
+      sex: formData.sex || null,
+      famousName,
+      famousNameInNasab: formData.famousNameInNasab ?? undefined,
+    };
+    return famousNamePreview(data, draft);
+  }, [showFamousChoice, previewTree, givenName, famousName, formData.surname, formData.sex, formData.famousNameInNasab]);
 
   // Client-side orphaned children detection from the preview subtree
   const detectOrphans = useCallback((personId: string) => {
@@ -656,6 +743,45 @@ export function IndividualForm({
             placeholder="مثال: السعيّد"
           />
         </div>
+
+        {/* Famous name */}
+        {enableFamousName && (
+          <Input
+            id="famousName"
+            label="اسم الشهرة"
+            value={formData.famousName ?? ''}
+            onChange={(e) => updateField('famousName', e.target.value)}
+            placeholder="مثال: عبدالمطلب"
+            maxLength={200}
+          />
+        )}
+
+        {showFamousChoice && (
+          <div className={styles.famousChoice}>
+            <span id="famousNameChoiceLabel" className={styles.famousChoiceLabel}>
+              يُذكر في النسب باسم:
+            </span>
+            <div ref={choiceRef} onKeyDown={handleChoiceKeyDown}>
+              <SegmentedControl<FamousChoice>
+                aria-labelledby="famousNameChoiceLabel"
+                value={famousLeads ? 'famous' : 'real'}
+                options={[
+                  { value: 'famous', label: famousName },
+                  { value: 'real', label: givenName },
+                ]}
+                onChange={pickFamousChoice}
+                className={styles.famousChoiceControl}
+              />
+            </div>
+          </div>
+        )}
+
+        {preview && (
+          <div className={styles.famousPreview} aria-live="polite" data-testid="famous-name-preview">
+            <span className={styles.famousPreviewLabel}>معاينة</span>
+            <PersonListName main={preview.main} alternate={preview.alternate} />
+          </div>
+        )}
 
         {/* Kunya */}
         {enableKunya && (

@@ -16,6 +16,7 @@ import {
   type SourceSummaryDto,
 } from '@/lib/tree/source-entries-api';
 import type { GedcomData } from '@/lib/gedcom/types';
+import { getLeadName } from '@/lib/gedcom/display';
 import { isShownOnPublicTree } from '@/lib/tree/public-shown';
 import type { SourceVisibilityLevel } from '@/lib/tree/source-visibility';
 import { MAX_SOURCE_TEXT, MAX_SOURCE_SUGGESTIONS, MAX_FILES_PER_ENTRY } from '@/lib/tree/source-entry-schemas';
@@ -356,7 +357,7 @@ export function SourceEntryForm({
   // --- «مصدر لـ» -------------------------------------------------------------
   const nameOf = (id: string, fallback: string): string => {
     const ind = data?.individuals[id];
-    return ind ? ind.givenName || ind.name || fallback : fallback;
+    return ind && (ind.famousName || ind.givenName || ind.name) ? getLeadName(ind) : fallback;
   };
   const pickPeople = (ids: string[]) => {
     const known = new Map(others.map((p) => [p.id, p.name]));

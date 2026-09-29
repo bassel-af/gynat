@@ -49,6 +49,7 @@ export const INDIVIDUAL_ENCRYPTED_FIELDS = [
   'deathNotes',
   'deathHijriDate',
   'kunya',
+  'famousName',
   'notes',
 ] as const;
 

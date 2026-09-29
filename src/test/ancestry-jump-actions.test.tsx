@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { renderHook, act } from '@testing-library/react';
 import type { AncestryJump, Family, GedcomData, Individual } from '@/lib/gedcom/types';
@@ -23,6 +23,7 @@ vi.mock('@/lib/api/client', () => ({ apiFetch: vi.fn() }));
 let panelData: GedcomData;
 let panelCanEdit = true;
 let panelJumpsEnabled = true;
+let panelFamousName = false;
 
 vi.mock('@/context/TreeContext', () => ({
   useTree: () => ({
@@ -44,6 +45,7 @@ vi.mock('@/context/WorkspaceTreeContext', () => ({
     isAdmin: false,
     enableRadaa: false,
     enableAncestryJumps: panelJumpsEnabled,
+    enableFamousName: panelFamousName,
     refreshTree: vi.fn(),
     pointers: [],
   }),
@@ -244,6 +246,29 @@ describe('«قفزة نسب» — the button in the person panel', () => {
     renderPanel(makeData());
     fireEvent.click(jumpButton()!);
     expect(screen.getByRole('button', { name: 'شخص موجود في الشجرة' })).toBeTruthy();
+  });
+});
+
+describe('«قفزة نسب» — the new-ancestor form follows the workspace «اسم الشهرة» setting', () => {
+  const openNewAncestorForm = (famousNameEnabled: boolean) => {
+    panelData = makeData();
+    panelCanEdit = true;
+    panelJumpsEnabled = true;
+    panelFamousName = famousNameEnabled;
+    render(<PersonDetail personId="@ADNAN@" />);
+    fireEvent.click(screen.getByRole('button', { name: /قفزة/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'شخص جديد' }));
+  };
+  afterEach(() => { panelFamousName = false; });
+
+  it('shows the «اسم الشهرة» field when the workspace has it on', () => {
+    openNewAncestorForm(true);
+    expect(screen.queryByLabelText('اسم الشهرة')).not.toBeNull();
+  });
+
+  it('hides the «اسم الشهرة» field when the workspace has it off', () => {
+    openNewAncestorForm(false);
+    expect(screen.queryByLabelText('اسم الشهرة')).toBeNull();
   });
 });
 

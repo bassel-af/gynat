@@ -13,7 +13,13 @@ import { isPointedIndividualInWorkspace } from '@/lib/tree/branch-pointer-querie
 import { parseValidatedBody, isParseError, extractTreeId } from '@/lib/api/route-helpers';
 import { isUndoRequest } from '@/lib/api/undo-header';
 import { dbTreeToGedcomData } from '@/lib/tree/mapper';
-import { getWorkspaceKey, encryptIndividualInput, encryptSnapshot } from '@/lib/tree/encryption';
+import {
+  getWorkspaceKey,
+  encryptIndividualInput,
+  decryptIndividualRow,
+  encryptSnapshot,
+} from '@/lib/tree/encryption';
+import { dropDisabledNameInput, nameFeatureFlags, NAME_FEATURE_SELECT } from '@/lib/tree/feature-strip';
 import { computeDeleteImpact, computeVersionHash } from '@/lib/tree/cascade-delete';
 import {
   snapshotIndividual,
@@ -63,22 +69,20 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     );
   }
 
-  // Strip kunya when feature is disabled
+  // Drop the fields of name features the workspace has switched off.
   const workspace = await prisma.workspace.findUnique({
     where: { id: workspaceId },
-    select: { enableKunya: true },
+    select: NAME_FEATURE_SELECT,
   });
-  if (!workspace?.enableKunya) {
-    delete parsed.data.kunya;
-  }
+  const input = dropDisabledNameInput(parsed.data, nameFeatureFlags(workspace));
 
-  // Phase 10b: encrypt sensitive fields before update. `parsed.data` still
+  // Phase 10b: encrypt sensitive fields before update. `input` still
   // holds plaintext for the audit snapshot further down.
   const workspaceKey = await getWorkspaceKey(workspaceId);
   const individual = await prisma.individual.update({
     where: { id: individualId },
     // Cast via unknown — see note in families/[familyId]/route.ts.
-    data: encryptIndividualInput(parsed.data, workspaceKey) as unknown as Parameters<typeof prisma.individual.update>[0]['data'],
+    data: encryptIndividualInput(input, workspaceKey) as unknown as Parameters<typeof prisma.individual.update>[0]['data'],
   });
 
   // Build an after-snapshot by merging the plaintext `existing` with the
@@ -86,7 +90,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   // `individual` directly because its encrypted fields are now Bytes-typed
   // by Prisma. Task #13 will wrap the stored snapshot in an encrypted
   // envelope.
-  const afterPlaintext = { ...existing, ...parsed.data, id: individualId };
+  const afterPlaintext = { ...existing, ...input, id: individualId };
 
   await Promise.all([
     prisma.treeEditLog.create({
@@ -96,7 +100,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         action: 'update',
         entityType: 'individual',
         entityId: individualId,
-        payload: encryptAuditPayload(parsed.data, workspaceKey),
+        payload: encryptAuditPayload(input, workspaceKey),
         // Phase 10b: wrap plaintext snapshots in encrypted envelopes.
         snapshotBefore: encryptSnapshot(snapshotIndividual(existing), workspaceKey),
         snapshotAfter: encryptSnapshot(snapshotIndividual(afterPlaintext), workspaceKey),
@@ -106,7 +110,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     touchTreeTimestamp(tree.id),
   ]);
 
-  return NextResponse.json({ data: individual });
+  // Plaintext DTO — never serialize the ciphertext Bytes columns.
+  return NextResponse.json({ data: decryptIndividualRow(individual, workspaceKey) });
 }
 
 // DELETE /api/workspaces/[id]/tree/individuals/[individualId] — Delete an individual

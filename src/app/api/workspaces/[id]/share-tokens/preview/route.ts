@@ -6,6 +6,7 @@ import { getTreeByWorkspaceId } from '@/lib/tree/queries';
 import { dbTreeToGedcomData, redactPrivateIndividuals } from '@/lib/tree/mapper';
 import { getWorkspaceKey } from '@/lib/tree/encryption';
 import { extractPointedSubtree } from '@/lib/tree/branch-pointer-merge';
+import { stripDisabledNameFeatures, nameFeatureFlags, NAME_FEATURE_SELECT } from '@/lib/tree/feature-strip';
 import { z } from 'zod';
 import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
 
@@ -43,10 +44,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     );
   }
 
-  // Fetch source workspace name
+  // Fetch source workspace name + its name-feature toggles (the owner's
+  // toggles govern what the preview shows; fail-closed if the row is missing)
   const sourceWorkspace = await prisma.workspace.findUnique({
     where: { id: shareToken.sourceWorkspaceId },
-    select: { nameAr: true },
+    select: { nameAr: true, ...NAME_FEATURE_SELECT },
   });
 
   // Fetch source tree + source workspace key in parallel
@@ -75,8 +77,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     includeGrafts: shareToken.includeGrafts,
   });
 
-  // Apply privacy redaction
-  const safeSubtree = redactPrivateIndividuals(subtree);
+  // Apply privacy redaction, then drop name features the owner switched off
+  const safeSubtree = stripDisabledNameFeatures(
+    redactPrivateIndividuals(subtree),
+    nameFeatureFlags(sourceWorkspace),
+  );
 
   const individualCount = Object.keys(safeSubtree.individuals).length;
 

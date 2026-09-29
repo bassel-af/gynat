@@ -5,6 +5,8 @@ import Link from 'next/link';
 import type { PersonProjection } from '@/lib/tree/person-projection';
 import { useTreeColorOverrides } from '@/hooks/useTreeColorOverrides';
 import { NasabRibbon } from './NasabRibbon';
+import { getAlternateNameLine, shouldShowKunya } from '@/lib/gedcom/display';
+import { asNamedIndividual } from './personNames';
 import { BloodlineColumn } from './BloodlineColumn';
 import { FamilyHighlightProvider } from './FamilyHighlight';
 import { MarriageGroupCard } from './MarriageGroupCard';
@@ -64,8 +66,13 @@ export function PersonPage({
   const { ancestryJump } = projection;
   const { preference } = useCalendarPreference();
 
-  const showKunya = enableKunya && !!subject.kunya;
+  // Same rule as the tree card / sidebar: no separate kunya line when it merely
+  // repeats the famous name (أبو طالب known as «أبو طالب»).
+  const showKunya =
+    enableKunya && shouldShowKunya({ ...asNamedIndividual(subject), kunya: subject.kunya });
   const subjectYears = subjectLifespan(subject, preference);
+  // «واسمه عبدمناف» / «ويُعرف بأبي طالب» — null without a famous name.
+  const subjectAltName = getAlternateNameLine(asNamedIndividual(subject));
 
   // The universe over which the parent↔child relationship highlight is computed:
   // every chip rendered inside the family section EXCEPT the spouses (the
@@ -121,6 +128,8 @@ export function PersonPage({
             hrefFor={hrefFor}
             suppressLivingConnectors={variant === 'public'}
           />
+
+          {subjectAltName && <p className={styles.heroAltName}>{subjectAltName}</p>}
 
           <div className={styles.heroMeta}>
             {showKunya && <span className={styles.kunya}>{subject.kunya}</span>}

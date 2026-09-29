@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState, type FormEvent } from 'react';
 import type { GedcomData, Individual } from '@/lib/gedcom/types';
-import { getDisplayNameWithNasab, JUMP_CONNECTOR, DEFAULT_NASAB_DEPTH } from '@/lib/gedcom/display';
+import { getDisplayNameWithNasab, getNasabToken, JUMP_CONNECTOR, DEFAULT_NASAB_DEPTH } from '@/lib/gedcom/display';
 import { getAllDescendants } from '@/lib/gedcom/graph';
 import { getFamiliesForPicker, ancestorNameOfExistingJump } from '@/lib/person-detail-helpers';
 import type { AncestryJumpFields, AncestryJumpSubmitPayload } from '@/hooks/usePersonActions';
@@ -51,6 +51,7 @@ export interface AncestryJumpFormProps {
   error?: string;
   workspaceId?: string;
   enableKunya?: boolean;
+  enableFamousName?: boolean;
   defaultDeceased?: boolean;
 }
 
@@ -83,6 +84,7 @@ export function AncestryJumpForm({
   error,
   workspaceId,
   enableKunya,
+  enableFamousName,
   defaultDeceased,
 }: AncestryJumpFormProps) {
   const [step, setStep] = useState<Step>(mode === 'edit' ? 'details' : 'path');
@@ -114,7 +116,8 @@ export function AncestryJumpForm({
     if (!id) return;
     const candidate = data.individuals[id];
     if (!candidate) return;
-    const name = candidate.givenName || candidate.name;
+    // The name follows «من وَلَد», so it takes the genitive («من وَلَد أبي طالب»).
+    const name = getNasabToken(candidate);
     setPendingPersonId(id);
     // Ask which couple only when there IS a choice to make; an ancestor with no
     // family at all gets a one-spouse couple minted for him, silently.
@@ -131,7 +134,7 @@ export function AncestryJumpForm({
     setChosen({
       kind: 'existingFamily',
       ancestorFamilyId: familyId,
-      name: candidate?.givenName || candidate?.name || '',
+      name: candidate ? getNasabToken(candidate) : '',
     });
     setStep('details');
   }, [pendingPersonId, data]);
@@ -183,6 +186,8 @@ export function AncestryJumpForm({
         anchorName={getDisplayNameWithNasab(data, person, DEFAULT_NASAB_DEPTH)}
         workspaceId={workspaceId}
         enableKunya={enableKunya}
+        enableFamousName={enableFamousName}
+        previewTree={{ data }}
         defaultDeceased={defaultDeceased}
       />
     );

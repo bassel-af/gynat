@@ -88,7 +88,7 @@ describe('IndividualPicker', () => {
     // Only "أحمد بن محمد" should show, not "محمد بن أحمد"
     const options = screen.getAllByRole('option');
     expect(options.length).toBe(1);
-    expect(screen.getByText('أحمد بن محمد')).toBeInTheDocument();
+    expect(options[0]).toHaveTextContent('أحمد بن محمد');
   });
 
   it('calls onChange when selecting a person', () => {
@@ -181,5 +181,31 @@ describe('IndividualPicker', () => {
       />,
     );
     expect(screen.getByText('1400')).toBeInTheDocument();
+  });
+
+  it('finds a person whose famous name leads by their real name and by their kunya', () => {
+    const famous = makeIndividual({ id: '@F1@', name: 'شيبة', givenName: 'شيبة', famousName: 'عبدالمطلب', kunya: 'أبو الحارث' });
+    render(<IndividualPicker {...defaultProps} data={{ individuals: { '@F1@': famous }, families: {} }} />);
+    const input = screen.getByRole('combobox');
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: 'شيبة' } });
+    expect(screen.getAllByRole('option')).toHaveLength(1);
+    fireEvent.change(input, { target: { value: 'أبو الحارث' } });
+    expect(screen.getAllByRole('option')).toHaveLength(1);
+  });
+
+  it('ranks a main-name match above a person matched only through their real name', () => {
+    const aliasOnly = makeIndividual({ id: '@A1@', name: 'شيبة', givenName: 'شيبة', famousName: 'عبدالمطلب' });
+    const mainMatch = makeIndividual({ id: '@A2@', name: 'شيبة بن ربيعة', givenName: 'شيبة بن ربيعة' });
+    render(
+      <IndividualPicker
+        {...defaultProps}
+        data={{ individuals: { '@A1@': aliasOnly, '@A2@': mainMatch }, families: {} }}
+      />,
+    );
+    const input = screen.getByRole('combobox');
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: 'شيبة' } });
+    expect(screen.getAllByRole('option')[0]).toHaveTextContent('شيبة بن ربيعة');
   });
 });

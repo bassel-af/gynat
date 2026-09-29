@@ -61,6 +61,7 @@ function subject(overrides: Partial<PersonSubject> = {}): PersonSubject {
     id: 'ADNAN',
     name: 'عدنان',
     givenName: 'عدنان',
+    famousName: '',
     surname: 'العدنانية',
     kunya: '',
     gender: 'male',
@@ -355,8 +356,8 @@ function jumpProjection(overrides: Partial<AncestryJumpProjection> = {}): Ancest
     generationsMin: 4,
     generationsMax: 40,
     notes: 'نصّ عليه ابن هشام في السيرة',
-    father: { id: 'ISH', name: 'إسماعيل', givenName: 'إسماعيل', gender: 'male', birth: '', birthHijriDate: '', death: '', deathHijriDate: '', isDeceased: true, private: false },
-    mother: { id: 'HAJAR', name: 'هاجر', givenName: 'هاجر', gender: 'female', birth: '', birthHijriDate: '', death: '', deathHijriDate: '', isDeceased: true, private: false },
+    father: { id: 'ISH', name: 'إسماعيل', givenName: 'إسماعيل', famousName: '', gender: 'male', birth: '', birthHijriDate: '', death: '', deathHijriDate: '', isDeceased: true, private: false },
+    mother: { id: 'HAJAR', name: 'هاجر', givenName: 'هاجر', famousName: '', gender: 'female', birth: '', birthHijriDate: '', death: '', deathHijriDate: '', isDeceased: true, private: false },
     ...overrides,
   };
 }

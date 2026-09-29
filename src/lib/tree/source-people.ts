@@ -9,7 +9,12 @@
  * family space.
  */
 import type { GedcomData, Individual } from '@/lib/gedcom/types';
-import { getDisplayNameWithNasab } from '@/lib/gedcom/display';
+import {
+  getAlternateNameLine,
+  getDisplayNameWithNasab,
+  getLeadName,
+  getPersonSearchText,
+} from '@/lib/gedcom/display';
 import { getPersonRelationships } from '@/lib/gedcom/relationships';
 import { matchesSearch, searchRelevance } from '@/lib/utils/search';
 import { shouldHideBirthDate, type BirthDatePrivacySettings } from '@/lib/tree/birth-date-privacy';
@@ -30,6 +35,8 @@ export interface QuickGroup {
 export interface PickerRow {
   id: string;
   name: string;
+  /** The grey other-name line («واسمه …» / «ويُعرف ب…»), or null. */
+  alternate: string | null;
   /** «{صلة القرابة} · مواليد …», or null when neither is known. */
   sub: string | null;
   disabled: boolean;
@@ -39,8 +46,6 @@ export interface PickerRow {
 export function isSelectablePerson(ind: Individual | undefined): ind is Individual {
   return !!ind && ind.isPrivate === false && !ind._pointed;
 }
-
-const shortName = (ind: Individual) => ind.givenName || ind.name;
 
 function selectable(list: readonly Individual[]): Individual[] {
   return list.filter(isSelectablePerson);
@@ -69,7 +74,7 @@ export function quickGroups(data: GedcomData, startId: string): QuickGroup[] {
       const isWife = start.familiesAsSpouse.some((fid) => data.families[fid]?.wife === spouse.id);
       groups.push({
         key: `spouse-${spouse.id}`,
-        label: `${isWife ? 'الزوجة' : 'الزوج'}: ${shortName(spouse)}`,
+        label: `${isWife ? 'الزوجة' : 'الزوج'}: ${getLeadName(spouse)}`,
         ids: [spouse.id],
       });
       family.add(spouse.id);
@@ -84,7 +89,7 @@ export function quickGroups(data: GedcomData, startId: string): QuickGroup[] {
       groups.push({ key: 'parents', label: 'الوالدان', ids: parents.map((p) => p.id) });
     } else if (parents.length === 1) {
       const p = parents[0];
-      groups.push({ key: 'parents', label: `${p.sex === 'F' ? 'الأم' : 'الأب'}: ${shortName(p)}`, ids: [p.id] });
+      groups.push({ key: 'parents', label: `${p.sex === 'F' ? 'الأم' : 'الأب'}: ${getLeadName(p)}`, ids: [p.id] });
     }
     parents.forEach((p) => family.add(p.id));
     const siblings = selectable([...rel.siblings, ...rel.halfSiblings]);
@@ -120,13 +125,14 @@ export function pickerRow(
   birthPrivacy: BirthDatePrivacySettings = {},
 ): PickerRow {
   const ind = data.individuals[id];
-  if (!ind) return { id, name: '', sub: null, disabled: true };
+  if (!ind) return { id, name: '', alternate: null, sub: null, disabled: true };
   const name = getDisplayNameWithNasab(data, ind, PICKER_NASAB_DEPTH);
-  if (ind._pointed) return { id, name, sub: BORROWED_PERSON_NOTE, disabled: true };
+  const alternate = getAlternateNameLine(ind);
+  if (ind._pointed) return { id, name, alternate, sub: BORROWED_PERSON_NOTE, disabled: true };
   const relation = fromId ? relationLabel(fromId, id, data) : null;
   const birth = shouldHideBirthDate(ind, birthPrivacy) ? '' : birthLabel(ind);
   const sub = [relation, birth].filter(Boolean).join(' · ');
-  return { id, name, sub: sub || null, disabled: false };
+  return { id, name, alternate, sub: sub || null, disabled: false };
 }
 
 /** Anyone in the tree matching the query (never a private person), best first. */
@@ -136,8 +142,8 @@ export function searchPickerPeople(data: GedcomData, query: string): Individual[
   for (const ind of Object.values(data.individuals)) {
     if (ind.isPrivate !== false) continue;
     const name = getDisplayNameWithNasab(data, ind, PICKER_NASAB_DEPTH);
-    const text = ind.kunya ? `${name} ${ind.kunya}` : name;
-    if (matchesSearch(text, query)) scored.push({ ind, score: searchRelevance(name, query) });
+    const text = getPersonSearchText(data, ind, name);
+    if (matchesSearch(text, query)) scored.push({ ind, score: searchRelevance(text, query) });
   }
   scored.sort((a, b) => a.score - b.score);
   return scored.slice(0, MAX_SEARCH_RESULTS).map((s) => s.ind);

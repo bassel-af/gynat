@@ -769,3 +769,136 @@ describe('parseGedcom — @#DHIJRI@ calendar escape on family events', () => {
     expect(data.families['@F1@'].marriage.hijriDate).toBe('07/10/1444')
   })
 })
+
+describe('parseGedcom — multiple NAME records (first NAME is primary)', () => {
+  it('keeps the primary name when a second NAME with TYPE aka follows', () => {
+    const gedcom = `
+0 @I1@ INDI
+1 NAME عبدمناف
+2 GIVN عبدمناف
+1 NAME أبو طالب
+2 TYPE aka
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.individuals['@I1@'].name).toBe('عبدمناف')
+  })
+
+  it('does not let GIVN under a later NAME overwrite the primary givenName', () => {
+    const gedcom = `
+0 @I1@ INDI
+1 NAME عبدمناف
+2 GIVN عبدمناف
+2 SURN هاشم
+1 NAME أبو طالب
+2 GIVN أبو
+2 SURN طالب
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.individuals['@I1@'].givenName).toBe('عبدمناف')
+  })
+
+  it('does not let SURN under a later NAME overwrite the primary surname', () => {
+    const gedcom = `
+0 @I1@ INDI
+1 NAME عبدمناف
+2 GIVN عبدمناف
+2 SURN هاشم
+1 NAME أبو طالب
+2 GIVN أبو
+2 SURN طالب
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.individuals['@I1@'].surname).toBe('هاشم')
+  })
+
+  it('does not let a later /surname/ NAME overwrite the primary surname', () => {
+    const gedcom = `
+0 @I1@ INDI
+1 NAME Fatima /Ali/
+1 NAME Fatima /Hassan/
+2 TYPE married
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.individuals['@I1@'].surname).toBe('Ali')
+  })
+
+  it('does not mark a person private when only a later NAME is PRIVATE', () => {
+    const gedcom = `
+0 @I1@ INDI
+1 NAME Ahmad
+1 NAME PRIVATE
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.individuals['@I1@'].isPrivate).toBe(false)
+  })
+
+  it('still detects PRIVATE on the primary NAME', () => {
+    const gedcom = `
+0 @I1@ INDI
+1 NAME PRIVATE
+1 NAME Someone
+2 TYPE aka
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.individuals['@I1@'].isPrivate).toBe(true)
+  })
+
+  it('parses a single "Given /Surname/" NAME unchanged', () => {
+    const gedcom = `
+0 @I1@ INDI
+1 NAME Ahmad /Saeed/
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    const indi = data.individuals['@I1@']
+    expect({ name: indi.name, givenName: indi.givenName, surname: indi.surname })
+      .toEqual({ name: 'Ahmad Saeed', givenName: 'Ahmad', surname: 'Saeed' })
+  })
+
+  it('parses a single NAME with GIVN/SURN children unchanged', () => {
+    const gedcom = `
+0 @I1@ INDI
+1 NAME محمد
+2 GIVN محمد
+2 SURN سعيد
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    const indi = data.individuals['@I1@']
+    expect({ name: indi.name, givenName: indi.givenName, surname: indi.surname })
+      .toEqual({ name: 'محمد', givenName: 'محمد', surname: 'سعيد' })
+  })
+
+  it('treats the first NAME of each INDI as primary independently', () => {
+    const gedcom = `
+0 @I1@ INDI
+1 NAME Ahmad
+0 @I2@ INDI
+1 NAME Khalid
+1 NAME Abu Omar
+2 TYPE aka
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.individuals['@I2@'].name).toBe('Khalid')
+  })
+
+  it('still reads legacy _KUNYA alongside multiple NAMEs', () => {
+    const gedcom = `
+0 @I1@ INDI
+1 NAME عبدمناف
+1 NAME أبو طالب
+2 TYPE aka
+1 _KUNYA أبو طالب
+`.trim()
+
+    const data = parseGedcom(gedcom)
+    expect(data.individuals['@I1@'].kunya).toBe('أبو طالب')
+  })
+})

@@ -22,6 +22,7 @@ const SURNAME = 'آل السعيد';
 
 const subject: PersonSubject = {
   id: 'p1', name: `باسل ${SURNAME}`, givenName: 'باسل', surname: SURNAME, kunya: '',
+  famousName: '',
   gender: 'male', birth: '', birthHijriDate: '', birthPlace: '', death: '', deathHijriDate: '',
   deathPlace: '', notes: '', isDeceased: false, living: true, house: '',
 };

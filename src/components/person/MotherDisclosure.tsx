@@ -1,26 +1,64 @@
 'use client';
 
+import { useId } from 'react';
 import Link from 'next/link';
 import { NodeFigure } from '@/components/heritage/FigureCluster';
 import type { Gender, MotherLine, PersonChip } from '@/lib/tree/person-projection';
 import { useCalendarPreference } from '@/hooks/useCalendarPreference';
+import {
+  getAlternateNameLine,
+  getNasabToken,
+  getOtherName,
+  isFamousNameLead,
+} from '@/lib/gedcom/display';
 import { JumpDivider } from './JumpDivider';
+import { asNamedIndividual, chipNameLines } from './personNames';
 import { chipYears } from './yearFormat';
 import styles from './person.module.css';
 
 /**
- * Small inline person link tuned for the green mother-ribbon. A private father
- * token (the projection emits it as a locked `{ private: true, name: 'خاص' }`
- * placeholder) renders as a non-clickable «خاص» — never an `<a>`.
+ * Small inline father link tuned for the green mother-ribbon, following the
+ * hero NasabRibbon: the father's LEAD name in the genitive after بن/بنت
+ * («أبي طالب»), and — when he has a famous name — a tiny muted caption of his
+ * other name, with «واسمه …» / «ويُعرف ب…» as the link's description. A father
+ * without a famous name keeps his display name. A private father token (the
+ * projection emits it as a locked `{ private: true, name: 'خاص' }` placeholder)
+ * renders as a non-clickable «خاص» — never an `<a>`.
  */
-function MotherName({ chip, hrefFor }: { chip: PersonChip; hrefFor: (id: string) => string }) {
+function MotherName({
+  chip,
+  descId,
+  hrefFor,
+}: {
+  chip: PersonChip;
+  descId: string;
+  hrefFor: (id: string) => string;
+}) {
   if (chip.private || !chip.id) {
     return <span className={styles.motherPrivate}>خاص</span>;
   }
+  const person = asNamedIndividual(chip);
+  const altLine = getAlternateNameLine(person);
+  const token = isFamousNameLead(person) ? getNasabToken(person) : chip.name;
+  if (!altLine) {
+    return (
+      <Link href={hrefFor(chip.id)} className={styles.motherLink}>
+        {token}
+      </Link>
+    );
+  }
   return (
-    <Link href={hrefFor(chip.id)} className={styles.motherLink}>
-      {chip.name}
-    </Link>
+    <span className={styles.motherName}>
+      <Link href={hrefFor(chip.id)} className={styles.motherLink} aria-describedby={descId}>
+        {token}
+      </Link>
+      <span className={styles.motherCaption} aria-hidden="true">
+        {getOtherName(person)}
+      </span>
+      <span id={descId} hidden>
+        {altLine}
+      </span>
+    </span>
   );
 }
 
@@ -44,6 +82,7 @@ export function MotherRibbon({
 }) {
   const { preference } = useCalendarPreference();
   const years = chipYears(mother, preference);
+  const idBase = useId();
 
   return (
     <div className={styles.motherRibbon}>
@@ -54,7 +93,7 @@ export function MotherRibbon({
         <span className={styles.motherPrivate}>خاص</span>
       ) : (
         <Link href={hrefFor(mother.id)} className={styles.motherLink}>
-          {mother.name}
+          {chipNameLines(mother).lead}
         </Link>
       )}
       {years && <span className={styles.motherYears}>{years}</span>}
@@ -65,7 +104,7 @@ export function MotherRibbon({
           ) : (
             <span className={styles.motherConnector}>{i === 0 ? 'بنت' : 'بن'}</span>
           )}
-          <MotherName chip={f} hrefFor={hrefFor} />
+          <MotherName chip={f} descId={`${idBase}-alt-${i}`} hrefFor={hrefFor} />
         </span>
       ))}
     </div>

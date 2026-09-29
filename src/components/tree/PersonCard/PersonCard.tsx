@@ -2,7 +2,8 @@
 
 import clsx from 'clsx';
 import type { Individual } from '@/lib/gedcom';
-import { getDisplayName } from '@/lib/gedcom';
+import { getLeadDisplayName } from '@/lib/gedcom';
+import { getAlternateNameLine, shouldShowKunya, withOtherNames } from '@/lib/gedcom/display';
 import { useTree } from '@/context/TreeContext';
 import { useOptionalWorkspaceTree } from '@/context/WorkspaceTreeContext';
 import { shouldHideBirthDate } from '@/lib/tree/birth-date-privacy';
@@ -19,12 +20,13 @@ export function PersonCard({ person, isRoot = false }: PersonCardProps) {
 
   if (!person) return null;
 
-  const displayName = getDisplayName(person);
+  const displayName = getLeadDisplayName(person);
+  const alternateName = getAlternateNameLine(person);
 
-  // Check if this person matches search
+  // Matches the card by any name the person goes by (famous, real, kunya).
   const isMatch =
     searchQuery &&
-    displayName.toLowerCase().includes(searchQuery.toLowerCase());
+    withOtherNames(displayName, person).toLowerCase().includes(searchQuery.toLowerCase());
 
   const hideBirth = shouldHideBirthDate(person, {
     hideBirthDateForFemale: wsContext?.hideBirthDateForFemale,
@@ -49,7 +51,10 @@ export function PersonCard({ person, isRoot = false }: PersonCardProps) {
       })}
     >
       <div className={styles.personName}>{displayName}</div>
-      {person.kunya && <div className={styles.personKunya}>{person.kunya}</div>}
+      {alternateName && (
+        <div className={styles.personAltName} title={alternateName}>{alternateName}</div>
+      )}
+      {shouldShowKunya(person) && <div className={styles.personKunya}>{person.kunya}</div>}
       {dates && <div className={styles.personDates}>{dates}</div>}
     </div>
   );

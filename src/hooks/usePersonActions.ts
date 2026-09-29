@@ -6,6 +6,7 @@ import type { MoveSubtreeOption } from '@/components/tree/MoveSubtreeModal';
 import { apiFetch } from '@/lib/api/client';
 import {
   serializeIndividualForm,
+  personUndoSnapshot,
   getEditableSpouseFamilyIds,
   ancestorFamilyDisplayName,
   jumpBlocksParents,
@@ -386,27 +387,7 @@ export function usePersonActions({
   const handleEditSubmit = useCallback(async (formData: IndividualFormData, sourcePlan?: SourcePlan) => {
     if (!workspace || isPointed) return;
     // Capture before-snapshot (for undo) from the current person BEFORE the API call.
-    const beforeSnapshot = person ? serializeIndividualForm({
-      givenName: person.givenName,
-      surname: person.surname,
-      sex: person.sex ?? '',
-      birthDate: person.birth,
-      birthPlace: person.birthPlace,
-      birthPlaceId: person.birthPlaceId ?? null,
-      birthDescription: person.birthDescription,
-      birthNotes: person.birthNotes,
-      birthHijriDate: person.birthHijriDate,
-      deathDate: person.death,
-      deathPlace: person.deathPlace,
-      deathPlaceId: person.deathPlaceId ?? null,
-      deathDescription: person.deathDescription,
-      deathNotes: person.deathNotes,
-      deathHijriDate: person.deathHijriDate,
-      kunya: person.kunya,
-      isDeceased: person.isDeceased,
-      isPrivate: person.isPrivate,
-      notes: person.notes,
-    }) : null;
+    const beforeSnapshot = person ? personUndoSnapshot(person) : null;
     const afterSnapshot = serializeIndividualForm(formData);
     const personName = person?.name;
     const personKey = JSON.stringify([afterSnapshot, formData.isUmmWalad ?? null]);
@@ -1666,27 +1647,7 @@ export function usePersonActions({
     const currentState = deleteState;
     const isSimple = currentState.kind === 'simpleConfirm';
     // Capture snapshot BEFORE delete fires so we can re-create on undo.
-    const deleteSnapshot = person ? serializeIndividualForm({
-      givenName: person.givenName,
-      surname: person.surname,
-      sex: person.sex ?? '',
-      birthDate: person.birth,
-      birthPlace: person.birthPlace,
-      birthPlaceId: person.birthPlaceId ?? null,
-      birthDescription: person.birthDescription,
-      birthNotes: person.birthNotes,
-      birthHijriDate: person.birthHijriDate,
-      deathDate: person.death,
-      deathPlace: person.deathPlace,
-      deathPlaceId: person.deathPlaceId ?? null,
-      deathDescription: person.deathDescription,
-      deathNotes: person.deathNotes,
-      deathHijriDate: person.deathHijriDate,
-      kunya: person.kunya,
-      isDeceased: person.isDeceased,
-      isPrivate: person.isPrivate,
-      notes: person.notes,
-    }) : null;
+    const deleteSnapshot = person ? personUndoSnapshot(person) : null;
     const personName = person?.name;
     setDeleteState({ kind: 'loading' });
     // Sources («المصادر»): sources outlive a person delete (only the links

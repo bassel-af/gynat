@@ -6,6 +6,7 @@ import { NodeFigure } from '@/components/heritage/FigureCluster';
 import type { PersonChip } from '@/lib/tree/person-projection';
 import { useCalendarPreference } from '@/hooks/useCalendarPreference';
 import { chipYears } from './yearFormat';
+import { chipNameLines } from './personNames';
 import styles from './person.module.css';
 
 // ---------------------------------------------------------------------------
@@ -105,6 +106,7 @@ export function RelationChip({
   const { preference } = useCalendarPreference();
 
   const years = chipYears(chip, preference);
+  const names = chipNameLines(chip);
   // Relation chips are non-private and always carry an id; `''` is an
   // unreachable fallback that keeps the highlight lookups total.
   const id = chip.id ?? '';
@@ -145,7 +147,8 @@ export function RelationChip({
         <NodeFigure gender={chip.gender} />
       </span>
       <span className={styles.relationText}>
-        <span className={styles.relationName}>{chip.name}</span>
+        <span className={styles.relationName}>{names.lead}</span>
+        {names.alt && <span className={styles.altNameLine}>{names.alt}</span>}
         {years && <span className={styles.relationYears}>{years}</span>}
       </span>
     </Link>

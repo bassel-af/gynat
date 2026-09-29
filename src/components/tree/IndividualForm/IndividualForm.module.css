@@ -308,3 +308,55 @@
   display: flex;
   gap: var(--space-3);
 }
+
+/* «اسم الشهرة»: which name the nasab uses + the live preview */
+.famousChoice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-radius: 12px;
+  background: rgba(200, 168, 101, 0.05);
+  border: 1px solid rgba(200, 168, 101, 0.14);
+  animation: famousChoiceRise 220ms ease;
+}
+
+@keyframes famousChoiceRise {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .famousChoice { animation: none; }
+}
+
+.famousChoiceLabel {
+  font-family: var(--heritage-font-body);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--heritage-cream);
+}
+
+.famousChoiceControl {
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+
+.famousPreview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-radius: 12px;
+  background: rgba(10, 14, 26, 0.5);
+  border: 1px solid rgba(200, 168, 101, 0.12);
+  font-family: var(--heritage-font-body);
+  font-size: 14px;
+  color: var(--heritage-parchment);
+}
+
+.famousPreviewLabel {
+  font-size: 11px;
+  color: var(--heritage-gold);
+  letter-spacing: 0.06em;
+}

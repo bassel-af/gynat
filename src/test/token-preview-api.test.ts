@@ -58,6 +58,7 @@ vi.mock('@/lib/tree/encryption', async () => {
 });
 
 import { NextRequest } from 'next/server';
+import { encryptField } from '@/lib/crypto/workspace-encryption';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -265,5 +266,90 @@ describe('POST /api/workspaces/[id]/share-tokens/preview — token preview', () 
     // Should be redacted
     expect(body.data.subtree.individuals['src-root'].name).toBe('خاص');
     expect(body.data.subtree.individuals['src-root'].givenName).toBe('خاص');
+  });
+
+  describe('owner workspace name-feature toggles', () => {
+    const key = Buffer.alloc(32, 7);
+
+    function mockSourceTreeWithNames() {
+      mockGetTreeByWorkspaceId.mockResolvedValue({
+        id: 'tree-source',
+        workspaceId: 'ws-source-uuid',
+        individuals: [
+          {
+            id: 'src-root', treeId: 'tree-source', gedcomId: null,
+            givenName: encryptField('فدوى', key), surname: encryptField('شربك', key), fullName: null,
+            sex: 'F', birthDate: null, birthPlace: null,
+            birthPlaceId: null, birthDescription: null, birthNotes: null,
+            deathDate: null, deathPlace: null, deathPlaceId: null,
+            deathDescription: null, deathNotes: null,
+            birthHijriDate: null, deathHijriDate: null, notes: null,
+            kunya: encryptField('أم محمد', key),
+            famousName: encryptField('فدوى الكبيرة', key),
+            famousNameInNasab: true,
+            isDeceased: false, isPrivate: false,
+            createdById: null, updatedAt: now, createdAt: now,
+          },
+        ],
+        families: [],
+      });
+    }
+
+    async function preview() {
+      const { POST } = await import(
+        '@/app/api/workspaces/[id]/share-tokens/preview/route'
+      );
+      const req = makePostRequest(
+        `http://localhost:3000/api/workspaces/${wsId}/share-tokens/preview`,
+        { token: 'brsh_valid-token' },
+      );
+      const res = await POST(req, routeParams);
+      expect(res.status).toBe(200);
+      return (await res.json()).data.subtree.individuals['src-root'];
+    }
+
+    beforeEach(() => {
+      mockAuth();
+      mockAdmin();
+      mockValidToken();
+      mockSourceTreeWithNames();
+    });
+
+    test('owner famous-name toggle off → preview has no famousName', async () => {
+      mockWorkspaceFindUnique.mockResolvedValue({
+        nameAr: 'آل شربك', enableKunya: true, enableFamousName: false,
+      });
+      const person = await preview();
+      expect(person.famousName).toBeUndefined();
+    });
+
+    test('owner kunya toggle off → preview kunya is blank', async () => {
+      mockWorkspaceFindUnique.mockResolvedValue({
+        nameAr: 'آل شربك', enableKunya: false, enableFamousName: true,
+      });
+      const person = await preview();
+      expect(person.kunya).toBe('');
+    });
+
+    test('owner famous-name toggle on → preview keeps famousName', async () => {
+      mockWorkspaceFindUnique.mockResolvedValue({
+        nameAr: 'آل شربك', enableKunya: true, enableFamousName: true,
+      });
+      const person = await preview();
+      expect(person.famousName).toBe('فدوى الكبيرة');
+    });
+
+    test('flags are read from the owner (source) workspace', async () => {
+      mockWorkspaceFindUnique.mockResolvedValue({
+        nameAr: 'آل شربك', enableKunya: true, enableFamousName: true,
+      });
+      await preview();
+      expect(mockWorkspaceFindUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'ws-source-uuid' },
+          select: expect.objectContaining({ enableFamousName: true, enableKunya: true }),
+        }),
+      );
+    });
   });
 });

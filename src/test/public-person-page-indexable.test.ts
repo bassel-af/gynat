@@ -24,6 +24,7 @@ function record(overrides: Partial<PublicTreeRecord> = {}): PublicTreeRecord {
     lastModifiedAt: new Date(),
     publicSlug: 'slug',
     enableKunya: true,
+    enableFamousName: false,
     hideBirthDateForFemale: false,
     hideBirthDateForMale: false,
     personPagesIndexable: false,

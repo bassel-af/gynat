@@ -14,13 +14,14 @@
 
 import { prisma } from '@/lib/db'
 import type { Prisma } from '../../../generated/prisma/client'
-import type { GedcomData, Individual } from '@/lib/gedcom/types'
+import type { GedcomData } from '@/lib/gedcom/types'
 import { cache } from 'react'
 import { dbTreeToGedcomData, PRIVATE_PERSON_PLACEHOLDER } from '@/lib/tree/mapper'
 import { getWorkspaceKey } from '@/lib/tree/encryption'
 import { getTreeByWorkspaceId, getOrCreateTargetTree } from '@/lib/tree/queries'
 import { extractPointedSubtree } from '@/lib/tree/branch-pointer-merge'
 import { redactForPublic } from '@/lib/tree/public-visibility'
+import { stripDisabledNameFeatures } from '@/lib/tree/feature-strip'
 import { composePublicGedcom, isSourceTreePublic } from '@/lib/tree/public-compose'
 import type { BirthDatePrivacySettings } from '@/lib/tree/birth-date-privacy'
 
@@ -70,6 +71,7 @@ export interface PublicTreeRecord {
   lastModifiedAt: Date
   publicSlug: string
   enableKunya: boolean
+  enableFamousName: boolean
   hideBirthDateForFemale: boolean
   hideBirthDateForMale: boolean
   /** Owner opt-in: give every non-private person their own indexable page. */
@@ -116,6 +118,7 @@ const PUBLIC_TREE_SELECT = {
     select: {
       nameAr: true,
       enableKunya: true,
+      enableFamousName: true,
       enableCollections: true,
       hideBirthDateForFemale: true,
       hideBirthDateForMale: true,
@@ -137,6 +140,7 @@ function toPublicTreeRecord(tree: PublicTreeRow): PublicTreeRecord {
     lastModifiedAt: tree.lastModifiedAt,
     publicSlug: tree.publicSlug as string,
     enableKunya: tree.workspace.enableKunya,
+    enableFamousName: tree.workspace.enableFamousName,
     hideBirthDateForFemale: tree.workspace.hideBirthDateForFemale,
     hideBirthDateForMale: tree.workspace.hideBirthDateForMale,
     personPagesIndexable: tree.personPagesIndexable,
@@ -380,23 +384,37 @@ export async function buildPublicTreePayload(
   // Compose FIRST, then redact ONCE over the whole set.
   const composed = composePublicGedcom(home, borrowed)
 
-  const birthDatePrivacy: BirthDatePrivacySettings = {
-    hideBirthDateForFemale: record.hideBirthDateForFemale,
-    hideBirthDateForMale: record.hideBirthDateForMale,
-  }
-  let data = redactForPublic(composed, new Date(), birthDatePrivacy)
-
-  // Strip kunya when the feature is off (mirrors the member route's posture).
-  if (!record.enableKunya) {
-    const individuals: Record<string, Individual> = {}
-    for (const [id, ind] of Object.entries(data.individuals)) {
-      individuals[id] = { ...ind, kunya: '' }
-    }
-    data = { ...data, individuals }
-  }
+  const data = applyPublicRedaction(composed, record)
 
   const names = buildPublicNamesList(data)
   return { record, data, names, homeIndividualIds }
+}
+
+/** The owner settings that shape what a stranger sees of a published tree. */
+export type PublicRedactionSettings = Pick<
+  PublicTreeRecord,
+  'enableKunya' | 'enableFamousName' | 'hideBirthDateForFemale' | 'hideBirthDateForMale'
+>
+
+/**
+ * THE public-serve redaction pass: `redactForPublic` (private blanked, living
+ * birth hidden, gender birth-date toggles) plus the kunya / famous-name strip
+ * when those features are off. Used by `buildPublicTreePayload` AND by the cross-workspace
+ * copy of a public tree, so a copy can never carry more than the public page
+ * showed. Pure; the input is not mutated.
+ */
+export function applyPublicRedaction(
+  composed: GedcomData,
+  settings: PublicRedactionSettings,
+): GedcomData {
+  const birthDatePrivacy: BirthDatePrivacySettings = {
+    hideBirthDateForFemale: settings.hideBirthDateForFemale,
+    hideBirthDateForMale: settings.hideBirthDateForMale,
+  }
+  const data = redactForPublic(composed, new Date(), birthDatePrivacy)
+
+  // Strip the name features the owner has switched off (kunya, famous name).
+  return stripDisabledNameFeatures(data, settings)
 }
 
 // ---------------------------------------------------------------------------

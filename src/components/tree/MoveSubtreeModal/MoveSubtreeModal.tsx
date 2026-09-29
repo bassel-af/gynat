@@ -4,6 +4,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { matchesSearch } from '@/lib/utils/search';
+import { PersonListName } from '@/components/ui/PersonListName';
 import styles from './MoveSubtreeModal.module.css';
 
 export type MoveSubtreeOption =
@@ -13,6 +14,10 @@ export type MoveSubtreeOption =
       familyId: string;
       /** "أب + أم" / single parent name / "عائلة بدون والدين". */
       parentNames: string;
+      /** Grey line: the parents' other names joined with « · », if any. */
+      alternate?: string | null;
+      /** What the search matches: every name the parents go by (defaults to the label). */
+      searchText?: string;
     }
   | {
       kind: 'solo';
@@ -21,6 +26,10 @@ export type MoveSubtreeOption =
       individualId: string;
       name: string;
       sex: 'M' | 'F';
+      /** Grey line: the person's other name («واسمه …» / «ويُعرف ب…»), if any. */
+      alternate?: string | null;
+      /** What the search matches: every name the person goes by (defaults to the label). */
+      searchText?: string;
     };
 
 export type MoveSubtreeIntent = 'assign' | 'change';
@@ -50,7 +59,7 @@ function optionDisplayLabel(option: MoveSubtreeOption): string {
 }
 
 function optionSearchHaystack(option: MoveSubtreeOption): string {
-  return option.kind === 'family' ? option.parentNames : option.name;
+  return option.searchText ?? optionDisplayLabel(option);
 }
 
 /**
@@ -265,7 +274,9 @@ export function MoveSubtreeModal({
                   onChange={() => setSelectedKey(key)}
                   className={styles.radioInput}
                 />
-                <span className={styles.familyLabel}>{optionDisplayLabel(option)}</span>
+                <span className={styles.familyLabel}>
+                  <PersonListName main={optionDisplayLabel(option)} alternate={option.alternate} query={query} />
+                </span>
                 {option.kind === 'solo' && (
                   <span className={styles.newFamilyBadge}>عائلة جديدة</span>
                 )}

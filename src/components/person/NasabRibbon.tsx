@@ -1,6 +1,14 @@
 'use client';
 
+import { useId } from 'react';
 import type { PersonSubject, SpineChip } from '@/lib/tree/person-projection';
+import {
+  getAlternateNameLine,
+  getLeadName,
+  getNasabToken,
+  getOtherName,
+} from '@/lib/gedcom/display';
+import { asNamedIndividual } from './personNames';
 import { PersonLink } from './PersonLink';
 import { JumpDivider } from './JumpDivider';
 import styles from './person.module.css';
@@ -41,12 +49,13 @@ export function NasabRibbon({
   // person is the one to its right: the subject for the first segment, else the
   // previous (younger) ancestor.
   const reversed = [...chain].reverse();
+  const idBase = useId();
 
   return (
     <div className={styles.ribbonScroller}>
       <h1 className={styles.ribbon}>
         <PersonLink
-          chip={{ id: subject.id, name: subject.givenName }}
+          chip={{ id: subject.id, name: getLeadName(asNamedIndividual(subject)) }}
           kind="lead"
           interactive={false}
           hrefFor={hrefFor}
@@ -73,13 +82,52 @@ export function NasabRibbon({
                   </span>
                 )
               )}
-              {/* Ancestors show only their GIVEN name — the family name is not
-                  part of the ribbon at all (it lives in the «من بيت» line). */}
-              <PersonLink chip={{ ...anc, name: anc.givenName }} hrefFor={hrefFor} />
+              {/* Ancestors show only their LEAD name (famous or given, genitive
+                  after بن) — the family name is not part of the ribbon at all
+                  (it lives in the «من بيت» line). */}
+              <AncestorName anc={anc} descId={`${idBase}-alt-${i}`} hrefFor={hrefFor} />
             </span>
           );
         })}
       </h1>
     </div>
+  );
+}
+
+/**
+ * One ancestor in the ribbon: a link by his lead name in the genitive
+ * («أبي طالب»), and — when he has a famous name — a tiny muted caption of his
+ * other name, with «واسمه …» / «ويُعرف ب…» as the link's description. A private
+ * placeholder stays a bare «خاص» token (no caption, no description).
+ */
+function AncestorName({
+  anc,
+  descId,
+  hrefFor,
+}: {
+  anc: SpineChip;
+  descId: string;
+  hrefFor: (id: string) => string;
+}) {
+  if (anc.private) {
+    return <PersonLink chip={{ ...anc, name: anc.givenName }} hrefFor={hrefFor} />;
+  }
+  const person = asNamedIndividual(anc);
+  const token = getNasabToken(person);
+  const altLine = getAlternateNameLine(person);
+  if (!altLine) {
+    return <PersonLink chip={{ ...anc, name: token }} hrefFor={hrefFor} />;
+  }
+  const caption = getOtherName(person);
+  return (
+    <span className={styles.ribbonName}>
+      <PersonLink chip={{ ...anc, name: token }} hrefFor={hrefFor} describedBy={descId} />
+      <span className={styles.ribbonCaption} aria-hidden="true">
+        {caption}
+      </span>
+      <span id={descId} hidden>
+        {altLine}
+      </span>
+    </span>
   );
 }

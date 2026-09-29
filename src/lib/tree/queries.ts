@@ -170,6 +170,18 @@ export async function touchTreeTimestamp(treeId: string) {
 }
 
 /**
+ * Bump lastModifiedAt on EVERY tree of a workspace (main + extras).
+ * Used when a workspace-level display setting that shapes the tree payload
+ * (enableKunya, enableFamousName) flips, so every tree's ETag changes.
+ */
+export async function touchWorkspaceTreeTimestamps(workspaceId: string) {
+  return prisma.familyTree.updateMany({
+    where: { workspaceId },
+    data: { lastModifiedAt: new Date() },
+  })
+}
+
+/**
  * Get a single individual, verifying it belongs to the specified tree.
  */
 export async function getTreeIndividual(treeId: string, individualId: string) {

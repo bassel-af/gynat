@@ -5,6 +5,7 @@ import { serializeBigInt } from '@/lib/api/serialize';
 import { z } from 'zod';
 import { parseValidatedBody, isParseError } from '@/lib/api/route-helpers';
 import { logAdminAccess } from '@/lib/audit/admin-access';
+import { touchWorkspaceTreeTimestamps } from '@/lib/tree/queries';
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -16,6 +17,7 @@ const updateWorkspaceSchema = z.object({
   enableRadaa: z.boolean().optional(),
   enableAncestryJumps: z.boolean().optional(),
   enableKunya: z.boolean().optional(),
+  enableFamousName: z.boolean().optional(),
   enableAuditLog: z.boolean().optional(),
   enableVersionControl: z.boolean().optional(),
   enableCollections: z.boolean().optional(),
@@ -92,15 +94,29 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
   // Snapshot privacy-sensitive export toggles so we can emit an admin access
   // log entry per field that actually flipped (security review M1).
-  // NOTE: existing privacy-sensitive toggles (enableAuditLog, enableKunya,
-  // hideBirthDateFor*) are NOT audited today — this PR closes the gap only
-  // for the two new export fields; the wider gap is flagged for follow-up.
-  const AUDITED_FIELDS = ['enableTreeExport', 'allowMemberExport', 'enableAncestryJumps'] as const;
+  // NOTE: enableAuditLog and hideBirthDateFor* are still NOT audited — flagged
+  // for follow-up.
+  const AUDITED_FIELDS = [
+    'enableTreeExport',
+    'allowMemberExport',
+    'enableAncestryJumps',
+    'enableKunya',
+    'enableFamousName',
+  ] as const;
+  // Settings that change the tree payload: a flip must bump every tree's
+  // lastModifiedAt so clients don't keep serving a stale ETag-cached tree.
+  const TREE_SHAPING_FIELDS = ['enableKunya', 'enableFamousName'] as const;
   const touchesAuditedField = AUDITED_FIELDS.some((f) => f in parsed.data);
   const before = touchesAuditedField
     ? await prisma.workspace.findUnique({
         where: { id },
-        select: { enableTreeExport: true, allowMemberExport: true, enableAncestryJumps: true },
+        select: {
+          enableTreeExport: true,
+          allowMemberExport: true,
+          enableAncestryJumps: true,
+          enableKunya: true,
+          enableFamousName: true,
+        },
       })
     : null;
 
@@ -108,6 +124,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     where: { id },
     data: parsed.data,
   });
+
+  if (before && TREE_SHAPING_FIELDS.some((f) => before[f] !== workspace[f])) {
+    await touchWorkspaceTreeTimestamps(id);
+  }
 
   if (before) {
     const ipAddress =
