@@ -223,6 +223,20 @@
   border: 1px solid rgba(200, 168, 101, 0.25);
 }
 
+.linkedBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: var(--heritage-radius-pill);
+  font-family: var(--heritage-font-body);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  background: rgba(46, 152, 118, 0.12);
+  color: var(--heritage-emerald-glow);
+  border: 1px solid rgba(46, 152, 118, 0.3);
+}
+
 /* Revoke confirmation */
 .revokeConfirm {
   display: flex;

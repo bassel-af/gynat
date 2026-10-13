@@ -179,6 +179,9 @@ export function ShareTokenList({ workspaceId, refreshTrigger }: ShareTokenListPr
                     <span className={styles.revokedBadge}>ملغى</span>
                   ) : state === 'disabled' ? (
                     <span className={styles.disabledBadge}>معطّل</span>
+                  ) : expired && token.activePointerCount > 0 ? (
+                    // An expired code only stops NEW links; the linked branch is live.
+                    <span className={styles.linkedBadge}>مرتبط</span>
                   ) : expired ? (
                     <span className={styles.expiredBadge}>منتهي الصلاحية</span>
                   ) : null}
