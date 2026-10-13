@@ -226,4 +226,28 @@ describe('freezeDependentPointers', () => {
     expect(mockPersistDeepCopy).not.toHaveBeenCalled();
     expect(mockBranchPointerUpdate).not.toHaveBeenCalled();
   });
+
+  // A link redeemed with a share code is a private, admin-to-admin grant — it
+  // never depended on the tree being public, so making the tree private must
+  // leave it live (regression: سعيّد → شربك link frozen on a publish/unpublish).
+  test('the query excludes share-code links (shareTokenId:null)', async () => {
+    mockBranchPointerFindMany.mockResolvedValue([]);
+    await freezeDependentPointers('src-ws');
+    const where = mockBranchPointerFindMany.mock.calls[0][0].where;
+    expect(where.shareTokenId).toBeNull();
+  });
+
+  test('never copies or breaks a link that was redeemed with a share code', async () => {
+    const shareCodeLink = { ...POINTER, id: 'ptr-token', shareTokenId: 'tok-1' };
+    mockBranchPointerFindMany.mockImplementation((args: { where?: { shareTokenId?: string | null } }) => {
+      const rows = [shareCodeLink];
+      const want = args?.where?.shareTokenId;
+      return Promise.resolve(want === undefined ? rows : rows.filter((r) => r.shareTokenId === want));
+    });
+
+    const result = await freezeDependentPointers('src-ws');
+    expect(result).toEqual({ frozen: 0, failed: 0, skippedSourceFiles: 0 });
+    expect(mockPersistDeepCopy).not.toHaveBeenCalled();
+    expect(mockBranchPointerUpdate).not.toHaveBeenCalled();
+  });
 });

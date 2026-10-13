@@ -30,8 +30,9 @@ export interface FreezeResult {
 }
 
 /**
- * Freeze every active branch pointer whose SOURCE is `sourceWorkspaceId` into a
- * deep copy in its target workspace, then mark the pointer `broken`. Best-effort
+ * Freeze every active branch pointer whose SOURCE is `sourceWorkspaceId` and
+ * that was NOT redeemed with a share code into a deep copy in its target
+ * workspace, then mark the pointer `broken`. Best-effort
  * per pointer — one failure does not abort the rest. Returns counts.
  */
 export async function freezeDependentPointers(
@@ -52,8 +53,14 @@ export async function freezeDependentPointers(
   // then the borrow stays a live link (hidden while the source is private,
   // reappears if the source returns public). Takedown reachability is unaffected
   // (admin/takedown + CopyProvenance query unfiltered).
+  //
+  // ALSO EXCLUDE links redeemed with a share code (`shareTokenId` set). A share
+  // code is a private admin-to-admin grant that never depended on the tree
+  // being public, so going private must leave it live — revoking the code is
+  // the owner's way to end it. (Regression: a quick publish/unpublish froze a
+  // share-code link into a dead copy.)
   const activePointers = await prisma.branchPointer.findMany({
-    where: { sourceWorkspaceId, status: 'active', isCollectionLink: false },
+    where: { sourceWorkspaceId, status: 'active', isCollectionLink: false, shareTokenId: null },
   })
   if (activePointers.length === 0) return { frozen: 0, failed: 0, skippedSourceFiles: 0 }
 
