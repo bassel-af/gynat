@@ -162,15 +162,21 @@ async function main() {
   }
 
   const { from, subject, html, text } = build(family, phones);
+  const finalSubject = args.includes('--preview') ? `[معاينة] ${subject}` : subject;
+  // Last guard before a real send: no placeholder number may survive, and a
+  // real send never carries the preview marker.
+  const placeholder = /5X XXX XXXX/;
+  if (placeholder.test(html) || placeholder.test(text)) {
+    console.error('Refusing to send: a placeholder phone number is still in the email');
+    process.exit(1);
+  }
+  if (!args.includes('--preview') && finalSubject.includes('معاينة')) {
+    console.error('Refusing to send: preview marker in a real send');
+    process.exit(1);
+  }
   // Imported lazily so --check/--dump never build an SMTP transport.
   const { emailTransport } = await import('../src/lib/email/transport');
-  const info = await emailTransport.sendMail({
-    from,
-    to,
-    subject: args.includes('--preview') ? `[معاينة] ${subject}` : subject,
-    html,
-    text,
-  });
+  const info = await emailTransport.sendMail({ from, to, subject: finalSubject, html, text });
   console.log('Sent:', info.messageId || info);
   process.exit(0);
 }
