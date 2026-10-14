@@ -63,3 +63,6 @@ scripts/geonames-data/
 
 # Logo preview gallery (local only — never published)
 logos-preview/
+
+# Private, never-committed inputs (e.g. phone numbers for one-off announcements)
+/private/

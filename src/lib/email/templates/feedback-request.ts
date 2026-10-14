@@ -1,16 +1,14 @@
+import { EMAIL_LOGO_URL } from '@/lib/site';
 import { escapeHtml } from '@/lib/utils/html-escape';
 
 interface FeedbackRequestEmailParams {
   recipientName: string;
-  /** data: URI or hosted https:// URL for the brand mark shown at the top of the email. */
-  logoSrc: string;
 }
 
-export function buildFeedbackRequestEmail({ recipientName, logoSrc }: FeedbackRequestEmailParams) {
+export function buildFeedbackRequestEmail({ recipientName }: FeedbackRequestEmailParams) {
   const subject = 'رأيك يهمّنا في جينات';
 
   const safeName = escapeHtml(recipientName);
-  const safeLogoSrc = logoSrc.replace(/"/g, '&quot;');
 
   const html = `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -48,7 +46,7 @@ export function buildFeedbackRequestEmail({ recipientName, logoSrc }: FeedbackRe
 
           <tr>
             <td style="padding: 48px 48px 20px 48px; text-align: center;" class="padding-mobile">
-              <img src="${safeLogoSrc}" width="64" height="64" alt="جينات" class="medallion-mobile" style="width: 64px; height: 64px; border-radius: 50%; display: inline-block;" />
+              <img src="${EMAIL_LOGO_URL}" width="64" height="64" alt="جينات" class="medallion-mobile" style="width: 64px; height: 64px; border-radius: 50%; display: inline-block;" />
               <p style="margin: 18px 0 0 0; font-family: 'Reem Kufi', 'Amiri', 'Noto Kufi Arabic', 'Segoe UI', Tahoma, sans-serif; font-size: 20px; font-weight: 500; color: #f4ead4; letter-spacing: 0.04em;">
                 جينات
               </p>

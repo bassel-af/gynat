@@ -1,3 +1,4 @@
+import { EMAIL_LOGO_URL } from '@/lib/site';
 import { escapeHtml } from '@/lib/utils/html-escape';
 
 interface InviteEmailParams {
@@ -70,13 +71,7 @@ export function buildInviteEmail({ workspaceName, inviterName, inviteUrl }: Invi
           <!-- Brand medallion -->
           <tr>
             <td style="padding: 48px 48px 20px 48px; text-align: center;" class="padding-mobile">
-              <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: auto;">
-                <tr>
-                  <td class="medallion-mobile" style="width: 64px; height: 64px; background-color: #c8a865; background-image: linear-gradient(135deg, #e6cf9e 0%, #c8a865 45%, #8c7441 100%); border-radius: 50%; text-align: center; vertical-align: middle; border: 1px solid rgba(255, 255, 255, 0.25); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);">
-                    <span style="font-family: 'Reem Kufi', 'Amiri', 'Noto Kufi Arabic', 'Segoe UI', Tahoma, sans-serif; font-size: 30px; color: #070b18; font-weight: 600; line-height: 64px; mso-line-height-rule: exactly;">&#1580;</span>
-                  </td>
-                </tr>
-              </table>
+              <img src="${EMAIL_LOGO_URL}" width="64" height="64" alt="جينات" class="medallion-mobile" style="width: 64px; height: 64px; border-radius: 50%; display: inline-block;" />
               <p style="margin: 18px 0 0 0; font-family: 'Reem Kufi', 'Amiri', 'Noto Kufi Arabic', 'Segoe UI', Tahoma, sans-serif; font-size: 20px; font-weight: 500; color: #f4ead4; letter-spacing: 0.04em;">
                 جينات
               </p>

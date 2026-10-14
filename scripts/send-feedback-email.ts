@@ -7,7 +7,6 @@
 import { emailTransport } from '../src/lib/email/transport';
 import { buildFeedbackRequestEmail } from '../src/lib/email/templates/feedback-request';
 
-const LOGO_URL = 'https://gynat.com/brand/avatar-400.png';
 // Monitored alias (also used as SITE_CONTACT_EMAIL) — NOT the transactional
 // noreply sender, since this email invites a reply.
 const FROM = '"فريق جينات" <contact@gynat.com>';
@@ -19,7 +18,7 @@ async function main() {
     process.exit(1);
   }
 
-  const { subject, html, text } = buildFeedbackRequestEmail({ recipientName: name, logoSrc: LOGO_URL });
+  const { subject, html, text } = buildFeedbackRequestEmail({ recipientName: name });
 
   const info = await emailTransport.sendMail({ from: FROM, to, subject, html, text });
   console.log('Sent:', info.messageId || info);
