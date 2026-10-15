@@ -85,6 +85,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 import { Sidebar } from '@/components/ui/Sidebar/Sidebar';
+import { DRAWER_HISTORY_SENTINEL_KEY } from '@/lib/utils/drawer-history';
 
 // Phone-width matchMedia so isDrawerViewport() (max-width:768) is true.
 function stubMatchMediaPhone() {
@@ -102,7 +103,7 @@ function stubMatchMediaPhone() {
 
 function sentinelPushes(spy: { mock: { calls: unknown[][] } }) {
   return spy.mock.calls.filter(
-    (c) => (c[0] as { mobileSidebarDetail?: boolean } | null)?.mobileSidebarDetail === true,
+    (c) => (c[0] as Record<string, unknown> | null)?.[DRAWER_HISTORY_SENTINEL_KEY] === true,
   );
 }
 

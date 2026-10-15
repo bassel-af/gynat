@@ -1,5 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+
+// The switcher reads the app router (no app router in jsdom).
+vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: vi.fn() }) }));
 import {
   TREE_VIEW_MODES,
   getViewMode,

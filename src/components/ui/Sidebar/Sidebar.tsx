@@ -13,6 +13,7 @@ import { PersonListName } from '@/components/ui/PersonListName';
 import { PersonDetail } from './PersonDetail';
 import { matchesSearch, searchRelevance } from '@/lib/utils/search';
 import { shouldCollapseDrawerOnPersonView, isDrawerViewport } from '@/lib/utils/viewport';
+import { DRAWER_HISTORY_SENTINEL_KEY, isOnDrawerHistorySentinel } from '@/lib/utils/drawer-history';
 import styles from './Sidebar.module.css';
 
 interface PersonItem {
@@ -107,7 +108,7 @@ export function Sidebar() {
     if (!isMobileSidebarOpen) return;
 
     let poppedByBrowser = false;
-    window.history.pushState({ mobileSidebarDetail: true }, '');
+    window.history.pushState({ [DRAWER_HISTORY_SENTINEL_KEY]: true }, '');
 
     const handlePopState = () => {
       poppedByBrowser = true;
@@ -118,7 +119,9 @@ export function Sidebar() {
 
     return () => {
       window.removeEventListener('popstate', handlePopState);
-      if (!poppedByBrowser && window.history.state?.mobileSidebarDetail) {
+      // After an in-drawer REPLACE navigation the current entry is no longer
+      // the sentinel, so this must not back() (that would cancel the nav).
+      if (!poppedByBrowser && isOnDrawerHistorySentinel()) {
         window.history.back();
       }
     };

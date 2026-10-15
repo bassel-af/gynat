@@ -1,11 +1,14 @@
 'use client';
 
+import type { MouseEvent } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   getNextViewMode,
   type TreeViewModeId,
   type ViewModeContext,
 } from '@/lib/tree/view-modes';
+import { isOnDrawerHistorySentinel } from '@/lib/utils/drawer-history';
 
 interface ViewSwitcherIconButtonProps {
   /** The mode the member is currently looking at. */
@@ -36,10 +39,22 @@ export function ViewSwitcherIconButton({
   const next = getNextViewMode(currentMode);
   const Icon = next.icon;
   const label = next.id === 'person' ? 'عرض صفحة الشخص' : 'عرض في الشجرة';
+  const href = next.href(ctx);
+  const router = useRouter();
+
+  // In the open phone drawer: replace the Back sentinel (see drawer-history.ts).
+  // A modifier-click (new tab/window) is left to the browser.
+  const handleClick = (e: MouseEvent<HTMLAnchorElement>) => {
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    if (!isOnDrawerHistorySentinel()) return;
+    e.preventDefault();
+    router.replace(href);
+  };
 
   return (
     <Link
-      href={next.href(ctx)}
+      href={href}
+      onClick={handleClick}
       className={className}
       aria-label={label}
       title={label}
