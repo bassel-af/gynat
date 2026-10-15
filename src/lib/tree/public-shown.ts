@@ -51,3 +51,21 @@ export function isShownOnPublicTree(ind: Individual, now: Date): boolean {
   if (ind._pointed) return false
   return !isPresumedLiving(ind, now)
 }
+
+/** Public placeholder shown in place of a private person's name. */
+export const PRIVATE_PERSON_PLACEHOLDER = 'خاص'
+
+/**
+ * The ONE rule "this person has a public person page" (`/family/<slug>/person/<id>`).
+ * Valid ONLY on public-redacted data (`redactForPublic` output): a redacted or
+ * private person, a blank name, or the «خاص» placeholder has no page — the page
+ * 404s identically for all of them (no existence oracle). Shared by the SSR
+ * names list, the public person page and the public panel's person-page button.
+ */
+export function hasPublicPersonPage(
+  ind: Pick<Individual, 'publicDisplay' | 'isPrivate' | 'name'>,
+): boolean {
+  if (ind.publicDisplay === 'redacted' || ind.isPrivate) return false
+  if (!ind.name?.trim() || ind.name === PRIVATE_PERSON_PLACEHOLDER) return false
+  return true
+}

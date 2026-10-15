@@ -5,7 +5,11 @@
  * people; a borrowed (`_pointed`) person is never shown for sources.
  */
 import { describe, test, expect } from 'vitest';
-import { isShownOnPublicTree } from '@/lib/tree/public-shown';
+import {
+  isShownOnPublicTree,
+  hasPublicPersonPage,
+  PRIVATE_PERSON_PLACEHOLDER,
+} from '@/lib/tree/public-shown';
 import { redactForPublic } from '@/lib/tree/public-visibility';
 import type { GedcomData, Individual } from '@/lib/gedcom/types';
 
@@ -80,5 +84,20 @@ describe('isShownOnPublicTree', () => {
         shown: redacted.individuals[p.id].publicDisplay === 'full',
       });
     }
+  });
+});
+
+describe('hasPublicPersonPage — the ONE rule "this person has a public person page"', () => {
+  test.each(['full', 'living'] as const)('a %s person has a page', (publicDisplay) => {
+    expect(hasPublicPersonPage(person('a', { name: 'أحمد', publicDisplay }))).toBe(true);
+  });
+
+  test('a redacted or private person has no page', () => {
+    expect(hasPublicPersonPage(person('a', { name: 'أحمد', publicDisplay: 'redacted' }))).toBe(false);
+    expect(hasPublicPersonPage(person('a', { name: 'أحمد', isPrivate: true }))).toBe(false);
+  });
+
+  test.each(['', '   ', '\t\n', PRIVATE_PERSON_PLACEHOLDER])('name %j has no page', (name) => {
+    expect(hasPublicPersonPage(person('a', { name, publicDisplay: 'full' }))).toBe(false);
   });
 });

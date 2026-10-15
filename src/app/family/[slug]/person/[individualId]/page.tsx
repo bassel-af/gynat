@@ -9,7 +9,7 @@ import {
 import { getDisplayNameWithNasab, DEFAULT_NASAB_DEPTH } from '@/lib/gedcom/display';
 import { projectPerson } from '@/lib/tree/person-projection';
 import { buildPersonJsonLd } from '@/lib/tree/person-jsonld';
-import { PRIVATE_PERSON_PLACEHOLDER } from '@/lib/tree/mapper';
+import { hasPublicPersonPage } from '@/lib/tree/public-shown';
 import PublicPersonView from './PublicPersonView';
 import styles from './page.module.css';
 import { safeJsonLd } from '@/lib/utils/safe-json-ld';
@@ -44,8 +44,7 @@ const resolvePublicPerson = cache(async function resolvePublicPerson(
 
   // Deny-by-default: the focal person must exist AND be publicly visible.
   // A redacted (private) person has no public page — 404, no oracle.
-  if (!focal || focal.publicDisplay === 'redacted') return null;
-  if (!focal.name || focal.name === PRIVATE_PERSON_PLACEHOLDER) return null;
+  if (!focal || !hasPublicPersonPage(focal)) return null;
 
   return { record, payload, focal };
 });

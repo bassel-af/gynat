@@ -2,6 +2,7 @@ import type { Individual, Family, GedcomData } from '@/lib/gedcom/types';
 import { getDisplayNameWithNasab, getLeadDisplayName, getPersonSearchText } from '@/lib/gedcom';
 import { getAlternateNameLine } from '@/lib/gedcom/display';
 import { getAllDescendants } from '@/lib/gedcom/graph';
+import { PRIVATE_PERSON_PLACEHOLDER } from '@/lib/tree/public-shown';
 import { validateJumpDescendant } from '@/lib/tree/ancestry-jump-validators';
 
 /** Format date with place for display */
@@ -456,13 +457,6 @@ export function getSexFilterForSpouse(person: Individual): 'M' | 'F' | undefined
 // ---------------------------------------------------------------------------
 
 /**
- * Redacted-name placeholder. Mirrors `PRIVATE_PERSON_PLACEHOLDER` in
- * `src/lib/tree/mapper.ts` — declared locally on purpose: importing the mapper
- * into this client-side module pulls server-only crypto into the client bundle.
- */
-const PRIVATE_NAME = 'خاص';
-
-/**
  * The form modes that can seed a surname. Every `FormMode` member in
  * `src/hooks/usePersonActions.ts` is structurally assignable to this, so a
  * `formMode` value passes straight through with no cast.
@@ -491,7 +485,7 @@ function usableSurname(person: Individual | undefined | null): string | null {
   if (!person) return null;
   if (person.isPrivate === true) return null;
   const surname = (person.surname ?? '').trim();
-  if (!surname || surname === PRIVATE_NAME) return null;
+  if (!surname || surname === PRIVATE_PERSON_PLACEHOLDER) return null;
   return surname;
 }
 

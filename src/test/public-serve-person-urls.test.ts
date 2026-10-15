@@ -40,7 +40,6 @@ const gedcomByWorkspace = new Map<string, GedcomData>();
 vi.mock('@/lib/tree/mapper', () => ({
   dbTreeToGedcomData: (dbTree: { _ws: string }) =>
     gedcomByWorkspace.get(dbTree._ws) ?? { individuals: {}, families: {} },
-  PRIVATE_PERSON_PLACEHOLDER: 'خاص',
   blankPrivatePerson: (ind: Record<string, unknown>) => {
     ind.name = 'خاص';
     ind.givenName = 'خاص';

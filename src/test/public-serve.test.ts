@@ -4,6 +4,7 @@ import { join } from 'path';
 import type { GedcomData, Individual } from '@/lib/gedcom/types';
 import { redactForPublic } from '@/lib/tree/public-visibility';
 import { buildPublicNamesList } from '@/lib/tree/public-serve';
+import { hasPublicPersonPage, PRIVATE_PERSON_PLACEHOLDER } from '@/lib/tree/public-shown';
 
 function makeIndividual(overrides: Partial<Individual> & { id: string }): Individual {
   return {
@@ -83,6 +84,24 @@ describe('buildPublicNamesList', () => {
     const redacted = redactForPublic(data, NOW);
     const list = buildPublicNamesList(redacted);
     expect(list.map((p) => p.name)).toEqual(['له اسم']);
+  });
+
+  test('lists exactly the people hasPublicPersonPage accepts (names list ↔ person page never drift)', () => {
+    const data: GedcomData = {
+      individuals: {
+        dec: makeIndividual({ id: 'dec', name: 'أحمد', isDeceased: true, birth: '1950' }),
+        liv: makeIndividual({ id: 'liv', name: 'سارة', sex: 'F', birth: '1990' }),
+        priv: makeIndividual({ id: 'priv', name: 'SECRET', isPrivate: true }),
+        spaces: makeIndividual({ id: 'spaces', name: '   ', givenName: '', isDeceased: true }),
+        literal: makeIndividual({ id: 'literal', name: PRIVATE_PERSON_PLACEHOLDER, isDeceased: true }),
+      },
+      families: {},
+    };
+    const redacted = redactForPublic(data, NOW);
+    const listed = buildPublicNamesList(redacted).map((p) => p.id).sort();
+    const withPage = Object.values(redacted.individuals).filter(hasPublicPersonPage).map((p) => p.id).sort();
+    expect(listed).toEqual(withPage);
+    expect(listed).toEqual(['dec', 'liv']);
   });
 });
 

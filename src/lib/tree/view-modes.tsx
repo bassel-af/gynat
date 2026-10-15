@@ -22,6 +22,13 @@ export interface ViewModeContext {
   slug: string;
   individualId?: string;
   treeId?: string;
+  /**
+   * Set ONLY by the anonymous public viewer (`/family/<publicSlug>`). When
+   * present it wins: hrefs target the public routes and `treeId` / focus are
+   * ignored (the public code already identifies the tree). Never set on member
+   * routes, so member hrefs are unchanged.
+   */
+  publicSlug?: string;
 }
 
 export interface TreeViewMode {
@@ -94,17 +101,21 @@ export const TREE_VIEW_MODES: readonly TreeViewMode[] = [
     icon: TreeIcon,
     // Return to the canvas centered on the person the member was reading.
     href: (ctx) =>
-      `/workspaces/${ctx.slug}/tree${buildTreeQuery(
-        ctx,
-        ctx.individualId ? { [FOCUS_PARAM]: ctx.individualId } : undefined,
-      )}`,
+      ctx.publicSlug
+        ? `/family/${ctx.publicSlug}`
+        : `/workspaces/${ctx.slug}/tree${buildTreeQuery(
+            ctx,
+            ctx.individualId ? { [FOCUS_PARAM]: ctx.individualId } : undefined,
+          )}`,
   },
   {
     id: 'person',
     labelAr: 'الشخص',
     icon: PersonIcon,
     href: (ctx) =>
-      `/workspaces/${ctx.slug}/tree/person/${ctx.individualId ?? ''}${buildTreeQuery(ctx)}`,
+      ctx.publicSlug
+        ? `/family/${ctx.publicSlug}/person/${ctx.individualId ?? ''}`
+        : `/workspaces/${ctx.slug}/tree/person/${ctx.individualId ?? ''}${buildTreeQuery(ctx)}`,
   },
 ] as const;
 

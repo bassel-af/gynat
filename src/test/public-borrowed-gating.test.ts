@@ -38,7 +38,6 @@ vi.mock('@/lib/tree/mapper', () => ({
   dbTreeToGedcomData: (dbTree: { _marker: string }) =>
     sourceGedcomByTreeMarker.get(dbTree._marker) ?? { individuals: {}, families: {} },
   // Faithful stand-ins for the shared private-redaction helpers (pure, no crypto).
-  PRIVATE_PERSON_PLACEHOLDER: 'خاص',
   blankPrivatePerson: (ind: Record<string, unknown>) => {
     ind.name = 'خاص'; ind.givenName = 'خاص'; ind.surname = '';
     ind.birth = ''; ind.birthPlace = ''; ind.birthDescription = '';

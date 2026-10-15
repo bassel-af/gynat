@@ -1,5 +1,6 @@
 import type { Individual, Family, GedcomData, RadaFamily, AncestryJump } from '@/lib/gedcom/types'
 import { stripSourceKeys } from '@/lib/tree/source-key-strip'
+import { PRIVATE_PERSON_PLACEHOLDER } from '@/lib/tree/public-shown'
 import {
   decryptIndividualRow,
   decryptFamilyRow,
@@ -465,9 +466,6 @@ function mapSex(sex: string | null): 'M' | 'F' | null {
 // ---------------------------------------------------------------------------
 // Privacy redaction
 // ---------------------------------------------------------------------------
-
-/** Public placeholder shown in place of a private person's name. */
-export const PRIVATE_PERSON_PLACEHOLDER = 'خاص'
 
 /**
  * Blank all PII on a private individual IN PLACE: name → placeholder, every

@@ -128,3 +128,18 @@ describe('ViewSwitcherIconButton', () => {
     );
   });
 });
+
+// Public tree (`/family/<publicSlug>`): the side panel's switcher must target
+// the PUBLIC routes, never the member `/workspaces/…` routes. The public code
+// already identifies the tree, so treeId and focus are dropped.
+describe('view-modes href builders — public surface (publicSlug)', () => {
+  const ctx = { slug: 'member-slug', publicSlug: 'pubCode123', individualId: 'I7', treeId: 'extra-9' };
+
+  it('person href is the public person page (publicSlug wins, treeId dropped)', () => {
+    expect(getViewMode('person').href(ctx)).toBe('/family/pubCode123/person/I7');
+  });
+
+  it('tree href is the public tree (treeId and focus dropped)', () => {
+    expect(getViewMode('tree').href(ctx)).toBe('/family/pubCode123');
+  });
+});

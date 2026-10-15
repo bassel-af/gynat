@@ -56,6 +56,7 @@ import type { AddParentResult } from '@/lib/person-detail-helpers';
 import { apiFetch } from '@/lib/api/client';
 import { shouldCollapseDrawerOnPersonView } from '@/lib/utils/viewport';
 import { shouldHideBirthDate } from '@/lib/tree/birth-date-privacy';
+import { hasPublicPersonPage } from '@/lib/tree/public-shown';
 import styles from './PersonDetail.module.css';
 
 // ---------------------------------------------------------------------------
@@ -1032,10 +1033,11 @@ export function PersonDetail({ personId }: PersonDetailProps) {
               </svg>
             </button>
           )}
-          {slug && (
+          {/* Public viewer: only when the public person page serves (never a 404 link). */}
+          {slug && (!workspace?.publicSlug || hasPublicPersonPage(person)) && (
             <ViewSwitcherIconButton
               currentMode={currentViewMode}
-              ctx={{ slug, individualId: personId, treeId: workspace?.activeTreeId }}
+              ctx={{ slug, individualId: personId, treeId: workspace?.activeTreeId, publicSlug: workspace?.publicSlug }}
               className={styles.focusButton}
             />
           )}

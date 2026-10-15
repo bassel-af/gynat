@@ -16,7 +16,8 @@ import { prisma } from '@/lib/db'
 import type { Prisma } from '../../../generated/prisma/client'
 import type { GedcomData } from '@/lib/gedcom/types'
 import { cache } from 'react'
-import { dbTreeToGedcomData, PRIVATE_PERSON_PLACEHOLDER } from '@/lib/tree/mapper'
+import { dbTreeToGedcomData } from '@/lib/tree/mapper'
+import { hasPublicPersonPage } from '@/lib/tree/public-shown'
 import { getWorkspaceKey } from '@/lib/tree/encryption'
 import { getTreeByWorkspaceId, getOrCreateTargetTree } from '@/lib/tree/queries'
 import { extractPointedSubtree } from '@/lib/tree/branch-pointer-merge'
@@ -38,14 +39,14 @@ export interface PublicNameEntry {
 /**
  * Build the crawlable names list rendered into the page's initial HTML. Runs
  * over the ALREADY-redacted data, so it inherits every privacy guarantee.
- * Redacted (private) people and empty names are excluded — a private person is
- * never surfaced as a discoverable name.
+ * Lists exactly the people `hasPublicPersonPage` accepts (redacted/private
+ * people and empty names are excluded — a private person is never surfaced as
+ * a discoverable name), so every listed link serves.
  */
 export function buildPublicNamesList(redactedData: GedcomData): PublicNameEntry[] {
   const list: PublicNameEntry[] = []
   for (const ind of Object.values(redactedData.individuals)) {
-    if (ind.publicDisplay === 'redacted') continue
-    if (!ind.name || ind.name === PRIVATE_PERSON_PLACEHOLDER) continue
+    if (!hasPublicPersonPage(ind)) continue
     list.push({
       id: ind.id,
       name: ind.name,
